@@ -14,7 +14,7 @@
 (defroutes handler
   (GET "/" [] (file-response "index.html" {:root "resources/public"}))
   (resources "/")
-  (not-found "<p>Not found</p>"))
+  (not-found "<p>Not found.</p>"))
 
 (defn wrap-csrf [handler]
   (wrap-anti-forgery
@@ -32,7 +32,7 @@
         {:status 500
          :header {"Content-Type" "text/html; charset=utf-8"}
          :body "<p>Something bad happened. Walking three times 
-                around the table should solve it.</p>"}))))
+                around the table may solve it.</p>"}))))
 
 (defn wrap-base [handler]
   (-> handler

@@ -1,7 +1,9 @@
 (ns cleebo.core
   (:require [com.stuartsierra.component :as component]
-            [siberet.handler :refer [app init destroy]]
-            [org.httpkit.server :as http-kit]))
+            [cleebo.handler :refer [app init destroy]]
+            [org.httpkit.server :as http-kit]
+            [cqp-clj.core :refer [make-cqi-client connect! disconnect!]]
+            [cqp-clj.spec :refer [read-init]]))
 
 (defn parse-port [port]
   (when port
@@ -19,21 +21,36 @@
   (when server
     (server :timeout 100)))
 
-(defrecord Siberet []
+(defrecord Server [handler port]
   component/Lifecycle
-  (start [this]
+  (start [component]
     (init)
-    (assoc this :server (start-http-server #'app 3000)))
-  (stop [this]
+    (assoc component :server (start-http-server handler port)))
+  (stop [component]
     (destroy)
-    (stop-http-server (:server this))
-    (dissoc this :server)))
+    (stop-http-server (:server component))
+    (dissoc component :server)))
 
-(defn create-system []
-  (Siberet.))
+(defrecord CQiComponent [client init-file]
+  component/Lifecycle
+  (start [component]
+    (let [client (:client (make-cqi-client (read-init init-file)))]
+      (assoc component :client client)))
+  (stop [component]
+    (disconnect! component)
+    (assoc component :client nil)))
 
-(defn -main [& args]
-  (let [system (create-system)]
+(defn create-system [config-map]
+  (let [{:keys [handler port init-file]} config-map]
+    (component/system-map
+     :web (map->Server {:handler handler
+                        :port port})
+     :cqi-client (map->CQiComponent {:init-file init-file}))))
+
+(defn run []
+  (let [system (create-system {:handler #'app
+                               :port 3000
+                               :init-file "dev-resources/cqpserver.init"})]
     (.addShutdownHook 
      (Runtime/getRuntime) 
      (Thread. (fn [] (.stop system))))

@@ -1,4 +1,6 @@
 (defproject cleebo "0.1.0-SNAPSHOT"
+  :description "Corpus query interface plus annotations"
+  :license {:name "GNU v3.0"}
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
@@ -11,17 +13,19 @@
                  [compojure "1.4.0"]
                  [jarohen/chord "0.6.0"]
                  [com.stuartsierra/component "0.3.1"]
-                 [http-kit "2.1.18"]]
+                 [http-kit "2.1.18"]
+                 [cqp-clj "0.1.0-SNAPSHOT"]]
 
   :main cleebo.core
   :plugins [[lein-cljsbuild "1.1.1"]
-            [lein-figwheel "0.4.1" :exclusions [cider/cider-nrepl]] ]
+            [lein-figwheel "0.5.0-2"]]
   :source-paths ["src/clj"]
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target" "test/js"]
   :cljsbuild {:builds
               [{:id "dev"
                 :source-paths ["src/cljs"]
-                :figwheel {:on-jsload cleebo.core/mount-root}
+                :figwheel {:on-jsload cleebo.core/mount-root
+                           :websocket-host :js-client-host}
                 :compiler {:main cleebo.core
                            :output-to "resources/public/js/compiled/app.js"
                            :output-dir "resources/public/js/compiled/out"
