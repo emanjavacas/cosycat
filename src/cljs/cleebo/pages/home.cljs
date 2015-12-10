@@ -6,24 +6,50 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (def imgs
-  [["1_02_owen.jpg" "Owen"]
+  [["1_01_baxter.jpg" "Baxter"]
+   ["1_02_owen.jpg" "Owen"]
+   ["1_03_more.jpg" "More"]
    ["1_04_milton.jpg" "Milton"]
    ["1_05_prynne.jpg" "Prynne"]
+   ["1_06_taylor.jpg" "Taylor"]
+   ["1_07_lestrange.jpg" "L'estrange"]
    ["1_08_fox.jpg" "Fox"]
-   ["2_03_stillingfleet.jpg" "Stillingfleet"]
+   ["2_01_burnet.jpg" "Burnet"]
+;   ["2_03_stillingfleet.jpg" "Stillingfleet"]
    ["2_04_boyle.jpg" "Boyle"]
+   ["2_06_whitby.jpg" "Whitby"]
+   ["2_07_dryden.jpg" "Dryden"]
    ["2_09_penn.jpg" "Penn"]
+   ["2_11_mather.jpg" "Mather"]
    ["2_13_tillotson.jpg" "Tillotson"]
+   ["2_14_behn.jpg" "Behn"]
+   ["2_15_bunyan.jpg" "Bunyan"]  
+   ["2_16_willard.jpg" "Willard"]
+   ["2_17_keach.jpg" "Keach"]
    ["2_18_salmon.jpg" "Salmon"]
+   ["2_20_flavel.jpg" "Flavel"]
+   ["2_22_poole.jpg" "Poole"]
    ["3_01_defoe.jpg" "Defoe"]
-   ["3_06_ward.jpg" "Ward"]
+   ["3_02_swift.jpg" "Swift"]
+   ["3_03_mather.jpg" "Mather"]
+;   ["3_05_whiston.jpg" "Whiston"]
+;   ["3_06_ward.jpg" "Ward"]
+   ["3_07_wake.jpg" "Wake"]
+   ["3_08_durfey.jpg" "Durfey"]
+   ["4_01_addison.jpg" "Addison"]
+   ["4_02_steele.jpg" "Steele"]
+   ["4_03_clarke.jpg" "Clarke"]
+   ["4_04_cibber.jpg" "Cibber"]
+   ["4_06_haywood.jpg" "Haywood"]
+   ["4_09_hoadly.jpg" "Hoadly"]
+   ["x2_02_locke.jpg" "Locke"]
    ["x2_05_newton.jpg" "Newton"]])
 
 (defn rand-int-chan [max-num cond-fn]
   (let [ch (chan)]
     (go
       (while (cond-fn)
-        (<! (timeout (* 1000 15)))
+        (<! (timeout (* 1000 5)))
         (>! ch (rand-int max-num)))
       (close! ch))
     ch))
@@ -37,40 +63,20 @@
     (let [[src name] (nth imgs n)]
       [:div.text-center
        [:img
-        {:style {:max-height "350px" :width "auto" :box-shadow "3px 3px 3px #888888"}
+        {:style {:box-shadow "3px 3px 3px #888888"}
          :src (str "/img/" src)}]
        [:br] [:br]
        name])))
 
 (defn header []
-  [re-com/box :size "70px" :child
-   [re-com/title :label "A corpus query interface (plus annotations)" :level :level2]])
-
-(defn footerlink [label href]
-  (fn []
-    [:a {:href href :style {:color "white" :font-size "13px"}} label]))
-
-(defn footer []
-  [:footer.nav.navbar.navbar-inverse.navbar-fixed-bottom
-   {:style {:background-color "#2a2730" :color "#99979c"}}
-   [re-com/v-box :align :baseline :size "80px" :margin "0 15px 0 15px" 
-    :children
-    [[:br]
-     [re-com/v-box :margin "0 0 0 20px" :gap "5px"
-      :children 
-      [[re-com/h-box :gap "25px"
-        :children
-        [[:li [footerlink "GitHub" "http://www.github.com/emanjavacas/cleebo"]]
-         [:li [footerlink "MindBendingGrammars" "https://www.uantwerpen.be/en/projects/mind-bending-grammars/"]]
-         [:li [footerlink "ERC" "http://erc.europa.eu"]]]]
-       [re-com/p "Powered by ClojureScript and Reagent"]]]
-     [:br]]]])
+  [re-com/box :size "70px" :margin "0 0 20px 0" :child
+   [re-com/title :label "A corpus query interface (plus annotations)" :level :level1]])
 
 (defn body [n]
   (fn [n]
-    [re-com/h-box :height "500px"    ;body
+    [re-com/h-box :height "500px"
      :children
-     [[re-com/v-box :size "80%"
+     [[re-com/v-box :size "70%"
        :children
        [[:br]
         [re-com/p "Welcome to the home page of Cleebo:  " "Corpus Linguistics with EEBO."]
@@ -87,12 +93,9 @@
         (reset! n new)
         (recur)))
     (fn []
-      [re-com/v-box
+      [re-com/v-box :margin "0 45px 0 45px"; :align :center
        :children 
-       [[re-com/v-box :margin "0 45px 0 45px"; :align :center
-         :children 
-         [[header]
-          [re-com/line]
-          [body @n]]]
+       [[header]
         [re-com/line]
-        [footer]]])))
+        [body @n]
+        [re-com/line]]])))

@@ -7,7 +7,7 @@
               [cleebo.routes :as routes]
               [cleebo.pages.home :refer [home-panel]]
               [cleebo.pages.login :refer [login-panel]]              
-              [cleebo.pages.annotation :refer [about-panel]]))
+              [cleebo.pages.about :refer [about-panel]]))
 
 (defmulti panels identity)
 (defmethod panels :home-panel [] [home-panel])
@@ -45,6 +45,26 @@
           [navlink "#/login" "login/join" :login-panel collapsed?]
           [navlink "#/about" "about" :about-panel collapsed?]]]]])))
 
+(defn footerlink [label href]
+  (fn []
+    [:a {:href href :style {:color "white" :font-size "13px"}} label]))
+
+(defn footer []
+  [:footer.nav.navbar.navbar-inverse.navbar-fixed-bottom
+   {:style {:background-color "#2a2730" :color "#99979c"}}
+   [re-com/v-box :align :baseline :size "80px" :margin "0 15px 0 15px" 
+    :children
+    [[:br]
+     [re-com/v-box :margin "0 0 0 25px" :gap "5px"
+      :children 
+      [[re-com/h-box :gap "25px"
+        :children
+        [[:li [footerlink "GitHub" "http://www.github.com/emanjavacas/cleebo"]]
+         [:li [footerlink "MindBendingGrammars" "https://www.uantwerpen.be/en/projects/mind-bending-grammars/"]]
+         [:li [footerlink "ERC" "http://erc.europa.eu"]]]]
+       [re-com/p "Powered by ClojureScript and Reagent"]]]
+     [:br]]]])
+
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])]
     (fn []
@@ -53,7 +73,8 @@
        :gap "55px"
        :children 
        [[navbar]
-        (panels @active-panel)]])))
+        (panels @active-panel)
+        [footer]]])))
 
 (defn mount-root []
   (reagent/render [main-panel] (.getElementById js/document "app")))

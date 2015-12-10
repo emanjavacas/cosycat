@@ -56,3 +56,5 @@
      (Thread. (fn [] (.stop system))))
     (.start system)))
 
+(defn -main [& args]
+  (run))
