@@ -12,30 +12,6 @@
               
               [cleebo.pages.login :refer [join]]))
 
-(let [{:keys [chsk ch-recv send-fn state]}
-      (sente/make-channel-socket! "/chsk" {:type :auto})]
-  (def chsk       chsk)
-  (def ch-chsk    ch-recv)
-  (def chsk-send! send-fn)
-  (def ch-state   state))
-
-(defmulti event-handler :id)
-(defmethod event-handler :default
-  [{:as ev-msg :keys [event]}]
-  (join event))
-(defmethod event-handler :chsk/state
-  [{:as ev-msg :keys [?data]}]
-  (if (= ?data {:first-open? true})
-    (join "Channel socket successfully established!")
-    (join (str "Channel socket state change: %s" ?data))))
-(defmethod event-handler :chsk/recv
-  [{:as ev-msg :keys [?data]}]
-  (join (str "Push event from server: %s" ?data)))
-(defmethod event-handler :chsk/handshake
-  [{:as ev-msg :keys [?data]}]
-  (let [[?uid ?csrf-token ?handshake-data] ?data]
-    (join (str "Handshake: %s" ?data))))
-
 (defmulti panels identity)
 (defmethod panels :home-panel [] [home-panel])
 (defmethod panels :login-panel [] [login-panel])

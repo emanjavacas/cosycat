@@ -4,7 +4,31 @@
             [re-com.core :as re-com]
             [taoensso.sente :as sente]))
 
-(declare login-form join-form)
+(declare login-form join-form join)
+
+(let [{:keys [chsk ch-recv send-fn state]}
+      (sente/make-channel-socket! "/chsk" {:type :auto :packer :edn})]
+  (def chsk       chsk)
+  (def ch-chsk    ch-recv)
+  (def chsk-send! send-fn)
+  (def chsk-state   state))
+
+(defmulti event-handler :id)
+(defmethod event-handler :default
+  [{:as ev-msg :keys [event]}]
+  (join event))
+(defmethod event-handler :chsk/state
+  [{:as ev-msg :keys [?data]}]
+  (if (= ?data {:first-open? true})
+    (join "Channel socket successfully established!")
+    (join (str "Channel socket state change: %s" ?data))))
+(defmethod event-handler :chsk/recv
+  [{:as ev-msg :keys [?data]}]
+  (join (str "Push event from server: %s" ?data)))
+(defmethod event-handler :chsk/handshake
+  [{:as ev-msg :keys [?data]}]
+  (let [[?uid ?csrf-token ?handshake-data] ?data]
+    (join (str "Handshake: %s" ?data))))
 
 (def tabs-def 
   [{:id :login :label "Login" :say-this "Login with your account"}
@@ -15,12 +39,23 @@
     :login [login-form]
     :join  [join-form]))
 
-(defn login []
-  (.log js/console "Don't do anything yet"))
+(defn by-id [id]
+  (.getElementById js/document id))
 
 (defn join  [new-name]
   (let [name (re-frame/subscribe [:name])]
     (re-frame/dispatch [:new-name new-name])))
+
+(defn login []
+  (let [user-id (.-value (by-id "login-username"))]
+    (sente/ajax-call
+     "/login"
+     {:method :post
+      :params {:user-id (str user-id)
+               :csrf-token (:csrf-token @chsk-state)}}
+     (fn [ajax-res]
+       (join (str ajax-res))
+       (sente/chsk-reconnect! chsk)))))
 
 (defn login-form []
   [:div.panel
@@ -36,7 +71,7 @@
       [:input.form-control {:id :login-password :type "password" :placeholder "Password"}]]
      [:div.form-group.pull-right
       [re-com/button :label "Login" :style {:margin-right "15px"}
-       :on-click #(join "Ho!")]]]]
+       :on-click #(login)]]]]
       [:div.pull-right {:style {:margin-right "14px" :font-size "11px"}}
        [:a {:href "forgot"} "forgot password?"]]])
 
@@ -62,7 +97,7 @@
       [:input.form-control {:id :join-password :type "password" :placeholder "Password"}]]     
      [:div.form-group.pull-right
       [re-com/button :label "Join" :style {:margin-right "15px"}
-       :on-click join]]]]])
+       :on-click #(join "Ho!")]]]]])
 
 (defn login-panel []
   (let [selected? (reagent/atom (:id (first tabs-def)))
