@@ -15,9 +15,12 @@
     :login [login-form]
     :join  [join-form]))
 
-(defn login [])
+(defn login []
+  (.log js/console "Don't do anything yet"))
 
-(defn join  [])
+(defn join  [new-name]
+  (let [name (re-frame/subscribe [:name])]
+    (re-frame/dispatch [:new-name new-name])))
 
 (defn login-form []
   [:div.panel
@@ -33,30 +36,30 @@
       [:input.form-control {:id :login-password :type "password" :placeholder "Password"}]]
      [:div.form-group.pull-right
       [re-com/button :label "Login" :style {:margin-right "15px"}
-       :on-click login]]]]
+       :on-click #(join "Ho!")]]]]
       [:div.pull-right {:style {:margin-right "14px" :font-size "11px"}}
        [:a {:href "forgot"} "forgot password?"]]])
 
 (defn join-form []
   [:div.panel
    [:div.panel-body
-    [:form.form-horizontal {:id :login}
+    [:form.form-horizontal {:id :join}
      [:div.input-group {:style {:margin-bottom "25px"}}
       [:span.input-group-addon
        [:i [re-com/md-icon-button :size :smaller :md-icon-name "zmdi-account-circle"]]]
-      [:input.form-control {:id :login-username :type "text" :placeholder "First name"}]]
+      [:input.form-control {:id :join-first :type "text" :placeholder "First name"}]]
      [:div.input-group {:style {:margin-bottom "25px"}}
       [:span.input-group-addon
        [:i [re-com/md-icon-button :size :smaller :md-icon-name "zmdi-account-circle"]]]
-      [:input.form-control {:id :login-password :type "text" :placeholder "Last name"}]]
+      [:input.form-control {:id :join-last :type "text" :placeholder "Last name"}]]
      [:div.input-group {:style {:margin-bottom "25px"}}
       [:span.input-group-addon
        [:i [re-com/md-icon-button :size :smaller :md-icon-name "zmdi-email"]]]
-      [:input.form-control {:id :login-password :type "text" :placeholder "Email"}]]
+      [:input.form-control {:id :join-email :type "text" :placeholder "Email"}]]
      [:div.input-group {:style {:margin-bottom "25px"}}
       [:span.input-group-addon
        [:i [re-com/md-icon-button :size :smaller :md-icon-name "zmdi-key"]]]
-      [:input.form-control {:id :login-password :type "password" :placeholder "Password"}]]     
+      [:input.form-control {:id :join-password :type "password" :placeholder "Password"}]]     
      [:div.form-group.pull-right
       [re-com/button :label "Join" :style {:margin-right "15px"}
        :on-click join]]]]])

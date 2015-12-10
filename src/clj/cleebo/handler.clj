@@ -1,17 +1,10 @@
 (ns cleebo.handler
   (:require [compojure.core :refer [GET POST routes defroutes wrap-routes]]
             [compojure.route :refer [not-found resources]]
-            [ring.util.response :refer [file-response response]]
-
+            [cleebo.layout :refer [error-page home-page]]
+            [ring.util.response :refer [response content-type]]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
-            
-            [ring.middleware.anti-forgery :refer [wrap-anti-forgery]]
-            [ring.middleware.reload :refer [wrap-reload]]
-            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
-            [ring.middleware.params :refer [wrap-params]]
-            [ring.middleware.nested-params :refer [wrap-nested-params]]
-            [ring.middleware.session :refer [wrap-session]]              
-
+            [ring-ttl-session.core :refer [ttl-memory-store]]
             [taoensso.sente.server-adapters.http-kit :refer [sente-web-server-adapter]]
             [taoensso.sente :as sente]
             [cemerick.friend :as friend]
@@ -34,35 +27,42 @@
   (def chsk-send!             send-fn)
   (def connected-uids         connected-uids))
 
+(defmulti event-handler :id)
+(defmethod event-handler :default
+  [{:as ev-msg {:keys [event id ?data ring-req ?reply-fn send-fn]}}]
+  (let [session (:session ring-req)
+        uid     (:uid     session)]
+    (when ?reply-fn
+      (?reply-fn {:unmatched-event-as-echoed-from-server event}))))
+
 (defroutes handler
-  (GET "/" [] (file-response "index.html" {:root "resources/public"}))
-  (GET "/login" [] (file-response "index.html" {:root "resources/public"}))
-  (GET "/debug" [req] (fn [req] {:status 200 :header {"Content-Type" "text/html" :body req}}))
-;  (resources "/")
+  (GET "/" [] (home-page))
+  (GET "/login" [] )
+  (GET "/debug" req (error-page {:message (str req)}))
   (GET "/chsk" req (ring-ajax-get-or-ws-hs req))
   (POST "/chsk" req (ring-ajax-post))
-  (not-found "<p>Not found.</p>"))
+  (resources "/")
+  (not-found (error-page {:status 404 :title "Page not found"})))
 
-;; (defn wrap-csrf [handler]
-;;   (wrap-anti-forgery
-;;    handler
-;;    {:error-response
-;;     {:status 403
-;;      :header {"Content-Type" "text/html; charset=utf-8"}
-;;      :body "<p>Invalid anti-forgery token</p>"}}))
-
-;; (defn wrap-internal-error [handler]
-;;   (fn [req]
-;;     (try
-;;       (handler req)
-;;       (catch Throwable t
-;;         {:status 500
-;;          :header {"Content-Type" "text/html; charset=utf-8"}
-;;          :body "<p>Something bad happened. Walking three times 
-;;                 around the table may solve it.</p>"}))))
+(defn wrap-internal-error [handler]
+  (fn [req]
+    (try
+      (handler req)
+      (catch Throwable t
+        (error-page
+         {:status 500
+          :title "Something very bad happened!"
+          :message (str t)})))))
 
 (defn wrap-base [handler]
-  (-> (wrap-defaults handler site-defaults)
+  (-> handler
+      (wrap-defaults 
+       (-> site-defaults
+           (assoc-in [:security :anti-forgery]
+                     {:read-token (fn [req] (-> req :params :csrf-token))
+                      :error-response (error-page {:status 403 :message "Missing anti-forgery-token"})})
+           (assoc-in [:session :store] (ttl-memory-store (* 60 180)))))
+      wrap-internal-error
       ;; (friend/authenticate
       ;;  {:credential-fn (partial credentials/bcrypt-credential-fn users)
       ;;   :workflows [(workflows/interactive-form)]})
@@ -71,5 +71,3 @@
 
 (def app
   (wrap-routes #'handler wrap-base))
-
-

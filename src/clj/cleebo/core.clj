@@ -2,8 +2,13 @@
   (:require [com.stuartsierra.component :as component]
             [cleebo.handler :refer [app init destroy]]
             [org.httpkit.server :as http-kit]
+            [clojure.tools.nrepl.server :as nrepl]
+            [taoensso.timbre :as timbre]
+            [environ.core :refer [env]]
             [cqp-clj.core :refer [make-cqi-client connect! disconnect!]]
             [cqp-clj.spec :refer [read-init]]))
+
+(defonce nrepl-server (atom nil))
 
 (defn parse-port [port]
   (when port
@@ -11,6 +16,23 @@
       (string? port) (Integer/parseInt port)
       (number? port) port
       :else (throw (Exception. (str "Invalid port value: " port))))))
+
+(defn stop-nrepl []
+  (when-let [server @nrepl-server]
+    (nrepl/stop-server server)))
+
+(defn start-nrepl []
+  (if @nrepl-server
+    (timbre/error "nREPL is already running!")
+    (when-let [port (env :nrepl-port)]
+      (try
+        (->> port
+             parse-port
+             (nrepl/start-server :port)
+             (reset! nrepl-server))
+        (timbre/info "nREPL server started on port" port)
+        (catch Throwable t
+          (timbre/error t "failed to start nREPL"))))))
 
 (defn- start-http-server [app port]
   (let [server (http-kit/run-server app {:port port})]
@@ -49,12 +71,18 @@
 
 (defn run []
   (let [system (create-system {:handler #'app
-                               :port 3000
+                               :port (or (env :port) 3000)
                                :init-file "dev-resources/cqpserver.init"})]
     (.addShutdownHook 
      (Runtime/getRuntime) 
-     (Thread. (fn [] (.stop system))))
-    (.start system)))
+     (Thread. (fn []
+                (stop-nrepl)
+                (.stop system))))
+    (try
+      (.start system)
+      (catch Throwable t
+        (.stop system)))))
 
 (defn -main [& args]
+  (start-nrepl)
   (run))
