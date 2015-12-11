@@ -7,6 +7,8 @@
   (parser/render-file "index.html" {}))
 
 (defn error-page [error-details]
-  (-> {:status (:status error-details)
-       :body (parser/render-file "error.html" error-details)}
-      (content-type "text/html")))
+  (parser/render-file "error.html" error-details)
+  ;; (-> {:status (:status error-details)
+  ;;      :body (parser/render-file "error.html" error-details)}
+  ;;     (content-type "text/html"))
+  )

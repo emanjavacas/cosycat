@@ -2,7 +2,6 @@
     (:require [reagent.core :as reagent]
               [re-frame.core :as re-frame]
               [re-com.core :as re-com]
-              [taoensso.sente :as sente]
               [cleebo.handlers]
               [cleebo.subs]
               [cleebo.routes :as routes]

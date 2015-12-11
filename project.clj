@@ -14,12 +14,14 @@
                  [ring/ring-anti-forgery "1.0.0"]
                  [ring-ttl-session "0.3.0"]
                  [ring/ring-defaults "0.1.5"]
+                 [ring/ring-json "0.4.0"]
                  [ring "1.4.0" :exclusions [ring/ring-jetty-adapter]]
-                 [compojure "1.4.0"]
-                 [com.cemerick/friend "0.2.2-SNAPSHOT"]
-                 [com.taoensso/sente "1.7.0"]
-                 [com.stuartsierra/component "0.3.1"]
                  [http-kit "2.1.18"]
+                 [compojure "1.4.0"]
+                 [jarohen/chord "0.7.0"]
+                 [cljs-ajax "0.5.2"]
+                 [com.cemerick/friend "0.2.2-SNAPSHOT"]
+                 [com.stuartsierra/component "0.3.1"]
                  [cqp-clj "0.1.0-SNAPSHOT"]]
 
   :main cleebo.core

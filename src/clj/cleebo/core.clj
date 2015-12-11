@@ -1,6 +1,6 @@
 (ns cleebo.core
   (:require [com.stuartsierra.component :as component]
-            [cleebo.handler :refer [app init destroy start-router!]]
+            [cleebo.handler :refer [app init destroy]]
             [org.httpkit.server :as http-kit]
             [clojure.tools.nrepl.server :as nrepl]
             [taoensso.timbre :as timbre]
@@ -79,15 +79,11 @@
                 (stop-nrepl)
                 (.stop system))))
     (try
+      (start-nrepl)
       (.start system)
       (catch Throwable t
+        (stop-nrepl)
         (.stop system)))))
 
 (defn -main [& args]
-  (start-nrepl)
-  (start-router!)
-  (run))
-
-(defn main []
-  (start-nrepl)
   (run))
