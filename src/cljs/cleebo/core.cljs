@@ -9,7 +9,6 @@
               [cleebo.pages.home :refer [home-panel]]
               [cleebo.pages.login :refer [login-panel]]              
               [cleebo.pages.about :refer [about-panel]]
-              
               [cleebo.pages.login :refer [join]]))
 
 (defmulti panels identity)
@@ -56,7 +55,8 @@
 (defn footer []
   [:footer.nav.navbar.navbar-inverse.navbar-fixed-bottom
    {:style {:background-color "#2a2730" :color "#99979c"}}
-   [re-com/v-box :align :baseline :size "80px" :margin "0 15px 0 15px" 
+   [re-com/v-box :align :baseline 
+    :size "80px" :margin "0 15px 0 15px" 
     :children
     [[:br]
      [re-com/v-box :margin "0 0 0 25px" :gap "5px"

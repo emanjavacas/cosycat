@@ -5,7 +5,9 @@
             [ring.util.response :refer [response content-type redirect]]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
             [ring-ttl-session.core :refer [ttl-memory-store]]
-            [taoensso.sente.server-adapters.http-kit :refer [sente-web-server-adapter]]
+            [taoensso.timbre :as timbre]            
+            [taoensso.sente.server-adapters.http-kit
+             :refer [sente-web-server-adapter]]
             [taoensso.sente :as sente]
             [cemerick.friend :as friend]
             [cemerick.friend.credentials :as credentials]
@@ -13,13 +15,14 @@
             [cleebo.auth :refer [users]]))
 
 (defn init []
-  (println "Initiating application"))
+  (timbre/info "Initiating application"))
 
 (defn destroy []
-  (println "Shutting down!"))
+  (timbre/info "Shutting down!"))
 
 ;;; sente
-(let [{:keys [ch-recv send-fn ajax-post-fn ajax-get-or-ws-handshake-fn connected-uids]}
+(let [{:keys
+       [ch-recv send-fn ajax-post-fn ajax-get-or-ws-handshake-fn connected-uids]}
       (sente/make-channel-socket! sente-web-server-adapter {:packer :edn})]
   (def ring-ajax-post                 ajax-post-fn)
   (def ring-ajax-get-or-ws-handshakes ajax-get-or-ws-handshake-fn)
@@ -27,22 +30,26 @@
   (def chsk-send!                     send-fn)
   (def connected-uids                 connected-uids))
 
-(defmulti event-handler :id)
-(defmethod event-handler :default
+(defmulti event-msg-handler :id)
+(defn event-msg-handler* [{:as ev-msg :keys [id ?data event]}]
+  (event-msg-handler ev-msg))
+(defmethod event-msg-handler :default
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (let [session (:session ring-req)
         uid     (:uid     session)]
+    (timbre/debugf (str "Unhandled event: " event))
     (when ?reply-fn
       (?reply-fn {:unmatched-event-as-echoed-from-server event}))))
 
-(defn login [{session :session {user-id :user-id} :params}]
-;  (assoc (redirect "/") :session (assoc session :uid user-id))
-  {:status 200 :session (assoc session :uid user-id)})
+(defn login [params]
+  (let [{session :session {user-id :user-id} :params} params]
+    (timbre/infof (str "Login request: " params))
+    {:status 200 :session (assoc session :uid user-id)}))
 
 (defroutes handler
   (GET "/" [] (home-page))
-  (GET "/chsk" req (ring-ajax-get-or-ws-hs req))
-  (POST "/chsk" req (ring-ajax-post))
+  (GET "/ws" req (ring-ajax-get-or-ws-handshakes req))
+  (POST "/ws" req (ring-ajax-post req))
   (POST "/login" req (login req))
   (GET "/debug" req (error-page {:message (str req)}))
   (resources "/")
@@ -58,20 +65,40 @@
           :title "Something very bad happened!"
           :message (str t)})))))
 
-(defn wrap-base [handler]
-  (-> handler
-      (wrap-defaults 
-       (-> site-defaults
-           (assoc-in [:security :anti-forgery]
-                     {:read-token (fn [req] (-> req :params :csrf-token))
-                      :error-response (error-page {:status 403 :message "Missing anti-forgery-token"})})
-           (assoc-in [:session :store] (ttl-memory-store (* 60 180)))))
-      wrap-internal-error
-      ;; (friend/authenticate
-      ;;  {:credential-fn (partial credentials/bcrypt-credential-fn users)
-      ;;   :workflows [(workflows/interactive-form)]})
-;      wrap-reload
-      ))
+;; (defn wrap-base [handler]
+;;   (-> handler
+;;       (wrap-defaults 
+;;        (-> site-defaults
+;;            (assoc-in [:security :anti-forgery]
+;;                      {:read-token (fn [req] (-> req :params :csrf-token))
+;;                       :error-response (error-page {:status 403 :message "Missing anti-forgery-token"})})
+;;            (assoc-in [:session :store] (ttl-memory-store (* 60 180)))))
+;;       wrap-internal-error
+;;       ;; (friend/authenticate
+;;       ;;  {:credential-fn (partial credentials/bcrypt-credential-fn users)
+;;       ;;   :workflows [(workflows/interactive-form)]})
+;; ;      wrap-reload
+;;       ))
+
+;; (def app
+;;   (wrap-routes #'handler wrap-base))
 
 (def app
-  (wrap-routes #'handler wrap-base))
+  (let [ring-config
+        (assoc-in site-defaults [:security :anti-forgery]
+                  {:read-token (fn [req] (-> req :params :csrf-token))})]
+    (wrap-defaults handler ring-config)))
+
+(defonce router (atom nil))
+(defn stop-router! [] (when-let [stop-fn @router] (stop-fn)))
+(defn start-router! []
+  (stop-router!)
+  (reset! router (sente/start-chsk-router! ch-chsk event-msg-handler*)))
+
+
+
+;; (prn @connected-uids)
+;; (chsk-send! "asd" [:some/serverpush {:hello "hello"}])
+
+
+

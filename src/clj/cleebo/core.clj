@@ -1,6 +1,6 @@
 (ns cleebo.core
   (:require [com.stuartsierra.component :as component]
-            [cleebo.handler :refer [app init destroy]]
+            [cleebo.handler :refer [app init destroy start-router!]]
             [org.httpkit.server :as http-kit]
             [clojure.tools.nrepl.server :as nrepl]
             [taoensso.timbre :as timbre]
@@ -36,7 +36,7 @@
 
 (defn- start-http-server [app port]
   (let [server (http-kit/run-server app {:port port})]
-    (println (str "Started server on port: " port))
+    (timbre/info (str "Started server on port: " port))
     server))
 
 (defn- stop-http-server [server]
@@ -84,5 +84,10 @@
         (.stop system)))))
 
 (defn -main [& args]
+  (start-nrepl)
+  (start-router!)
+  (run))
+
+(defn main []
   (start-nrepl)
   (run))
