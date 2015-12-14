@@ -13,6 +13,11 @@
    (assoc db :active-panel active-panel)))
 
 (re-frame/register-handler
- :new-name
+ :set-name
  (fn [db name]
    (assoc db :name name)))
+
+(re-frame/register-handler
+ :set-user
+ (fn [db user]
+   (assoc db :user user)))

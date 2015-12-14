@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset='utf-8'>
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="vendor/css/material-design-iconic-font.min.css">
+    <link rel="stylesheet" href="vendor/css/re-com.css">
+    <link href="http://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic" rel="stylesheet" type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Roboto+Condensed:400,300" rel="stylesheet" type="text/css">
+    <script href="http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script>var csrf = "{{csrf}}";</script>
+  </head>
+  <body>
+    <nav class="navbar navbar-default navbar-fixed-top"> <!-- nav -->
+      <div class="container">
+        <div class="navbar-header">
+          <button class="navbar-toggle" data-toggle="collapse" aria-expanded="true" aria-controls="navbar">
+    	<span class="sr-only">Toggle Navigation
+    	</span>
+    	<span class="icon-bar">
+    	</span>
+    	<span class="icon-bar">
+    	</span>
+    	<span class="icon-bar">
+    	</span>
+          </button>
+          <a href="/" class="navbar-brand">Cleebo
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="panel panel-info" >
+      <div class="panel-heading">
+        <div class="panel-title">Sign In</div>
+        <div style="float:right; font-size: 80%; position: relative; top:-10px"><a href="#">Forgot password?</a></div>
+      </div>     
+      <div style="padding-top:30px" class="panel-body" >
+        <div style="display:none" id="login-alert" class="alert alert-danger col-sm-12"></div>
+        <form id="loginform" class="form-horizontal" role="form">
+          <div style="margin-bottom: 25px" class="input-group">
+            <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+            <input id="login-username" type="text" class="form-control" name="username" value="" placeholder="username or email">                                        
+          </div>
+          <div style="margin-bottom: 25px" class="input-group">
+            <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
+            <input id="login-password" type="password" class="form-control" name="password" placeholder="password">
+          </div>
+          <div class="input-group">
+            <div class="checkbox">
+              <label>
+                <input id="login-remember" type="checkbox" name="remember" value="1"> Remember me
+              </label>
+            </div>
+          </div>
+          <div style="margin-top:10px" class="form-group">
+            <!-- Button -->
+            <div class="col-sm-12 controls">
+              <a id="btn-login" href="#" class="btn btn-success">Login  </a>
+              <a id="btn-fblogin" href="#" class="btn btn-primary">Login with Facebook</a>
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="col-md-12 control">
+              <div style="border-top: 1px solid#888; padding-top:15px; font-size:85%" >
+                Don't have an account! 
+                <a href="#" onClick="$('#loginbox').hide(); $('#signupbox').show()">
+                  Sign Up Here
+                </a>
+              </div>
+            </div>
+          </div>    
+	</form>
+      </div>
+    </div>
+    <footer style="background-color:#2a2730;color:#99979c;" class="nav navbar navbar-inverse navbar-fixed-bottom"> <!-- footer -->
+      <div class="rc-v-box display-flex " style="align-items:baseline;-webkit-flex-flow:column nowrap;-webkit-flex:0 0 80px;-webkit-justify-content:flex-start;flex:0 0 80px;justify-content:flex-start;-webkit-align-items:baseline;flex-flow:column nowrap;margin:0 15px 0 15px;">
+	<br>
+	<div class="rc-v-box display-flex " style="align-items:stretch;-webkit-flex-flow:column nowrap;-webkit-flex:none;-webkit-justify-content:flex-start;flex:none;justify-content:flex-start;-webkit-align-items:stretch;flex-flow:column nowrap;margin:0 0 0 25px;">
+	  <div class="rc-h-box display-flex " style="-webkit-flex-flow:row nowrap;flex-flow:row nowrap;-webkit-flex:none;flex:none;-webkit-justify-content:flex-start;justify-content:flex-start;-webkit-align-items:stretch;align-items:stretch;">
+	    <li>
+	      <a href="http://www.github.com/emanjavacas/cleebo" style="color:white;font-size:13px;">GitHub
+	      </a>
+	    </li>
+	    <div class="rc-gap " style="-webkit-flex:0 0 25px;flex:0 0 25px;width:25px;">
+	    </div>
+	    <li>
+	      <a href="https://www.uantwerpen.be/en/projects/mind-bending-grammars/" style="color:white;font-size:13px;">MindBendingGrammars
+	      </a>
+	    </li>
+	    <div class="rc-gap " style="-webkit-flex:0 0 25px;flex:0 0 25px;width:25px;">
+	    </div>
+	    <li>
+	      <a href="http://erc.europa.eu" style="color:white;font-size:13px;">ERC
+	      </a>
+	    </li>
+	  </div>
+	  <div class="rc-gap " style="-webkit-flex:0 0 5px;flex:0 0 5px;height:5px;">
+	  </div>
+	  <span style="flex:none;width:450px;min-width:450px;">
+	    <p>Powered by ClojureScript and Reagent
+	    </p>
+	  </span>
+	</div>
+	<br>
+      </div>
+    </footer>
+  </body>
+</html>

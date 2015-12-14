@@ -4,7 +4,7 @@
 
 (re-frame/register-sub
  :name
- (fn [db]
+ (fn [db _]
    (reaction (:name @db))))
 
 (re-frame/register-sub

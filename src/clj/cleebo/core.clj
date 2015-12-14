@@ -1,6 +1,8 @@
 (ns cleebo.core
   (:require [com.stuartsierra.component :as component]
-            [cleebo.handler :refer [app init destroy]]
+            [clojure.tools.namespace.repl :refer [refresh refresh-all]]
+            [cleebo.handler :refer [app]]
+            [cleebo.system :refer [system]]
             [org.httpkit.server :as http-kit]
             [clojure.tools.nrepl.server :as nrepl]
             [taoensso.timbre :as timbre]
@@ -9,6 +11,11 @@
             [cqp-clj.spec :refer [read-init]]))
 
 (defonce nrepl-server (atom nil))
+
+(def config-map
+  {:handler #'app
+   :port (or (env :port) 3000)
+   :init-file "dev-resources/cqpserver.init"})
 
 (defn parse-port [port]
   (when port
@@ -46,10 +53,8 @@
 (defrecord Server [handler port]
   component/Lifecycle
   (start [component]
-    (init)
     (assoc component :server (start-http-server handler port)))
   (stop [component]
-    (destroy)
     (stop-http-server (:server component))
     (dissoc component :server)))
 
@@ -69,21 +74,28 @@
                         :port port})
      :cqi-client (map->CQiComponent {:init-file init-file}))))
 
+(defn init []
+  (alter-var-root #'system (constantly (create-system config-map))))
+
+(defn start []
+  (alter-var-root #'system component/start))
+
+(defn stop []
+  (alter-var-root #'system #(when % component/stop)))
+
 (defn run []
-  (let [system (create-system {:handler #'app
-                               :port (or (env :port) 3000)
-                               :init-file "dev-resources/cqpserver.init"})]
+  (init)
+  (start))
+
+(defn reset []
+  (stop)
+  (refresh :after 'cleebo.core/run))
+
+(defn -main [& args]
+  (let [system (create-system config-map)]
     (.addShutdownHook 
      (Runtime/getRuntime) 
      (Thread. (fn []
                 (stop-nrepl)
                 (.stop system))))
-    (try
-      (start-nrepl)
-      (.start system)
-      (catch Throwable t
-        (stop-nrepl)
-        (.stop system)))))
-
-(defn -main [& args]
-  (run))
+    (.start system)))

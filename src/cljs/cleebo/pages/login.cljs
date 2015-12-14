@@ -22,43 +22,65 @@
 (defn join []
   (let [name (re-frame/subscribe [:name])
         new-name (.-value (by-id "join-first"))]
-    (re-frame/dispatch [:new-name new-name])))
+    (re-frame/dispatch [:set-name new-name])))
 
 (defn login-error [{:keys [status status-text failure] :as response}]
-  (timbre/debug response)
   (timbre/debug "Error [" status-text "] with key [" status "] happened. Reason " failure))
 
 (defn login-success [{:keys [message] :as response}]
-  (timbre/debug "Got: " response)
-  (timbre/debug "Got: " message))
+  (timbre/debug "Got: " message)
+  (.assign js/window ))
 
-(defn login []
+(defn login [error-atom]
   (let [user-id (.-value (by-id "login-username"))]
     (POST "/login"
-          {:params {:user-id user-id}
-           :handler login-success
+          {:headers {"anti-forgery-token" js/csrf}
+           :params {:user-id user-id}
+           :handler (fn [{:keys [status msg]}]
+                      (timbre/debug "Got from server: " msg)
+                      (case status
+                        :error (reset! error-atom msg)
+                        :ok (do (re-frame/dispatch [:set-user msg])
+                                (.assign js/location "/"))))
            :error-handler login-error
-           :format :json
-           :response-format :raw
-           :keywords? true})))
+           :format :transit
+           :response-format :transit})))
 
 (defn login-form []
-  [:div.panel
-   [:div.panel-body
-    [:form.form-horizontal {:id :login}
-     [:div.input-group {:style {:margin-bottom "25px"}}
-      [:span.input-group-addon
-       [:i [re-com/md-icon-button :size :smaller :md-icon-name "zmdi-account-circle"]]]
-      [:input.form-control {:id :login-username :type "text" :placeholder "Username/Email"}]]
-     [:div.input-group {:style {:margin-bottom "25px"}}
-      [:span.input-group-addon
-       [:i [re-com/md-icon-button :size :smaller :md-icon-name "zmdi-key"]]]
-      [:input.form-control {:id :login-password :type "password" :placeholder "Password"}]]
-     [:div.form-group.pull-right
-      [:button.btn.btn-secondary
-       {:type "button" :style {:margin-right "15px"} :on-click login} "Login"]]]]
-      [:div.pull-right {:style {:margin-right "14px" :font-size "11px"}}
-       [:a {:href "forgot"} "forgot password?"]]])
+  (let [error-msg (atom nil)]
+    (fn []
+      [:div.panel
+       [:div.panel-body
+        [:form.form-horizontal {:id :login :action "/login" :method :post}
+         [:div.input-group {:style {:margin-bottom "25px"}}
+          [:span.input-group-addon
+           [:i [re-com/md-icon-button :size :smaller :md-icon-name "zmdi-account-circle"]]]
+          [:input.form-control
+           {:id :login-username :type "text" :placeholder "Username/Email"}]]
+         [:div.input-group {:style {:margin-bottom "25px"}}
+          [:span.input-group-addon
+           [:i [re-com/md-icon-button :size :smaller :md-icon-name "zmdi-key"]]]
+          [:input.form-control
+           {:id :login-password :type "password" :placeholder "Password"}]]
+         [re-com/h-box :gap "1" :children 
+          [(if-not @error-msg
+             [:br]
+             [re-com/alert-box
+              :alert-type :none
+              :style {:color             "#222"
+                      :background-color  "rgba(255, 165, 0, 0.1)"
+                      :border-top        "none"
+                      :border-right      "none"
+                      :border-bottom     "none"
+                      :border-left       "4px solid rgba(255, 165, 0, 0.8)"
+                      :border-radius     "0px"}
+              :body "Login-error: Password missmatch"
+              :padding "6px"])
+           [:div.form-group.pull-right
+            [:button.btn.btn-secondary
+             {:type "button" :style {:margin-right "15px"} :on-click login} "Login"]]]]]]
+       [:div.pull-right {:style {:margin-right "14px" :font-size "11px"}}
+        [:a {:href "forgot"} "forgot password?"]]])))
 
 (defn join-form []
   [:div.panel

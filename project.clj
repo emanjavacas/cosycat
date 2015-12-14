@@ -5,8 +5,10 @@
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
                  [com.taoensso/timbre "4.1.4"] 
+                 [prone "0.8.2"]
                  [environ "1.0.1"]
                  [selmer "0.9.3"]
+                 [hiccup "1.0.5"]
                  [reagent "0.5.1"]
                  [re-frame "0.5.0"]
                  [re-com "0.7.0"]
@@ -15,6 +17,7 @@
                  [ring-ttl-session "0.3.0"]
                  [ring/ring-defaults "0.1.5"]
                  [ring/ring-json "0.4.0"]
+                 [ring-transit "0.1.4"]
                  [ring "1.4.0" :exclusions [ring/ring-jetty-adapter]]
                  [http-kit "2.1.18"]
                  [compojure "1.4.0"]
@@ -22,6 +25,7 @@
                  [cljs-ajax "0.5.2"]
                  [com.cemerick/friend "0.2.2-SNAPSHOT"]
                  [com.stuartsierra/component "0.3.1"]
+                 [org.clojure/tools.namespace "0.2.11"]
                  [cqp-clj "0.1.0-SNAPSHOT"]]
 
   :main cleebo.core
