@@ -110,13 +110,14 @@
 (defn tabs [csrf]
   [:div.panel.with-nav-tabs.panel-default
    [:div.panel-heading
-    [:ul.nav.nav-tabs {:role "tablist"}
-     [:li.active [:a {:href "#login" :role "tab" :data-toogle "tab"} "Login"]]
-     [:li [:a {:href "#signup" :role "tab" :data-toogle "tab"} "Join"]]]]
+    [:ul.nav.nav-tabs
+     [:li.active [:a {:href "#login"  :data-toggle "tab"} "Login"]]
+     [:li        [:a {:href "#signup" :data-toggle "tab"} "Join"]]]]
    [:div.panel-body
     [:div.tab-content
-     [:div#login.tab-pane.active
-      [:form#loginform.form-horizontal {:action "/login" :method :post}
+     [:div#signup.tab-pane [:p "asd"]]
+     [:div#login.tab-pane.fade.in.active
+      [:form.form-horizontal {:action "/login" :method :post}
        [:input {:style "display:none;" :name "csrf" :value csrf}]
        [:div.input-group {:style "margin-bottom: 25px"}
         [:span.input-group-addon [:i.glyphicon.glyphicon-user]]
@@ -137,9 +138,7 @@
         {:style "margin-top:10px"}
         [:div.pull-right
          [:div.col-sm-12.controls
-          [:button#btn-login.btn.btn-success {:type "submit"} "Login"]]]]]]
-     [:div#signup.tab-pane 
-      [:p "asd"]]]]])
+          [:button.btn-login.btn.btn-success {:type "submit"} "Login"]]]]]]]]])
 
 (defn footer []
   [:footer.nav.navbar.navbar-inverse.navbar-fixed-bottom ;footer

@@ -81,7 +81,7 @@
        {:credential-fn (partial creds/bcrypt-credential-fn app-users)
         :workflows [(wfs/interactive-form)]
         :login-uri "/login"
-        :default-landing-uri "/auth"})                                                      
+        :default-landing-uri "/auth"})      
       (wrap-anti-forgery {:read-token get-token})
       (wrap-session {:store (ttl-memory-store (* 30 60))})
       wrap-transit-params
