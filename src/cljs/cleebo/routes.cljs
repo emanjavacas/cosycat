@@ -16,10 +16,6 @@
 
 (defn app-routes []
   (secretary/set-config! :prefix "#")
-  (defroute "/" []
-    (re-frame/dispatch [:set-active-panel :home-panel]))
-  (defroute "/about" []
-    (re-frame/dispatch [:set-active-panel :about-panel]))
-  (defroute "/login" []
-    (re-frame/dispatch [:set-active-panel :login-panel]))
+  (defroute "/query" []
+    (re-frame/dispatch [:set-active-panel :query-panel]))
   (hook-browser-navigation!))

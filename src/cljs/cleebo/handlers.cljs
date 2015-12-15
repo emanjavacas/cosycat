@@ -21,3 +21,8 @@
  :set-user
  (fn [db user]
    (assoc db :user user)))
+
+(re-frame/register-handler
+ :set-results
+ (fn [db results]
+   (assoc db :results results)))

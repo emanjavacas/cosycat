@@ -3,7 +3,8 @@
             [compojure.route :refer [not-found resources]]
             [taoensso.timbre :as timbre]
             [prone.middleware :refer [wrap-exceptions]]
-            [cleebo.layout :refer [error-page home-page landing-page]]
+            [cleebo.views.layout
+             :refer [error-page cleebo-page landing-page about-page login-page]]
             [ring.util.response :refer [response redirect]]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
             [ring.middleware.anti-forgery
@@ -18,44 +19,45 @@
             [ring-ttl-session.core :refer [ttl-memory-store]]
             [cemerick.friend :as friend]
             [cemerick.friend.credentials :as creds]
-            [cemerick.friend.workflows :as wfs]))
+            [cemerick.friend.workflows :as wfs]
+            [chord.http-kit :refer [with-channel wrap-websocket-handler]]
+            [clojure.core.async :refer [<! >! put! close! go]]))
 
 (def debug-token (atom nil))
 (def app-users
-  {"root" {:username "admin"
+  {"root" {:username "root"
            :password (creds/hash-bcrypt "pass")
            :roles #{::admin}}
    "user" {:username "user"
            :password (creds/hash-bcrypt "pass")
            :roles #{::user}}})
 
-(defn login-workflow [{:keys [params] :as req}]
-  (let [creds {:username (get params :username)
-               :password (get params :password)}
-        cred-fn (get-in req [::friend/auth-config :credential-fn])]
-    (wfs/make-auth (cred-fn creds))))
+(derive ::admin ::user)
 
-(defn login-cred-fn [{:keys [username password] :as login-data}]
-  (if-let [creds (creds/bcrypt-credential-fn app-users login-data)]
-    creds))
+(defn ws-handler [req]
+  (with-channel req ws-ch {:format :transit-json}
+    (go
+      (let [{:keys [message]} (<! ws-ch)]
+        (timbre/debug "Message received: " message)
+        (>! ws-ch "Hello from server!")
+        (close! ws-ch)))))
 
-(defn fun-wf [req]
-  (timbre/debug "workflow called with " (str req))
-  (let [speak (get-in req [:params :username])]
-    (when (= speak "friend")
-      (wfs/make-auth {:identity "user" :roles #{::user}}))))
-
-(defn get-token [req]
-  (timbre/debug "anti" req)
-  (get-in req [:params :csrf]))
+(defn is-logged? [req]
+  (get-in req [:session ::friend/identity]))
 
 (defroutes handler
-  (GET "/" [] (landing-page {:csrf *anti-forgery-token*}))
-  (GET "/auth" req (friend/authorize #{::user} "Only for users"))
-  (POST "/logout" req (redirect "/"))
-  (GET "/debug" req (error-page {:message (str req)}))
+  (GET "/" req (landing-page :logged? (is-logged? req)))
+  (GET "/login" req (login-page :csrf *anti-forgery-token*))
+  (GET "/debug" req (error-page  :message (str req)))
+  (GET "/about" req (friend/authorize #{::admin} (about-page :logged? (is-logged? req))))
+  (GET "/cleebo" req (friend/authorize #{::user} (cleebo-page :csrf *anti-forgery-token*)))
+  (ANY "/logout" req (friend/logout* (redirect "/")))
+  (GET "/ws" req (ws-handler req))
   (resources "/")
-  (not-found (error-page {:status 404 :title "Page not found"})))
+  (not-found (error-page :status 404 :title "Page not found")))
+
+(defn get-token [req]
+  (get-in req [:params :csrf]))
 
 (defn wrap-internal-error [handler]
   (fn [req]
@@ -69,7 +71,7 @@
 
 (defn wrap-debug [handler]
   (fn [req]
-    (timbre/info "debug")
+    (timbre/info req)
     (reset! debug-token req)
     (handler req)))
 
@@ -81,9 +83,11 @@
        {:credential-fn (partial creds/bcrypt-credential-fn app-users)
         :workflows [(wfs/interactive-form)]
         :login-uri "/login"
-        :default-landing-uri "/auth"})      
+        ;:default-landing-uri "/cleebo"
+        })  
       (wrap-anti-forgery {:read-token get-token})
-      (wrap-session {:store (ttl-memory-store (* 30 60))})
+      wrap-session
+      ;(wrap-session {:store (ttl-memory-store (* 30 60))})
       wrap-transit-params
       wrap-keyword-params
       wrap-params
@@ -92,3 +96,5 @@
       wrap-internal-error))
 
 (def app (wrap-routes #'handler wrap-base))
+;;; static routes
+;;; spa routes (ws) ;; secure
