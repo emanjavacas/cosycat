@@ -13,7 +13,7 @@
 ;   ["2_03_stillingfleet.jpg" "Stillingfleet"]
    ["2_04_boyle.jpg" "Boyle"]
    ["2_06_whitby.jpg" "Whitby"]
-   ["2_07_dryden.jpg" "Dryden"]
+;   ["2_07_dryden.jpg" "Dryden"]
    ["2_09_penn.jpg" "Penn"]
    ["2_11_mather.jpg" "Mather"]
    ["2_13_tillotson.jpg" "Tillotson"]

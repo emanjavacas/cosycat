@@ -43,7 +43,11 @@
          [:a.navbar-brand {:href "#/"} @name]]
         [:div.navbar-collapse.collapse
          [:ul.nav.navbar-nav.navbar-right
-          [:li [footerlink "out" "/out"]]]]]])))
+          [:li [re-com/md-icon-button
+                :md-icon-name "zmdi-power"
+                :style {:margin-top "7px"}
+                :size :larger
+                :on-click #(.assign js/location "/logout")]]]]]])))
 
 (defn sidelink [target href label]
   (let [active (re-frame/subscribe [:active-panel])]
@@ -51,24 +55,20 @@
       [:li {:class (when (= active target) "active")}
        [:a {:href href} label]])))
 
-(defn sidebar []
-  (fn []
-    [:div.col-sm-3.col-md-2.sidebar
-     [:ul.nav.nav-sidebar
-      {:style {:margin-right "-21px;" :margin-bottom "20px;" :margin-left "-20px;"}}
-      [sidelink :query-panel "#/query" "query"]
-      [sidelink :query-panel "#/home" "home?"]
-      [sidelink :query-panel "#/else" "else"]]]))
-
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])]
     (fn []
       [:div
        [navbar]
        [:div.container-fluid
-        [:div.row {:style {:padding-top "50px;"}}
-         [sidebar]
-         [:div.col-sm-9.col-sm-offset-3.col-md-10.col-md-offset-2.main
+        [:div.row {:style {:padding-top "45px;"}}
+         [:div.col-sm-2.col-md-1.sidebar ;sidebar
+          [:ul.nav.nav-sidebar
+           [sidelink :query-panel "#/query" "query"]
+           [sidelink :query-panel "#/home" "home"]
+           [sidelink :query-panel "#/settings" "settings"]      
+           [sidelink :query-panel "#/updates" "updates"]]]
+         [:div.col-sm-10.col-sm-offset-2.col-md-11.col-md-offset-1.main
           (panels @active-panel)]]]])))
 
 (defn mount-root []
