@@ -26,3 +26,13 @@
  :set-results
  (fn [db results]
    (assoc db :results results)))
+
+(re-frame/register-handler
+ :input-msg
+ (fn [db msg]
+   (update-in db [:input-msg] #(conj % msg))))
+
+(re-frame/register-handler
+ :remove-last
+ (fn [db _]
+   (update db :input-msg #(vec (drop-last %)))))

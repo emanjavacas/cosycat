@@ -16,3 +16,8 @@
  :results
  (fn [db _]
    (reaction (:results @db))))
+
+(re-frame/register-sub
+ :input-msg
+ (fn [db _]
+   (reaction (:input-msg @db))))

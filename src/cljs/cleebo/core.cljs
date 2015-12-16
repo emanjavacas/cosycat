@@ -5,7 +5,8 @@
               [cleebo.handlers]
               [cleebo.subs]
               [cleebo.routes :as routes]
-              [cleebo.pages.query :refer [query-panel]]))
+              [cleebo.pages.query :refer [query-panel make-ws-ch]]
+              [taoensso.timbre :as timbre]))
 
 (defmulti panels identity)
 (defmethod panels :query-panel [] [query-panel])
@@ -76,6 +77,11 @@
 
 (defn ^:export init [] 
   (routes/app-routes)
+  (make-ws-ch
+   (str "ws://" (.-host js/location) "/ws")
+   #(do 
+      (timbre/debug %)
+      (re-frame/dispatch [:input-msg %])))
   (re-frame/dispatch-sync [:initialize-db])
   (mount-root))
 

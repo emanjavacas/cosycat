@@ -18,6 +18,7 @@
                  [ring/ring-defaults "0.1.5"]
                  [ring/ring-json "0.4.0"]
                  [ring-transit "0.1.4"]
+                 [com.cognitect/transit-clj "0.8.285"]
                  [ring "1.4.0" :exclusions [ring/ring-jetty-adapter]]
                  [http-kit "2.1.18"]
                  [compojure "1.4.0"]

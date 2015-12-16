@@ -57,14 +57,15 @@
 
 (defn connect! [ws-ch]
   (timbre/info "channel open")
-  (swap! channels conj channels))
+  (swap! channels conj ws-ch))
 
 (defn disconnect! [ws-ch status]
   (timbre/info "channel closed: " status)
-  (swap! channels #(remove #{channels} %)))
+  (swap! channels #(remove #{ws-ch} %)))
 
 (defn notify-clients [msg]
-  (doseq [channel channels]
+  (doseq [channel @channels]
+    (timbre/debug (str "Sending " msg " to channel: " channel))
     (kit/send! channel msg)))
 
 (defn is-logged? [req]
@@ -101,7 +102,7 @@
 
 (defn wrap-base [handler]
   (-> handler   
-      ;wrap-debug
+      wrap-debug
       wrap-reload
       (friend/authenticate
        {:credential-fn (partial creds/bcrypt-credential-fn app-users)
