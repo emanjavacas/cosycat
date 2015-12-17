@@ -1,0 +1,3 @@
+.navbar-default > .navbar-nav > li > i:hover, .navbar-default .navbar-nav > li > i:focus {
+    color: #cecece;
+}

@@ -24,23 +24,14 @@
     [:a {:href href :style {:color "white" :font-size "13px"}} label]))
 
 (defn navbar []
-  (let [collapsed? (reagent/atom true)
-        name (re-frame/subscribe [:name])]
+  (let [name (re-frame/subscribe [:name])]
     (fn []
       [:nav.navbar.navbar-default.navbar-fixed-top
-       {:style {:background-color "#2a2730" :color "#99979c" :min-height "25px !important"}}
+       {:style {:background-color "#2a2730"
+                :color "#99979c"
+                :min-height "25px !important"}}
        [:div.container
         [:div.navbar-header
-         [:button.navbar-toggle
-          {:class         (when-not @collapsed? "collapsed")
-           :data-toggle   "collapse"
-           :aria-expanded @collapsed?
-           :aria-controls "navbar"
-           :on-click      #(swap! collapsed? not)}
-          [:span.sr-only  "Toggle Navigation"]
-          [:span.icon-bar]
-          [:span.icon-bar]
-          [:span.icon-bar]]
          [:a.navbar-brand {:href "#/"} @name]]
         [:div.navbar-collapse.collapse
          [:ul.nav.navbar-nav.navbar-right
@@ -79,9 +70,7 @@
   (routes/app-routes)
   (make-ws-ch
    (str "ws://" (.-host js/location) "/ws")
-   #(do 
-      (timbre/debug %)
-      (re-frame/dispatch [:input-msg %])))
+   #(re-frame/dispatch [:ws-in %]))
   (re-frame/dispatch-sync [:initialize-db])
   (mount-root))
 

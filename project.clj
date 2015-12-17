@@ -4,6 +4,7 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
+                 [com.novemberain/monger "3.0.0-rc2"]
                  [com.taoensso/timbre "4.1.4"] 
                  [prone "0.8.2"]
                  [environ "1.0.1"]
@@ -64,9 +65,6 @@
              :http-server-root "public"
              :server-port 3449
              :nrepl-port 7888}
-  :profiles {:dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
-                                  [figwheel-sidecar "0.5.0-1"]]
-                   :source-paths ["src/cljs"]}}
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]})
 
 

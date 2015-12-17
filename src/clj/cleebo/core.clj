@@ -1,78 +1,28 @@
 (ns cleebo.core
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer [refresh refresh-all]]
-            [cleebo.handler :refer [app]]
+            [cleebo.http-server :refer [new-http-server]]
+            [cleebo.handler :refer [new-handler]]
             [cleebo.system :refer [system]]
-            [org.httpkit.server :as http-kit]
-            [clojure.tools.nrepl.server :as nrepl]
+            [cleebo.db :refer [new-db]]
+            [cleebo.cqp :refer [new-cqi-client]]
             [taoensso.timbre :as timbre]
-            [environ.core :refer [env]]
-            [cqp-clj.core :refer [make-cqi-client connect! disconnect!]]
-            [cqp-clj.spec :refer [read-init]]))
-
-(defonce nrepl-server (atom nil))
+            [environ.core :refer [env]]))
 
 (def config-map
   {:handler #'app
-   :port (or (env :port) 3000)
-   :init-file "dev-resources/cqpserver.init"})
-
-(defn parse-port [port]
-  (when port
-    (cond
-      (string? port) (Integer/parseInt port)
-      (number? port) port
-      :else (throw (Exception. (str "Invalid port value: " port))))))
-
-(defn stop-nrepl []
-  (when-let [server @nrepl-server]
-    (nrepl/stop-server server)))
-
-(defn start-nrepl []
-  (if @nrepl-server
-    (timbre/error "nREPL is already running!")
-    (when-let [port (env :nrepl-port)]
-      (try
-        (->> port
-             parse-port
-             (nrepl/start-server :port)
-             (reset! nrepl-server))
-        (timbre/info "nREPL server started on port" port)
-        (catch Throwable t
-          (timbre/error t "failed to start nREPL"))))))
-
-(defn- start-http-server [app port]
-  (let [server (http-kit/run-server app {:port port})]
-    (timbre/info (str "Started server on port: " port))
-    server))
-
-(defn- stop-http-server [server]
-  (when server
-    (server :timeout 100)))
-
-(defrecord Server [handler port]
-  component/Lifecycle
-  (start [component]
-    (assoc component :server (start-http-server handler port)))
-  (stop [component]
-    (stop-http-server (:server component))
-    (dissoc component :server)))
-
-(defrecord CQiComponent [client init-file]
-  component/Lifecycle
-  (start [component]
-    (let [client (:client (make-cqi-client (read-init init-file)))]
-      (assoc component :client client)))
-  (stop [component]
-    (disconnect! component)
-    (assoc component :client nil)))
+   :port (:port env)
+   :database-url (:database-url env)
+   :cqp-init-file (:cqp-init-file env)})
 
 (defn create-system [config-map]
-  (let [{:keys [handler port init-file]} config-map]
+  (let [{:keys [handler port cqp-init-file database-url]} config-map]
     (component/system-map
-     :web (map->Server {:handler handler
-                        :port port})
-     :cqi-client (map->CQiComponent {:init-file init-file}))))
+     :http-server (component/using
+                   (new-http-server {:port port})
+                   [:components])
+     :cqi-client (new-cqi-client {:init-file cqp-init-file})
+     :db (new-db {:url database-url}))))
 
 (defn init []
   (alter-var-root #'system (constantly (create-system config-map))))

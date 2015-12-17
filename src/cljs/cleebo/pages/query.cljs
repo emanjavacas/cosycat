@@ -98,7 +98,6 @@
         [re-com/box
          :child
          [:div
-          [:div (str @messages)]
           [:ul (for [[i msg] (map-indexed vector (reverse @messages))]
                  ^{:key i}
                  [:li (:text (second msg))])]]]]])))

@@ -1,5 +1,7 @@
 (ns cleebo.handler
-  (:require [compojure.core :refer [GET POST ANY routes defroutes wrap-routes]]
+  (:require [com.stuartsierra.component :as component]
+            [compojure.core
+             :refer [GET POST ANY routes defroutes wrap-routes]]
             [compojure.route :refer [not-found resources]]
             [taoensso.timbre :as timbre]
             [prone.middleware :refer [wrap-exceptions]]
@@ -37,18 +39,8 @@
 
 (derive ::admin ::user)
 
-(defn ws-handler [req]
-  (with-channel req ws-ch {:format :transit-json}
-    (let [secs (atom 0)]
-      (go
-        (let [{:keys [message] :as load} (<! ws-ch)]
-          (timbre/debug "Message received: " load)
-          (<! (timeout 10000))
-          (timbre/debug "Waited " (str (swap! secs + 10000)))
-          (>! ws-ch (str "Hello from server!" (rand-int 10)))
-          (timbre/debug "Sent message"))))))
-
 (declare connect! disconnect! notify-clients)
+
 (defn ws-handler-http-kit [req]
   (kit/with-channel req ws-ch
     (connect! ws-ch)
@@ -71,7 +63,7 @@
 (defn is-logged? [req]
   (get-in req [:session ::friend/identity]))
 
-(defroutes handler
+(defroutes app-routes
   (GET "/" req (landing-page :logged? (is-logged? req)))
   (GET "/login" req (login-page :csrf *anti-forgery-token*))
   (GET "/debug" req (error-page  :message (str req)))
@@ -118,4 +110,14 @@
       wrap-exceptions
       wrap-internal-error))
 
-(def app (wrap-routes #'handler wrap-base))
+(def web-app (wrap-routes #'app-routes wrap-base))
+
+(defn wrap-app-component [handler components]
+  (fn [req]
+    (handler (assoc req ::components components))))
+
+(defn make-handler [component]
+  (let [components (select-keys component (:components component))]
+    (-> app-routes
+        (wrap-app-component components)
+        (wrap-routes wrap-base))))
