@@ -1,5 +1,6 @@
 (ns cleebo.http-server
   (:require [clojure.tools.nrepl.server :as nrepl]
+            [cleebo.handler :refer [make-handler]]
             [com.stuartsierra.component :as component]
             [taoensso.timbre :as timbre]
             [org.httpkit.server :as kit]

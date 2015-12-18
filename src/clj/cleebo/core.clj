@@ -2,7 +2,6 @@
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer [refresh refresh-all]]
             [cleebo.http-server :refer [new-http-server]]
-            [cleebo.handler :refer [new-handler]]
             [cleebo.system :refer [system]]
             [cleebo.db :refer [new-db]]
             [cleebo.cqp :refer [new-cqi-client]]
@@ -17,12 +16,12 @@
 
 (defn create-system [config-map]
   (let [{:keys [handler port cqp-init-file database-url]} config-map]
-    (component/system-map
-     :http-server (component/using
-                   (new-http-server {:port port})
-                   [:components])
-     :cqi-client (new-cqi-client {:init-file cqp-init-file})
-     :db (new-db {:url database-url}))))
+    (-> (component/system-map
+         :cqi-client (new-cqi-client {:init-file cqp-init-file})
+         :db (new-db {:url database-url})
+         :http-server (new-http-server {:port port :components [:cqi-client :db]}))
+        (component/system-using
+         {:http-server [:cqi-client :db]}))))
 
 (defn init []
   (alter-var-root #'system (constantly (create-system config-map))))
