@@ -2,15 +2,18 @@
   (:require [com.stuartsierra.component :as component]
             [cqp-clj.core :refer [make-cqi-client connect! disconnect!]]
             [cqp-clj.spec :refer [read-init]]
-            [environ.core :refer [env]]))
+            [environ.core :refer [env]]
+            [taoensso.timbre :as timbre]))
 
 (defrecord CQiComponent [client init-file]
   component/Lifecycle
   (start [component]
     (let [client (:client (make-cqi-client (read-init init-file)))]
+      (timbre/info "Connected to CQPServer")
       (assoc component :client client)))
   (stop [component]
-    (disconnect! component)
+    (timbre/info "Shutting down connection to CQPServer")
+    (disconnect! (:client component))
     (assoc component :client nil)))
 
 (defn new-cqi-client [{:keys [init-file]}]

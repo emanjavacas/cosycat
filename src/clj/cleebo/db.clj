@@ -3,7 +3,8 @@
             [monger.collection :as mc]
             [monger.operators :refer :all]
             [com.stuartsierra.component :as component]
-            [environ.core :refer [env]]))
+            [environ.core :refer [env]]
+            [taoensso.timbre :as timbre]))
 
 (defrecord DB [db conn url]
   component/Lifecycle 
@@ -11,11 +12,13 @@
     (if (and conn db)
       component
       (let [{:keys [conn db]} (mg/connect-via-uri url)]
+        (timbre/info "starting DB")
         (assoc component :db db :conn conn))))
   (stop [component]
     (if-not conn
       component
       (let [conn (:conn component)]
+        (timbre/info "Shutting down DB")
         (mg/disconnect conn)
         (assoc component :db nil :conn nil)))))
 
