@@ -65,6 +65,7 @@
              :http-server-root "public"
              :server-port 3449
              :nrepl-port 7888}
-  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]})
+  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]
+                 :timeout 120000})
 
 

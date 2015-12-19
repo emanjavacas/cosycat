@@ -19,7 +19,7 @@
         (mg/disconnect conn)
         (assoc component :db nil :conn nil)))))
 
-(defn new-db [& [url]]
+(defn new-db [{:keys [url]}]
   (map->DB {:url url}))
 
 (defn add-user [db {:keys [username password]}]
