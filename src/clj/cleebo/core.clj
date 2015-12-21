@@ -3,7 +3,6 @@
             [clojure.tools.namespace.repl :refer [refresh refresh-all]]
             [clojure.tools.nrepl.server :refer [start-server stop-server]]
             [cleebo.http-server :refer [new-http-server]]
-            [cleebo.system :refer [system]]
             [cleebo.db :refer [new-db]]
             [cleebo.cqp :refer [new-cqi-client]]
             [taoensso.timbre :as timbre]
@@ -49,6 +48,8 @@
         (component/system-using
          {:http-server [:cqi-client :db]}))))
 
+(defonce system nil)
+
 (defn init []
   (alter-var-root #'system (constantly (create-system config-map))))
 
@@ -56,8 +57,7 @@
   (alter-var-root #'system component/start))
 
 (defn stop []
-  (timbre/info "stopping")
-  (alter-var-root #'system #(when % component/stop)))
+  (alter-var-root #'system component/stop))
 
 (defn run []
   (init)

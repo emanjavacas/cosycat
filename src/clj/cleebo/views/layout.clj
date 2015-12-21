@@ -4,43 +4,6 @@
 
 (declare base nav tabs footer)
 
-(defn landing-page [& {:keys [logged?] :or {:logged? false}}]
-  (let [{href :href name :name} (random-img)]
-    (base 
-     {:left  [:div
-              [:h2 "Welcome to the home page. "
-               [:span.text-muted "Corpus Linguistics with ECCO & EEBO"]]              
-              [:p.lead "Donec ullamcorper nulla non metus auctor fringilla. 
-                      Vestibulum id ligula porta felis euismod semper.
-                      Praesent commodo cursus magna, vel scelerisque nisl consectetur.
-                      Fusce dapibus, tellus ac cursus commodo."]]
-      :right [:div.panel.panel-default
-              [:div.panel-body {:style "text-align: center;"}
-               [:img {:src (str "img/" href) :alt name}]]
-              [:div.panel-footer {:style "text-align: center;"} name]]
-      :logged? logged?})))
-
-(defn about-page [& {:keys [logged?] :or {:logged? false}}]
-  (let [{href :href name :name} (random-img)]
-    (base 
-     {:left  [:div
-              [:h2 "About page. "]
-              [:h3 [:span.text-muted "This page was created so&so."]]
-              [:p.lead "Some text block"]
-              [:p.lead "Followed"]
-              [:p.lead "By another"]]
-      :right [:div.panel.panel-default
-              [:div.panel-body {:style "text-align: center;"}
-               [:img {:src (str "img/" href) :alt name}]]
-              [:div.panel-footer {:style "text-align: center;"} name]]
-      :logged? logged?})))
-
-(defn login-page [& {:keys [csrf]}]
-  (base
-   {:left  [:p.lead "Please login to access this resource"]
-    :right (tabs csrf)
-    :logged? false}))
-
 (def bootstrap-css
   "http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css")
 
@@ -49,53 +12,6 @@
 
 (def jquery
   "http://code.jquery.com/jquery-1.9.1.min.js")
-
-(defn cleebo-page [& {:keys [csrf]}]
-  (html
-   [:html
-    {:lang "en"}
-    [:head
-     [:meta {:charset "utf-8"}]
-     [:link {:href bootstrap-css :rel "stylesheet"}]
-     [:link {:href "vendor/css/material-design-iconic-font.min.css" :rel "stylesheet"}]
-     [:link {:href "vendor/css/dashboard.css" :rel "stylesheet"}]
-     [:link {:href "vendor/css/re-com.css", :rel "stylesheet"}]
-     [:link {:href "css/main.css" :rel "stylesheet"}]
-     [:link
-      {:type "text/css" :rel "stylesheet"
-       :href "http://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic"}]
-     [:link
-      {:type "text/css" :rel "stylesheet"
-       :href "http://fonts.googleapis.com/css?family=Roboto+Condensed:400,300"}]]
-    [:body
-     [:div#app]
-     [:script (str "var csrf =\"" csrf "\";")]
-     [:script {:src "js/compiled/app.js"}]
-     [:script "cleebo.core.init();"]]]))
-
-(defn error-page
-  [& {:keys [status title message] :or
-      {:status "404" :title "Error!" :message "Walk three times around the table!"}}]
-  (html
-   [:html
-    [:head
-     [:title "Something bad happened"]
-     [:meta
-      {:content "text/html; charset=UTF-8", :http-equiv "Content-Type"}]
-     [:meta
-      {:content "width=device-width, initial-scale=1.0",
-       :name "viewport"}]
-     [:link {:href bootstrap-css :rel "stylesheet"}]]
-    [:body
-     [:div.container-fluid
-      [:div.row-fluid
-       [:div.col-lg-12
-        [:div.centering.text-center
-         [:div.text-center
-          [:h1 [:span.text-danger (str "Error: " status)]]
-          [:hr]
-          [:h2.without-margin title]
-          [:h4.text-danger message]]]]]]]]))
 
 (defn base [{:keys [left right logged?]}]
   (html
@@ -120,72 +36,6 @@
        [:div.col-md-7 left]
        [:div.col-md-5 right]]]
      (footer)]]))
-
-(defn tabs [csrf]
-  [:div.panel.with-nav-tabs.panel-default
-   [:div.panel-heading
-    [:ul.nav.nav-tabs
-     [:li.active [:a {:href "#login"  :data-toggle "tab"} "Login"]]
-     [:li        [:a {:href "#signup" :data-toggle "tab"} "Join"]]]]
-   [:div.panel-body
-    [:div.tab-content
-     [:div#login.tab-pane.fade.in.active ;login
-      [:form.form-horizontal {:action "/login" :method :post}
-       [:input {:style "display:none;" :name "csrf" :value csrf}]
-       [:div.input-group {:style "margin-bottom: 25px"}
-        [:span.input-group-addon [:i.glyphicon.glyphicon-user]]
-        [:input.form-control
-         {:placeholder "username or email"
-          :value ""
-          :name "username"
-          :type "text"}]]
-       [:div.input-group
-        {:style "margin-bottom: 25px"}
-        [:span.input-group-addon [:i.glyphicon.glyphicon-lock]]
-        [:input.form-control
-         {:placeholder "password"
-          :value ""
-          :name "password"
-          :type "password"}]]
-       [:div.form-group
-        {:style "margin-top:10px"}
-        [:div.pull-right {:style "text-align: right;"}
-         [:div.col-sm-12.controls
-          [:button.btn-login.btn.btn-success {:type "submit"} "Login"]]
-         [:br]
-         [:div {:style "font-size: 12px; padding: 25px 10px 0 0;"}
-          [:a {:href "#"} "forgot password?"]]]]]]
-     [:div#signup.tab-pane              ;signup
-      [:form.form-horizontal {:action "/signup" :method :post}
-       [:input {:style "display:none;" :name "csrf" :value csrf}]
-       [:div.input-group {:style "margin-bottom: 25px"}
-        [:span.input-group-addon [:i.glyphicon.glyphicon-user]]
-        [:input.form-control
-         {:placeholder "username or email"
-          :value ""
-          :name "username"
-          :type "text"}]]
-       [:div.input-group
-        {:style "margin-bottom: 25px"}
-        [:span.input-group-addon [:i.glyphicon.glyphicon-lock]]
-        [:input.form-control
-         {:placeholder "password"
-          :value ""
-          :name "password"
-          :type "password"}]]
-       [:div.input-group
-        {:style "margin-bottom: 25px"}
-        [:span.input-group-addon [:i.glyphicon.glyphicon-lock]]
-        [:input.form-control
-         {:placeholder "repeat password"
-          :value ""
-          :name "repeatpassword"
-          :type "password"}]]
-       [:div.form-group
-        {:style "margin-top:10px"}
-        [:div.pull-right
-         [:div.col-sm-12.controls
-          [:button.btn-login.btn.btn-success {:type "submit"} "Join"]]]]]]]]])
 
 (defn nav [& [logged?]]
   [:nav.navbar.navbar-default.navbar-fixed-top ;navbar

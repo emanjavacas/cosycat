@@ -13,7 +13,7 @@
       (assoc component :client client)))
   (stop [component]
     (timbre/info "Shutting down connection to CQPServer")
-    (disconnect! (:client component))
+    (disconnect! component)
     (assoc component :client nil)))
 
 (defn new-cqi-client [{:keys [init-file]}]

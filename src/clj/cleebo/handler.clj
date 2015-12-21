@@ -5,8 +5,12 @@
             [compojure.route :refer [not-found resources]]
             [taoensso.timbre :as timbre]
             [prone.middleware :refer [wrap-exceptions]]
-            [cleebo.views.layout
-             :refer [error-page cleebo-page landing-page about-page login-page]]
+            [cleebo.db :refer [load-user-fn app-roles]]
+            [cleebo.views.error :refer [error-page]]
+            [cleebo.views.cleebo :refer [cleebo-page]]
+            [cleebo.views.landing :refer [landing-page]]
+            [cleebo.views.about :refer [about-page]]
+            [cleebo.views.login :refer [login-page]]
             [ring.util.response :refer [response redirect]]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
             [ring.middleware.anti-forgery
@@ -29,16 +33,6 @@
 
 (def debug-token (atom nil))
 (defonce channels (atom #{}))
-(def app-users
-  {"root" {:username "root"
-           :password (creds/hash-bcrypt "pass")
-           :roles #{::admin}}
-   "user" {:username "user"
-           :password (creds/hash-bcrypt "pass")
-           :roles #{::user}}})
-
-(derive ::admin ::user)
-
 (declare connect! disconnect! notify-clients)
 
 (defn ws-handler-http-kit [req]
@@ -67,8 +61,10 @@
   (GET "/" req (landing-page :logged? (is-logged? req)))
   (GET "/login" req (login-page :csrf *anti-forgery-token*))
   (GET "/debug" req (error-page  :message (str req)))
-  (GET "/about" req (friend/authorize #{::admin} (about-page :logged? (is-logged? req))))
-  (GET "/cleebo" req (friend/authorize #{::user} (cleebo-page :csrf *anti-forgery-token*)))
+  (GET "/about" req
+       (friend/authorize (:admin app-roles) (about-page :logged? (is-logged? req))))
+  (GET "/cleebo" req
+       (friend/authorize (:user app-roles) (cleebo-page :csrf *anti-forgery-token*)))
   (ANY "/logout" req (friend/logout* (redirect "/")))
   (GET "/ws" req (ws-handler-http-kit req))
   (resources "/")
@@ -92,17 +88,27 @@
     (timbre/info req)
     (handler req)))
 
+(defn wrap-auth [handler]
+  (friend/authenticate
+   handler
+   {:credential-fn (partial creds/bcrypt-credential-fn
+;                            (load-user-fn (get-in handler [::components :db]))
+                            )
+    :workflows [(wfs/interactive-form
+                 :login-failure-handler
+                 (fn [req]
+                   (response (login-page
+                              :csrf *anti-forgery-token*
+                              :error-msg "Invalid credentials"))))]
+    :login-uri "/login"}))
+
 (defn wrap-base [handler]
   (-> handler   
       wrap-debug
       wrap-reload
-      (friend/authenticate
-       {:credential-fn (partial creds/bcrypt-credential-fn app-users)
-        :workflows [(wfs/interactive-form)]
-        :login-uri "/login"})  
+      wrap-auth
       (wrap-anti-forgery {:read-token get-token})
-      wrap-session
-      ;(wrap-session {:store (ttl-memory-store (* 30 60))})
+      (wrap-session {:store (ttl-memory-store (* 30 60))})
       wrap-transit-params
       wrap-keyword-params
       wrap-params

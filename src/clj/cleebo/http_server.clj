@@ -11,6 +11,7 @@
 
 (defn- stop-http-server [server]
   (when server
+    (timbre/info "Shutting down server")
     (server :timeout 100)))
 
 (defrecord HttpServer [port http-server components]
