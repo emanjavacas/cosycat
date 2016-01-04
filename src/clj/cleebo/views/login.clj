@@ -3,7 +3,7 @@
 
 (declare tabs)
 
-(defn alert [title]
+(defn alert-error [title]
   [:div.alert.alert-danger
    {:style "border-right:none;
             color:#333;
@@ -15,17 +15,29 @@
             border-bottom:none;"}
    title])
 
-(defn login-page [& {:keys [csrf error-msg]}]
+(defn alert-success [title]
+  [:div.alert.alert-success
+   {:style "border-right:none;
+            color:#333;
+            background-color:rgba(60, 118, 61, 0.1);
+            padding: 7px;
+            border-left:4px solid rgba(60, 118, 61, 0.8);
+            border-top:none;
+            border-radius:0px;
+            border-bottom:none;"}
+   title])
+
+(defn login-page [& {:keys [csrf error-msg success-msg]}]
   (base
    {:left  [:p.lead "Please login to access this resource"]
-    :right (tabs csrf error-msg)
+    :right (tabs csrf error-msg success-msg)
     :logged? false}))
 
-(defn tabs [csrf & [error-msg]]
+(defn tabs [csrf & [error-msg success-msg]]
   [:div.panel.with-nav-tabs.panel-default
    [:div.panel-heading
     [:ul.nav.nav-tabs
-     [:li.active [:a {:href "#login"  :data-toggle "tab"} "Logins"]]
+     [:li.active [:a {:href "#login"  :data-toggle "tab"} "Login"]]
      [:li        [:a {:href "#signup" :data-toggle "tab"} "Join"]]]]
    [:div.panel-body
     [:div.tab-content
@@ -53,7 +65,9 @@
          [:div.col-sm-12.controls
           [:div.row
            [:div.col-md-8 {:style "text-align: left;"}
-            (if error-msg (alert error-msg) "")]
+            (if error-msg (alert-error error-msg)
+                (if success-msg (alert-success success-msg)
+                    ""))]
            [:div.col-md-4
             [:button.btn-login.btn.btn-success {:type "submit"} "Login"]]]]
          [:br]

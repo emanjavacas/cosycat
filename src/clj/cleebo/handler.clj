@@ -3,15 +3,16 @@
             [compojure.core
              :refer [GET POST ANY routes defroutes wrap-routes]]
             [compojure.route :refer [not-found resources]]
+            [compojure.response :refer [render]]            
             [taoensso.timbre :as timbre]
             [prone.middleware :refer [wrap-exceptions]]
-            [cleebo.db :refer [load-user-fn app-roles]]
+            [cleebo.db :refer [lookup-user is-user? new-user]]
             [cleebo.views.error :refer [error-page]]
             [cleebo.views.cleebo :refer [cleebo-page]]
             [cleebo.views.landing :refer [landing-page]]
             [cleebo.views.about :refer [about-page]]
             [cleebo.views.login :refer [login-page]]
-            [ring.util.response :refer [response redirect]]
+            [ring.util.response :refer [redirect response]]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
             [ring.middleware.anti-forgery
              :refer [wrap-anti-forgery *anti-forgery-token*]]
@@ -23,15 +24,16 @@
             [ring.middleware.session :refer [wrap-session]]
             [ring.middleware.reload :refer [wrap-reload]]
             [ring-ttl-session.core :refer [ttl-memory-store]]
-            [cemerick.friend :as friend]
-            [cemerick.friend.credentials :as creds]
-            [cemerick.friend.workflows :as wfs]
+            [buddy.auth :refer [authenticated? throw-unauthorized]]
+            [buddy.auth.backends.session :refer [session-backend]]
+            [buddy.auth.middleware
+             :refer [wrap-authentication wrap-authorization]]
+            [buddy.auth.accessrules :refer [restrict]]
             [chord.http-kit :refer [with-channel]]
             [org.httpkit.server :as kit]
             [clojure.core.async
              :refer [<! >! put! close! go go-loop timeout chan mult tap]]))
 
-(def debug-token (atom nil))
 (defonce channels (atom #{}))
 (declare connect! disconnect! notify-clients)
 
@@ -54,24 +56,86 @@
     (timbre/debug (str "Sending " msg " to channel: " channel))
     (kit/send! channel msg)))
 
+(defn on-login-failure [req]
+  (render
+   (login-page
+    :csrf *anti-forgery-token*
+    :error-msg "Invalid credentials")
+   req))
+
+(defn on-signup-failure [req msg]
+  (render
+   (login-page
+    :csrf *anti-forgery-token*
+    :error-msg msg)
+   req))
+
+(defn signup [req]
+  (let [{{:keys [password repeatpassword username]} :params session :session} req
+        db (get-in req [::components :db])
+        user {:username username :password password}
+        is-user (is-user? db user)
+        password-match (= password repeatpassword)]
+    (timbre/debug user is-user db password-match)
+    (cond
+      (not password-match) (on-signup-failure req "Password mismatch")
+      is-user              (on-signup-failure req "User already exists")
+      :else (let [user (new-user db user)
+                  new-session (assoc session :identity user)]
+              (-> (redirect (get-in req [:session :next] "/"))
+                  (assoc :session new-session))))))
+
+(defn get-username [params form-params]
+  (or (get form-params "username") (:username params "")))
+
+(defn get-password [params form-params]
+  (or (get form-params "password") (:password params "")))
+
+(defn login-authenticate [on-login-failure]
+  (fn [req]
+    (let [{:keys [params form-params session]} req
+          db (get-in req [::components :db])
+          username (get-username params form-params)
+          password (get-password params form-params)]
+      (if-let [user (lookup-user db username password)]
+        (let [new-session (assoc session :identity user)]
+          (-> (redirect (get-in req [:session :next] "/"))
+              (assoc :session new-session)))
+        (on-login-failure req)))))
+
+(defn unauthorized-handler [req meta]
+  (-> (response "Unauthorized")
+      (assoc :status 403)))
+
+(def auth-backend
+  (session-backend {:unauthorized-handler unauthorized-handler}))
+
+(defn safe [handler rule-map]
+  (fn [req]
+    (let [{:keys [login-uri is-ok?]} rule-map]
+      (if (is-ok? req)
+        (handler req)
+        (-> (redirect login-uri)
+            (assoc-in [:session :next] (:uri req)))))))
+
 (defn is-logged? [req]
-  (get-in req [:session ::friend/identity]))
+  (get-in req [:session :identity]))
 
 (defroutes app-routes
   (GET "/" req (landing-page :logged? (is-logged? req)))
   (GET "/login" req (login-page :csrf *anti-forgery-token*))
-  (GET "/debug" req (error-page  :message (str req)))
-  (GET "/about" req
-       (friend/authorize (:admin app-roles) (about-page :logged? (is-logged? req))))
-  (GET "/cleebo" req
-       (friend/authorize (:user app-roles) (cleebo-page :csrf *anti-forgery-token*)))
-  (ANY "/logout" req (friend/logout* (redirect "/")))
+  (POST "/login" req (login-authenticate on-login-failure))
+  (POST "/signup" req (signup req))
+  (GET "/about" req (safe
+                     (fn [req] (about-page :logged? (is-logged? req)))
+                     {:login-uri "/login" :is-ok? authenticated?}))
+  (GET "/cleebo" req (safe
+                      (fn [req] (cleebo-page :csrf *anti-forgery-token*))
+                      {:login-uri "/login" :is-ok? authenticated?}))
+  (ANY "/logout" req (-> (redirect "/") (assoc :session {})))
   (GET "/ws" req (ws-handler-http-kit req))
   (resources "/")
   (not-found (error-page :status 404 :title "Page not found")))
-
-(defn get-token [req]
-  (get-in req [:params :csrf]))
 
 (defn wrap-internal-error [handler]
   (fn [req]
@@ -88,26 +152,13 @@
     (timbre/info req)
     (handler req)))
 
-(defn wrap-auth [handler]
-  (friend/authenticate
-   handler
-   {:credential-fn (partial creds/bcrypt-credential-fn
-;                            (load-user-fn (get-in handler [::components :db]))
-                            )
-    :workflows [(wfs/interactive-form
-                 :login-failure-handler
-                 (fn [req]
-                   (response (login-page
-                              :csrf *anti-forgery-token*
-                              :error-msg "Invalid credentials"))))]
-    :login-uri "/login"}))
-
 (defn wrap-base [handler]
   (-> handler   
       wrap-debug
       wrap-reload
-      wrap-auth
-      (wrap-anti-forgery {:read-token get-token})
+      (wrap-authorization auth-backend)
+      (wrap-authentication auth-backend)
+      (wrap-anti-forgery {:read-token (fn [req] (get-in req [:params :csrf]))})
       (wrap-session {:store (ttl-memory-store (* 30 60))})
       wrap-transit-params
       wrap-keyword-params

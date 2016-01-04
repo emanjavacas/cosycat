@@ -2,7 +2,7 @@
   (:require [monger.core :as mg]
             [monger.collection :as mc]
             [monger.operators :refer :all]
-            [cemerick.friend.credentials :as creds]
+            [buddy.hashers :as hashers]
             [com.stuartsierra.component :as component]
             [environ.core :refer [env]]
             [taoensso.timbre :as timbre]))
@@ -26,11 +26,12 @@
 (defn new-db [{:keys [url]}]
   (map->DB {:url url}))
 
-(def app-roles
-  {:admin ::admin
-   :user ::user})
+(defn app-roles [role]
+  (let [roles {:admin ::admin
+               :user ::user}]
+    (hash-set (get roles role nil))))
 
-(derive (:admin app-roles) (:user app-roles))
+(derive ::admin ::user)
 
 (defn ->keyword [s]
   (keyword (str "cleebo.db/" s)))
@@ -41,46 +42,36 @@
         coll "users"
         roles (or roles [:user])]
     (if (not (mc/find-one-as-map db-conn coll {:username username}))
-      (mc/insert-and-return
-       db-conn
-       coll {:username username
-             :password (creds/hash-bcrypt password)
-             :roles (map app-roles roles)}))))
+      (-> (mc/insert-and-return
+           db-conn
+           coll {:username username
+                 :password (hashers/encrypt password {:alg :bcrypt+blake2b-512})
+                 :roles (map app-roles roles)})
+          (dissoc :password)
+          (dissoc :_id)))))
 
 (defn is-user? [db user]
   (let [db-conn (:db db)
-        {:keys [username password]} user
-        coll "users"]
-    (boolean (mc/find-one-as-map db-conn coll {:username username}))))
+        {:keys [username password]} user]
+    (boolean (mc/find-one-as-map db-conn "users" {:username username}))))
 
-(defn load-user-fn [db]
-  (let [db-conn (:db db)
-        coll "users"]
-    (fn [username]
-      (if-let [creds (mc/find-one-as-map db-conn coll {:username username})]
-        (-> creds
-            (update :password creds/hash-bcrypt)
-            (update :roles #(into #{} (map ->keyword %))))))))
+(defn lookup-user [db username password]
+  (let [db-conn (:db db)]
+    (if-let [user (mc/find-one-as-map db-conn "users" {:username username})]
+      (if (hashers/check password (:password user))
+        (-> user
+            (update :roles #(into #{} (map ->keyword %)))
+            (dissoc :password)
+            (dissoc :_id))))))
 
 (defn remove-user [db username]
-  (let [db-conn (:db db)
-        coll "users"]
+  (let [db-conn (:db db)]
     (if (is-user? db {:username username})
-      (mc/remove db-conn coll {:username username}))))
+      (mc/remove db-conn "users" {:username username}))))
 
-;; (def app-users
-;;   {"root" {:username "root"
-;;            :password (creds/hash-bcrypt "pass")
-;;            :roles (into #{} (select-keys app-roles [:admin]))}
-;;    "user" {:username "user"
-;;            :password (creds/hash-bcrypt "pass")
-;;            :roles (into #{} (select-keys app-roles [:user]))}})
-
+;; (def db (component/start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
 ;; (new-user conn {:username "quique" :password "pass"})
-;; (new-user conn {:username "root" :password "pass"})
-;; (new-user conn {:username "user" :password "pass"})
-;; ((load-user-fn conn) "root")
-;; (remove-user conn "root")
+;; (remove-user db "quique"))
 ;; (def conn (mg/connect-via-uri (:database-url env)))
 ;; (mc/insert (:db conn) "test" {:username "root" :password "bar" :roles #{::user}})
 ;; (mc/create-index (:db conn) "test" [:username])
