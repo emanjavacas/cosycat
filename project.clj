@@ -39,9 +39,7 @@
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target" "test/js"]
   :cljsbuild {:builds
               [{:id "dev"
-                :source-paths ["src/cljs"]
-                :figwheel {:on-jsload cleebo.core/mount-root
-                           :websocket-host :js-client-host}
+                :source-paths ["src/cljs"]                
                 :compiler {:main cleebo.core
                            :output-to "resources/public/js/compiled/app.js"
                            :output-dir "resources/public/js/compiled/out"
@@ -61,11 +59,11 @@
                            :optimizations :advanced
                            :closure-defines {goog.DEBUG false}
                            :pretty-print false}}]}
-  :figwheel {:css-dirs ["resources/public/css"]
-             :ring-handler cleebo.handler/app
-             :http-server-root "public"
-             :server-port 3449
-             :nrepl-port 7888}
+  ;; :figwheel {:css-dirs ["resources/public/css"]
+  ;;            ;; :ring-handler cleebo.handler/web-app
+  ;;            :http-server-root "public"
+  ;;            :server-port 3449
+  ;;            :nrepl-port 7888}
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]
                  :timeout 120000})
 

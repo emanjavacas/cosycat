@@ -1,5 +1,6 @@
 (ns cleebo.handler
   (:require [com.stuartsierra.component :as component]
+            [environ.core :refer [env]]
             [compojure.core
              :refer [GET POST ANY routes defroutes wrap-routes]]
             [compojure.route :refer [not-found resources]]
@@ -135,7 +136,7 @@
   (ANY "/logout" req (-> (redirect "/") (assoc :session {})))
   (GET "/ws" req (ws-handler-http-kit req))
   (resources "/")
-  (not-found (error-page :status 404 :title "Page not found")))
+  (not-found (error-page :status 404 :title "Page not found!!")))
 
 (defn wrap-internal-error [handler]
   (fn [req]
@@ -178,3 +179,4 @@
     (-> app-routes
         (wrap-app-component components)
         (wrap-routes wrap-base))))
+

@@ -5,6 +5,7 @@
             [cleebo.http-server :refer [new-http-server]]
             [cleebo.db :refer [new-db]]
             [cleebo.cqp :refer [new-cqi-client]]
+            [cleebo.figwheel :refer [new-figwheel]]
             [taoensso.timbre :as timbre]
             [environ.core :refer [env]]))
 
@@ -44,9 +45,11 @@
     (-> (component/system-map
          :cqi-client (new-cqi-client {:init-file cqp-init-file})
          :db (new-db {:url database-url})
-         :http-server (new-http-server {:port port :components [:cqi-client :db]}))
+         :http-server (new-http-server {:port port :components [:cqi-client :db]})
+         :figwheel (new-figwheel))
         (component/system-using
-         {:http-server [:cqi-client :db]}))))
+         {:http-server [:cqi-client :db]
+          :figwheel [:http-server]}))))
 
 (defonce system nil)
 

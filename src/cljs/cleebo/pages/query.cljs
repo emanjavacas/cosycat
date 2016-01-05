@@ -8,7 +8,7 @@
             [cognitect.transit :as t])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-(def url "ws://146.175.15.30:3449/ws")
+;; (def url "ws://146.175.15.30:3449/ws")
 ;; (defn in-chan [url & {:keys [format] :or {:format :transit-json}}]
 ;;   (let [out (chan)]
 ;;     (go
