@@ -2,35 +2,10 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [re-com.core :as re-com]
-            ;[chord.client :refer [ws-ch]]
+            [cognitect.transit :as t]
             [cljs.core.async :refer [<! >! put! close! timeout chan]]
-            [taoensso.timbre :as timbre]
-            [cognitect.transit :as t])
+            [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.async.macros :refer [go]]))
-
-;; (def url "ws://146.175.15.30:3449/ws")
-;; (defn in-chan [url & {:keys [format] :or {:format :transit-json}}]
-;;   (let [out (chan)]
-;;     (go
-;;       (loop [in (:ws-channel (<! (ws-ch url {:format format})))]
-;;         (let [{:keys [message error] :as data} (<! in)]
-;;           (if data
-;;             (do (cond message (>! out message)
-;;                       error   (close! in))
-;;                 (recur in))
-;;             (do (timbre/debug "Connection failed!")
-;;                 (<! (timeout 1000))
-;;                 (recur (:ws-channel (<! (ws-ch url {:format format})))))))))
-;;     out))
-
-;; (defn out-chan [url & {:keys [format] :or {:format :transit-json}}]
-;;   (let [in (chan)]
-;;     (go
-;;       (loop [out (:ws-channel (<! (ws-ch url {:format format})))]
-;;         (let [data (<! in)]
-;;           (>! out data)
-;;           (recur out))))
-;;     in))
 
 (defonce ws-ch (atom nil))
 (def json-reader (t/reader :json-verbose))
@@ -81,7 +56,7 @@
          :md-icon-name "zmdi-search"
          :size :smaller
          :on-click #(let [text (.-value (by-id "query"))]
-                      (send-transit-msg! {:text text}))]]]]]]])
+                      (send-transit-msg! {:msg text}))]]]]]]])
 
 (defn results-frame []
   (let [messages (re-frame/subscribe [:input-msg])]
@@ -103,7 +78,7 @@
                  [:li (:text (second msg))])]]]]])))
 
 (defn annotation-frame []
-  [:div "annotation frame"])
+  [:div "annotation frame!!!"])
 
 (defn query-main []
   (let [annotation? (atom true)]

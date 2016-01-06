@@ -1,7 +1,6 @@
 (ns cleebo.core
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer [refresh refresh-all]]
-            [clojure.tools.nrepl.server :refer [start-server stop-server]]
             [cleebo.http-server :refer [new-http-server]]
             [cleebo.db :refer [new-db]]
             [cleebo.cqp :refer [new-cqi-client]]
@@ -14,32 +13,6 @@
    :database-url (:database-url env)
    :cqp-init-file (:cqp-init-file env)})
 
-(defonce nrepl-server (atom nil))
-
-(defn parse-port [port]
-  (when port
-    (cond
-      (string? port) (Integer/parseInt port)
-      (number? port) port
-      :else (throw (Exception. (str "Invalid port value: " port))))))
-
-(defn stop-nrepl []
-  (when-let [server @nrepl-server]
-    (stop-server server)))
-
-(defn start-nrepl []
-  (if @nrepl-server
-    (timbre/error "nREPL is already running!")
-    (when-let [port (env :nrepl-port)]
-      (try
-        (->> port
-             parse-port
-             (start-server :port)
-             (reset! nrepl-server))
-        (timbre/info "nREPL server started on port" port)
-        (catch Throwable t
-          (timbre/error t "failed to start nREPL"))))))
-
 (defn create-system [config-map]
   (let [{:keys [handler port cqp-init-file database-url]} config-map]
     (-> (component/system-map
@@ -48,8 +21,7 @@
          :http-server (new-http-server {:port port :components [:cqi-client :db]})
          :figwheel (new-figwheel))
         (component/system-using
-         {:http-server [:cqi-client :db]
-          :figwheel [:http-server]}))))
+         {:http-server [:cqi-client :db]}))))
 
 (defonce system nil)
 
@@ -75,6 +47,5 @@
     (.addShutdownHook 
      (Runtime/getRuntime) 
      (Thread. (fn []
-                (stop-nrepl)
                 (.stop system))))
     (.start system)))

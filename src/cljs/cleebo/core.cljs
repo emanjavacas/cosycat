@@ -6,7 +6,8 @@
               [cleebo.subs]
               [cleebo.routes :as routes]
               [cleebo.pages.query :refer [query-panel make-ws-ch]]
-              [taoensso.timbre :as timbre]))
+              [taoensso.timbre :as timbre]
+              [figwheel.client :as figwheel]))
 
 (defmulti panels identity)
 (defmethod panels :query-panel [] [query-panel])
@@ -64,13 +65,18 @@
           (panels @active-panel)]]]])))
 
 (defn mount-root []
-  (reagent/render [main-panel] (.getElementById js/document "app")))
+  (.log js/console "Called mount-root")
+  (reagent/render [#'main-panel] (.getElementById js/document "app")))
+
+(defn set-ws-ch []
+  (make-ws-ch
+   (str "ws://" (.-host js/location) "/ws")
+   #(re-frame/dispatch [:ws-in %])))
 
 (defn ^:export init [] 
   (routes/app-routes)
-  (make-ws-ch
-   (str "ws://" (.-host js/location) "/ws")
-   #(re-frame/dispatch [:ws-in %]))
+  (set-ws-ch)
   (re-frame/dispatch-sync [:initialize-db])
-  (mount-root))
+  (mount-root)
+  (figwheel/start {:websocket-url "ws://146.175.15.30:3449/figwheel-ws"}))
 

@@ -35,6 +35,7 @@
             [clojure.core.async
              :refer [<! >! put! close! go go-loop timeout chan mult tap]]))
 
+;;; ws
 (defonce channels (atom #{}))
 (declare connect! disconnect! notify-clients)
 
@@ -57,6 +58,7 @@
     (timbre/debug (str "Sending " msg " to channel: " channel))
     (kit/send! channel msg)))
 
+;;; auth
 (defn on-login-failure [req]
   (render
    (login-page
@@ -122,6 +124,7 @@
 (defn is-logged? [req]
   (get-in req [:session :identity]))
 
+;;; routes
 (defroutes app-routes
   (GET "/" req (landing-page :logged? (is-logged? req)))
   (GET "/login" req (login-page :csrf *anti-forgery-token*))
@@ -138,6 +141,7 @@
   (resources "/")
   (not-found (error-page :status 404 :title "Page not found!!")))
 
+;;; middleware
 (defn wrap-internal-error [handler]
   (fn [req]
     (try
