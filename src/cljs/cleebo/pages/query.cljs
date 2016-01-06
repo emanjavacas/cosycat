@@ -23,7 +23,6 @@
 (defn send-transit-msg! [msg]
   (if @ws-ch
     (let [json-msg (t/write json-writer msg)]
-      (timbre/debug "Sent" json-msg)
       (.send @ws-ch json-msg))
     (throw (js/Error. "Websocket is not available!"))))
 
@@ -55,27 +54,28 @@
         [re-com/md-icon-button
          :md-icon-name "zmdi-search"
          :size :smaller
-         :on-click #(let [text (.-value (by-id "query"))]
-                      (send-transit-msg! {:msg text}))]]]]]]])
+         :on-click
+         #(let [text (.-value (by-id "query"))]
+            (send-transit-msg! {:msg text :type :msgs :status :ok}))]]]]]]])
 
 (defn results-frame []
-  (let [messages (re-frame/subscribe [:input-msg])]
+  (let [messages (re-frame/subscribe [:msgs])]
     (fn []
       [re-com/v-box :children
        [[re-com/h-box :align :center
          :children
          [[re-com/md-icon-button
            :md-icon-name "zmdi-edit"
-           :on-click #(send-transit-msg! {:text "Hello everyone!"})]
+           :on-click
+           #(send-transit-msg! {:status :ok :type :msgs :msg "Hello everyone!"})]
           [re-com/md-icon-button
            :md-icon-name "zmdi-copy"
-           :on-click #(re-frame/dispatch [:remove-last nil])]]]
+           :on-click #(timbre/debug "Messages: " @messages)]]]
         [re-com/box
          :child
          [:div
-          [:ul (for [[i msg] (map-indexed vector (reverse @messages))]
-                 ^{:key i}
-                 [:li (:text (second msg))])]]]]])))
+          [:ul (for [[i [msg]] (map-indexed vector (reverse @messages))]
+                 ^{:key i} [:li msg])]]]]])))
 
 (defn annotation-frame []
   [:div "annotation frame!!!"])

@@ -18,6 +18,6 @@
    (reaction (:results @db))))
 
 (re-frame/register-sub
- :input-msg
+ :msgs
  (fn [db _]
-   (reaction (:input-msg @db))))
+   (reaction (:msgs @db))))

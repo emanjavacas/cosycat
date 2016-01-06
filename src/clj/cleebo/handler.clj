@@ -1,11 +1,12 @@
 (ns cleebo.handler
   (:require [com.stuartsierra.component :as component]
             [environ.core :refer [env]]
+            [taoensso.timbre :as timbre]
+            [cognitect.transit :as transit]
             [compojure.core
              :refer [GET POST ANY routes defroutes wrap-routes]]
             [compojure.route :refer [not-found resources]]
             [compojure.response :refer [render]]            
-            [taoensso.timbre :as timbre]
             [prone.middleware :refer [wrap-exceptions]]
             [cleebo.db :refer [lookup-user is-user? new-user]]
             [cleebo.views.error :refer [error-page]]
@@ -37,13 +38,27 @@
 
 ;;; ws
 (defonce channels (atom #{}))
-(declare connect! disconnect! notify-clients)
+(declare connect! disconnect! ws-router)
+
+(defn read-str
+  "Reads a value from a decoded string"
+  [^String s type & opts]
+  (let [in (java.io.ByteArrayInputStream. (.getBytes s "UTF-8"))]
+    (transit/read (transit/reader in type opts))))
+
+(defn write-str
+  "Writes a value to a string."
+  [o type & opts]
+  (let [out (java.io.ByteArrayOutputStream.)
+        writer (transit/writer out type opts)]
+    (transit/write writer o)
+    (.toString out "UTF-8")))
 
 (defn ws-handler-http-kit [req]
   (kit/with-channel req ws-ch
     (connect! ws-ch)
     (kit/on-close ws-ch (partial disconnect! ws-ch))
-    (kit/on-receive ws-ch #(notify-clients %))))
+    (kit/on-receive ws-ch #(ws-router %))))
 
 (defn connect! [ws-ch]
   (timbre/info "channel open")
@@ -57,6 +72,18 @@
   (doseq [channel @channels]
     (timbre/debug (str "Sending " msg " to channel: " channel))
     (kit/send! channel msg)))
+
+(defn on-ws-error [data])
+
+(defn on-ws-success [{:keys [status type msg] :as data}]
+  (notify-clients (write-str data :json)))
+
+(defn ws-router [msg-data]
+  (let [parsed-msg (read-str msg-data :json)
+        {:keys [status type msg] :as data} parsed-msg]
+    (case status
+      :ok (on-ws-success data)
+      :error (on-ws-error data))))
 
 ;;; auth
 (defn on-login-failure [req]
@@ -165,7 +192,7 @@
       (wrap-authentication auth-backend)
       (wrap-anti-forgery {:read-token (fn [req] (get-in req [:params :csrf]))})
       (wrap-session {:store (ttl-memory-store (* 30 60))})
-      wrap-transit-params
+      (wrap-transit-params {:encoding :json-verbose})
       wrap-keyword-params
       wrap-params
       (wrap-transit-response {:encoding :json-verbose})
