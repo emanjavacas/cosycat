@@ -23,16 +23,10 @@
  (fn [db user]
    (assoc db :user user)))
 
-(re-frame/register-handler
- :set-results
- (fn [db results]
-   (assoc db :results results)))
-
 (defn handle-ws [db {:keys [type msg]}]
   (timbre/debug "Handling " {:type type :msg msg})
-  (update-in db [type] conj [msg]))
+  (update db type conj [msg]))
 
-;;; mock
 (re-frame/register-handler
  :ws-in
  (fn [db [_ data]]
@@ -41,8 +35,3 @@
        (= status :error) (do (timbre/debug msg) db)
        (= status :ok)    (handle-ws db {:type type :msg msg})
        :else             (do (timbre/debug "Unknown status: " status) db)))))
-
-(re-frame/register-handler
- :remove-last
- (fn [db _]
-   (update db :msgs #(vec (drop-last %)))))

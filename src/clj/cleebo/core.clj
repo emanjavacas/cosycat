@@ -5,6 +5,7 @@
             [cleebo.db :refer [new-db]]
             [cleebo.cqp :refer [new-cqi-client]]
             [cleebo.figwheel :refer [new-figwheel]]
+            [cleebo.routes.ws :refer [new-ws]]
             [taoensso.timbre :as timbre]
             [environ.core :refer [env]]))
 

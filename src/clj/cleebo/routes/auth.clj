@@ -1,5 +1,6 @@
 (ns cleebo.routes.auth
-  (:require [compojure.response :refer [render]]
+  (:require [taoensso.timbre :as timbre]
+            [compojure.response :refer [render]]
             [ring.util.response :refer [redirect response]]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]           
             [cleebo.db :refer [lookup-user is-user? new-user]]

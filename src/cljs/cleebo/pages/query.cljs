@@ -2,38 +2,12 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [re-com.core :as re-com]
-            [cognitect.transit :as t]
-            [cljs.core.async :refer [<! >! put! close! timeout chan]]
+            [cleebo.ws :refer [send-transit-msg!]]
             [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-(defonce ws-ch (atom nil))
-(def json-reader (t/reader :json-verbose))
-(def json-writer (t/writer :json-verbose))
-
 (defn by-id [id]
   (.getElementById js/document id))
-
-(defn receive-transit-msg! [wrap-msg]
-  (fn [msg]
-    (if @ws-ch
-      (wrap-msg
-       (->> msg .-data (t/read json-reader))))))
-
-(defn send-transit-msg! [msg]
-  (if @ws-ch
-    (let [json-msg (t/write json-writer msg)]
-      (.send @ws-ch json-msg))
-    (throw (js/Error. "Websocket is not available!"))))
-
-(defn make-ws-ch [url wrap-msg]
-  (timbre/info "Attempting connection to " url)
-  (if-let [c (js/WebSocket. url)]
-    (do
-      (set! (.-onmessage c) (receive-transit-msg! wrap-msg))
-      (reset! ws-ch c)
-      (timbre/info "Connected to " url))
-    (throw (js/Error. "Websocket connection failed!"))))
 
 (defn query-field []
   [:h2.page-header {:style {:font-weight "5em"}}
@@ -55,11 +29,58 @@
          :md-icon-name "zmdi-search"
          :size :smaller
          :on-click
-         #(let [text (.-value (by-id "query"))]
-            (send-transit-msg! {:msg text :type :msgs :status :ok}))]]]]]]])
+         #(let [query (.-value (by-id "query"))]
+            (send-transit-msg!
+             {:msg {:query-str query}
+              :type :query
+              :status :ok}))]]]]]]])
+
+(defn field-btn [f field]
+  [:button.btn.btn-default.btn-sm 
+   {:type "button"
+    :class (if (= f @field) "active" "")
+    :on-click #(reset! field f)}
+   f])
+
+(defn toolbar [field]
+  [:div.btn-toolbar
+   [:div.btn-group.pull-right
+    [:div.btn-group
+     [field-btn "word" field]
+     [field-btn "pos" field]
+     [field-btn "lemma" field]
+     [field-btn "reg" field]]
+    [:button.btn.btn-primary.btn-sm
+     {:type "button" :onClick #(.log js/console "prev!")}
+     "Prev!"]
+    [:button.btn.btn-primary.btn-sm
+     {:type "button" :onClick #(.log js/console "next!")}
+     "Next!"]]])
 
 (defn results-frame []
-  (let [messages (re-frame/subscribe [:msgs])]
+  (let [results (re-frame/subscribe [:query-results])
+        field (atom "word")]
+    (fn []
+      [:div
+       [toolbar field]
+       [:br]
+       [:table.table.table-striped.table-results
+        [:thead]
+        [:tbody {:style {:font-size "11px"}}
+         (for [[i row] (map-indexed vector (first (first @results)))]
+           ^{:key i}
+           [:tr
+            (for [{:keys [pos word id] :as token} row]
+              (if (:match token)
+                ^{:key (str i "-" id)} [:td.info word]
+                ^{:key (str i "-" id)} [:td word]))])]]])))
+
+(defn annotation-frame []
+  [:div "annotation frame!!!"])
+
+(defn debug-frame []
+  (let [messages (re-frame/subscribe [:msgs])
+        results  (re-frame/subscribe [:query-results])]
     (fn []
       [re-com/v-box :children
        [[re-com/h-box :align :center
@@ -70,24 +91,21 @@
            #(send-transit-msg! {:status :ok :type :msgs :msg "Hello everyone!"})]
           [re-com/md-icon-button
            :md-icon-name "zmdi-copy"
-           :on-click #(timbre/debug "Messages: " @messages)]]]
+           :on-click #(timbre/debug "Messages: " @results)]]]
         [re-com/box
          :child
          [:div
           [:ul (for [[i [msg]] (map-indexed vector (reverse @messages))]
                  ^{:key i} [:li msg])]]]]])))
 
-(defn annotation-frame []
-  [:div "annotation frame!!!"])
-
 (defn query-main []
   (let [annotation? (atom true)]
     (fn []
       [re-com/v-box :gap "50px"
        :children 
-       [[re-com/box :align :center :child [results-frame]]
+       [[re-com/box :align :stretch :child [results-frame]]
         (when @annotation?
-          [re-com/box :align :center :child [annotation-frame]])]])))
+          [re-com/box :align :center :child [debug-frame]])]])))
 
 (defn query-panel []
   [:div

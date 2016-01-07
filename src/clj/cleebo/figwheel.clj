@@ -21,7 +21,7 @@
   component/Lifecycle
   (start [component]
     (f-repl/start-figwheel! component)
-;    (f-repl/cljs-repl)
+;    (f-repl/cljs-repl) ;fighweel repl
     component)
   (stop [component]
     (f-repl/stop-figwheel!)

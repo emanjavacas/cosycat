@@ -1,58 +1,74 @@
 (ns cleebo.routes.ws
   (:require [taoensso.timbre :as timbre]
             [cleebo.utils :refer [write-str read-str]]
-            [com.stuartsierra.component :as [component]]
+            [cleebo.cqp :refer [cqi-query query-range]]
+            [com.stuartsierra.component :as component]
             [org.httpkit.server :as kit]))
 
-(defrecord WS [channels]
+(defrecord WS [ws-channels]
   component/Lifecycle
   (start [component]
-    (if channels
+    (if ws-channels
       component
-      (assoc component :channels (atom #{}))))
+      (assoc component :ws-channels (atom #{}))))
   (stop [component]
-    (assoc component :channels nil)))
+    (assoc component :ws-channels nil)))
 
 (defn new-ws []
   (map->WS {}))
 
-;;; ws
-;; (defonce channels (atom #{}))
-(declare connect! disconnect! ws-router)
+(declare connect! disconnect! on-ws-success send->client)
 
 (defn ws-handler-http-kit [req]
-  (let [ws (get-in req [:components :ws])]
+  (let [ws (get-in req [:components :ws])
+        ws-channels (:ws-channels ws)
+        cqi-client (get-in req [:components :cqi-client])
+        ws-router (fn [ws-from msg-data]
+                    (let [parsed-msg (read-str msg-data :json)
+                          {:keys [status type msg] :as data} parsed-msg]
+                      (timbre/debug "Received " (str parsed-msg))
+                      (try
+                        (on-ws-success ws-from ws-channels data :cqi-client cqi-client)
+                        (catch Exception e
+                          (send->client ws-from {:msg (str e) :status :error})))))]
     (kit/with-channel req ws-ch
-      (connect! ws ws-ch)
-      (kit/on-close ws-ch (partial disconnect! ws ws-ch))
-      (kit/on-receive ws-ch (partial ws-router ws)))))
+      (connect! ws-ch ws-channels)
+      (kit/on-close ws-ch (partial disconnect! ws-ch ws-channels))
+      (kit/on-receive ws-ch (partial ws-router ws-ch)))))
 
-(defn connect! [ws ws-ch]
-  (let [channels (:channels ws)]
-    (timbre/info "channel open")
-    (swap! channels conj ws-ch)))
+(defn connect! [ws-ch ws-channels]
+  (timbre/info "channel open")
+  (swap! ws-channels conj ws-ch))
 
-(defn disconnect! [ws ws-ch status]
-  (let [channels (:channels ws)]
-    (timbre/info "channel closed: " status)
-    (swap! channels (partial remove #{ws-ch}))))
+(defn disconnect! [ws-ch ws-channels status]
+  (timbre/info "channel closed: " status)
+  (swap! ws-channels (partial remove #{ws-ch})))
 
-(defn notify-clients [channels msg]
-  (doseq [channel @channels]
-    (timbre/debug (str "Sending " msg " to channel: " channel))
-    (kit/send! channel msg)))
+(defn notify-clients [ws-from ws-channels data]
+  (let [out-str (write-str data :json)]
+    (doseq [channel @ws-channels]
+      (timbre/debug (format "Sending %s from [%s] to [%s]" (str data) ws-from ws-from))
+      (kit/send! channel out-str))))
 
-(defn on-ws-error [data & [channels]]
-  ()
-  (notify-clients))
+(defn send->client [ws-from data]
+  (let [out-str (write-str data :json)]
+    (timbre/debug (format "Sending %s from [%s] to [%s]" (str data) ws-from ws-from))
+    (kit/send! ws-from out-str)))
 
-(defn on-ws-success [{:keys [status type msg] :as data}]
-  (notify-clients channels (write-str data :json)))
+(defn on-ws-error [ws-from ws-channels {:keys [status type msg] :as data}]
+  (send->client ws-from (update data :status :error)))
 
-(defn ws-router [ws msg-data]
-  (let [channels (:channels ws)
-        parsed-msg (read-str msg-data :json)
-        {:keys [status type msg] :as data} parsed-msg]
-    (case status
-      :ok (on-ws-success channels data)
-      :error (on-ws-error data))))
+(defn on-ws-success [ws-from ws-channels data & {:keys [cqi-client]}]
+  (let [{:keys [status type msg]} data]
+    (case type
+      :query (let [{:keys [query-str size]} msg
+                   result (cqi-query cqi-client "PYCCLE-ECCO" query-str)]
+               (send->client ws-from {:msg result
+                                      :status :ok
+                                      :type :query-results}))
+      :next (let [{:keys [from to]} msg
+                  result (query-range cqi-client "PYCCLE-ECCO" from to)]
+              (send->client ws-from {:msg result
+                                     :status :ok
+                                     :type :query-results}))
+      :msgs (notify-clients ws-from ws-channels data))))

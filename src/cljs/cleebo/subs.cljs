@@ -13,11 +13,11 @@
    (reaction (:active-panel @db))))
 
 (re-frame/register-sub
- :results
- (fn [db _]
-   (reaction (:results @db))))
-
-(re-frame/register-sub
  :msgs
  (fn [db _]
    (reaction (:msgs @db))))
+
+(re-frame/register-sub
+ :query-results
+ (fn [db _]
+   (reaction (:query-results @db))))

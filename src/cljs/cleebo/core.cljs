@@ -1,13 +1,14 @@
 (ns cleebo.core
-    (:require [reagent.core :as reagent]
-              [re-frame.core :as re-frame]
-              [re-com.core :as re-com]
-              [cleebo.handlers]
-              [cleebo.subs]
-              [cleebo.routes :as routes]
-              [cleebo.pages.query :refer [query-panel make-ws-ch]]
-              [taoensso.timbre :as timbre]
-              [figwheel.client :as figwheel]))
+  (:require [reagent.core :as reagent]
+            [re-frame.core :as re-frame]
+            [re-com.core :as re-com]
+            [cleebo.handlers]
+            [cleebo.subs]
+            [cleebo.routes :as routes]
+            [cleebo.ws :refer [make-ws-ch]]
+            [cleebo.pages.query :refer [query-panel]]
+            [taoensso.timbre :as timbre]
+            [figwheel.client :as figwheel]))
 
 (defmulti panels identity)
 (defmethod panels :query-panel [] [query-panel])
@@ -79,4 +80,3 @@
   (re-frame/dispatch-sync [:initialize-db])
   (mount-root)
   (figwheel/start {:websocket-url "ws://146.175.15.30:3449/figwheel-ws"}))
-
