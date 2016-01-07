@@ -18,10 +18,11 @@
     (-> (component/system-map
          :cqi-client (new-cqi-client {:init-file cqp-init-file})
          :db (new-db {:url database-url})
-         :http-server (new-http-server {:port port :components [:cqi-client :db]})
+         :ws (new-ws)
+         :http-server (new-http-server {:port port :components [:cqi-client :db :ws]})
          :figwheel (new-figwheel))
         (component/system-using
-         {:http-server [:cqi-client :db]}))))
+         {:http-server [:cqi-client :db :ws]}))))
 
 (defonce system nil)
 
