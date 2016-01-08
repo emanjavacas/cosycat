@@ -14,36 +14,7 @@
 (defmethod panels :query-panel [] [query-panel])
 (defmethod panels :default [] [:div])
 
-(defn navlink [uri label target-panel collapsed?]
-  (let [active-panel (re-frame/subscribe [:active-panel])]
-    [:li {:class (when (= @active-panel target-panel) "active")}
-     [:a {:href uri
-          :on-click #(reset! collapsed? true)}
-      label]]))
-
-(defn footerlink [label href]
-  (fn []
-    [:a {:href href :style {:color "white" :font-size "13px"}} label]))
-
-(defn navbar []
-  (let [name (re-frame/subscribe [:name])]
-    (fn []
-      [:nav.navbar.navbar-default.navbar-fixed-top
-       {:style {:background-color "#2a2730"
-                :color "#99979c"
-                :min-height "25px !important"}}
-       [:div.container
-        [:div.navbar-header
-         [:a.navbar-brand {:href "#/"} @name]]
-        [:div.navbar-collapse.collapse
-         [:ul.nav.navbar-nav.navbar-right
-          [:li [re-com/md-icon-button
-                :md-icon-name "zmdi-power"
-                :style {:margin-top "7px"}
-                :size :larger
-                :on-click #(.assign js/location "/logout")]]]]]])))
-
-(defn sidelink [target href label]
+(defn sidelink [target href label & [icon]]
   (let [active (re-frame/subscribe [:active-panel])]
     (fn []
       [:li {:class (when (= active target) "active")}
@@ -52,18 +23,20 @@
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])]
     (fn []
-      [:div
-       [navbar]
-       [:div.container-fluid
-        [:div.row {:style {:padding-top "45px;"}}
-         [:div.col-sm-2.col-md-1.sidebar ;sidebar
-          [:ul.nav.nav-sidebar
-           [sidelink :query-panel "#/query" "query"]
-           [sidelink :query-panel "#/home" "home"]
-           [sidelink :query-panel "#/settings" "settings"]      
-           [sidelink :query-panel "#/updates" "updates"]]]
-         [:div.col-sm-10.col-sm-offset-2.col-md-11.col-md-offset-1.main
-          (panels @active-panel)]]]])))
+      [:div.container-fluid
+       [:div.row 
+        [:div.col-sm-2.col-md-1.sidebar ;sidebar
+         [:ul.nav.nav-sidebar
+          [sidelink :query-panel "#/query" "query"]
+          [sidelink :query-panel "#/home" "home"]
+          [sidelink :query-panel "#/settings" "settings"]      
+          [sidelink :query-panel "#/updates" "updates"]
+          [sidelink :exit        "#/exit" [:div "exit"
+                                           [:i.zmdi.zmdi-power.pull-right
+                                            {:style {:line-height "20px"
+                                                     :font-size "20px"}}]]]]]
+        [:div.col-sm-10.col-sm-offset-2.col-md-11.col-md-offset-1.main
+         (panels @active-panel)]]])))
 
 (defn mount-root []
   (.log js/console "Called mount-root")

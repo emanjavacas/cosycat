@@ -14,6 +14,6 @@
               [:p.lead "By another"]]
       :right [:div.panel.panel-default
               [:div.panel-body {:style "text-align: center;"}
-               [:img {:src (str "img/" href) :alt name}]]
+               [:img.circle {:src (str "img/" href) :alt name}]]
               [:div.panel-footer {:style "text-align: center;"} name]]
       :logged? logged?})))

@@ -13,10 +13,20 @@
    (reaction (:active-panel @db))))
 
 (re-frame/register-sub
+ :throbbing?
+ (fn [db [_ panel]]
+   (reaction (get-in @db [:throbbing? panel] false))))
+
+(re-frame/register-sub
  :session
  (fn [db [_ & path]]
    (let [session (reaction (:session @db))]
      (reaction (get-in @session path)))))
+
+(re-frame/register-sub
+ :query-opts
+ (fn [db _]
+   (reaction (get-in @db [:session :query-opts]))))
 
 (re-frame/register-sub
  :msgs
@@ -26,4 +36,4 @@
 (re-frame/register-sub
  :query-results
  (fn [db _]
-   (reaction (:query-results @db))))
+   (reaction (get-in @db [:session :query-results]))))

@@ -16,6 +16,11 @@
 
 (defn app-routes []
   (secretary/set-config! :prefix "#")
+  (defroute "/" []
+    (re-frame/dispatch [:set-active-panel :query-panel]))
   (defroute "/query" []
     (re-frame/dispatch [:set-active-panel :query-panel]))
+  (defroute "/exit" []
+    (.assign js/location "/logout"))
   (hook-browser-navigation!))
+

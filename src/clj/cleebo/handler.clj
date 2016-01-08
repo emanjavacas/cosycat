@@ -27,10 +27,14 @@
              :refer [wrap-authentication wrap-authorization]]
             [cleebo.routes.auth
              :refer [safe auth-backend login-authenticate on-login-failure signup]]
-            [cleebo.routes.ws :refer [ws-handler-http-kit]]))
+            [cleebo.routes.ws :refer [ws-handler-http-kit]]
+            [cleebo.cqp :refer [cqi-query query-range]]))
 
 (defn is-logged? [req]
   (get-in req [:session :identity]))
+
+(defn ->int [s]
+  (Integer/parseInt s))
 
 (def about-route
   (safe
@@ -42,6 +46,34 @@
    (fn [req] (cleebo-page :csrf *anti-forgery-token*))
    {:login-uri "/login" :is-ok? authenticated?}))
 
+(def query-route
+  (safe
+   (fn [{{cqi-client :cqi-client} :components
+         {query-str :query-str
+          corpus :corpus
+          context :context
+          from :from
+          size :size} :params}]
+     (let [result (cqi-query cqi-client corpus query-str
+                             {:context (->int context) ;opts
+                              :size (->int size)
+                              :from (->int from)})]
+       {:status 200 :body result}))
+   {:login-uri "/login" :is-ok? authenticated?}))
+
+(def range-route
+  (safe
+   (fn [{{cqi-client :cqi-client} :components
+         {corpus :corpus
+          from :from
+          to :to
+          context :context} :params}]
+     (let [result (query-range cqi-client corpus (->int from) (->int to)
+                               {:context (->int context)})]
+       (timbre/debug result)
+       {:status 200 :body result}))
+   {:login-uri "/login" :is-ok? authenticated?}))
+
 (defroutes app-routes
   (GET "/" req (landing-page :logged? (is-logged? req)))
   (GET "/login" req (login-page :csrf *anti-forgery-token*))
@@ -50,6 +82,8 @@
   (GET "/about" req (about-route req))
   (GET "/cleebo" req (cleebo-route req))
   (ANY "/logout" req (-> (redirect "/") (assoc :session {})))
+  (GET "/query" req (query-route req))
+  (GET "/range" req (range-route req))  
   (GET "/ws" req (ws-handler-http-kit req))
   (resources "/")
   (not-found (error-page :status 404 :title "Page not found!!")))

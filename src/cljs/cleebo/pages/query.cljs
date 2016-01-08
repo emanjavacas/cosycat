@@ -4,6 +4,7 @@
             [re-com.core :as re-com]
             [cleebo.ws :refer [send-transit-msg!]]
             [ajax.core :refer [GET]]
+            [goog.string :as gstr]
             [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.async.macros :refer [go]]
                    [re-com.core :refer [handler-fn]]))
@@ -11,154 +12,197 @@
 (defn by-id [id]
   (.getElementById js/document id))
 
-(defn button-tooltip [& {:keys [info md-icon-name size width position]
-                         :or {size :smaller width "250px" position :below-left}}]
-  {:pre [(and info md-icon-name)]}
-  (let [showing? (reagent/atom false)]
-    (fn []
-      [re-com/popover-tooltip
-       :label     info
-       :status    :info
-       :position  position
-       :width     width
-       :showing?  showing?
-       :on-cancel #(swap! showing? not)
-       :anchor    [re-com/md-icon-button
-                   :md-icon-name md-icon-name 
-                   :size size
-                   :on-click #(swap! showing? not)]])))
+(defn error-handler [{:keys [status status-text]}]
+ (.log js/console 
+  (str "something bad happened: " status " " status-text)))
 
-(defn query [{:keys [query-str type]}])
+(defn pager-next
+  ([size page-size] (pager-next size page-size 0))
+  ([size page-size from]
+   (let [to (+ from page-size)]
+     (if (>= to size) 
+       [from 0]
+       [from to]))))
+
+(defn pager-prev
+  ([size page-size] (pager-prev size page-size 0))
+  ([size page-size from]
+   (let [new-from (- from page-size)]
+     (cond (zero? from) [(- size page-size) size]
+           (zero? new-from) [0 page-size]
+           (neg?  new-from)  [0 (+ new-from page-size)]
+           :else [new-from from]))))
+
+(defn query
+  "will need to support 'from' for in-place query-opts change"
+  [{:keys [query-str corpus context size from] :or {from 0}}]
+  (GET "/query"
+       {:handler (fn [data] 
+                   (timbre/debug data)
+                   (re-frame/dispatch [:set-query-results data])
+                   (re-frame/dispatch [:stop-throbbing :results-frame]))
+        :error-handler error-handler
+        :params {:query-str query-str
+                 :corpus corpus
+                 :context context
+                 :from from
+                 :size size}}))
+
+(defn query-range [{:keys [corpus from to context]}]
+  (GET "/range"
+       {:handler (fn [data] 
+                   (timbre/debug data)
+                   (re-frame/dispatch [:set-query-results data])
+                   (re-frame/dispatch [:stop-throbbing :results-frame]))
+        :error-handler error-handler
+        :params {:corpus corpus
+                 :from from
+                 :to to
+                 :context context}}))
 
 (defn query-field []
-  (let [corpus (re-frame/subscribe [:session :query-opts :corpus])
-        size (re-frame/subscribe [:session :query-opts :size])
-        context (re-frame/subscribe [:session :query-opts :context])
-        asize (reagent/atom @size)]
+  (let [query-opts (re-frame/subscribe [:query-opts])
+        query-str (re-frame/subscribe [:session :query-results :query-str])]
     (fn []
-      [:h2.page-header {:style {:font-weight "5em"}}
+      [:div.container-fluid
        [:div.row
-        [:div.col-sm-3 "Query Panel"]
-        [:div.col-sm-9
+        [:div.col-sm-2
+         [:h4 [:span.text-muted {:style {:line-height "15px"}} "Query Panel"]]]
+        [:div.col-sm-10
          [:div.form-horizontal
           [:div.form-group.has-feedback
-           [:div.input-group
-            [:input.form-control
-             {:type "text"
-              :name "query"
-              :id "query-str"
-              :placeholder "Example: [pos='.*\\.']"
-              :autocorrect "off"
-              :autocapitalize "off"
-              :spellcheck "false"
-              :on-key-press
-              #(if (= (.-charCode %) 13)
-                 (let [query-str (.-value (by-id "query-str"))]
-                   (send-transit-msg!
-                    {:msg {:query-str query-str}
-                     :type :query
-                     :status :ok})))}
-             [:i.zmdi.zmdi-search.form-control-feedback
-              {:style {:font-size "0.75em" :line-height "35px" :margin-right "35px"}}]]
-            [:span.input-group-addon
-             [button-tooltip
-              :md-icon-name "zmdi-unfold-more"
-              :width "300px"
-              :info
-              [re-com/v-box
-               :gap "10px"
-               :children
-               [[:p.info-subheading "Query advanced options"]
-                [re-com/line]
-                [re-com/h-box
-                 :justify :between
-                 :children
-                 [[re-com/label :label "corpus"]
-                  [re-com/single-dropdown
-                   :style {:font-size "11px"}
-                   :width "150px"
-                   :placeholder "Select a corpus"
-                   :choices [{:id "PYCCLE-ECCO"} {:id "PYCCLE-EBBO"} {:id "MBG-CORPUS"}]
-                   :label-fn :id
-                   :model @corpus
-                   :on-change #(.log js/console @corpus)]]]
-                [re-com/h-box
-                 :justify :between
-                 :children
-                 [[re-com/label :label "context size"]
-                  [re-com/single-dropdown
-                   :style {:font-size "11px"}
-                   :width "150px"
-                   :placeholder "Select a corpus"
-                   :choices (map (partial hash-map :id) (range 1 10))
-                   :label-fn :id
-                   :model @asize
-                   :on-change
-                   #(do (reset! asize %)
-                        (re-frame/dispatch [:set-session [:query-opts :size] %]))]]]]]]]]]]]]])))
+           [:input.form-control
+            {:type "text"
+             :name "query"
+             :id "query-str"
+             :placeholder (or @query-str "Example: [pos='.*\\.']") ;remove?
+             :autocorrect "off"
+             :autocapitalize "off"
+             :spellcheck "false"
+             :on-key-press
+             #(if (= (.-charCode %) 13)
+                (let [query-str (.-value (by-id "query-str"))]
+                  (re-frame/dispatch [:start-throbbing :results-frame])
+                  (query (assoc @query-opts :query-str query-str :type "type"))))}
+            [:i.zmdi.zmdi-search.form-control-feedback
+             {:style {:font-size "1.75em" :line-height "35px"}}]]]]]]])))
 
-(defn field-btn [f field]
-  [:button.btn.btn-default.btn-sm 
-   {:type "button"
-    :class (if (= f @field) "active" "")
-    :on-click #(reset! field f)}
-   f])
+(defn dropdown-opt [k placeholder choices & {:keys [width] :or {width "125px"}}]
+  [re-com/single-dropdown
+   :style {:font-size "12px"}
+   :width width
+   :placeholder placeholder
+   :choices choices
+   :model @(re-frame/subscribe [:session :query-opts k])
+   :label-fn #(str placeholder (:id %))
+   :on-change #(re-frame/dispatch [:set-session [:query-opts k] %])])
 
-(defn toolbar [field]
-  [:div.btn-toolbar
-   [:div.btn-group.pull-right
-    [:div.btn-group
-     [field-btn "word" field]
-     [field-btn "pos" field]
-     [field-btn "lemma" field]
-     [field-btn "reg" field]]
-    [:button.btn.btn-primary.btn-sm
-     {:type "button" :onClick #(.log js/console "prev!")}
-     "Prev!"]
-    [:button.btn.btn-primary.btn-sm
-     {:type "button" :onClick #(.log js/console "next!")}
-     "Next!"]]])
+(defn query-opts-menu []
+  [re-com/h-box
+   :justify :end
+   :gap "5px"
+   :children
+   [[dropdown-opt
+     :corpus
+     "Corpus: "
+     [{:id "PYCCLE-ECCO"} {:id "PYCCLE-EBBO"} {:id "MBG-CORPUS"}]
+     :width "175px"]
+    [dropdown-opt
+     :size
+     "Page size: "
+     (map (partial hash-map :id) (range 1 15))]
+    [dropdown-opt
+     :context
+     "Window size: "
+     (map (partial hash-map :id) (range 1 10))]]])
+
+(defn nav-buttons []
+  (let [query-opts (re-frame/subscribe [:query-opts])
+        query-results (re-frame/subscribe [:query-results])]
+    (fn []
+      [re-com/h-box
+       :children
+       [[re-com/button
+         :style {:font-size "12px"}
+         :label
+         [:div [:i.zmdi.zmdi-arrow-left {:style {:margin-right "10px"}}] "prev page"]
+         :on-click #(let [{:keys [query-size from to]} @query-results
+                          {:keys [corpus context size]} @query-opts
+                          [from to] (pager-prev query-size size from)]
+                      (re-frame/dispatch [:start-throbbing :results-frame])
+                      (query-range {:corpus corpus
+                                    :from from
+                                    :to to
+                                    :context context}))]
+        [re-com/button
+         :style {:font-size "12px"}
+         :label
+         [:div "next page" [:i.zmdi.zmdi-arrow-right {:style {:margin-left "10px"}}]]
+         :on-click #(let [{:keys [query-size from to]} @query-results
+                          {:keys [corpus context size]} @query-opts
+                          [from to] (pager-next query-size size to)]
+                      (re-frame/dispatch [:start-throbbing :results-frame])
+                      (query-range {:corpus corpus
+                                    :from from
+                                    :to to
+                                    :context context}))]]])))
+
+(defn toolbar []
+  (let [query-results (re-frame/subscribe [:query-results])]
+    (fn []
+      [re-com/h-box
+       :justify :between
+       :gap "10px"
+       :children
+       [[query-opts-menu]
+        [re-com/h-box
+         :justify :end
+         :gap "15px"
+         :children
+         [[re-com/label     
+           :label (let [{:keys [from to query-size]} @query-results]
+                    (gstr/format "Displaying %d-%d from %d hits" from to query-size))
+           :style {:line-height "30px"}]
+          [nav-buttons]]]]])))
+
+(defn throbbing-panel []
+  [re-com/v-box
+   :gap "50px"
+   :justify :between
+   :children
+   [""
+    [re-com/h-box
+     :gap "25px"
+     :justify :between
+     :children
+     [""
+      [re-com/throbber :size :large]
+      ""]]
+    ""]])
 
 (defn results-frame []
-  (let [results (re-frame/subscribe [:query-results])
-        field (atom "word")]
+  (let [query-results (re-frame/subscribe [:query-results])
+        throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
     (fn []
-      [:div
-       [toolbar field]
-       [:br]
-       [:table.table.table-striped.table-results
-        [:thead]
-        [:tbody {:style {:font-size "11px"}}
-         (for [[i row] (map-indexed vector (first (first @results)))]
-           ^{:key i}
-           [:tr
-            (for [{:keys [pos word id] :as token} row]
-              (if (:match token)
-                ^{:key (str i "-" id)} [:td.info word]
-                ^{:key (str i "-" id)} [:td word]))])]]])))
+      (if @throbbing?
+        (throbbing-panel)
+        (when (:results @query-results)
+          [:div
+           [toolbar]
+           [:br]
+           [:table.table.table-striped.table-results
+            [:thead]
+            [:tbody {:style {:font-size "11px"}}
+             (for [[i row] (map-indexed vector (:results @query-results))]
+               ^{:key i}
+               [:tr 
+                (for [{:keys [pos word id] :as token} row]
+                  (if (:match token)
+                    ^{:key (str i "-" id)} [:td.info word]
+                    ^{:key (str i "-" id)} [:td word]))])]]])))))
 
 (defn annotation-frame []
   [:div "annotation frame!!!"])
-
-(defn debug-frame []
-  (let [messages (re-frame/subscribe [:msgs])
-        results  (re-frame/subscribe [:query-results])]
-    (fn []
-      [re-com/v-box :children
-       [[re-com/h-box :align :center
-         :children
-         [[re-com/md-icon-button
-           :md-icon-name "zmdi-edit"
-           :on-click
-           #(send-transit-msg! {:status :ok :type :msgs :msg "Hello everyone!"})]
-          [re-com/md-icon-button
-           :md-icon-name "zmdi-copy"
-           :on-click #(timbre/debug "Messages: " @messages)]]]
-        [re-com/box
-         :child
-         [:div
-          [:ul (for [[i [msg]] (map-indexed vector (reverse @messages))]
-                 ^{:key i} [:li msg])]]]]])))
 
 (defn query-main []
   (let [annotation? (atom true)]
@@ -167,7 +211,7 @@
        :children 
        [[re-com/box :align :stretch :child [results-frame]]
         (when @annotation?
-          [re-com/box :align :center :child [debug-frame]])]])))
+          [re-com/box :align :center :child [annotation-frame]])]])))
 
 (defn query-panel []
   [:div

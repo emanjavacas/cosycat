@@ -30,22 +30,35 @@
 (def encodings
   {"PYCCLE-ECCO" "latin1"})
 
+(defn wrap-safe [f]
+  (try (let [out (f)]
+         (assoc out :status :ok))
+       (catch Exception e
+         {:msg (str e)
+          :status :error})))
+
 (defn cqi-query [cqi-client corpus query-str & [opts]]
   (let [client (:client cqi-client)
         encoding (get encodings corpus "utf8")
-        {:keys [corpus context attrs size]
+        {:keys [corpus context attrs size from to]
          :or {corpus "PYCCLE-ECCO"
               context 5
               size 10
+              from 0
+              to (+ from size)
               attrs default-attrs}} opts]
-    (timbre/debug corpus context attrs query-str client)
-    (do (cqp/query! client corpus query-str encoding)
-        (cqp/cpos-seq-handler
-         client
-         corpus
-         (cqp/cpos-range client corpus 0 size)
-         context
-         attrs))))
+    (cqp/query! client corpus query-str encoding)
+    (let [results (cqp/cpos-seq-handler
+                   client
+                   corpus
+                   (cqp/cpos-range client corpus from to)
+                   context
+                   attrs)]
+      {:results results
+       :from from
+       :to (+ from (count results))
+       :query-str query-str
+       :query-size (cqp/query-size client corpus)})))
 
 (defn query-range [cqi-client corpus from to & [opts]]
   (let [client (:client cqi-client)
@@ -53,23 +66,36 @@
          :or {corpus "PYCCLE-ECCO"
               context 5
               attrs default-attrs}} opts]
-    (cqp/cpos-seq-handler
-     client
-     corpus
-     (cqp/cpos-range client corpus from to)
-     context
-     attrs)))
+    (timbre/debug corpus client from to context attrs)
+    (let [results (cqp/cpos-seq-handler
+                   client
+                   corpus
+                   (cqp/cpos-range client corpus from to)
+                   context
+                   attrs)]
+      {:results results
+       :from from
+       :to (+ from (count results))})))
 
 ;; (def spec (read-init "dev-resources/cqpserver.init"))
+;; (def client (cqp/make-cqi-client spec))
 ;; (def query-str "'goin.*' @'.*' 'to'")
 ;; (def query-str "'the'")
+;; (def attrs
+;;   (create-attrs [{:type :pos :name "word"} {:type :pos :name "pos"}]))
 
 ;; (def result
-;;   (cqp/with-cqi-client [client (cqp/make-cqi-client spec)]
-;;     (cqp/query! client "PYCCLE-ECCO" query-str "latin1")
-;;     (cqp/cpos-seq-handler
-;;      client
-;;      "PYCCLE-ECCO"
-;;      (cqp/cpos-range client "PYCCLE-ECCO" 0 10)
-;;      2
-;;      attrs)))
+;;   (do (cqp/query! client "PYCCLE-ECCO" query-str "latin1")
+;;       (cqp/cpos-seq-handler
+;;        client
+;;        "PYCCLE-ECCO"
+;;        (cqp/cpos-range client "PYCCLE-ECCO" 0 10)
+;;        2
+;;        attrs)))
+
+;; (cqp/cpos-seq-handler
+;;  client
+;;  "PYCCLE-ECCO"
+;;  (cqp/cpos-range client "PYCCLE-ECCO" 20 40)
+;;  2
+;;  attrs)

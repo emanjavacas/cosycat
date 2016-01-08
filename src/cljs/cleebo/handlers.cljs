@@ -14,6 +14,16 @@
    (assoc db :active-panel active-panel)))
 
 (re-frame/register-handler
+ :start-throbbing
+ (fn [db [_ panel]]
+   (assoc-in db [:throbbing? panel] true)))
+
+(re-frame/register-handler
+ :stop-throbbing
+ (fn [db [_ panel]]
+   (assoc-in db [:throbbing? panel] false)))
+
+(re-frame/register-handler
  :set-name
  (fn [db [_ name]]
    (assoc db :name name)))
@@ -27,8 +37,7 @@
 (defn handle-ws [db {:keys [type msg]}]
   (timbre/debug "Handling " {:type type :msg msg})
   (case type
-    :msgs (update db type conj [msg])
-    :query-results (update db type conj [msg])))
+    :msgs (update db type conj [msg])))
 
 (re-frame/register-handler
  :ws-in
@@ -38,3 +47,8 @@
        (= status :error) (do (timbre/debug msg) db)
        (= status :ok)    (handle-ws db {:type type :msg msg})
        :else             (do (timbre/debug "Unknown status: " status) db)))))
+
+(re-frame/register-handler
+ :set-query-results
+ (fn [db [_ & [{:keys [results query-size query-str status from to] :as data}]]]
+   (update-in db [:session :query-results] merge data)))

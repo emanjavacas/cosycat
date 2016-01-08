@@ -6,6 +6,7 @@
                           :context 5
                           :size 10}
              :query-results {:results nil
+                             :query-size nil
                              :query-str nil
                              :status nil
                              :from nil
