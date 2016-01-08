@@ -3,37 +3,99 @@
             [re-frame.core :as re-frame]
             [re-com.core :as re-com]
             [cleebo.ws :refer [send-transit-msg!]]
+            [ajax.core :refer [GET]]
             [taoensso.timbre :as timbre])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+  (:require-macros [cljs.core.async.macros :refer [go]]
+                   [re-com.core :refer [handler-fn]]))
 
 (defn by-id [id]
   (.getElementById js/document id))
 
+(defn button-tooltip [& {:keys [info md-icon-name size width position]
+                         :or {size :smaller width "250px" position :below-left}}]
+  {:pre [(and info md-icon-name)]}
+  (let [showing? (reagent/atom false)]
+    (fn []
+      [re-com/popover-tooltip
+       :label     info
+       :status    :info
+       :position  position
+       :width     width
+       :showing?  showing?
+       :on-cancel #(swap! showing? not)
+       :anchor    [re-com/md-icon-button
+                   :md-icon-name md-icon-name 
+                   :size size
+                   :on-click #(swap! showing? not)]])))
+
+(defn query [{:keys [query-str type]}])
+
 (defn query-field []
-  [:h2.page-header {:style {:font-weight "5em"}}
-   [:div.row
-    [:div.col-sm-3 "Query Panel"]
-    [:div.col-sm-9
-     [:div.form-horizontal
-      [:div.input-group      
-       [:input.form-control
-        {:name "query"
-         :type "text"
-         :id "query"
-         :placeholder "Example: [pos='.*\\.']"
-         :autocorrect "off"
-         :autocapitalize "off"
-         :spellcheck "false"}]
-       [:span.input-group-addon
-        [re-com/md-icon-button
-         :md-icon-name "zmdi-search"
-         :size :smaller
-         :on-click
-         #(let [query (.-value (by-id "query"))]
-            (send-transit-msg!
-             {:msg {:query-str query}
-              :type :query
-              :status :ok}))]]]]]]])
+  (let [corpus (re-frame/subscribe [:session :query-opts :corpus])
+        size (re-frame/subscribe [:session :query-opts :size])
+        context (re-frame/subscribe [:session :query-opts :context])
+        asize (reagent/atom @size)]
+    (fn []
+      [:h2.page-header {:style {:font-weight "5em"}}
+       [:div.row
+        [:div.col-sm-3 "Query Panel"]
+        [:div.col-sm-9
+         [:div.form-horizontal
+          [:div.form-group.has-feedback
+           [:div.input-group
+            [:input.form-control
+             {:type "text"
+              :name "query"
+              :id "query-str"
+              :placeholder "Example: [pos='.*\\.']"
+              :autocorrect "off"
+              :autocapitalize "off"
+              :spellcheck "false"
+              :on-key-press
+              #(if (= (.-charCode %) 13)
+                 (let [query-str (.-value (by-id "query-str"))]
+                   (send-transit-msg!
+                    {:msg {:query-str query-str}
+                     :type :query
+                     :status :ok})))}
+             [:i.zmdi.zmdi-search.form-control-feedback
+              {:style {:font-size "0.75em" :line-height "35px" :margin-right "35px"}}]]
+            [:span.input-group-addon
+             [button-tooltip
+              :md-icon-name "zmdi-unfold-more"
+              :width "300px"
+              :info
+              [re-com/v-box
+               :gap "10px"
+               :children
+               [[:p.info-subheading "Query advanced options"]
+                [re-com/line]
+                [re-com/h-box
+                 :justify :between
+                 :children
+                 [[re-com/label :label "corpus"]
+                  [re-com/single-dropdown
+                   :style {:font-size "11px"}
+                   :width "150px"
+                   :placeholder "Select a corpus"
+                   :choices [{:id "PYCCLE-ECCO"} {:id "PYCCLE-EBBO"} {:id "MBG-CORPUS"}]
+                   :label-fn :id
+                   :model @corpus
+                   :on-change #(.log js/console @corpus)]]]
+                [re-com/h-box
+                 :justify :between
+                 :children
+                 [[re-com/label :label "context size"]
+                  [re-com/single-dropdown
+                   :style {:font-size "11px"}
+                   :width "150px"
+                   :placeholder "Select a corpus"
+                   :choices (map (partial hash-map :id) (range 1 10))
+                   :label-fn :id
+                   :model @asize
+                   :on-change
+                   #(do (reset! asize %)
+                        (re-frame/dispatch [:set-session [:query-opts :size] %]))]]]]]]]]]]]]])))
 
 (defn field-btn [f field]
   [:button.btn.btn-default.btn-sm 
@@ -91,7 +153,7 @@
            #(send-transit-msg! {:status :ok :type :msgs :msg "Hello everyone!"})]
           [re-com/md-icon-button
            :md-icon-name "zmdi-copy"
-           :on-click #(timbre/debug "Messages: " @results)]]]
+           :on-click #(timbre/debug "Messages: " @messages)]]]
         [re-com/box
          :child
          [:div

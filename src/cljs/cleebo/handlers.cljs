@@ -15,17 +15,20 @@
 
 (re-frame/register-handler
  :set-name
- (fn [db name]
+ (fn [db [_ name]]
    (assoc db :name name)))
 
 (re-frame/register-handler
- :set-user
- (fn [db user]
-   (assoc db :user user)))
+ :set-session
+ (fn [db [_ path value]]
+   (let [session (:session db)]
+     (assoc db :session (assoc-in session path value)))))
 
 (defn handle-ws [db {:keys [type msg]}]
   (timbre/debug "Handling " {:type type :msg msg})
-  (update db type conj [msg]))
+  (case type
+    :msgs (update db type conj [msg])
+    :query-results (update db type conj [msg])))
 
 (re-frame/register-handler
  :ws-in

@@ -13,6 +13,12 @@
    (reaction (:active-panel @db))))
 
 (re-frame/register-sub
+ :session
+ (fn [db [_ & path]]
+   (let [session (reaction (:session @db))]
+     (reaction (get-in @session path)))))
+
+(re-frame/register-sub
  :msgs
  (fn [db _]
    (reaction (:msgs @db))))
