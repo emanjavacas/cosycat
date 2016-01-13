@@ -7,14 +7,16 @@
             [cleebo.routes :as routes]
             [cleebo.ws :refer [make-ws-ch]]
             [cleebo.pages.query :refer [query-panel]]
-            [cleebo.pages.settings :refer [settings-panel]]            
+            [cleebo.pages.settings :refer [settings-panel]]
+            [cleebo.pages.debug :refer [debug-panel]]            
             [taoensso.timbre :as timbre]
-;            [environ.core :refer [env]]
-            [figwheel.client :as figwheel]))
+            [figwheel.client :as figwheel])
+  (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
 (defmulti panels identity)
 (defmethod panels :query-panel [] [query-panel])
 (defmethod panels :settings-panel [] [settings-panel])
+(defmethod panels :debug-panel [] [debug-panel])
 (defmethod panels :default [] [:div])
 
 (defn sidelink [target href label icon]
@@ -40,7 +42,8 @@
           [sidelink :home-panel "#/home" "Home" "zmdi-home"]
           [sidelink :query-panel "#/query" "Query" "zmdi-search"]
           [sidelink :updates-panel "#/updates" "Updates" "zmdi-notifications"]
-          [sidelink :settings-panel "#/settings" "Settings" "zmdi-settings"]      
+          [sidelink :settings-panel "#/settings" "Settings" "zmdi-settings"]
+          [sidelink :debug-panel "#/debug" "Debug" "zmdi-bug"]          
           [sidelink :exit          "#/exit" "Exit" "zmdi-power"]]]
         [:div.col-sm-10.col-sm-offset-2.col-md-11.col-md-offset-1.main
          (panels @active-panel)]]])))
@@ -55,8 +58,7 @@
    #(re-frame/dispatch [:ws-in %])))
 
 (defn ^:export init []
-  (let [host "localhost";(get env :host "146.175.15.30")
-        ]
+  (let [host (cljs-env :host)]
     (routes/app-routes)
     (set-ws-ch)
     (re-frame/dispatch-sync [:initialize-db])

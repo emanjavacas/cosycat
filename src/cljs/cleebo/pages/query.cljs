@@ -5,9 +5,11 @@
             [cleebo.ws :refer [send-transit-msg!]]
             [ajax.core :refer [GET]]
             [goog.string :as gstr]
+            [goog.dom.dataset :as gdataset]
+            [goog.fx.dom :as gfx]
+            [goog.fx.easing :as gfx-easing]
             [taoensso.timbre :as timbre])
-  (:require-macros [cljs.core.async.macros :refer [go]]
-                   [re-com.core :refer [handler-fn]]))
+  (:import [goog.fx Animation]))
 
 (defn by-id [id]
   (.getElementById js/document id))
@@ -184,11 +186,11 @@
             :min "1"
             :default-value (inc (:from @query-results))
             :on-key-press
-            #(if (= (.-charCode %) 13)
-               (let [{:keys [corpus context size]} @query-opts
-                     {:keys [query-size]} @query-results
-                     from-hit (js/parseInt (.-value (by-id "from-hit")))
-                     from-hit (max 0 (min (dec from-hit) query-size))]
+            (on-key 13
+               #(let [{:keys [corpus context size]} @query-opts
+                      {:keys [query-size]} @query-results
+                      from-hit (js/parseInt (.-value (by-id "from-hit")))
+                      from-hit (max 0 (min (dec from-hit) query-size))]
                  (query-range
                   {:corpus corpus
                    :from from-hit
@@ -226,6 +228,14 @@
    :padding "50px"
    :child [re-com/throbber :size :large]])
 
+(defn result-by-id [e results-map]
+  (let [id (gdataset/get (.-currentTarget e) "num")]
+    (get results-map (js/parseInt id))))
+
+(defn fade-out [e]
+  (let [anim (gfx/FadeOut. (.-currentTarget e) 1 0.5 5200 gfx-easing/easeOut)]
+    (.play anim)))
+
 (defn table-results []
   (let [query-results (re-frame/subscribe [:query-results])]
     (fn []
@@ -234,7 +244,8 @@
        [:tbody {:style {:font-size "11px"}}
         (for [[i [n row]] (map-indexed vector (:results @query-results))]
           ^{:key i}
-          [:tr {:data-num n :on-click #(timbre/debug (aget (aget (. % -target) "dataset") "num"))}
+          [:tr {:data-num n :on-click #(do (timbre/debug (result-by-id % (:results @query-results)))
+                                           (fade-out %))}
            (into [:td (inc n)]
                  (for [{:keys [id word] :as token} row]
                    (cond
@@ -260,7 +271,7 @@
   [:div "annotation frame!!!"])
 
 (defn query-main []
-  (let [annotation? (atom true)]
+  (let [annotation? (atom false)]
     (fn []
       [re-com/v-box :gap "50px"
        :children 

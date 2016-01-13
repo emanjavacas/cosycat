@@ -6,5 +6,5 @@
 (defn settings-panel []
   [re-com/v-box
    :children
-   [[:h4 [:span.text-muted "Settings"]]
+   [[:h3 [:span.text-muted "Settings"]]
     [re-com/line]]])
