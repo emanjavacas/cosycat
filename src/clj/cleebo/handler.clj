@@ -28,7 +28,7 @@
             [cleebo.routes.auth
              :refer [safe auth-backend login-authenticate on-login-failure signup]]
             [cleebo.routes.ws :refer [ws-handler-http-kit]]
-            [cleebo.cqp :refer [cqi-query query-range]]))
+            [cleebo.cqp :refer [cqi-query cqi-query-range]]))
 
 (defn is-logged? [req]
   (get-in req [:session :identity]))
@@ -49,15 +49,18 @@
 (def query-route
   (safe
    (fn [{{cqi-client :cqi-client} :components
-         {query-str :query-str
-          corpus :corpus
+         {corpus :corpus
+          query-str :query-str         
           context :context
-          from :from
-          size :size} :params}]
-     (let [result (cqi-query cqi-client corpus query-str
-                             {:context (->int context) ;opts
-                              :size (->int size)
-                              :from (->int from)})]
+          size :size
+          from :from} :params}]
+     (let [result (cqi-query
+                   {:cqi-client cqi-client
+                    :corpus corpus
+                    :query-str query-str
+                    :opts {:context (->int context)
+                           :size (->int size)
+                           :from (->int from)}})]
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))
 
@@ -68,9 +71,12 @@
           from :from
           to :to
           context :context} :params}]
-     (let [result (query-range cqi-client corpus (->int from) (->int to)
-                               {:context (->int context)})]
-       (timbre/debug result)
+     (let [result (cqi-query-range
+                   {:cqi-client cqi-client
+                    :corpus corpus
+                    :from (->int from)
+                    :to  (->int to)
+                    :opts {:context (->int context)}})]
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))
 

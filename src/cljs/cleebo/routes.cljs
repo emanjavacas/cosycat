@@ -20,6 +20,8 @@
     (re-frame/dispatch [:set-active-panel :query-panel]))
   (defroute "/query" []
     (re-frame/dispatch [:set-active-panel :query-panel]))
+  (defroute "/settings" []
+    (re-frame/dispatch [:set-active-panel :settings-panel]))
   (defroute "/exit" []
     (.assign js/location "/logout"))
   (hook-browser-navigation!))

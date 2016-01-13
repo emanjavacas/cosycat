@@ -35,7 +35,6 @@
      (assoc db :session (assoc-in session path value)))))
 
 (defn handle-ws [db {:keys [type msg]}]
-  (timbre/debug "Handling " {:type type :msg msg})
   (case type
     :msgs (update db type conj [msg])))
 

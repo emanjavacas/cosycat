@@ -30,41 +30,35 @@
 (def encodings
   {"PYCCLE-ECCO" "latin1"})
 
-(defn wrap-safe [f]
-  (try (let [out (f)]
-         (assoc out :status :ok))
-       (catch Exception e
-         {:msg (str e)
-          :status :error})))
-
-(defn cqi-query [cqi-client corpus query-str & [opts]]
+(defn cqi-query* [& {:keys [cqi-client corpus query-str opts]}]
+  {:pre [(and cqi-client corpus query-str)]}
   (let [client (:client cqi-client)
         encoding (get encodings corpus "utf8")
-        {:keys [corpus context attrs size from to]
-         :or {corpus "PYCCLE-ECCO"
-              context 5
+        {:keys [context attrs size from to]
+         :or {context 5
               size 10
               from 0
               to (+ from size)
               attrs default-attrs}} opts]
     (cqp/query! client corpus query-str encoding)
     (let [results (cqp/cpos-seq-handler
-                   client
-                   corpus
-                   (cqp/cpos-range client corpus from to)
-                   context
-                   attrs)]
-      {:results results
+                      client
+                      corpus
+                      (cqp/cpos-range client corpus from to)
+                      context
+                      attrs)
+          to (+ from (count results))]
+      {:results (zipmap (range from to) results)
        :from from
-       :to (+ from (count results))
+       :to to
        :query-str query-str
        :query-size (cqp/query-size client corpus)})))
 
-(defn query-range [cqi-client corpus from to & [opts]]
+(defn cqi-query-range* [& {:keys [cqi-client corpus from to opts]}]
+  {:pre [(and cqi-client corpus from to)]}
   (let [client (:client cqi-client)
-        {:keys [corpus context attrs]
-         :or {corpus "PYCCLE-ECCO"
-              context 5
+        {:keys [context attrs]
+         :or {context 5
               attrs default-attrs}} opts]
     (timbre/debug corpus client from to context attrs)
     (let [results (cqp/cpos-seq-handler
@@ -72,10 +66,23 @@
                    corpus
                    (cqp/cpos-range client corpus from to)
                    context
-                   attrs)]
-      {:results results
+                   attrs)
+          to (+ from (count results))]
+      {:results (zipmap (range from to) results)
        :from from
-       :to (+ from (count results))})))
+       :to to})))
+
+(defn wrap-safe [thunk]
+  (try (let [out (thunk)]
+         (assoc out :status {:status :ok :status-text "OK"}))
+       (catch Exception e
+         {:status {:status :error :status-text (str e)}})))
+
+(defn cqi-query [args-map]
+  (wrap-safe (fn [] (apply cqi-query* (apply concat args-map)))))
+
+(defn cqi-query-range [args-map]
+  (wrap-safe (fn [] (apply cqi-query-range* (apply concat args-map)))))
 
 ;; (def spec (read-init "dev-resources/cqpserver.init"))
 ;; (def client (cqp/make-cqi-client spec))

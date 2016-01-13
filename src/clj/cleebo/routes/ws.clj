@@ -1,7 +1,7 @@
 (ns cleebo.routes.ws
   (:require [taoensso.timbre :as timbre]
             [cleebo.utils :refer [write-str read-str]]
-            [cleebo.cqp :refer [cqi-query query-range]]
+            [cleebo.cqp :refer [cqi-query cqi-query-range]]
             [com.stuartsierra.component :as component]
             [org.httpkit.server :as kit]))
 
@@ -67,7 +67,7 @@
                                       :status :ok
                                       :type :query-results}))
       :next (let [{:keys [from to]} msg
-                  result (query-range cqi-client "PYCCLE-ECCO" from to)]
+                  result (cqi-query-range cqi-client "PYCCLE-ECCO" from to)]
               (send->client ws-from {:msg result
                                      :status :ok
                                      :type :query-results}))

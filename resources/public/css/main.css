@@ -1,3 +1,11 @@
 .navbar-default > .navbar-nav > li > i:hover, .navbar-default .navbar-nav > li > i:focus {
     color: #cecece;
 }
+
+.nav>li>a:hover {
+    background-color: #464646 !important;
+}
+
+*:focus {
+    outline: none;
+}
