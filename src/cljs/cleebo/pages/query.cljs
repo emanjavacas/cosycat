@@ -74,6 +74,11 @@
                  :to to
                  :context context}}))
 
+(defn on-key [k thunk]
+  (fn [e]
+    (if (= (.-charCode e) k)
+      (thunk))))
+
 (defn query-field []
   (let [query-opts (re-frame/subscribe [:query-opts])
         query-str (re-frame/subscribe [:session :query-results :query-str])]
@@ -92,9 +97,9 @@
            :autocapitalize "off"
            :spellcheck "false"
            :on-key-press
-           #(if (= (.-charCode %) 13)
-              (let [query-str (.-value (by-id "query-str"))]
-                (query (assoc @query-opts :query-str query-str :type "type"))))}
+           (on-key 13
+            #(let [query-str (.-value (by-id "query-str"))]
+               (query (assoc @query-opts :query-str query-str :type "type"))))}
           [:i.zmdi.zmdi-search.form-control-feedback
            {:style {:font-size "1.75em" :line-height "35px"}}]]]]])))
 
@@ -117,7 +122,7 @@
    [[dropdown-opt
      :k :corpus
      :placeholder "Corpus: "
-     :choices [{:id "PYCCLE-ECCO"} {:id "PYCCLE-EBBO"} {:id "MBG-CORPUS"}]
+     :choices [{:id "DICKENS"} {:id "PYCCLE-ECCO"} {:id "MBG-CORPUS"}]
      :width "175px"]
     [dropdown-opt
      :k :size
@@ -177,7 +182,7 @@
           [:input#from-hit
            {:type "number"
             :min "1"
-            :default-value "1"
+            :default-value (inc (:from @query-results))
             :on-key-press
             #(if (= (.-charCode %) 13)
                (let [{:keys [corpus context size]} @query-opts

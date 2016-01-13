@@ -59,11 +59,6 @@
                            :optimizations :advanced
                            :closure-defines {goog.DEBUG false}
                            :pretty-print false}}]}
-  ;; :figwheel {:css-dirs ["resources/public/css"]
-  ;;            ;; :ring-handler cleebo.handler/web-app
-  ;;            :http-server-root "public"
-  ;;            :server-port 3449
-  ;;            :nrepl-port 7888}
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]
                  :timeout 120000})
 

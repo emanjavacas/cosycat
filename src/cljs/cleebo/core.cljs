@@ -9,6 +9,7 @@
             [cleebo.pages.query :refer [query-panel]]
             [cleebo.pages.settings :refer [settings-panel]]            
             [taoensso.timbre :as timbre]
+;            [environ.core :refer [env]]
             [figwheel.client :as figwheel]))
 
 (defmulti panels identity)
@@ -53,9 +54,11 @@
    (str "ws://" (.-host js/location) "/ws")
    #(re-frame/dispatch [:ws-in %])))
 
-(defn ^:export init [] 
-  (routes/app-routes)
-  (set-ws-ch)
-  (re-frame/dispatch-sync [:initialize-db])
-  (mount-root)
-  (figwheel/start {:websocket-url "ws://146.175.15.30:3449/figwheel-ws"}))
+(defn ^:export init []
+  (let [host "localhost";(get env :host "146.175.15.30")
+        ]
+    (routes/app-routes)
+    (set-ws-ch)
+    (re-frame/dispatch-sync [:initialize-db])
+    (mount-root)
+    (figwheel/start {:websocket-url (str "ws://" host ":3449/figwheel-ws")})))

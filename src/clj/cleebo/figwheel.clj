@@ -1,6 +1,9 @@
 (ns cleebo.figwheel
-  (:require [figwheel-sidecar.repl-api :as f-repl]
+  (:require [environ.core :refer [env]]
+            [figwheel-sidecar.repl-api :as f-repl]
             [com.stuartsierra.component :as component]))
+
+(def host (get env :host "146.175.15.30"))
 
 (def figwheel-config
    {:figwheel-options {:css-dirs ["resources/public/css"]} ;server config
@@ -8,7 +11,7 @@
     :all-builds          ;; <-- supply your build configs here
     [{:id "dev"
       :source-paths ["src/cljs"]
-      :figwheel {:websocket-url "ws://146.175.15.30:3449/figwheel-ws" ;client config
+      :figwheel {:websocket-url (str "ws://" host ":3449/figwheel-ws") ;client config
                  :on-jsload "cleebo.core/mount-root"
                  :websocket-host :js-client-host}
       :compiler {:main "cleebo.core"
