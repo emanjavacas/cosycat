@@ -50,4 +50,8 @@
 (re-frame/register-handler
  :set-query-results
  (fn [db [_ & [{:keys [results query-size query-str status from to] :as data}]]]
-   (update-in db [:session :query-results] merge data)))
+   (timbre/debug data)
+   (update-in db [:session :query-results] merge data)
+                                        ;   (assoc-in db [:session :query-results] data)
+;   db
+   ))

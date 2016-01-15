@@ -9,7 +9,13 @@
             [goog.fx.dom :as gfx]
             [goog.fx.easing :as gfx-easing]
             [taoensso.timbre :as timbre])
+  (:require-macros [cleebo.env :as env :refer [cljs-env]])
   (:import [goog.fx Animation]))
+
+(def corpora
+  (let [{cqp-corpora :corpora} (cljs-env :cqp)
+        {bl-corpora :corpora}  (cljs-env :blacklab)]
+    (concat cqp-corpora bl-corpora)))
 
 (defn by-id [id]
   (.-value (.getElementById js/document id)))
@@ -119,7 +125,7 @@
    [[dropdown-opt
      :k :corpus
      :placeholder "Corpus: "
-     :choices [{:id "DICKENS"} {:id "PYCCLE-ECCO"} {:id "MBG-CORPUS"}]
+     :choices (map (partial hash-map :id) corpora)
      :width "225px"]
     [dropdown-opt
      :k :size
@@ -244,11 +250,11 @@
       [:table.table.table-hover.table-results
        [:thead]
        [:tbody {:style {:font-size "11px"}}
-        (for [[i [n row]] (map-indexed vector (:results @query-results))]
+        (for [[i {:keys [hit num meta]}] (map-indexed vector (:results @query-results))]
           ^{:key i}
-          [:tr {:data-num n :on-click #(do (timbre/debug (result-by-id % (:results @query-results))))}
-           (into [:td (inc n)]
-                 (for [{:keys [id word] :as token} row]
+          [:tr {:data-num num :on-click #(do (timbre/debug (result-by-id % (:results @query-results))))}
+           (into [:td (inc num)]
+                 (for [{:keys [id word] :as token} hit]
                    (cond
                      (:target token) ^{:key (str i "-" id)} [:td.success word]
                      (:match token) ^{:key (str i "-" id)} [:td.info word]

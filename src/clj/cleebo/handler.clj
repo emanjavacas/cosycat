@@ -28,7 +28,8 @@
             [cleebo.routes.auth
              :refer [safe auth-backend login-authenticate on-login-failure signup]]
             [cleebo.routes.ws :refer [ws-handler-http-kit]]
-            [cleebo.cqp :refer [cqi-query cqi-query-range]]))
+            [cleebo.cqp :refer [cqi-query cqi-query-range]]
+            [cleebo.blacklab.core :refer [bl-query bl-query-range bl-query-size]]))
 
 (defn is-logged? [req]
   (get-in req [:session :identity]))
@@ -80,6 +81,44 @@
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))
 
+(def bl-query-route
+  (safe
+   (fn [{{{username :username} :identity} :session 
+         {blacklab :blacklab} :components
+         {corpus :corpus
+          query-str :query-str         
+          context :context
+          size :size
+          from :from} :params}]
+     (let [result (bl-query blacklab
+                            corpus
+                            query-str
+                            (->int from)
+                            (+ (->int from) (->int size))
+                            (->int context)
+                            username)]
+       {:status 200 :body result}))
+   {:login-uri "/login" :is-ok? authenticated?}))
+
+(def bl-query-range-route
+  (safe
+   (fn [{{{username :username} :identity} :session 
+         {blacklab :blacklab} :components
+         {corpus :corpus
+          query-str :query-str         
+          context :context
+          to :to
+          from :from} :params}]
+     (let [result (bl-query-range
+                   blacklab
+                   corpus
+                   (->int from)
+                   (+ (->int from) (->int to))
+                   (->int context)
+                   username)]
+       {:status 200 :body result}))
+   {:login-uri "/login" :is-ok? authenticated?}))
+
 (defroutes app-routes
   (GET "/" req (landing-page :logged? (is-logged? req)))
   (GET "/login" req (login-page :csrf *anti-forgery-token*))
@@ -88,8 +127,8 @@
   (GET "/about" req (about-route req))
   (GET "/cleebo" req (cleebo-route req))
   (ANY "/logout" req (-> (redirect "/") (assoc :session {})))
-  (GET "/query" req (query-route req))
-  (GET "/range" req (range-route req))  
+  (GET "/query" req (bl-query-route req))
+  (GET "/range" req (bl-query-range-route req))  
   (GET "/ws" req (ws-handler-http-kit req))
   (resources "/")
   (not-found (error-page :status 404 :title "Page not found!!")))

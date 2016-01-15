@@ -55,23 +55,24 @@
 
 (defn- make-hit-map
   "Base handler that takes a Hit and gives a clojure data struct"
-  [^Hit hit ^Hits hits]
-  (let [kwic (.getKwic hits hit)
+  [^Hit -hit ^Hits -hits]
+  (let [kwic (.getKwic -hits -hit)
         props (map keyword (.getProperties kwic))
         tokens (.getTokens kwic)
-        hit-vec (mapv (partial zipmap props) (partition (count props) tokens))]
-    {:hit hit :hits hits :hit-vec hit-vec}))
+        hit (mapv (partial zipmap props) (partition (count props) tokens))]
+    {:-hit -hit :-hits -hits :hit hit}))
 
-(defn basic-handler 
+(defn wrap-clean
   "Basic handler that removes the hit key from hit-map"
-  [hit-map] (dissoc hit-map :hit :hits))
+;  [handler]
+  [hit-map] (dissoc hit-map :-hit :-hits))
 
 (defn wrap-doc-by-name
   "Handler for extracting doc metadata"
   [handler]
   (fn [hit-map ^Searcher searcher field-name]
-    (let [^Hit hit (:hit hit-map)
-          ^Document doc (.document searcher (.doc hit))
+    (let [^Hit -hit (:-hit hit-map)
+          ^Document doc (.document searcher (.doc -hit))
           ^String field (.stringValue (.getField doc field-name))
           new-map (assoc-in hit-map [:meta (keyword field-name)] field)]
       (handler new-map))))
@@ -80,8 +81,8 @@
   "Extract multiple fields at once"
   [handler]
   (fn [hit-map ^Searcher searcher & field-names]
-    (let [^Hit hit (:hit hit-map)
-          ^Document doc (.document searcher (.doc hit))
+    (let [^Hit -hit (:-hit hit-map)
+          ^Document doc (.document searcher (.doc -hit))
           get-value (fn [field-name] (.stringValue (.getField doc field-name)))
           fields (zipmap (map keyword field-names) (map get-value field-names))
           new-map (assoc hit-map :meta fields)]
@@ -91,8 +92,8 @@
   "Extract all doc fields"
   [handler ^Searcher searcher]
   (fn [hit-map]
-    (let [^Hit hit (:hit hit-map)
-          ^Document doc (.document searcher (.doc hit))
+    (let [^Hit -hit (:-hit hit-map)
+          ^Document doc (.document searcher (.doc -hit))
           field-tokens (map (fn [^IndexableField field]
                               [(.name field)
                                (.stringValue field)])
@@ -105,68 +106,108 @@
   "Add match annotation to match tokens"
   [handler]
   (fn [hit-map]
-    (let [^Hit hit (:hit hit-map)
-          ^Hits hits (:hits hit-map)
-          ^Kwic kwic (.getKwic hits hit)
+    (let [^Hit -hit (:-hit hit-map)
+          ^Hits -hits (:-hits hit-map)
+          ^Kwic kwic (.getKwic -hits -hit)
           start (.getHitStart kwic)
           end (.getHitEnd kwic)
-          hit-vec (:hit-vec hit-map)
+          hit-vec (:hit hit-map)
           hit-match (update-range hit-vec #(assoc % :match true) start (inc end))
-          new-map (assoc hit-map :hit-vec hit-match)]
+          new-map (assoc hit-map :hit hit-match)]
       (handler new-map))))
 
-(defprotocol SearcherState
-  (update-hits! [searcher query-id new-hits]))
+(defn wrap-hit [handler]
+  (fn [hit]
+    (handler hit)))
 
-(defrecord BLSearcher [searchers hits hits-handler]
+(defn hits-handler [hits searcher]
+  (let [handler (wrap-hit (->  wrap-clean
+                              wrap-match
+                              (wrap-doc searcher)))]
+    (for [^Hit hit hits
+          :let [hit-map (make-hit-map hit hits)]]
+      (handler hit-map))))
+
+(defn- -hits->page [^Hits -hits from to context]
+  (.setContextSize -hits context)
+  (.window -hits from to))
+
+(defprotocol SearcherState
+  (update-hits! [searcher query-id -new-hits]))
+
+(defrecord BLSearcher [searchers -hits hits-handler]
   component/Lifecycle
   (start [component] component)
   (stop [component] component)
   SearcherState
-  (update-hits! [seacher query-id new-hits] (swap! hits assoc query-id new-hits)))
+  (update-hits! [seacher query-id -new-hits]
+    (swap! -hits assoc query-id -new-hits)))
 
 (defn new-blsearcher [paths-map]
   (let [searchers (zipmap (keys paths-map) (map make-searcher (vals paths-map)))]
     (map->BLSearcher
      {:searchers searchers
-      :hits (atom {})
-      :hits-handler (fn [hits searcher]
-                      (for [^Hit hit hits
-                            :let [hit-map (make-hit-map hit hits)]]
-                        ((-> basic-handler
-                             wrap-match
-                             (wrap-doc searcher))
-                         hit-map)))})))
+      :-hits (atom {})
+      :hits-handler hits-handler})))
 
-(defn query
-  ([searcher corpus query-str from size context]
-   (query searcher corpus query-str from size context "default"))
-  ([searcher corpus query-str from size context query-id]
+(defn- get-hits
+  ([searcher corpus]
+   (get-hits searcher corpus "default"))
+  ([searcher corpus query-id]
+   (get @(:-hits searcher) query-id)))
+
+(defn bl-query-size
+  ([searcher corpus]
+   (bl-query-size searcher corpus "default"))
+  ([searcher corpus query-id]
+   (let [-hits (get-hits searcher query-id)]
+     (.size ^Hits -hits))))
+
+(defn bl-query
+  ([searcher corpus query-str from to context]
+   (bl-query searcher corpus query-str from to context "default"))
+  ([searcher corpus query-str from to context query-id]
    (let [blsearcher (get-in searcher [:searchers corpus])
          hits-handler (get searcher :hits-handler)
-         hits (run-query blsearcher query-str)]
-     (update-hits! searcher query-id hits)
-     
-     (hits-handler hits blsearcher))))
+         -hits (run-query blsearcher query-str)         
+         hits (hits-handler (-hits->page -hits from to context) blsearcher)]
+     (update-hits! searcher query-id -hits)
+     hits
+     {:results  (map (fn [hit num] (assoc hit :num num)) hits (range from to))
+      :from from
+      :to to
+      :query-str query-str
+      :query-size (.size ^Hits -hits)})))
 
-(defn query-range
+(defn bl-query-range
   ([searcher corpus from to context]
-   (query-range searcher corpus from to context "default"))
+   (bl-query-range searcher corpus from to context "default"))
   ([searcher corpus from to context query-id]
    (let [blsearcher (get-in searcher [:searchers corpus])
          hits-handler (get searcher :hits-handler)
-         hits (get @(:hits searcher) query-id)]
-     (.setContextSize hits context)
-     (hits-handler (.window hits from to) blsearcher))))
+         -hits (get-hits searcher corpus query-id)
+         hits (hits-handler (-hits->page -hits from to context) blsearcher)]
+     {:results  (map (fn [hit num] (assoc hit :num num)) hits (range from to))
+      :from from
+      :to to})))
 
-(def paths-map {"brown" "/home/enrique/code/BlackLab/brown-index/"})
+(def paths-map {"brown"    "/home/enrique/code/BlackLab/brown-index/"
+                "brown-id" "/home/enrique/code/BlackLab/brown-index-id/"})
 
-;; ;;; 
-;; (def searcher (new-blsearcher paths-map))
-;; (def hits (query searcher "brown" "[pos=\"N.*\"]" 0 10 5))
+;; ;;;
+(def searcher (new-blsearcher paths-map))
+(def hits (bl-query searcher "brown-id" "[pos=\".*\"]" 0 10 5))
+(bl-query-range searcher "brown-id" 0 10 5)
+;; (first (:results hits))
+;(query-range searcher "brown-id" 0 50 5)
+
 ;; (raw-text hits :n 10)
+;; (query-size searcher "brown")
 
-;; (clojure.inspector/inspect hits)
+;; (map :word (filter :match ))
+
+;; (map :hit-vec (take 10 hits))
+
 
 ;; (defn raw-text [hits & {:keys [n] :or {n 10}}]
 ;;   (map :word (filter :match (map :hit-vec (take n hits)))))
@@ -174,4 +215,3 @@
 ;; (def hits (morph-query "[pos=\"N.*\"] "))
 ;; (def hit-property (HitPropertyHitText. hits "contents"))
 ;; (.sort hits (HitPropertyHitText. hits "contents"))
-

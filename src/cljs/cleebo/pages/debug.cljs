@@ -19,7 +19,7 @@
 (defn summary-session []
   (let [session (re-frame/subscribe [:session])]
     (fn []
-      (let [asession (update-in @session [:query-results] dissoc :results)
+      (let [asession @session ;(update-in @session [:query-results] dissoc :results)
             query-opts (:query-opts asession)
             query-results (:query-results asession)]
         (conj

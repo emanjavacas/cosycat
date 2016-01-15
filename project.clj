@@ -1,6 +1,7 @@
 (defproject cleebo "0.1.0-SNAPSHOT"
   :description "Corpus query interface plus annotations"
   :license {:name "GNU v3.0"}
+  
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
@@ -41,7 +42,7 @@
                  [junit/junit "4.8"]
                  [com.goldmansachs/gs-collections "6.1.0"]
                  [blacklab "1.2-SNAPSHOT"]]
-
+  :java-source-paths ["src/java"]
   :main cleebo.core
   :plugins [[lein-cljsbuild "1.1.1"]
             [lein-environ "1.0.1"]
