@@ -9,3 +9,18 @@
 *:focus {
     outline: none;
 }
+
+.panel-enter {
+    height: 0;
+    transition: height 0.27s ease-out;
+}
+
+.panel-leave {
+    height: 0;
+    transition: height 0.27s ease-out;
+}
+
+.panel-enter-active {
+    height: 100%;
+    opacity: 1;
+}

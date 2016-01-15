@@ -48,7 +48,7 @@
                       context
                       attrs)
           to (+ from (count results))]
-      {:results (zipmap (range from to) results)
+      {:results (apply sorted-map (interleave (range from to) results))
        :from from
        :to to
        :query-str query-str
@@ -92,7 +92,7 @@
 ;;   (create-attrs [{:type :pos :name "word"} {:type :pos :name "pos"}]))
 
 ;; (def result
-;;   (do (cqp/query! client "PYCCLE-ECCO" query-str "latin1")
+;;   (do (cqp/query! client "PYCCLE-ECCO" "'those'" "latin1")
 ;;       (cqp/cpos-seq-handler
 ;;        client
 ;;        "PYCCLE-ECCO"
@@ -100,9 +100,15 @@
 ;;        2
 ;;        attrs)))
 
-;; (cqp/cpos-seq-handler
-;;  client
-;;  "PYCCLE-ECCO"
-;;  (cqp/cpos-range client "PYCCLE-ECCO" 20 40)
-;;  2
-;;  attrs)
+;; (def query-size
+;;   (cqp/query-size client "PYCCLE-ECCO"))
+
+;; (prn query-size)
+
+;; (def hits
+;;   (cqp/cpos-seq-handler
+;;    client
+;;    "PYCCLE-ECCO"
+;;    (cqp/cpos-range client "PYCCLE-ECCO" 0 query-size)
+;;    2
+;;    attrs))

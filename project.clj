@@ -10,7 +10,8 @@
                  [environ "1.0.1"]
                  [selmer "0.9.3"]
                  [hiccup "1.0.5"]
-                 [reagent "0.5.1"]
+                 [reagent "0.5.1" :exclusions [cljsjs/react]]
+                 [cljsjs/react-with-addons "0.13.3-0"]
                  [re-frame "0.5.0"]
                  [re-com "0.7.0"]
                  [secretary "1.2.3"]
@@ -29,7 +30,17 @@
                  [buddy/buddy-hashers "0.9.1"]
                  [com.stuartsierra/component "0.3.1"]
                  [org.clojure/tools.namespace "0.2.11"]
-                 [cqp-clj "0.1.0-SNAPSHOT"]]
+                 [cqp-clj "0.1.0-SNAPSHOT"]
+                 ; blacklab
+                 [org.apache.lucene/lucene-core "4.2.1"]
+                 [org.apache.lucene/lucene-analyzers-common "4.2.1"]
+                 [org.apache.lucene/lucene-highlighter "4.2.1"]
+                 [org.apache.lucene/lucene-queryparser "4.2.1"]
+                 [org.apache.lucene/lucene-queries "4.2.1"]
+                 [log4j/log4j "1.2.16"]
+                 [junit/junit "4.8"]
+                 [com.goldmansachs/gs-collections "6.1.0"]
+                 [blacklab "1.2-SNAPSHOT"]]
 
   :main cleebo.core
   :plugins [[lein-cljsbuild "1.1.1"]

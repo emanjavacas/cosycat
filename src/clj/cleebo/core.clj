@@ -6,6 +6,7 @@
             [cleebo.cqp :refer [new-cqi-client]]
             [cleebo.figwheel :refer [new-figwheel]]
             [cleebo.routes.ws :refer [new-ws]]
+            [clojure.pprint :as pprint]
             [taoensso.timbre :as timbre]
             [environ.core :refer [env]]))
 
@@ -28,6 +29,9 @@
 (defonce system nil)
 
 (defn init []
+  (println "\n\nStarting server with enviroment:")
+  (pprint/pprint (select-keys env [:host :database-url :cqp-init-file]))
+  (println "\n")  
   (alter-var-root #'system (constantly (create-system config-map))))
 
 (defn start []

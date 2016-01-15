@@ -13,6 +13,9 @@
             [figwheel.client :as figwheel])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
+(def css-transition-group
+  (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
+
 (defmulti panels identity)
 (defmethod panels :query-panel [] [query-panel])
 (defmethod panels :settings-panel [] [settings-panel])
@@ -46,7 +49,9 @@
           [sidelink :debug-panel "#/debug" "Debug" "zmdi-bug"]          
           [sidelink :exit          "#/exit" "Exit" "zmdi-power"]]]
         [:div.col-sm-10.col-sm-offset-2.col-md-11.col-md-offset-1.main
-         (panels @active-panel)]]])))
+         (panels @active-panel)
+         [css-transition-group {:transition-name "panel"}]
+         ]]])))
 
 (defn mount-root []
   (.log js/console "Called mount-root")

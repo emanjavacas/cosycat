@@ -12,7 +12,7 @@
   (:import [goog.fx Animation]))
 
 (defn by-id [id]
-  (.getElementById js/document id))
+  (.-value (.getElementById js/document id)))
 
 (defn pager-next
   ([size page-size] (pager-next size page-size 0))
@@ -76,14 +76,8 @@
                  :to to
                  :context context}}))
 
-(defn on-key [k thunk]
-  (fn [e]
-    (if (= (.-charCode e) k)
-      (thunk))))
-
 (defn query-field []
-  (let [query-opts (re-frame/subscribe [:query-opts])
-        query-str (re-frame/subscribe [:session :query-results :query-str])]
+  (let [query-opts (re-frame/subscribe [:query-opts])]
     (fn []
       [re-com/h-box
        :justify :between
@@ -94,18 +88,19 @@
           {:style {:width "640px"}
            :type "text"
            :name "query"
-           :placeholder (or @query-str "Example: [pos='.*\\.']") ;remove?
+           :placeholder "Example: [pos='.*\\.']" ;remove?
            :autocorrect "off"
            :autocapitalize "off"
            :spellcheck "false"
            :on-key-press
-           (on-key 13
-            #(let [query-str (.-value (by-id "query-str"))]
-               (query (assoc @query-opts :query-str query-str :type "type"))))}
+           (fn [k] (if (= (.-charCode k) 13)
+                     (let [query-str (by-id "query-str")
+                           arg-map (assoc @query-opts :query-str query-str)]
+                       (query arg-map))))}
           [:i.zmdi.zmdi-search.form-control-feedback
            {:style {:font-size "1.75em" :line-height "35px"}}]]]]])))
 
-(defn dropdown-opt [& {:keys [k placeholder choices width] :or {width "125px"}}]
+(defn dropdown-opt [& {:keys [k placeholder choices width] :or {width "175px"}}]
   {:pre [(and k placeholder choices)]}
   [re-com/single-dropdown
    :style {:font-size "12px"}
@@ -125,7 +120,7 @@
      :k :corpus
      :placeholder "Corpus: "
      :choices [{:id "DICKENS"} {:id "PYCCLE-ECCO"} {:id "MBG-CORPUS"}]
-     :width "175px"]
+     :width "225px"]
     [dropdown-opt
      :k :size
      :placeholder "Page size: "
@@ -150,20 +145,37 @@
                                   :to to
                                   :context context}))])))
 
-(defn bordered-div [& {:keys [label]}]
-  {:pre [label]}
-  [:div
-   {:style {:font-size "12px"
-            :height "34px"
-            :line-height "32px"
-            :padding "0 0.3em"
-            :border "1px solid #ccc"
-            :border-right "none"
-            :border-radius "4px 0 0 4px"
-            :background-color "#ddd"
-            :position "static"
-            :margin "auto"}}
-   label])
+(defn bordered-input [& {:keys [label model on-change on-key-press]}]
+  {:pre [(and label model)]}
+  (let [inner-value (reagent/atom "")]
+    (fn [& {:keys [label model-fn on-change on-key-press]
+            :or {on-change identity on-key-press identity}}]
+      [re-com/h-box
+       :children
+       [[:div
+         {:style {:font-size "12px"
+                  :height "34px"
+                  :line-height "25px"
+                  :padding "0 0.3em"
+                  :border "1px solid #ccc"
+                  :border-right "none"
+                  :border-radius "4px 0 0 4px"
+                  :background-color "#ddd"
+                  :position "static"
+                  :margin "auto"}}
+         label]
+        [:input
+         {:style {:width "3.7em"
+                  :padding-left "0.3em"
+                  :padding-top "2px"
+                  :border "1px solid #ccc"
+                  :border-radius "0 4px 4px 0"
+                  :border-left "none"}
+          :type "number"
+          :min "1"
+          :default-value model
+          :on-change #(on-change (reset! inner-value (.-value (.-target %))))
+          :on-key-press #(on-key-press % @inner-value)}]]])))
 
 (defn nav-buttons []
   (let [query-opts (re-frame/subscribe [:query-opts])
@@ -178,30 +190,20 @@
         [nav-button
          (fn [query-size size from to] (pager-next query-size size to))
          [:div "next" [:i.zmdi.zmdi-arrow-right {:style {:margin-left "10px"}}]]]
-        [re-com/h-box
-         :children
-         [[bordered-div :label "Go to hit: "]
-          [:input#from-hit
-           {:type "number"
-            :min "1"
-            :default-value (inc (:from @query-results))
-            :on-key-press
-            (on-key 13
-               #(let [{:keys [corpus context size]} @query-opts
-                      {:keys [query-size]} @query-results
-                      from-hit (js/parseInt (.-value (by-id "from-hit")))
-                      from-hit (max 0 (min (dec from-hit) query-size))]
-                 (query-range
-                  {:corpus corpus
-                   :from from-hit
-                   :to (+ from-hit size)
-                   :context context})))
-            :style {:width "3.7em"
-                    :padding-left "0.3em"
-                    :padding-top "2px"
-                    :border "1px solid #ccc"
-                    :border-radius "0 4px 4px 0"
-                    :border-left "none"}}]]]]])))
+        [bordered-input
+         :label "go->"
+         :model (inc (:from @query-results))
+         :on-key-press
+         (fn [k value]
+           (if (= (.-charCode k) 13)
+             (let [{:keys [corpus context size]} @query-opts
+                   {:keys [query-size]} @query-results
+                   from-hit (max 0 (min (dec (js/parseInt value)) query-size))]
+               (query-range
+                {:corpus corpus
+                 :from from-hit
+                 :to (+ from-hit size)
+                 :context context}))))]]])))
 
 (defn toolbar []
   (let [query-results (re-frame/subscribe [:query-results])]
@@ -244,8 +246,7 @@
        [:tbody {:style {:font-size "11px"}}
         (for [[i [n row]] (map-indexed vector (:results @query-results))]
           ^{:key i}
-          [:tr {:data-num n :on-click #(do (timbre/debug (result-by-id % (:results @query-results)))
-                                           (fade-out %))}
+          [:tr {:data-num n :on-click #(do (timbre/debug (result-by-id % (:results @query-results))))}
            (into [:td (inc n)]
                  (for [{:keys [id word] :as token} row]
                    (cond
