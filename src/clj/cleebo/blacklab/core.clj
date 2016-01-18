@@ -2,13 +2,31 @@
   (:require [cleebo.blacklab.paginator]
             [com.stuartsierra.component :as component])
   (:import [nl.inl.blacklab.search Searcher Hit Hits Concordance Kwic TextPatternRegex]
-           [nl.inl.blacklab.search.grouping HitPropertyHitText]           
+           [nl.inl.blacklab.search.grouping
+            HitProperty HitPropertyHitText HitPropertyLeftContext HitPropertyRightContext]
            [nl.inl.blacklab.queryParser.corpusql CorpusQueryLanguageParser]
            [nl.inl.util XmlUtil]
            [org.apache.lucene.document Document]
            [org.apache.lucene.index IndexableField]))
 
 (set! *warn-on-reflection* true)
+
+(defn update-range
+  "Updates v applying function f to the items at the positions
+  by a range. See #'range for its function signature"
+  [v f & args]
+  (if args
+    (let [arange (apply range args)]
+      (loop [cur (first arange)
+             todo (next arange)
+             res v]
+        (if todo
+          (recur
+           (first todo)
+           (next todo)
+           (assoc res cur (f (get res cur))))
+          res)))
+    v))
 
 (defn unmod-query
   "Basic query handler without query modification"
@@ -33,25 +51,8 @@
    (run-query searcher s unmod-query))
   ([^Searcher searcher ^String s query-handler]
    (let [^TextPatternRegex query (query-handler s)
-         ^Hits hits (.find searcher query)]
-     hits)))
-
-(defn update-range
-  "Updates v applying function f to the items at the positions
-  by a range. See #'range for its function signature"
-  [v f & args]
-  (if args
-    (let [arange (apply range args)]
-      (loop [cur (first arange)
-             todo (next arange)
-             res v]
-        (if todo
-          (recur
-           (first todo)
-           (next todo)
-           (assoc res cur (f (get res cur))))
-          res)))
-    v))
+         ^Hits -hits (.find searcher query)]
+     -hits)))
 
 (defn- make-hit-map
   "Base handler that takes a Hit and gives a clojure data struct"
@@ -62,6 +63,18 @@
         hit (mapv (partial zipmap props) (partition (count props) tokens))]
     {:-hit -hit :-hits -hits :hit hit}))
 
+(defn- -hits->window [^Hits -hits from to context]
+  (.setContextSize -hits context)
+  (.window -hits from to))
+
+(defn- ^Hits get-hits
+  ([searcher]
+   (get-hits searcher "default"))
+  ([searcher query-id]
+   (let [{-hits :-hits} searcher]
+     (get @-hits query-id))))
+
+;;; middleware
 (defn wrap-clean
   "Basic handler that removes the hit key from hit-map"
 ;  [handler]
@@ -116,21 +129,12 @@
           new-map (assoc hit-map :hit hit-match)]
       (handler new-map))))
 
-(defn wrap-hit [handler]
-  (fn [hit]
-    (handler hit)))
-
 (defn hits-handler [hits searcher]
-  (let [handler (wrap-hit (->  wrap-clean
-                              wrap-match
-                              (wrap-doc searcher)))]
+  (let [middleware (-> wrap-clean wrap-match (wrap-doc searcher))
+        handler (fn [hit] (middleware hit))]
     (for [^Hit hit hits
           :let [hit-map (make-hit-map hit hits)]]
       (handler hit-map))))
-
-(defn- -hits->page [^Hits -hits from to context]
-  (.setContextSize -hits context)
-  (.window -hits from to))
 
 (defprotocol SearcherState
   (update-hits! [searcher query-id -new-hits]))
@@ -143,75 +147,86 @@
   (update-hits! [seacher query-id -new-hits]
     (swap! -hits assoc query-id -new-hits)))
 
-(defn new-blsearcher [paths-map]
-  (let [searchers (zipmap (keys paths-map) (map make-searcher (vals paths-map)))]
-    (map->BLSearcher
-     {:searchers searchers
-      :-hits (atom {})
-      :hits-handler hits-handler})))
-
-(defn- get-hits
+(defn query-size
   ([searcher corpus]
-   (get-hits searcher corpus "default"))
-  ([searcher corpus query-id]
-   (get @(:-hits searcher) query-id)))
-
-(defn bl-query-size
-  ([searcher corpus]
-   (bl-query-size searcher corpus "default"))
+   (query-size searcher corpus "default"))
   ([searcher corpus query-id]
    (let [-hits (get-hits searcher query-id)]
      (.size ^Hits -hits))))
 
-(defn bl-query
+(defn query
   ([searcher corpus query-str from to context]
-   (bl-query searcher corpus query-str from to context "default"))
+   (query searcher corpus query-str from to context "default"))
   ([searcher corpus query-str from to context query-id]
-   (let [blsearcher (get-in searcher [:searchers corpus])
-         hits-handler (get searcher :hits-handler)
-         -hits (run-query blsearcher query-str)         
-         hits (hits-handler (-hits->page -hits from to context) blsearcher)]
+   (let [{{blsearcher corpus} :searchers
+           hits-handler :hits-handler} searcher
+         -hits (run-query blsearcher query-str)]
      (update-hits! searcher query-id -hits)
-     hits
-     {:results  (map (fn [hit num] (assoc hit :num num)) hits (range from to))
-      :from from
-      :to to
-      :query-str query-str
-      :query-size (.size ^Hits -hits)})))
+     (hits-handler (-hits->window -hits from to context) blsearcher))))
 
-(defn bl-query-range
+(defn query-range
   ([searcher corpus from to context]
-   (bl-query-range searcher corpus from to context "default"))
+   (query-range searcher corpus from to context "default"))
   ([searcher corpus from to context query-id]
-   (let [blsearcher (get-in searcher [:searchers corpus])
-         hits-handler (get searcher :hits-handler)
-         -hits (get-hits searcher corpus query-id)
-         hits (hits-handler (-hits->page -hits from to context) blsearcher)]
-     {:results  (map (fn [hit num] (assoc hit :num num)) hits (range from to))
-      :from from
-      :to to})))
+   (let [{{blsearcher corpus} :searchers
+          hits-handler :hits-handler} searcher
+         -hits (get-hits searcher query-id)]
+     (hits-handler (-hits->window -hits from to context) blsearcher))))
 
-(def paths-map {"brown"    "/home/enrique/code/BlackLab/brown-index/"
-                "brown-id" "/home/enrique/code/BlackLab/brown-index-id/"})
+(defn ^HitProperty make-property
+  [^Hits -hits & {:keys [criterion ^String prop-name]
+                  :or {criterion :match
+                       prop-name "word"}}]
+  (case criterion
+    :match         (HitPropertyHitText. -hits "contents" prop-name)
+    :left-context  (HitPropertyLeftContext. -hits "contents" prop-name)
+    :right-context (HitPropertyRightContext. -hits "contents" prop-name)))
 
-;; ;;;
-(def searcher (new-blsearcher paths-map))
-(def hits (bl-query searcher "brown-id" "[pos=\".*\"]" 0 10 5))
-(bl-query-range searcher "brown-id" 0 10 5)
-;; (first (:results hits))
+(defn sorted-range
+  ([searcher corpus from to context criterion prop-name]
+   (sorted-range searcher corpus from to context criterion prop-name "default"))
+  ([searcher corpus from to context criterion prop-name query-id]
+   (let [{{blsearcher corpus} :searchers
+          hits-handler :hits-handler} searcher
+         -hits (get-hits searcher query-id)
+         -hits-window (-hits->window -hits from to context)
+         contents-field (:contentsFieldMainPropName blsearcher)
+         hit-property (make-property -hits-window :criterion criterion :prop-name prop-name)]
+     (.sort ^Hits -hits-window hit-property)
+     (hits-handler -hits-window blsearcher))))
+
+(defn new-blsearcher [paths-map]
+  (let [searchers (zipmap (keys paths-map) (map make-searcher (vals paths-map)))]
+    (map->BLSearcher
+     {:-hits (atom {})
+      :searchers searchers
+      :hits-handler hits-handler})))
+
+;;; test
+
+(defn raw-text [hits & {:keys [n window? pprint?]
+                        :or   {n 10 window? false pprint? true}}]
+  (let [tokens (if window?
+                 (map (partial map :word) (map :hit (take n hits)))
+                 (map :word (filter :match (mapcat :hit (take n hits)))))]
+    (if pprint?
+      (clojure.pprint/pprint (map #(apply str (interleave (repeat " ") %)) tokens))
+      tokens)))
+
+(def paths-map {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"})
+
+;(def searcher (new-blsearcher paths-map))
+;(def hits (query searcher "brown-id" "\"a\"" 0 10 5))
 ;(query-range searcher "brown-id" 0 50 5)
+;(query-size searcher "brown")
 
-;; (raw-text hits :n 10)
-;; (query-size searcher "brown")
-
-;; (map :word (filter :match ))
-
-;; (map :hit-vec (take 10 hits))
-
-
-;; (defn raw-text [hits & {:keys [n] :or {n 10}}]
-;;   (map :word (filter :match (map :hit-vec (take n hits)))))
-
-;; (def hits (morph-query "[pos=\"N.*\"] "))
-;; (def hit-property (HitPropertyHitText. hits "contents"))
-;; (.sort hits (HitPropertyHitText. hits "contents"))
+;; (def n 10000)
+;; (def hits (query searcher "brown-id" "\".*\"" 0 n 5))
+;; (clojure.pprint/pprint
+;;  (map #(apply str (interleave (repeat " ") %))
+;;       (raw-text (sorted-range searcher "brown-id" 0 n 2 :left-context "word")
+;;                 :window? true :n n)))
+;; (clojure.pprint/pprint
+;;  (map #(apply str (interleave (repeat " ") %))
+;;       (raw-text (query-range searcher "brown-id" 0 n 2 :left-context "word")
+;;                 :window? true :n n)))

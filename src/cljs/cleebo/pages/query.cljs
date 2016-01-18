@@ -55,13 +55,12 @@
 (defn query-results-handler [data]
   (let [{query-size :query-size} data
         data (if (zero? query-size) (assoc data :results nil) data)]
-    (timbre/debug "results-handler" data)
     (re-frame/dispatch [:set-query-results data])
     (re-frame/dispatch [:stop-throbbing :results-frame])))
 
 (defn query
   "will need to support 'from' for in-place query-opts change"
-  [{:keys [query-str corpus context size from] :or {from 0}}]
+  [{:keys [query-str corpus context size from] :or {from 0} :as query-args}]
   (re-frame/dispatch [:start-throbbing :results-frame])
   (GET "/query"
        {:handler query-results-handler
@@ -72,7 +71,7 @@
                  :from from
                  :size size}}))
 
-(defn query-range [{:keys [corpus from to context]}]
+(defn query-range [{:keys [corpus from to context sort-map]}]
   (re-frame/dispatch [:start-throbbing :results-frame])
   (GET "/range"
        {:handler query-results-handler
@@ -80,7 +79,8 @@
         :params {:corpus corpus
                  :from from
                  :to to
-                 :context context}}))
+                 :context context
+                 :sort-map sort-map}}))
 
 (defn query-field []
   (let [query-opts (re-frame/subscribe [:query-opts])]
@@ -102,7 +102,9 @@
            (fn [k] (if (= (.-charCode k) 13)
                      (let [query-str (by-id "query-str")
                            arg-map (assoc @query-opts :query-str query-str)]
-                       (query arg-map))))}
+                       (query arg-map))
+                     ;; 
+                     ))}
           [:i.zmdi.zmdi-search.form-control-feedback
            {:style {:font-size "1.75em" :line-height "35px"}}]]]]])))
 
@@ -130,7 +132,12 @@
     [dropdown-opt
      :k :size
      :placeholder "Page size: "
-     :choices (map (partial hash-map :id) (range 1 25))]
+     :choices (map (partial hash-map :id)
+                   [5 10 15 25 35
+                    55 85 125 190
+                    290 435 655 985
+                    1475 2215 3325 4985
+                    7480 11220 16830])]
     [dropdown-opt
      :k :context
      :placeholder "Window size: "
@@ -166,7 +173,7 @@
                   :border "1px solid #ccc"
                   :border-right "none"
                   :border-radius "4px 0 0 4px"
-                  :background-color "#ddd"
+                  :background-color "#EDEDED"
                   :position "static"
                   :margin "auto"}}
          label]
@@ -185,31 +192,68 @@
 
 (defn nav-buttons []
   (let [query-opts (re-frame/subscribe [:query-opts])
-        query-results (re-frame/subscribe [:query-results])]
+        query-results (re-frame/subscribe [:query-results])
+        criterion (reagent/atom "match")     ;defaults
+        prop-name (reagent/atom "word")]
     (fn []
       [re-com/h-box
-       :gap "5px"
+       :gap "15px"
        :children
-       [[nav-button
-         (fn [query-size size from to] (pager-prev query-size size from))
-         [:div [:i.zmdi.zmdi-arrow-left {:style {:margin-right "10px"}}] "prev"]] 
-        [nav-button
-         (fn [query-size size from to] (pager-next query-size size to))
-         [:div "next" [:i.zmdi.zmdi-arrow-right {:style {:margin-left "10px"}}]]]
-        [bordered-input
-         :label "go->"
-         :model (inc (:from @query-results))
-         :on-key-press
-         (fn [k value]
-           (if (= (.-charCode k) 13)
-             (let [{:keys [corpus context size]} @query-opts
-                   {:keys [query-size]} @query-results
-                   from-hit (max 0 (min (dec (js/parseInt value)) query-size))]
-               (query-range
-                {:corpus corpus
-                 :from from-hit
-                 :to (+ from-hit size)
-                 :context context}))))]]])))
+       [[re-com/h-box
+         :gap "0px"
+         :children
+         [[nav-button
+           (fn [query-size size from to] (pager-prev query-size size from))
+           [:div [:i.zmdi.zmdi-arrow-left {:style {:margin-right "10px"}}] "prev"]] 
+          [nav-button
+           (fn [query-size size from to] (pager-next query-size size to))
+           [:div "next" [:i.zmdi.zmdi-arrow-right {:style {:margin-left "10px"}}]]]
+          [bordered-input
+           :label "go->"
+           :model (inc (:from @query-results))
+           :on-key-press
+           (fn [k value]
+             (if (= (.-charCode k) 13)
+               (let [{:keys [corpus context size]} @query-opts
+                     {:keys [query-size]} @query-results
+                     from-hit (max 0 (min (dec (js/parseInt value)) query-size))]
+                 ;; todo check value
+                 (query-range
+                  {:corpus corpus
+                   :from from-hit
+                   :to (+ from-hit size)
+                   :context context}))))]]]
+        [re-com/h-box
+         :gap "0px"
+         :children
+         [[re-com/single-dropdown
+           :width "155px"
+           :choices [{:id "match"}
+                     {:id "left-context"}
+                     {:id "right-context"}]
+           :label-fn #(str "sort by: " (:id %))
+           :model criterion
+           :on-change (partial reset! criterion)]
+          [re-com/single-dropdown
+           :width "185px"
+           :choices [{:id "word"} {:id "pos"} {:id "lemma"}]
+           :label-fn #(str "sort prop: " (:id %))
+           :model prop-name
+           :on-change (partial reset! prop-name)]
+          [re-com/button
+           :style {:font-size "12px" :height "34px"}
+           :label "Sort!"
+           :on-click
+           (fn []
+             (let [{:keys [query-size from to]} @query-results
+                   {:keys [corpus context size]} @query-opts]
+               (timbre/debug from to context)
+               (query-range {:corpus corpus
+                             :from from
+                             :to (+ from size)
+                             :context context
+                             :sort-map {:criterion @criterion
+                                        :prop-name @prop-name}})))]]]]])))
 
 (defn toolbar []
   (let [query-results (re-frame/subscribe [:query-results])]
@@ -219,14 +263,14 @@
        :gap "5px"
        :children
        [(if-not (:results @query-results)
-          ""
+          ""          
           [re-com/h-box :justify :end :gap "10px"
            :children
            [[re-com/label
              :style {:line-height "30px"}
              :label
              (let [{:keys [from to query-size]} @query-results]
-               (gstr/format "Displaying %d-%d of %d hits" (inc from) to query-size))]
+               (gstr/format "Displaying %d-%d of %d hits" (inc from) (min to query-size) query-size))]
             [nav-buttons]]])
         [query-opts-menu]]])))
 
@@ -252,13 +296,13 @@
        [:tbody {:style {:font-size "11px"}}
         (for [[i {:keys [hit num meta]}] (map-indexed vector (:results @query-results))]
           ^{:key i}
-          [:tr {:data-num num :on-click #(do (timbre/debug (result-by-id % (:results @query-results))))}
+          [:tr {:data-num num
+                :on-click #(do (timbre/debug (result-by-id % (:results @query-results))))}
            (into [:td (inc num)]
                  (for [{:keys [id word] :as token} hit]
                    (cond
-                     (:target token) ^{:key (str i "-" id)} [:td.success word]
                      (:match token) ^{:key (str i "-" id)} [:td.info word]
-                     :else ^{:key (str i "-" id)} [:td word])))])]])))
+                     :else          ^{:key (str i "-" id)} [:td word])))])]])))
 
 (defn results-frame []
   (let [throbbing? (re-frame/subscribe [:throbbing? :results-frame])
@@ -266,13 +310,17 @@
         query-size (re-frame/subscribe [:session :query-results :query-size])]
     (fn []
       (let [{:keys [status status-text]} @status]
-        (cond
-          @throbbing?         (throbbing-panel)
-          (= status :error)   [error-panel
-                              {:status "Ups! something bad happened" :status-text status-text}]
-          (zero? @query-size) [error-panel
-                              {:status "The query returned no matching results"}]
-          :else               [:div [toolbar] [:br] [table-results]])))))
+        [re-com/v-box
+         :gap "20px"
+         :children
+         [[toolbar]
+          (cond
+            @throbbing?       (throbbing-panel)
+            (= status :error) [error-panel
+                               {:status "Ups! something bad happened" :status-text status-text}]
+            (= 0 @query-size) [error-panel
+                               {:status "The query returned no matching results"}]
+            :else             [table-results])]]))))
 
 (defn annotation-frame []
   [:div "annotation frame!!!"])

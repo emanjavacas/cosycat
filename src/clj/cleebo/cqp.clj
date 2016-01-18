@@ -48,7 +48,7 @@
                       context
                       attrs)
           to (+ from (count results))]
-      {:results (apply sorted-map (interleave (range from to) results))
+      {:results (mapv (fn [hit num] {:hit hit :num num}) results (range from to))
        :from from
        :to to
        :query-str query-str
@@ -60,7 +60,6 @@
         {:keys [context attrs]
          :or {context 5
               attrs default-attrs}} opts]
-    (timbre/debug corpus client from to context attrs)
     (let [results (cqp/cpos-seq-handler
                    client
                    corpus
@@ -68,11 +67,11 @@
                    context
                    attrs)
           to (+ from (count results))]
-      {:results (zipmap (range from to) results)
+      {:results (mapv (fn [hit num] {:hit hit :num num}) results (range from to))
        :from from
        :to to})))
 
-(defn wrap-safe [thunk]
+(defn- wrap-safe [thunk]
   (try (let [out (thunk)]
          (assoc out :status {:status :ok :status-text "OK"}))
        (catch Exception e
@@ -90,20 +89,19 @@
 ;; (def query-str "'the'")
 ;; (def attrs
 ;;   (create-attrs [{:type :pos :name "word"} {:type :pos :name "pos"}]))
+;; (def corpus-name "DICKENS")
 
 ;; (def result
-;;   (do (cqp/query! client "PYCCLE-ECCO" "'those'" "latin1")
+;;   (do (cqp/query! client corpus-name "'those'" "latin1")
 ;;       (cqp/cpos-seq-handler
 ;;        client
-;;        "PYCCLE-ECCO"
-;;        (cqp/cpos-range client "PYCCLE-ECCO" 0 10)
+;;        corpus-name
+;;        (cqp/cpos-range client corpus-name 0 10)
 ;;        2
 ;;        attrs)))
 
 ;; (def query-size
-;;   (cqp/query-size client "PYCCLE-ECCO"))
-
-;; (prn query-size)
+;;   (cqp/query-size client corpus-name))
 
 ;; (def hits
 ;;   (cqp/cpos-seq-handler

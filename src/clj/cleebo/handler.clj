@@ -1,5 +1,6 @@
 (ns cleebo.handler
   (:require [com.stuartsierra.component :as component]
+            [environ.core :refer [env]]
             [taoensso.timbre :as timbre]
             [compojure.core
              :refer [GET POST ANY defroutes wrap-routes]]
@@ -25,11 +26,11 @@
             [buddy.auth :refer [authenticated?]]
             [buddy.auth.middleware
              :refer [wrap-authentication wrap-authorization]]
-            [cleebo.routes.auth
-             :refer [safe auth-backend login-authenticate on-login-failure signup]]
+            [cleebo.routes.auth :refer
+             [safe auth-backend login-authenticate on-login-failure signup]]
             [cleebo.routes.ws :refer [ws-handler-http-kit]]
             [cleebo.cqp :refer [cqi-query cqi-query-range]]
-            [cleebo.blacklab.core :refer [bl-query bl-query-range bl-query-size]]))
+            [cleebo.blacklab :refer [bl-query bl-query-range]]))
 
 (defn is-logged? [req]
   (get-in req [:session :identity]))
@@ -47,7 +48,7 @@
    (fn [req] (cleebo-page :csrf *anti-forgery-token*))
    {:login-uri "/login" :is-ok? authenticated?}))
 
-(def query-route
+(def cqp-query-route
   (safe
    (fn [{{cqi-client :cqi-client} :components
          {corpus :corpus
@@ -65,7 +66,7 @@
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))
 
-(def range-route
+(def cqp-query-range-route
   (safe
    (fn [{{cqi-client :cqi-client} :components
          {corpus :corpus
@@ -108,16 +109,27 @@
           query-str :query-str         
           context :context
           to :to
-          from :from} :params}]
+          from :from
+          {criterion :criterion
+           prop-name :prop-name :as sort-map} :sort-map} :params :as req}]
      (let [result (bl-query-range
                    blacklab
                    corpus
                    (->int from)
-                   (+ (->int from) (->int to))
+                   (->int to)
                    (->int context)
+                   {:criterion (keyword criterion) :prop-name prop-name}
                    username)]
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))
+
+(defn which-corpus [corpus]
+  (let [cqp-corpora (get-in env [:cqp :corpora])
+        bl-corpora (get-in env [:blacklab :corpora])
+        is-in? (fn [corpus corpora] (some #{corpus} corpora))]
+    (cond (is-in? corpus cqp-corpora) :cqp
+          (is-in? corpus bl-corpora) :blacklab
+          :else :unknown-corpus)))
 
 (defroutes app-routes
   (GET "/" req (landing-page :logged? (is-logged? req)))
@@ -127,8 +139,14 @@
   (GET "/about" req (about-route req))
   (GET "/cleebo" req (cleebo-route req))
   (ANY "/logout" req (-> (redirect "/") (assoc :session {})))
-  (GET "/query" req (bl-query-route req))
-  (GET "/range" req (bl-query-range-route req))  
+  (GET "/query" [corpus :as req]
+       (case (which-corpus corpus)
+         :cqp (cqp-query-route req)
+         :blacklab (bl-query-route req)))
+  (GET "/range" [corpus :as req]
+       (case (which-corpus corpus)        
+         :cqp (cqp-query-range-route req)
+         :blacklab (bl-query-range-route req)))
   (GET "/ws" req (ws-handler-http-kit req))
   (resources "/")
   (not-found (error-page :status 404 :title "Page not found!!")))
@@ -146,7 +164,8 @@
 
 (defn wrap-debug [handler]
   (fn [req]
-    (timbre/info req)
+    (when (get-in req [:params :*])
+      (timbre/info req))
     (handler req)))
 
 (defn wrap-base [handler]
@@ -159,6 +178,7 @@
       (wrap-session {:store (ttl-memory-store (* 30 60))})
       (wrap-transit-params {:encoding :json-verbose})
       wrap-keyword-params
+      wrap-nested-params
       wrap-params
       (wrap-transit-response {:encoding :json-verbose})
       wrap-exceptions
