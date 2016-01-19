@@ -6,6 +6,8 @@
             [ajax.core :refer [GET]]
             [goog.string :as gstr]
             [goog.dom.dataset :as gdataset]
+            [goog.dom.classes :as gclass]
+            [goog.style :as gstyle]
             [goog.fx.dom :as gfx]
             [goog.fx.easing :as gfx-easing]
             [taoensso.timbre :as timbre])
@@ -102,9 +104,7 @@
            (fn [k] (if (= (.-charCode k) 13)
                      (let [query-str (by-id "query-str")
                            arg-map (assoc @query-opts :query-str query-str)]
-                       (query arg-map))
-                     ;; 
-                     ))}
+                       (query arg-map))))}
           [:i.zmdi.zmdi-search.form-control-feedback
            {:style {:font-size "1.75em" :line-height "35px"}}]]]]])))
 
@@ -242,19 +242,35 @@
            :on-change (partial reset! prop-name)]
           [re-com/button
            :style {:font-size "12px" :height "34px"}
-           :label "Sort!"
+           :label "Sort page"
+           :disabled? (let [{:keys [corpus]} @query-opts]
+                        (not (some #{corpus} (:corpora (cljs-env :blacklab)))))
            :on-click
            (fn []
              (let [{:keys [query-size from to]} @query-results
                    {:keys [corpus context size]} @query-opts]
-               (timbre/debug from to context)
                (query-range {:corpus corpus
                              :from from
                              :to (+ from size)
                              :context context
                              :sort-map {:criterion @criterion
-                                        :prop-name @prop-name}})))]]]]])))
-
+                                        :prop-name @prop-name}})))]
+          [re-com/button
+           :style {:font-size "12px" :height "34px"}
+           :label "Sort all"
+           :disabled? (let [{:keys [corpus]} @query-opts]
+                        (not (some #{corpus} (:corpora (cljs-env :blacklab)))))
+           :on-click
+           (fn []
+             (let [{:keys [query-size from to]} @query-results
+                   {:keys [corpus context size]} @query-opts]
+               (query-range {:corpus corpus
+                             :from from
+                             :to (+ from size)
+                             :context context
+                             :sort-map {:criterion @criterion
+                                        :prop-name @prop-name
+                                        :sort-type "all"}})))]]]]])))
 (defn toolbar []
   (let [query-results (re-frame/subscribe [:query-results])]
     (fn []
@@ -268,9 +284,10 @@
            :children
            [[re-com/label
              :style {:line-height "30px"}
-             :label
-             (let [{:keys [from to query-size]} @query-results]
-               (gstr/format "Displaying %d-%d of %d hits" (inc from) (min to query-size) query-size))]
+             :label  (let [{:keys [from to query-size]} @query-results]
+                       (gstr/format
+                        "Displaying %d-%d of %d hits"
+                        (inc from) (min to query-size) query-size))]
             [nav-buttons]]])
         [query-opts-menu]]])))
 
@@ -281,46 +298,74 @@
    :child [re-com/throbber :size :large]])
 
 (defn result-by-id [e results-map]
-  (let [id (gdataset/get (.-currentTarget e) "num")]
-    (get results-map (js/parseInt id))))
+  (let [id (gdataset/get (.-currentTarget e) "id")
+        hit (get-in results-map [(js/parseInt id) :hit])]
+    id))
 
 (defn fade-out [e]
   (let [anim (gfx/FadeOut. (.-currentTarget e) 1 0.5 5200 gfx-easing/easeOut)]
     (.play anim)))
 
-(defn table-results []
-  (let [query-results (re-frame/subscribe [:query-results])]
-    (fn []
-      [:table.table.table-hover.table-results
+(defn table-results [selected]
+  (let [query-results (re-frame/subscribe [:query-results])
+        on-cell #(timbre/debug (result-by-id % (:results @query-results)))
+        mouse-down? (reagent/atom false)
+        highlighted? (reagent/atom false)]
+    (fn [selected]
+      [:table#table1.table.table-results
+       {:on-mouse-down
+        #(let [e (aget % "target")
+               ahighlighted? (gclass/has e "highlighted")]
+           (when-not ahighlighted?
+             (swap! selected assoc (gdataset/get e "id") true))
+           (swap! mouse-down? not)
+           (gclass/toggle e "highlighted")
+           (reset! highlighted? (gclass/has e "highlighted"))
+           false)
+        :on-mouse-over
+        #(let [e (aget % "target")]
+           (when @mouse-down?
+             (swap! selected dissoc (gdataset/get e "id"))
+             (gclass/enable e "highlighted" @highlighted?)))
+        :on-mouse-up #(swap! mouse-down? not)}
        [:thead]
        [:tbody {:style {:font-size "11px"}}
-        (for [[i {:keys [hit num meta]}] (map-indexed vector (:results @query-results))]
+        (for [[i {:keys [hit meta]}] (sort-by first (:results @query-results))]
           ^{:key i}
-          [:tr {:data-num num
-                :on-click #(do (timbre/debug (result-by-id % (:results @query-results))))}
-           (into [:td (inc num)]
-                 (for [{:keys [id word] :as token} hit]
-                   (cond
-                     (:match token) ^{:key (str i "-" id)} [:td.info word]
-                     :else          ^{:key (str i "-" id)} [:td word])))])]])))
+          [:tr
+           {:data-num i}
+           (into
+            [:td (inc i)]
+            (for [{:keys [id word] :as token} hit]
+              (cond
+                (:match token)
+                ^{:key (str i "-" id)} [:td.info {:data-id id ;:on-click on-cell
+                                                  } word]
+                :else
+                ^{:key (str i "-" id)} [:td {:data-id id; :on-click on-cell
+                                             } word])))])]])))
 
 (defn results-frame []
   (let [throbbing? (re-frame/subscribe [:throbbing? :results-frame])
         status (re-frame/subscribe [:session :query-results :status])
-        query-size (re-frame/subscribe [:session :query-results :query-size])]
+        query-size (re-frame/subscribe [:session :query-results :query-size])
+        selected (reagent/atom {})]
     (fn []
       (let [{:keys [status status-text]} @status]
         [re-com/v-box
          :gap "20px"
          :children
          [[toolbar]
+          [re-com/button
+           :label "selected"
+           :on-click #(timbre/debug (keys @selected))]
           (cond
             @throbbing?       (throbbing-panel)
             (= status :error) [error-panel
                                {:status "Ups! something bad happened" :status-text status-text}]
             (= 0 @query-size) [error-panel
                                {:status "The query returned no matching results"}]
-            :else             [table-results])]]))))
+            :else             [table-results selected])]]))))
 
 (defn annotation-frame []
   [:div "annotation frame!!!"])

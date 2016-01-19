@@ -50,8 +50,7 @@
           [sidelink :exit          "#/exit" "Exit" "zmdi-power"]]]
         [:div.col-sm-10.col-sm-offset-2.col-md-11.col-md-offset-1.main
          (panels @active-panel)
-         [css-transition-group {:transition-name "panel"}]
-         ]]])))
+         [css-transition-group {:transition-name "panel"}]]]])))
 
 (defn mount-root []
   (.log js/console "Called mount-root")

@@ -30,7 +30,7 @@
              [safe auth-backend login-authenticate on-login-failure signup]]
             [cleebo.routes.ws :refer [ws-handler-http-kit]]
             [cleebo.cqp :refer [cqi-query cqi-query-range]]
-            [cleebo.blacklab :refer [bl-query bl-query-range]]))
+            [cleebo.blacklab :refer [bl-query bl-query-range bl-sort-query]]))
 
 (defn is-logged? [req]
   (get-in req [:session :identity]))
@@ -51,33 +51,20 @@
 (def cqp-query-route
   (safe
    (fn [{{cqi-client :cqi-client} :components
-         {corpus :corpus
-          query-str :query-str         
-          context :context
-          size :size
-          from :from} :params}]
+         {corpus :corpus query-str :query-str context :context size :size from :from} :params}]
      (let [result (cqi-query
-                   {:cqi-client cqi-client
-                    :corpus corpus
-                    :query-str query-str
-                    :opts {:context (->int context)
-                           :size (->int size)
-                           :from (->int from)}})]
+                   {:cqi-client cqi-client :corpus corpus :query-str query-str
+                    :opts {:context (->int context) :size (->int size) :from (->int from)}})]
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))
 
 (def cqp-query-range-route
   (safe
    (fn [{{cqi-client :cqi-client} :components
-         {corpus :corpus
-          from :from
-          to :to
-          context :context} :params}]
+         {corpus :corpus from :from to :to context :context} :params}]
      (let [result (cqi-query-range
-                   {:cqi-client cqi-client
-                    :corpus corpus
-                    :from (->int from)
-                    :to  (->int to)
+                   {:cqi-client cqi-client :corpus corpus
+                    :from (->int from)     :to  (->int to)
                     :opts {:context (->int context)}})]
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))
@@ -86,18 +73,10 @@
   (safe
    (fn [{{{username :username} :identity} :session 
          {blacklab :blacklab} :components
-         {corpus :corpus
-          query-str :query-str         
-          context :context
-          size :size
-          from :from} :params}]
-     (let [result (bl-query blacklab
-                            corpus
-                            query-str
-                            (->int from)
-                            (+ (->int from) (->int size))
-                            (->int context)
-                            username)]
+         {corpus :corpus query-str :query-str context :context size :size from :from} :params}]
+     (let [args [blacklab corpus query-str (->int from) (+ (->int from) (->int size))
+                 (->int context) username]
+           result (apply bl-query args)]
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))
 
@@ -105,21 +84,15 @@
   (safe
    (fn [{{{username :username} :identity} :session 
          {blacklab :blacklab} :components
-         {corpus :corpus
-          query-str :query-str         
-          context :context
-          to :to
-          from :from
-          {criterion :criterion
-           prop-name :prop-name :as sort-map} :sort-map} :params :as req}]
-     (let [result (bl-query-range
-                   blacklab
-                   corpus
-                   (->int from)
-                   (->int to)
-                   (->int context)
-                   {:criterion (keyword criterion) :prop-name prop-name}
-                   username)]
+         {corpus :corpus query-str :query-str context :context to :to from :from
+          {criterion :criterion prop-name :prop-name sort-type :sort-type
+           :as sort-map
+           :or {sort-type :range}} :sort-map} :params :as req}]
+     (let [args [blacklab corpus (->int from) (->int to) (->int context)
+                 {:criterion (keyword criterion) :prop-name prop-name} username]
+           result (case (keyword sort-type)
+                    :range (apply bl-query-range args)
+                    :all (apply bl-sort-query args))]
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))
 
@@ -164,8 +137,9 @@
 
 (defn wrap-debug [handler]
   (fn [req]
-    (when (get-in req [:params :*])
-      (timbre/info req))
+    (when-not (get-in req [:params :*])
+      (when-not (empty? (:params req))
+        (timbre/info req)))
     (handler req)))
 
 (defn wrap-base [handler]
@@ -195,4 +169,3 @@
     (-> app-routes
         (wrap-app-component components)
         (wrap-routes wrap-base))))
-

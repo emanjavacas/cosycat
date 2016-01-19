@@ -147,14 +147,24 @@
   (update-hits! [seacher query-id -new-hits]
     (swap! -hits assoc query-id -new-hits)))
 
+(defn ^HitProperty make-property
+  "creates a property for sorting purposes"
+  [^Hits -hits criterion ^String prop-name]
+  (case criterion
+    :match         (HitPropertyHitText. -hits "contents" prop-name)
+    :left-context  (HitPropertyLeftContext. -hits "contents" prop-name)
+    :right-context (HitPropertyRightContext. -hits "contents" prop-name)))
+
 (defn query-size
   ([searcher corpus]
    (query-size searcher corpus "default"))
   ([searcher corpus query-id]
-   (let [-hits (get-hits searcher query-id)]
-     (.size ^Hits -hits))))
+   (if-let [-hits (get-hits searcher query-id)]
+     (.size ^Hits -hits)
+     (throw (ex-info "Query hasn't been run yet" {:query query-id})))))
 
 (defn query
+  "runs a query and returns a window of hits specified by `from` `to` and `context`"
   ([searcher corpus query-str from to context]
    (query searcher corpus query-str from to context "default"))
   ([searcher corpus query-str from to context query-id]
@@ -165,35 +175,44 @@
      (hits-handler (-hits->window -hits from to context) blsearcher))))
 
 (defn query-range
+  "returns a window of hits specified by `from` `to` and `context` from the result of
+  a previous query."
   ([searcher corpus from to context]
    (query-range searcher corpus from to context "default"))
   ([searcher corpus from to context query-id]
    (let [{{blsearcher corpus} :searchers
-          hits-handler :hits-handler} searcher
-         -hits (get-hits searcher query-id)]
-     (hits-handler (-hits->window -hits from to context) blsearcher))))
+          hits-handler :hits-handler} searcher]
+     (if-let [-hits (get-hits searcher query-id)]
+       (hits-handler (-hits->window -hits from to context) blsearcher)
+       (throw (ex-info "Query hasn't been run yet" {:query query-id}))))))
 
-(defn ^HitProperty make-property
-  [^Hits -hits & {:keys [criterion ^String prop-name]
-                  :or {criterion :match
-                       prop-name "word"}}]
-  (case criterion
-    :match         (HitPropertyHitText. -hits "contents" prop-name)
-    :left-context  (HitPropertyLeftContext. -hits "contents" prop-name)
-    :right-context (HitPropertyRightContext. -hits "contents" prop-name)))
+(defn sorted-query
+  "returns a specified hits window after sorting the entire query results.
+  Throws an exception in case of missing query."
+  ([searcher corpus from to context criterion prop-name]
+   (sorted-query corpus from to context criterion prop-name "default"))
+  ([searcher corpus from to context criterion prop-name query-id]
+   (let [{{blsearcher corpus} :searchers
+          hits-handler :hits-handler} searcher]
+     (if-let [-hits (get-hits searcher query-id)]
+       (let [hit-property (make-property -hits criterion prop-name)]
+         (.sort ^Hits -hits hit-property)
+         (hits-handler (-hits->window -hits from to context) blsearcher))
+       (throw (ex-info "Query hasn't been run yet" {:query query-id}))))))
 
 (defn sorted-range
+  "sorts a specified hits window. Throws an exception in case of missing query."
   ([searcher corpus from to context criterion prop-name]
    (sorted-range searcher corpus from to context criterion prop-name "default"))
   ([searcher corpus from to context criterion prop-name query-id]
    (let [{{blsearcher corpus} :searchers
-          hits-handler :hits-handler} searcher
-         -hits (get-hits searcher query-id)
-         -hits-window (-hits->window -hits from to context)
-         contents-field (:contentsFieldMainPropName blsearcher)
-         hit-property (make-property -hits-window :criterion criterion :prop-name prop-name)]
-     (.sort ^Hits -hits-window hit-property)
-     (hits-handler -hits-window blsearcher))))
+          hits-handler :hits-handler} searcher]
+     (if-let [-hits (get-hits searcher query-id)]
+       (let [-hits-window (-hits->window -hits from to context)
+             hit-property (make-property -hits-window criterion prop-name)]
+         (.sort ^Hits -hits-window hit-property)
+         (hits-handler -hits-window blsearcher))
+       (throw (ex-info "Query hasn't been run yet" {:query query-id}))))))
 
 (defn new-blsearcher [paths-map]
   (let [searchers (zipmap (keys paths-map) (map make-searcher (vals paths-map)))]
@@ -203,9 +222,7 @@
       :hits-handler hits-handler})))
 
 ;;; test
-
-(defn raw-text [hits & {:keys [n window? pprint?]
-                        :or   {n 10 window? false pprint? true}}]
+(defn raw-text [hits & {:keys [n window? pprint?] :or {n 10 window? false pprint? true}}]
   (let [tokens (if window?
                  (map (partial map :word) (map :hit (take n hits)))
                  (map :word (filter :match (mapcat :hit (take n hits)))))]
