@@ -9,7 +9,8 @@
             [cleebo.routes.ws :refer [new-ws]]
             [clojure.pprint :as pprint]
             [taoensso.timbre :as timbre]
-            [environ.core :refer [env]]))
+            [environ.core :refer [env]]
+            [clojure.string :as str]))
 
 (def config-map
   {:port (:port env)
@@ -24,7 +25,8 @@
          :blacklab (new-blsearcher blacklab-paths-map)
          :db (new-db {:url database-url})
          :ws (new-ws)
-         :http-server (new-http-server {:port port :components [:cqi-client :db :ws :blacklab]})
+         :http-server
+         (new-http-server {:port port :components [:cqi-client :db :ws :blacklab]})
          :figwheel (new-figwheel))
         (component/system-using
          {:http-server [:cqi-client :db :ws :blacklab]}))))
@@ -58,3 +60,4 @@
      (Thread. (fn []
                 (.stop system))))
     (.start system)))
+

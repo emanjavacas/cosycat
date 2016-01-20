@@ -30,7 +30,8 @@
              [safe auth-backend login-authenticate on-login-failure signup]]
             [cleebo.routes.ws :refer [ws-handler-http-kit]]
             [cleebo.cqp :refer [cqi-query cqi-query-range]]
-            [cleebo.blacklab :refer [bl-query bl-query-range bl-sort-query]]))
+            [cleebo.blacklab :refer [bl-query bl-query-range bl-sort-query]]
+            [cleebo.blacklab.core :refer [remove-hits!]]))
 
 (defn is-logged? [req]
   (get-in req [:session :identity]))
@@ -54,6 +55,7 @@
          {corpus :corpus query-str :query-str context :context size :size from :from} :params}]
      (let [result (cqi-query
                    {:cqi-client cqi-client :corpus corpus :query-str query-str
+
                     :opts {:context (->int context) :size (->int size) :from (->int from)}})]
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))
@@ -96,6 +98,12 @@
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))
 
+(defn logout-route
+  [{{{username :username} :identity} :session
+    {blacklab :blacklab} :components}]
+  (remove-hits! blacklab username)
+  (-> (redirect "/") (assoc :session {})))
+
 (defn which-corpus [corpus]
   (let [cqp-corpora (get-in env [:cqp :corpora])
         bl-corpora (get-in env [:blacklab :corpora])
@@ -111,7 +119,7 @@
   (POST "/signup" req (signup req))
   (GET "/about" req (about-route req))
   (GET "/cleebo" req (cleebo-route req))
-  (ANY "/logout" req (-> (redirect "/") (assoc :session {})))
+  (ANY "/logout" req (logout-route req))
   (GET "/query" [corpus :as req]
        (case (which-corpus corpus)
          :cqp (cqp-query-route req)

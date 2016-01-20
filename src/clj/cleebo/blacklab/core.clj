@@ -137,7 +137,8 @@
       (handler hit-map))))
 
 (defprotocol SearcherState
-  (update-hits! [searcher query-id -new-hits]))
+  (update-hits! [searcher query-id -new-hits])
+  (remove-hits! [searcher query-id]))
 
 (defrecord BLSearcher [searchers -hits hits-handler]
   component/Lifecycle
@@ -145,7 +146,9 @@
   (stop [component] component)
   SearcherState
   (update-hits! [seacher query-id -new-hits]
-    (swap! -hits assoc query-id -new-hits)))
+    (swap! -hits assoc query-id -new-hits))
+  (remove-hits! [seacher query-id]
+    (swap! -hits dissoc query-id)))
 
 (defn ^HitProperty make-property
   "creates a property for sorting purposes"

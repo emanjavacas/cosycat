@@ -63,7 +63,6 @@
 (defn query
   "will need to support 'from' for in-place query-opts change"
   [{:keys [query-str corpus context size from] :or {from 0} :as query-args}]
-  (re-frame/dispatch [:start-throbbing :results-frame])
   (GET "/query"
        {:handler query-results-handler
         :error-handler error-handler
@@ -74,7 +73,6 @@
                  :size size}}))
 
 (defn query-range [{:keys [corpus from to context sort-map]}]
-  (re-frame/dispatch [:start-throbbing :results-frame])
   (GET "/range"
        {:handler query-results-handler
         :error-handler error-handler
@@ -84,6 +82,15 @@
                  :context context
                  :sort-map sort-map}}))
 
+(defn tokenize-query [s]
+  )
+
+(def check-fn-map
+  {:syntax-error (fn [s] ())})
+
+(defn query-check [query-str check-fn-map])
+(defn error-message [message])
+
 (defn query-field []
   (let [query-opts (re-frame/subscribe [:query-opts])]
     (fn []
@@ -91,6 +98,7 @@
        :justify :between
        :children
        [[:h4 [:span.text-muted {:style {:line-height "15px"}} "Query Panel"]]
+        [:div "hello"]
         [:div.form-group.has-feedback
          [:input#query-str.form-control
           {:style {:width "640px"}
@@ -103,8 +111,12 @@
            :on-key-press
            (fn [k] (if (= (.-charCode k) 13)
                      (let [query-str (by-id "query-str")
-                           arg-map (assoc @query-opts :query-str query-str)]
-                       (query arg-map))))}
+                           arg-map (assoc @query-opts :query-str query-str)
+                           query-error (query-check query-str check-fn-map)]
+                       (re-frame/dispatch [:start-throbbing :results-frame])
+                       (if query-error
+                         (error-message query-error)
+                         (query arg-map)))))}
           [:i.zmdi.zmdi-search.form-control-feedback
            {:style {:font-size "1.75em" :line-height "35px"}}]]]]])))
 
@@ -153,6 +165,7 @@
        :on-click #(let [{:keys [query-size from to]} @query-results
                         {:keys [corpus context size]} @query-opts
                         [from to] (pager-fn query-size size from to)]
+                    (re-frame/dispatch [:start-throbbing :results-frame])
                     (query-range {:corpus corpus
                                   :from from
                                   :to to
@@ -217,7 +230,7 @@
                (let [{:keys [corpus context size]} @query-opts
                      {:keys [query-size]} @query-results
                      from-hit (max 0 (min (dec (js/parseInt value)) query-size))]
-                 ;; todo check value
+                 (re-frame/dispatch [:start-throbbing :results-frame])
                  (query-range
                   {:corpus corpus
                    :from from-hit
@@ -249,6 +262,7 @@
            (fn []
              (let [{:keys [query-size from to]} @query-results
                    {:keys [corpus context size]} @query-opts]
+               (re-frame/dispatch [:start-throbbing :results-frame])
                (query-range {:corpus corpus
                              :from from
                              :to (+ from size)
@@ -306,66 +320,71 @@
   (let [anim (gfx/FadeOut. (.-currentTarget e) 1 0.5 5200 gfx-easing/easeOut)]
     (.play anim)))
 
-(defn table-results [selected]
+(defn update-selection [selection id flag]
+  (if flag
+    (swap! selection assoc id true)
+    (swap! selection dissoc id)))
+
+(defn table-results [selection]
   (let [query-results (re-frame/subscribe [:query-results])
-        on-cell #(timbre/debug (result-by-id % (:results @query-results)))
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]
-    (fn [selected]
+    (fn [selection]
       [:table#table1.table.table-results
        {:on-mouse-down
         #(let [e (aget % "target")
-               ahighlighted? (gclass/has e "highlighted")]
-           (when-not ahighlighted?
-             (swap! selected assoc (gdataset/get e "id") true))
-           (swap! mouse-down? not)
-           (gclass/toggle e "highlighted")
-           (reset! highlighted? (gclass/has e "highlighted"))
-           false)
+               button (aget % "button")]
+           (.preventDefault %)          ;avoid text selection
+           (when (zero? button)
+             (swap! mouse-down? not)
+             (gclass/toggle e "highlighted")
+             (reset! highlighted? (gclass/has e "highlighted"))
+             (update-selection selection (gdataset/get e "id") @highlighted?)))
         :on-mouse-over
-        #(let [e (aget % "target")]
-           (when @mouse-down?
-             (swap! selected dissoc (gdataset/get e "id"))
-             (gclass/enable e "highlighted" @highlighted?)))
-        :on-mouse-up #(swap! mouse-down? not)}
+        #(let [e (aget % "target")
+               button (aget % "button")]
+           (when (and (zero? button) @mouse-down?)
+             (gclass/enable e "highlighted" @highlighted?)
+             (update-selection selection (gdataset/get e "id") @highlighted?)))
+        :on-mouse-up #(swap! mouse-down? not) }
        [:thead]
        [:tbody {:style {:font-size "11px"}}
         (for [[i {:keys [hit meta]}] (sort-by first (:results @query-results))]
           ^{:key i}
           [:tr
            {:data-num i}
-           (into
-            [:td (inc i)]
             (for [{:keys [id word] :as token} hit]
               (cond
-                (:match token)
-                ^{:key (str i "-" id)} [:td.info {:data-id id ;:on-click on-cell
-                                                  } word]
-                :else
-                ^{:key (str i "-" id)} [:td {:data-id id; :on-click on-cell
-                                             } word])))])]])))
+                (:match token) ^{:key (str i "-" id)} [:td.info {:data-id id} word]
+                :else          ^{:key (str i "-" id)} [:td {:data-id id} word]))
+           ;; (into
+           ;;  ^{:key (str  i)} [:td (inc i)]
+           ;;  (for [{:keys [id word] :as token} hit]
+           ;;    (cond
+           ;;      (:match token) ^{:key (str i "-" id)} [:td.info {:data-id id} word]
+           ;;      :else          ^{:key (str i "-" id)} [:td {:data-id id} word]))
+           ;;  )
+           ])]])))
 
 (defn results-frame []
   (let [throbbing? (re-frame/subscribe [:throbbing? :results-frame])
         status (re-frame/subscribe [:session :query-results :status])
         query-size (re-frame/subscribe [:session :query-results :query-size])
-        selected (reagent/atom {})]
+        selection (reagent/atom {})]
     (fn []
       (let [{:keys [status status-text]} @status]
         [re-com/v-box
          :gap "20px"
          :children
          [[toolbar]
-          [re-com/button
-           :label "selected"
-           :on-click #(timbre/debug (keys @selected))]
+          (into [:ul] (for [id (keys @selection)] ^{:key (str "s-" id)} [:i id]))
           (cond
             @throbbing?       (throbbing-panel)
             (= status :error) [error-panel
                                {:status "Ups! something bad happened" :status-text status-text}]
             (= 0 @query-size) [error-panel
                                {:status "The query returned no matching results"}]
-            :else             [table-results selected])]]))))
+            :else             [table-results selection])]]))))
 
 (defn annotation-frame []
   [:div "annotation frame!!!"])
