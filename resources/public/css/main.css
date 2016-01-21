@@ -30,3 +30,19 @@ table td.highlighted {
     border: 1px solid black !important;
     
 }
+
+/* transition group */
+.annotation-enter {
+    height: 0;
+    transition: height 1.27s ease-out;
+}
+
+.annotation-leave {
+    height: 0;
+    transition: height 1.27s ease-out;
+}
+
+.annotation-enter-active {
+    height: 2em;
+    opacity: 1;
+}

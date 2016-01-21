@@ -1,7 +1,6 @@
 (defproject cleebo "0.1.0-SNAPSHOT"
   :description "Corpus query interface plus annotations"
-  :license {:name "GNU v3.0"}
-  
+  :license {:name "GNU v3.0"}  
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
@@ -42,30 +41,29 @@
                  [junit/junit "4.8"]
                  [com.goldmansachs/gs-collections "6.1.0"]
                  [blacklab "1.2-SNAPSHOT"]]
-  :java-source-paths ["src/java"]
   :main cleebo.core
   :plugins [[lein-cljsbuild "1.1.1"]
             [lein-environ "1.0.1"]
             [lein-figwheel "0.5.0-2"]]
-  :source-paths ["src/clj"]
+  :source-paths ["src/clj" "src/cljc"]
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target" "test/js"]
   :cljsbuild {:builds
               [{:id "dev"
-                :source-paths ["src/cljs"]                
+                :source-paths ["src/cljs" "src/cljc"]
                 :compiler {:main cleebo.core
                            :output-to "resources/public/js/compiled/app.js"
                            :output-dir "resources/public/js/compiled/out"
                            :asset-path "js/compiled/out"
                            :source-map-timestamp true}}
                {:id "test"
-                :source-paths ["src/cljs" "test/cljs"]
+                :source-paths ["src/cljs" "src/cljc" "test/cljs"]
                 :notify-command ["phantomjs" "test/unit-test.js" "test/unit-test.html"]
                 :compiler {:optimizations :whitespace
                            :pretty-print true
                            :output-to "test/js/app_test.js"
                            :warnings {:single-segment-namespace false}}}
                {:id "min"
-                :source-paths ["src/cljs"]
+                :source-paths ["src/cljs" "src/cljc"]
                 :compiler {:main cleebo.core
                            :output-to "resources/public/js/compiled/app.js"
                            :optimizations :advanced
@@ -73,5 +71,3 @@
                            :pretty-print false}}]}
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]
                  :timeout 120000})
-
-

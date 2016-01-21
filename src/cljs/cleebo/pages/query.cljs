@@ -2,7 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [re-com.core :as re-com]
-            [cleebo.ws :refer [send-transit-msg!]]
+            [cleebo.query-check :as q]
             [ajax.core :refer [GET]]
             [goog.string :as gstr]
             [goog.dom.dataset :as gdataset]
@@ -13,6 +13,9 @@
             [taoensso.timbre :as timbre])
   (:require-macros [cleebo.env :as env :refer [cljs-env]])
   (:import [goog.fx Animation]))
+
+(def css-transition-group
+  (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
 
 (def corpora
   (let [{cqp-corpora :corpora} (cljs-env :cqp)
@@ -82,15 +85,6 @@
                  :context context
                  :sort-map sort-map}}))
 
-(defn tokenize-query [s]
-  )
-
-(def check-fn-map
-  {:syntax-error (fn [s] ())})
-
-(defn query-check [query-str check-fn-map])
-(defn error-message [message])
-
 (defn query-field []
   (let [query-opts (re-frame/subscribe [:query-opts])]
     (fn []
@@ -98,7 +92,6 @@
        :justify :between
        :children
        [[:h4 [:span.text-muted {:style {:line-height "15px"}} "Query Panel"]]
-        [:div "hello"]
         [:div.form-group.has-feedback
          [:input#query-str.form-control
           {:style {:width "640px"}
@@ -111,12 +104,10 @@
            :on-key-press
            (fn [k] (if (= (.-charCode k) 13)
                      (let [query-str (by-id "query-str")
-                           arg-map (assoc @query-opts :query-str query-str)
-                           query-error (query-check query-str check-fn-map)]
+                           arg-map (assoc @query-opts :query-str query-str)]
                        (re-frame/dispatch [:start-throbbing :results-frame])
-                       (if query-error
-                         (error-message query-error)
-                         (query arg-map)))))}
+                       (timbre/debug (q/parse-checks (q/check-query query-str q/check-fn-map)))
+                       (query arg-map))))}
           [:i.zmdi.zmdi-search.form-control-feedback
            {:style {:font-size "1.75em" :line-height "35px"}}]]]]])))
 
@@ -133,7 +124,6 @@
 
 (defn query-opts-menu []
   [re-com/h-box
-   :justify :end
    :gap "5px"
    :children
    [[dropdown-opt
@@ -278,6 +268,7 @@
            (fn []
              (let [{:keys [query-size from to]} @query-results
                    {:keys [corpus context size]} @query-opts]
+               (re-frame/dispatch [:start-throbbing :results-frame])
                (query-range {:corpus corpus
                              :from from
                              :to (+ from size)
@@ -285,29 +276,34 @@
                              :sort-map {:criterion @criterion
                                         :prop-name @prop-name
                                         :sort-type "all"}})))]]]]])))
+
+(defn query-result-label [{:keys [from to query-size]}]
+  (fn [{:keys [from to query-size]}]
+    [re-com/label
+     :style {:line-height "30px"}
+     :label (let [from (inc from) to (min to query-size)]
+              (gstr/format "Displaying %d-%d of %d hits" from to query-size))]))
+
 (defn toolbar []
   (let [query-results (re-frame/subscribe [:query-results])]
     (fn []
       [re-com/h-box
        :justify :between
+       :align :end
        :gap "5px"
        :children
-       [(if-not (:results @query-results)
-          ""          
-          [re-com/h-box :justify :end :gap "10px"
-           :children
-           [[re-com/label
-             :style {:line-height "30px"}
-             :label  (let [{:keys [from to query-size]} @query-results]
-                       (gstr/format
-                        "Displaying %d-%d of %d hits"
-                        (inc from) (min to query-size) query-size))]
-            [nav-buttons]]])
+       [[re-com/h-box
+         :style {:visibility (if-not (:results @query-results) "hidden" "visible")}
+         :gap "10px"
+         :children
+         [[query-result-label @query-results]
+          [nav-buttons]]]
         [query-opts-menu]]])))
 
 (defn throbbing-panel []
   [re-com/box
    :align :center
+   :justify :center
    :padding "50px"
    :child [re-com/throbber :size :large]])
 
@@ -330,75 +326,75 @@
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]
     (fn [selection]
-      [:table#table1.table.table-results
-       {:on-mouse-down
-        #(let [e (aget % "target")
-               button (aget % "button")]
-           (.preventDefault %)          ;avoid text selection
-           (when (zero? button)
-             (swap! mouse-down? not)
-             (gclass/toggle e "highlighted")
-             (reset! highlighted? (gclass/has e "highlighted"))
-             (update-selection selection (gdataset/get e "id") @highlighted?)))
-        :on-mouse-over
-        #(let [e (aget % "target")
-               button (aget % "button")]
-           (when (and (zero? button) @mouse-down?)
-             (gclass/enable e "highlighted" @highlighted?)
-             (update-selection selection (gdataset/get e "id") @highlighted?)))
-        :on-mouse-up #(swap! mouse-down? not) }
-       [:thead]
-       [:tbody {:style {:font-size "11px"}}
-        (for [[i {:keys [hit meta]}] (sort-by first (:results @query-results))]
-          ^{:key i}
-          [:tr
-           {:data-num i}
-            (for [{:keys [id word] :as token} hit]
-              (cond
-                (:match token) ^{:key (str i "-" id)} [:td.info {:data-id id} word]
-                :else          ^{:key (str i "-" id)} [:td {:data-id id} word]))
-           ;; (into
-           ;;  ^{:key (str  i)} [:td (inc i)]
-           ;;  (for [{:keys [id word] :as token} hit]
-           ;;    (cond
-           ;;      (:match token) ^{:key (str i "-" id)} [:td.info {:data-id id} word]
-           ;;      :else          ^{:key (str i "-" id)} [:td {:data-id id} word]))
-           ;;  )
-           ])]])))
+      [re-com/box
+       :child
+       [:table#table1.table.table-results
+        {:on-mouse-down
+         #(let [e (aget % "target")
+                button (aget % "button")]
+            (.preventDefault %)         ;avoid text selection
+            (when (zero? button)
+              (swap! mouse-down? not)
+              (gclass/toggle e "highlighted")
+              (reset! highlighted? (gclass/has e "highlighted"))
+              (update-selection selection (gdataset/get e "id") @highlighted?)))
+         :on-mouse-over
+         #(let [e (aget % "target")
+                button (aget % "button")]
+            (when (and (zero? button) @mouse-down?)
+              (gclass/enable e "highlighted" @highlighted?)
+              (update-selection selection (gdataset/get e "id") @highlighted?)))
+         :on-mouse-up #(swap! mouse-down? not) }
+        [:thead]
+        [:tbody {:style {:font-size "11px"}}
+         (for [[i {:keys [hit meta]}] (sort-by first (:results @query-results))]
+           ^{:key i}
+           [:tr
+            {:data-num i}
+            (into
+             ^{:key (str  i)} [:td (inc i)]
+             (for [{:keys [id word] :as token} hit]
+               (cond
+                 (:match token) ^{:key (str i "-" id)} [:td.info {:data-id id} word]
+                 :else          ^{:key (str i "-" id)} [:td {:data-id id} word])))])]]])))
 
-(defn results-frame []
-  (let [throbbing? (re-frame/subscribe [:throbbing? :results-frame])
-        status (re-frame/subscribe [:session :query-results :status])
+(defn results-frame [selection]
+  (let [status (re-frame/subscribe [:session :query-results :status])
         query-size (re-frame/subscribe [:session :query-results :query-size])
-        selection (reagent/atom {})]
-    (fn []
+        throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
+    (fn [selection]
       (let [{:keys [status status-text]} @status]
-        [re-com/v-box
-         :gap "20px"
-         :children
-         [[toolbar]
-          (into [:ul] (for [id (keys @selection)] ^{:key (str "s-" id)} [:i id]))
-          (cond
-            @throbbing?       (throbbing-panel)
-            (= status :error) [error-panel
-                               {:status "Ups! something bad happened" :status-text status-text}]
-            (= 0 @query-size) [error-panel
-                               {:status "The query returned no matching results"}]
-            :else             [table-results selection])]]))))
+        (cond
+          @throbbing?       (throbbing-panel)
+          (= status :error) [error-panel
+                             {:status "Ups! something bad happened" :status-text status-text}]
+          (= 0 @query-size) [error-panel
+                             {:status "The query returned no matching results"}]
+          :else             [table-results selection])))))
 
-(defn annotation-frame []
-  [:div "annotation frame!!!"])
+(defn annotation-frame [selection]
+  (fn [selection]
+    (let [style {:style {:position "fixed"
+                         :width "100%"
+                        ;:left "175px"                         
+                         :bottom 0
+                         :background-color "rgb(235, 240, 242)"}}]
+      [:div style (keys @selection)])))
 
 (defn query-main []
-  (let [annotation? (atom false)]
+  (let [selection (reagent/atom {})]
     (fn []
-      [re-com/v-box :gap "50px"
-       :children 
-       [[re-com/box :align :stretch :child [results-frame]]
-        (when @annotation?
-          [re-com/box :align :center :child [annotation-frame]])]])))
+      [re-com/v-box
+       :align :stretch
+       :gap "20px"
+       :children
+       [[toolbar]
+        [results-frame selection]
+        [annotation-frame selection]]])))
 
 (defn query-panel []
-  [:div
-   [query-field]
-   [query-main]])
+  [re-com/v-box
+   :style {:width "100%"}
+   :children
+   [[query-field]
+    [query-main]]])

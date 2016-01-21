@@ -1,4 +1,4 @@
-(ns cleebo.query-check
+(ns cleebo.query-check-test
   (:require [clojure.test :refer [deftest testing is]]
             [cleebo.query-check :refer [parse-checks check-query check-fn-map]]))
 

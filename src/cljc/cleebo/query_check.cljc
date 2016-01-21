@@ -1,10 +1,32 @@
 (ns cleebo.query-check
   (:require [clojure.string :as str]))
 
+(def regex-char-esc-smap
+  (let [esc-chars "()*&^%$#!"]
+    (zipmap esc-chars
+            (map #(str "\\" %) esc-chars))))
+
+(defn str-to-pattern
+  [string]
+  (->> string
+       (replace regex-char-esc-smap)
+       (reduce str)
+       re-pattern))
+
+(def trim-end-regex
+  #?(:clj (re-pattern "([\"']])[+?*]$")
+     :cljs (js/RegExp "([\"']])[+?*]$")))
+(def missing-quote-inside-regex
+  #?(:clj (re-pattern "[ =]+([\"'][^\"']+|[^\"']+[\"'])(?=])")
+     :cljs (js/RegExp "[ =]+([\"'][^\"']+|[^\"']+[\"'])(?=])")))
+(def tokenize-regex
+  #?(:clj (re-pattern "(?<=['\"\\]}])[ ]*(?=['\"\\[{])")
+     :cljs (js/RegExp "(?<=['\"\\]}])[ ]*(?=['\"\\[{])")))
+
 (defn xor [a b] (and (or a b) (not (and a b))))
 
-(defn tokenize [s]
-  (str/split s #"(?<=['\"\]}])[ ]*(?=['\"\[{])"))
+(defn tokenize [s] 
+  (str/split s tokenize-regex))
 
 (defn string-match [container contained]
   (let [start (.indexOf container contained)]
@@ -13,14 +35,14 @@
       [-1 -1])))
 
 (defn trim-end [s]
-  (str/replace s #"([\"']])[+?*]$" "$1"))
+  (str/replace s trim-end-regex "$1"))
 
 (def check-fn-map
   (letfn [(missing-quote [s] (let [start (first s) end (last s)]
                                (or (xor (= \' start) (= \' end))
                                    (xor (= \" start) (= \" end)))))
-          (missing-quote-inside [s]
-            (boolean (re-find #"(?<=[ =]+)([\"'][^\"']+|[^\"']+[\"'])(?=])" s)))
+          (missing-quote-inside [s]           
+            (boolean (re-find missing-quote-inside-regex s)))
           (missing-bracket [s]
             (xor (= \[ (first s)) (= \] (last s))))
           (infinite-quantifier [s] false)]
@@ -56,4 +78,3 @@
        checks-map))
 
 ;(parse-checks (check-query "\"the " check-fn-map))
-

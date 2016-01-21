@@ -10,7 +10,7 @@
     :build-ids ["dev"]   ;; <-- a vector of build ids to start autobuilding
     :all-builds          ;; <-- supply your build configs here
     [{:id "dev"
-      :source-paths ["src/cljs"]
+      :source-paths ["src/cljs" "src/cljc"]
       :figwheel {:websocket-url (str "ws://" host ":3449/figwheel-ws") ;client config
                  :on-jsload "cleebo.core/mount-root"
                  :websocket-host :js-client-host}
