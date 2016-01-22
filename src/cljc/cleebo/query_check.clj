@@ -1,27 +1,9 @@
 (ns cleebo.query-check
   (:require [clojure.string :as str]))
 
-(def regex-char-esc-smap
-  (let [esc-chars "()*&^%$#!"]
-    (zipmap esc-chars
-            (map #(str "\\" %) esc-chars))))
-
-(defn str-to-pattern
-  [string]
-  (->> string
-       (replace regex-char-esc-smap)
-       (reduce str)
-       re-pattern))
-
-(def trim-end-regex
-  #?(:clj (re-pattern "([\"']])[+?*]$")
-     :cljs (js/RegExp "([\"']])[+?*]$")))
-(def missing-quote-inside-regex
-  #?(:clj (re-pattern "[ =]+([\"'][^\"']+|[^\"']+[\"'])(?=])")
-     :cljs (js/RegExp "[ =]+([\"'][^\"']+|[^\"']+[\"'])(?=])")))
-(def tokenize-regex
-  #?(:clj (re-pattern "(?<=['\"\\]}])[ ]*(?=['\"\\[{])")
-     :cljs (js/RegExp "(?<=['\"\\]}])[ ]*(?=['\"\\[{])")))
+(def trim-end-regex (re-pattern "([\"']])[+?*]$"))
+(def missing-quote-inside-regex (re-pattern "[ =]+([\"'][^\"']+|[^\"']+[\"'])(?=])"))
+(def tokenize-regex  (re-pattern "(?<=['\"\\]}])[ ]*(?=['\"\\[{])"))
 
 (defn xor [a b] (and (or a b) (not (and a b))))
 
@@ -76,5 +58,3 @@
            (when (not (empty? fails))
              [token [from to] fails])))
        checks-map))
-
-;(parse-checks (check-query "\"the " check-fn-map))

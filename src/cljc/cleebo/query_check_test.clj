@@ -1,7 +1,6 @@
 (ns cleebo.query-check-test
   (:require [clojure.test :refer [deftest testing is]]
-            [cleebo.query-check :refer [parse-checks check-query check-fn-map]]))
-
+            [cleebo.query-check :refer [check-fn-map check-query parse-checks]]))
 
 (def test-strs
   [{:s "\"the\"" :should :pass}
@@ -42,4 +41,3 @@
       (doseq [{s :s {where :where what :what} :error} (filter :error test-strs)]
         (is (= what (parse-check-result s where))
             (str s "should have " what " at " where "th token"))))))
-

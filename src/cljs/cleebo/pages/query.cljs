@@ -2,7 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [re-com.core :as re-com]
-            [cleebo.query-check :as q]
+            [cleebo.query-parser :as parser]
             [ajax.core :refer [GET]]
             [goog.string :as gstr]
             [goog.dom.dataset :as gdataset]
@@ -10,12 +10,11 @@
             [goog.style :as gstyle]
             [goog.fx.dom :as gfx]
             [goog.fx.easing :as gfx-easing]
+            [goog.ui.Popup :as gpop]
+            [goog.positioning :as pop]
             [taoensso.timbre :as timbre])
   (:require-macros [cleebo.env :as env :refer [cljs-env]])
   (:import [goog.fx Animation]))
-
-(def css-transition-group
-  (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
 
 (def corpora
   (let [{cqp-corpora :corpora} (cljs-env :cqp)
@@ -85,13 +84,30 @@
                  :context context
                  :sort-map sort-map}}))
 
+(defn highlight-error [query-str at]
+  [:tt.alert.alert-danger
+   {:style {:border-right "none"
+            :color "#333"
+            :background-color "rgba(255, 0, 0, 0.1)"
+            :padding "7px"
+            :border-left "4px solid rgba(255, 0, 0, 0.8)"
+            :border-top "none"
+            :border-radius "0px"
+            :border-bottom "none"}}
+   (str "Mismatched quotes: " query-str)])
+
+(defn show-popup [id]                   ;todo
+  (let [popup (gpop/Popup. (by-id id))]))
+
 (defn query-field []
-  (let [query-opts (re-frame/subscribe [:query-opts])]
+  (let [query-opts (re-frame/subscribe [:query-opts])
+        query-parse-error (reagent/atom nil)]
     (fn []
       [re-com/h-box
        :justify :between
        :children
        [[:h4 [:span.text-muted {:style {:line-height "15px"}} "Query Panel"]]
+        (when @query-parse-error [highlight-error @query-parse-error 0])
         [:div.form-group.has-feedback
          [:input#query-str.form-control
           {:style {:width "640px"}
@@ -104,10 +120,13 @@
            :on-key-press
            (fn [k] (if (= (.-charCode k) 13)
                      (let [query-str (by-id "query-str")
-                           arg-map (assoc @query-opts :query-str query-str)]
-                       (re-frame/dispatch [:start-throbbing :results-frame])
-                       (timbre/debug (q/parse-checks (q/check-query query-str q/check-fn-map)))
-                       (query arg-map))))}
+                           arg-map (assoc @query-opts :query-str query-str)
+                           {status :status at :at} (parser/missing-quotes query-str)]
+                       (case status
+                         :mismatch (reset! query-parse-error query-str)
+                         :finished
+                         (do (re-frame/dispatch [:start-throbbing :results-frame])
+                             (query arg-map))))))}
           [:i.zmdi.zmdi-search.form-control-feedback
            {:style {:font-size "1.75em" :line-height "35px"}}]]]]])))
 

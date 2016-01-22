@@ -5,26 +5,26 @@
 
 (defn alert-error [title]
   [:div.alert.alert-danger
-   {:style "border-right:none;
-            color:#333;
-            background-color:rgba(255, 0, 0, 0.1);
-            padding: 7px;
-            border-left:4px solid rgba(255, 0, 0, 0.8);
-            border-top:none;
-            border-radius:0px;
-            border-bottom:none;"}
+    {:style {:border-right "none"
+             :color "#333"
+             :background-color "rgba(255, 0, 0, 0.1)"
+             :padding "7px"
+             :border-left "4px solid rgba(255, 0, 0, 0.8);"
+             :border-top "none"
+             :border-radius "0px"
+             :border-bottom "none"}}
    title])
 
 (defn alert-success [title]
   [:div.alert.alert-success
-   {:style "border-right:none;
-            color:#333;
-            background-color:rgba(60, 118, 61, 0.1);
-            padding: 7px;
-            border-left:4px solid rgba(60, 118, 61, 0.8);
-            border-top:none;
-            border-radius:0px;
-            border-bottom:none;"}
+    {:style {:border-right "none"
+             :color "#333"
+             :background-color "rgba(60, 118, 61, 0.1);"
+             :padding "7px"
+             :border-left "4px solid rgba(60, 118, 61, 0.8);"
+             :border-top "none"
+             :border-radius "0px"
+             :border-bottom "none"}}
    title])
 
 (defn login-page [& {:keys [csrf error-msg success-msg]}]
