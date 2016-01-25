@@ -8,13 +8,20 @@
 (defrecord CQiComponent [client init-file]
   component/Lifecycle
   (start [component]
-    (let [client (make-cqi-client (read-init init-file))]
-      (timbre/info "Connected to CQPServer")
-      (assoc component :client client)))
+    (try
+      (let [client (make-cqi-client (read-init init-file))]
+        (timbre/info "Connected to CQPServer")
+        (assoc component :client client))
+      (catch Exception e
+        (timbre/info "CQP service not available due to Exception:" (str e))
+        (assoc component :client nil))))
   (stop [component]
     (timbre/info "Shutting down connection to CQPServer")
-    (disconnect! (:client component))
-    (assoc component :client nil)))
+    (if-let [client (:client component)]
+      (do
+        (disconnect! (:client component))
+        (assoc component :client nil))
+      component)))
 
 (defn new-cqi-client [{:keys [init-file]}]
   (map->CQiComponent {:init-file init-file}))
@@ -73,9 +80,9 @@
 
 (defn- wrap-safe [thunk]
   (try (let [out (thunk)]
-         (assoc out :status {:status :ok :status-text "OK"}))
+         (assoc out :status {:status :ok :status-content "OK"}))
        (catch Exception e
-         {:status {:status :error :status-text (str e)}})))
+         {:status {:status :error :status-content (str e)}})))
 
 (defn cqi-query [args-map]
   (wrap-safe (fn [] (apply cqi-query* (apply concat args-map)))))
@@ -83,30 +90,3 @@
 (defn cqi-query-range [args-map]
   (wrap-safe (fn [] (apply cqi-query-range* (apply concat args-map)))))
 
-;; (def spec (read-init "dev-resources/cqpserver.init"))
-;; (def client (cqp/make-cqi-client spec))
-;; (def query-str "'goin.*' @'.*' 'to'")
-;; (def query-str "'the'")
-;; (def attrs
-;;   (create-attrs [{:type :pos :name "word"} {:type :pos :name "pos"}]))
-;; (def corpus-name "DICKENS")
-
-;; (def result
-;;   (do (cqp/query! client corpus-name "'those'" "latin1")
-;;       (cqp/cpos-seq-handler
-;;        client
-;;        corpus-name
-;;        (cqp/cpos-range client corpus-name 0 10)
-;;        2
-;;        attrs)))
-
-;; (def query-size
-;;   (cqp/query-size client corpus-name))
-
-;; (def hits
-;;   (cqp/cpos-seq-handler
-;;    client
-;;    "PYCCLE-ECCO"
-;;    (cqp/cpos-range client "PYCCLE-ECCO" 0 query-size)
-;;    2
-;;    attrs))

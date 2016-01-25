@@ -13,6 +13,14 @@
    (reaction (:active-panel @db))))
 
 (re-frame/register-sub
+ :notifications
+ (fn [db _]
+   (let [notifications (reaction (:notifications @db))]
+     (reaction (reverse (sort-by (fn [[_ {date :date}]]
+                                   date)
+                                 @notifications))))))
+
+(re-frame/register-sub
  :throbbing?
  (fn [db [_ panel]]
    (reaction (get-in @db [:throbbing? panel] false))))

@@ -8,7 +8,8 @@
             [cleebo.ws :refer [make-ws-ch]]
             [cleebo.pages.query :refer [query-panel]]
             [cleebo.pages.settings :refer [settings-panel]]
-            [cleebo.pages.debug :refer [debug-panel]]            
+            [cleebo.pages.debug :refer [debug-panel]]
+            [cleebo.utils :refer [notify!]]
             [taoensso.timbre :as timbre]
             [figwheel.client :as figwheel])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
@@ -35,10 +36,30 @@
             :style {:line-height "20px" :font-size "15px"}}]
           [re-com/label :label label]]]]])))
 
+(def notification-colors
+  {:info ""})
+
+(defn notification [id message & {:keys [type] :or {type :info}}]
+  (let [color (type notification-colors)]
+    ^{:key id}
+    [:li#notification
+     {:on-click #(re-frame/dispatch [:drop-notification id])}
+     message]))
+
 (defn main-panel []
-  (let [active-panel (re-frame/subscribe [:active-panel])]
+  (let [active-panel (re-frame/subscribe [:active-panel])
+        notifications (re-frame/subscribe [:notifications])]
     (fn []
       [:div.container-fluid
+       [:ul#notifications
+        {:style {:position "fixed"
+                 :right "5px"
+                 :top "5px"
+                 :z-index "1001"}}
+        [css-transition-group {:transition-name "notification"}
+         (map (fn [[id {msg :msg date :date}]]
+                (notification id (str msg " " id " " (.toDateString date))))
+              @notifications)]]
        [:div.row 
         [:div.col-sm-2.col-md-1.sidebar ;sidebar
          [:ul.nav.nav-sidebar
@@ -49,8 +70,7 @@
           [sidelink :debug-panel "#/debug" "Debug" "zmdi-bug"]          
           [sidelink :exit          "#/exit" "Exit" "zmdi-power"]]]
         [:div.col-sm-10.col-sm-offset-2.col-md-11.col-md-offset-1.main
-         (panels @active-panel)
-         [css-transition-group {:transition-name "panel"}]]]])))
+         (panels @active-panel)]]])))
 
 (defn mount-root []
   (.log js/console "Called mount-root")

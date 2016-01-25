@@ -1,6 +1,5 @@
 (ns cleebo.query-parser
-  (:require [clojure.string :as str]
-            [taoensso.timbre :as timbre]))
+  (:require [clojure.string :as str]))
 
 (defn re-pos [re s]
   #?(:clj (let [m (re-matcher re s)]

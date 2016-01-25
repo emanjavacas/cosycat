@@ -55,7 +55,6 @@
          {corpus :corpus query-str :query-str context :context size :size from :from} :params}]
      (let [result (cqi-query
                    {:cqi-client cqi-client :corpus corpus :query-str query-str
-
                     :opts {:context (->int context) :size (->int size) :from (->int from)}})]
        {:status 200 :body result}))
    {:login-uri "/login" :is-ok? authenticated?}))

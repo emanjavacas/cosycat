@@ -14,6 +14,18 @@
    (assoc db :active-panel active-panel)))
 
 (re-frame/register-handler
+ :add-notification
+ (fn [db [_ {msg :msg id :id}]]
+   (let [now (js/Date.)
+         notification {:msg msg :date now}]
+     (assoc-in db [:notifications id] notification))))
+
+(re-frame/register-handler
+ :drop-notification
+ (fn [db [_ id]]
+   (update-in db [:notifications] dissoc id)))
+
+(re-frame/register-handler
  :start-throbbing
  (fn [db [_ panel]]
    (assoc-in db [:throbbing? panel] true)))

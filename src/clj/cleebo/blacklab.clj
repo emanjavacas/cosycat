@@ -20,9 +20,9 @@
 (defn- wrap-safe [f]
   (fn [& args]
     (try (let [out (apply f args)]
-           (assoc out :status {:stutus :ok :status-text "OK"}))
+           (assoc out :status {:stutus :ok :status-content "OK"}))
          (catch Exception e
-           {:status {:status :error :status-text (str e)}}))))
+           {:status {:status :error :status-content (str e)}}))))
 
 (defn- bl-query*
   ([searcher corpus query-str from to context]

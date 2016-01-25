@@ -3,26 +3,24 @@
             [re-frame.core :as re-frame]
             [re-com.core :as re-com]
             [cleebo.query-parser :as parser]
+            [cleebo.utils :refer [notify!]]           
             [ajax.core :refer [GET]]
             [goog.string :as gstr]
+            [goog.events :as gevents]
             [goog.dom.dataset :as gdataset]
             [goog.dom.classes :as gclass]
-            [goog.style :as gstyle]
-            [goog.fx.dom :as gfx]
-            [goog.fx.easing :as gfx-easing]
-            [goog.ui.Popup :as gpop]
-            [goog.positioning :as pop]
-            [taoensso.timbre :as timbre])
-  (:require-macros [cleebo.env :as env :refer [cljs-env]])
-  (:import [goog.fx Animation]))
+            [taoensso.timbre :as timbre]
+            [clojure.string :as str])
+  (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
 (def corpora
   (let [{cqp-corpora :corpora} (cljs-env :cqp)
         {bl-corpora :corpora}  (cljs-env :blacklab)]
     (concat cqp-corpora bl-corpora)))
 
-(defn by-id [id]
-  (.-value (.getElementById js/document id)))
+(defn by-id [id & {:keys [value] :or {value true}}]
+  (let [elt (.getElementById js/document id)]
+    (if value (.-value elt) elt)))
 
 (defn pager-next
   ([size page-size] (pager-next size page-size 0))
@@ -42,7 +40,8 @@
            (neg?  new-from) [0 (+ new-from page-size)]
            :else            [new-from from]))))
 
-(defn error-panel [{:keys [status status-text]}]
+(defn error-panel [& {:keys [status status-content]}]
+  {:pre [(and status)]}
   [re-com/v-box
    :align :center
    :padding "40px"
@@ -50,11 +49,11 @@
    :children
    [[:h3 [:span.text-muted status]]
     [:br]
-    status-text]])
+    status-content]])
 
-(defn error-handler [{:keys [status status-text]}]
+(defn error-handler [{:keys [status status-content]}]
   (re-frame/dispatch
-   [:set-session [:query-results :status] {:status status :status-text status-text}]))
+   [:set-session [:query-results :status] {:status status :status-content status-content}]))
 
 (defn query-results-handler [data]
   (let [{query-size :query-size} data
@@ -84,20 +83,45 @@
                  :context context
                  :sort-map sort-map}}))
 
-(defn highlight-error [query-str at]
-  [:tt.alert.alert-danger
-   {:style {:border-right "none"
-            :color "#333"
-            :background-color "rgba(255, 0, 0, 0.1)"
-            :padding "7px"
-            :border-left "4px solid rgba(255, 0, 0, 0.8)"
-            :border-top "none"
-            :border-radius "0px"
-            :border-bottom "none"}}
-   (str "Mismatched quotes: " query-str)])
+(defn highlight-n [s n]
+  (let [target [:span {:style {:background-color "rgba(255, 0, 0, 0.3)"}} (nth s n)]
+        pre (subs s 0 n)
+        post (subs s (inc n))]
+    [:tt.text-center pre target post]))
 
-(defn show-popup [id]                   ;todo
-  (let [popup (gpop/Popup. (by-id id))]))
+(defn replace-char [s n replacement]
+  (let [pre (subs s 0 n)
+        post (subs s (inc n))]
+    (str pre replacement post)))
+
+(defn nbsp []
+  (gstr/unescapeEntities "&nbsp;"))
+
+(defn normalize-str [s]
+  (str/replace s #"[ ]+" " "))
+
+(defn empty-before [s n]
+  (count (filter #(= % " ")  (subs s n))))
+
+(defn highlight-error [{query-str :query-str at :at}]
+  [:div
+   [:div.alert.alert-danger
+    {:style {:border-right "none"
+             :color "#333"
+             :background-color "rgba(255, 0, 0, 0.1)"
+             :padding "0px"
+             :border-left "4px solid rgba(255, 0, 0, 0.8)"
+             :border-top "none"
+             :border-radius "0px"
+             :border-bottom "none"
+             :margin "0px"}}
+    (highlight-n query-str at)]
+   [:tt.text-center
+    {:style {:padding-left "3.5px"}}
+    (replace-char
+     (apply str (repeat (count query-str) (nbsp)))
+     at
+     (gstr/unescapeEntities "&#x21D1;"))]])
 
 (defn query-field []
   (let [query-opts (re-frame/subscribe [:query-opts])
@@ -107,7 +131,6 @@
        :justify :between
        :children
        [[:h4 [:span.text-muted {:style {:line-height "15px"}} "Query Panel"]]
-        (when @query-parse-error [highlight-error @query-parse-error 0])
         [:div.form-group.has-feedback
          [:input#query-str.form-control
           {:style {:width "640px"}
@@ -118,15 +141,19 @@
            :autocapitalize "off"
            :spellcheck "false"
            :on-key-press
-           (fn [k] (if (= (.-charCode k) 13)
-                     (let [query-str (by-id "query-str")
-                           arg-map (assoc @query-opts :query-str query-str)
-                           {status :status at :at} (parser/missing-quotes query-str)]
-                       (case status
-                         :mismatch (reset! query-parse-error query-str)
-                         :finished
-                         (do (re-frame/dispatch [:start-throbbing :results-frame])
-                             (query arg-map))))))}
+           (fn [k]
+             (let [query-str (normalize-str (by-id "query-str"))]
+               (if (and (not (zero? (count query-str))) (= (.-charCode k) 13))
+                 (let [{status :status at :at} (parser/missing-quotes query-str)]
+                   (case status
+                     :mismatch
+                     (re-frame/dispatch
+                      [:set-session [:query-results :status]
+                       {:status :query-str-error
+                        :status-content {:query-str query-str :at (+ at (empty-before query-str at))}}])
+                     :finished
+                     (do (re-frame/dispatch [:start-throbbing :results-frame])
+                         (query (assoc @query-opts :query-str query-str))))))))}
           [:i.zmdi.zmdi-search.form-control-feedback
            {:style {:font-size "1.75em" :line-height "35px"}}]]]]])))
 
@@ -331,10 +358,6 @@
         hit (get-in results-map [(js/parseInt id) :hit])]
     id))
 
-(defn fade-out [e]
-  (let [anim (gfx/FadeOut. (.-currentTarget e) 1 0.5 5200 gfx-easing/easeOut)]
-    (.play anim)))
-
 (defn update-selection [selection id flag]
   (if flag
     (swap! selection assoc id true)
@@ -382,14 +405,19 @@
         query-size (re-frame/subscribe [:session :query-results :query-size])
         throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
     (fn [selection]
-      (let [{:keys [status status-text]} @status]
+      (let [{:keys [status status-content]} @status]
         (cond
-          @throbbing?       (throbbing-panel)
-          (= status :error) [error-panel
-                             {:status "Ups! something bad happened" :status-text status-text}]
-          (= 0 @query-size) [error-panel
-                             {:status "The query returned no matching results"}]
-          :else             [table-results selection])))))
+          @throbbing?                 (throbbing-panel)
+          (= status :error)           [error-panel
+                                       :status "Ups! something bad happened"
+                                       :status-content [:div status-content]]
+          (= 0 @query-size)           [error-panel
+                                       :status "The query returned no matching results"]         
+          (= status :query-str-error) [error-panel
+                                       :status (str "Query string is misquoted at position "
+                                                    (inc (:at status-content)))
+                                       :status-content (highlight-error status-content)]
+          :else                       [table-results selection])))))
 
 (defn annotation-frame [selection]
   (fn [selection]
