@@ -64,8 +64,9 @@
     {:-hit -hit :-hits -hits :hit hit}))
 
 (defn- -hits->window [^Hits -hits from to context]
-  (.setContextSize -hits context)
-  (.window -hits from to))
+  (let [size (- to from)]
+    (.setContextSize -hits context)
+    (.window -hits from size)))
 
 (defn- ^Hits get-hits
   ([searcher]
@@ -145,9 +146,9 @@
   (start [component] component)
   (stop [component] component)
   SearcherState
-  (update-hits! [seacher query-id -new-hits]
+  (update-hits! [component query-id -new-hits]
     (swap! -hits assoc query-id -new-hits))
-  (remove-hits! [seacher query-id]
+  (remove-hits! [component query-id]
     (swap! -hits dissoc query-id)))
 
 (defn ^HitProperty make-property
@@ -189,11 +190,11 @@
        (hits-handler (-hits->window -hits from to context) blsearcher)
        (throw (ex-info "Query hasn't been run yet" {:query query-id}))))))
 
-(defn sorted-query
+(defn sort-query
   "returns a specified hits window after sorting the entire query results.
   Throws an exception in case of missing query."
   ([searcher corpus from to context criterion prop-name]
-   (sorted-query corpus from to context criterion prop-name "default"))
+   (sort-query corpus from to context criterion prop-name "default"))
   ([searcher corpus from to context criterion prop-name query-id]
    (let [{{blsearcher corpus} :searchers
           hits-handler :hits-handler} searcher]
@@ -203,10 +204,10 @@
          (hits-handler (-hits->window -hits from to context) blsearcher))
        (throw (ex-info "Query hasn't been run yet" {:query query-id}))))))
 
-(defn sorted-range
+(defn sort-range
   "sorts a specified hits window. Throws an exception in case of missing query."
   ([searcher corpus from to context criterion prop-name]
-   (sorted-range searcher corpus from to context criterion prop-name "default"))
+   (sort-range searcher corpus from to context criterion prop-name "default"))
   ([searcher corpus from to context criterion prop-name query-id]
    (let [{{blsearcher corpus} :searchers
           hits-handler :hits-handler} searcher]
@@ -233,18 +234,39 @@
       (clojure.pprint/pprint (map #(apply str (interleave (repeat " ") %)) tokens))
       tokens)))
 
+(defn print-ids [hits & {:keys [print?] :or {print? false}}]
+  (let [f (if print? prn identity)]
+    (f (map :id (filter :match (mapcat :hit hits))))))
+
+(defn check-equals [s1 s2]
+  (= (into (hash-set) s1) (into (hash-set) s2)))
+
+(defn check-overlap [s1 s2]
+  (clojure.set/difference (into (hash-set) s1) (into (hash-set) s2)))
+
 (def paths-map {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"})
 
-;(def searcher (new-blsearcher paths-map))
-;(def hits (query searcher "brown-id" "\"a\"" 0 10 5))
-;(query-range searcher "brown-id" 0 50 5)
-;(query-size searcher "brown")
+(def searcher (new-blsearcher paths-map))
+
+(for [i (range 1 10)
+      :let [from (* i 100)
+            to (+ from 10)
+            hits (query searcher "brown-id" "\"a\"" from to 10 5)
+            sorted-hits (sort-range searcher "brown-id" from to 5 :left-context "word")]]
+  [(check-equals (print-ids hits) (print-ids sorted-hits))
+   (count (check-overlap (print-ids hits) (print-ids sorted-hits)))])
+
+(def hits (query searcher "brown-id" "\"a\"" 0 20 5))
+(def sorted-hits (sort-range searcher "brown-id" 0 10 5 :left-context "word"))
+
+;; (query-range searcher "brown-id" 0 50 5)
+;; (query-size searcher "brown")
 
 ;; (def n 10000)
 ;; (def hits (query searcher "brown-id" "\".*\"" 0 n 5))
 ;; (clojure.pprint/pprint
 ;;  (map #(apply str (interleave (repeat " ") %))
-;;       (raw-text (sorted-range searcher "brown-id" 0 n 2 :left-context "word")
+;;       (raw-text (sort-range searcher "brown-id" 0 n 2 :left-context "word")
 ;;                 :window? true :n n)))
 ;; (clojure.pprint/pprint
 ;;  (map #(apply str (interleave (repeat " ") %))

@@ -1,7 +1,7 @@
 (ns cleebo.blacklab
   (:require [taoensso.timbre :as timbre]
             [cleebo.blacklab.core :refer
-             [query query-range sorted-range sorted-query query-size new-blsearcher]]))
+             [query query-range sort-range sort-query query-size new-blsearcher]]))
 
 (defn format-hit [hit context]
   (let [match-idxs (keep-indexed (fn [i hit] (when (:match hit) i)) hit)
@@ -14,6 +14,7 @@
 (defn numerize-hits
   "{0 {:hit [{:id id :word word} {:id id :word word}] :num 0 :meta meta}}"
   [hits from to context]
+  {:pre (= (count hits) (- to from))}
   (let [formatted (map (fn [hit-map] (update hit-map :hit #(format-hit % context))) hits)]
     (apply array-map (interleave (range from to) formatted))))
 
@@ -40,7 +41,7 @@
    (bl-query-range* searcher corpus from to context sort-map "default"))
   ([searcher corpus from to context {:keys [criterion prop-name]} query-id]
    (let [hits (if (and criterion prop-name)
-                (sorted-range searcher corpus from to context criterion prop-name query-id)
+                (sort-range searcher corpus from to context criterion prop-name query-id)
                 (query-range searcher corpus from to context query-id))]
      {:results (numerize-hits hits from to context)
       :from from
@@ -50,7 +51,7 @@
   ([searcher corpus from to context sort-map]
    (bl-sort-query* searcher corpus from to context sort-map "default"))
   ([searcher corpus from to context {:keys [criterion prop-name]} query-id]
-   (let [hits (sorted-query searcher corpus from to context criterion prop-name query-id)]
+   (let [hits (sort-query searcher corpus from to context criterion prop-name query-id)]
      {:results (numerize-hits hits from to context)
       :from from
       :to to})))

@@ -1,4 +1,4 @@
-(ns cleebo.db)
+(ns cleebo.backend.db)
 
 (def default-db
   {:name "CleeBo"

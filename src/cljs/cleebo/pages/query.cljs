@@ -2,9 +2,9 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [re-com.core :as re-com]
-            [cleebo.query-parser :as parser]
-            [cleebo.utils :refer [notify!]]           
-            [ajax.core :refer [GET]]
+            [cleebo.logic.query-logic :as q]
+            [cleebo.query-parser :refer [missing-quotes]]            
+            [cleebo.utils :refer [notify! by-id normalize-from]]            
             [goog.string :as gstr]
             [goog.events :as gevents]
             [goog.dom.dataset :as gdataset]
@@ -18,28 +18,6 @@
         {bl-corpora :corpora}  (cljs-env :blacklab)]
     (concat cqp-corpora bl-corpora)))
 
-(defn by-id [id & {:keys [value] :or {value true}}]
-  (let [elt (.getElementById js/document id)]
-    (if value (.-value elt) elt)))
-
-(defn pager-next
-  ([size page-size] (pager-next size page-size 0))
-  ([size page-size from]
-   (let [to (+ from page-size)]
-     (cond
-       (= from size) [0 (min page-size size)]
-       (>= to size)  [from size]
-       :else         [from to]))))
-
-(defn pager-prev
-  ([size page-size] (pager-prev size page-size 0))
-  ([size page-size from]
-   (let [new-from (- from page-size)]
-     (cond (zero? from)     [(- size page-size) size]
-           (zero? new-from) [0 page-size]
-           (neg?  new-from) [0 (+ new-from page-size)]
-           :else            [new-from from]))))
-
 (defn error-panel [& {:keys [status status-content]}]
   {:pre [(and status)]}
   [re-com/v-box
@@ -50,38 +28,6 @@
    [[:h3 [:span.text-muted status]]
     [:br]
     status-content]])
-
-(defn error-handler [{:keys [status status-content]}]
-  (re-frame/dispatch
-   [:set-session [:query-results :status] {:status status :status-content status-content}]))
-
-(defn query-results-handler [data]
-  (let [{query-size :query-size} data
-        data (if (zero? query-size) (assoc data :results nil) data)]
-    (re-frame/dispatch [:set-query-results data])
-    (re-frame/dispatch [:stop-throbbing :results-frame])))
-
-(defn query
-  "will need to support 'from' for in-place query-opts change"
-  [{:keys [query-str corpus context size from] :or {from 0} :as query-args}]
-  (GET "/query"
-       {:handler query-results-handler
-        :error-handler error-handler
-        :params {:query-str query-str
-                 :corpus corpus
-                 :context context
-                 :from from
-                 :size size}}))
-
-(defn query-range [{:keys [corpus from to context sort-map]}]
-  (GET "/range"
-       {:handler query-results-handler
-        :error-handler error-handler
-        :params {:corpus corpus
-                 :from from
-                 :to to
-                 :context context
-                 :sort-map sort-map}}))
 
 (defn highlight-n [s n]
   (let [target [:span {:style {:background-color "rgba(255, 0, 0, 0.3)"}} (nth s n)]
@@ -94,7 +40,7 @@
         post (subs s (inc n))]
     (str pre replacement post)))
 
-(defn nbsp []
+(defn nbsp [& [n]]
   (gstr/unescapeEntities "&nbsp;"))
 
 (defn normalize-str [s]
@@ -124,8 +70,7 @@
      (gstr/unescapeEntities "&#x21D1;"))]])
 
 (defn query-field []
-  (let [query-opts (re-frame/subscribe [:query-opts])
-        query-parse-error (reagent/atom nil)]
+  (let [query-opts (re-frame/subscribe [:query-opts])]
     (fn []
       [re-com/h-box
        :justify :between
@@ -144,16 +89,18 @@
            (fn [k]
              (let [query-str (normalize-str (by-id "query-str"))]
                (if (and (not (zero? (count query-str))) (= (.-charCode k) 13))
-                 (let [{status :status at :at} (parser/missing-quotes query-str)]
+                 (let [{status :status at :at} (missing-quotes query-str)
+                       at (+ at (empty-before query-str at))
+                       args-map (assoc @query-opts :query-str query-str)]
                    (case status
                      :mismatch
                      (re-frame/dispatch
                       [:set-session [:query-results :status]
                        {:status :query-str-error
-                        :status-content {:query-str query-str :at (+ at (empty-before query-str at))}}])
+                        :status-content {:query-str query-str :at at}}])
                      :finished
                      (do (re-frame/dispatch [:start-throbbing :results-frame])
-                         (query (assoc @query-opts :query-str query-str))))))))}
+                         (q/query args-map)))))))}
           [:i.zmdi.zmdi-search.form-control-feedback
            {:style {:font-size "1.75em" :line-height "35px"}}]]]]])))
 
@@ -180,12 +127,7 @@
     [dropdown-opt
      :k :size
      :placeholder "Page size: "
-     :choices (map (partial hash-map :id)
-                   [5 10 15 25 35
-                    55 85 125 190
-                    290 435 655 985
-                    1475 2215 3325 4985
-                    7480 11220 16830])]
+     :choices (map (partial hash-map :id) [5 10 15 25 35 55 85 125 190 290 435 655 985])]
     [dropdown-opt
      :k :context
      :placeholder "Window size: "
@@ -198,14 +140,11 @@
       [re-com/button
        :style {:font-size "12px" :height "34px"}
        :label label
-       :on-click #(let [{:keys [query-size from to]} @query-results
-                        {:keys [corpus context size]} @query-opts
+       :on-click #(let [{:keys [size]} @query-opts
+                        {:keys [query-size from to]} @query-results
                         [from to] (pager-fn query-size size from to)]
-                    (re-frame/dispatch [:start-throbbing :results-frame])
-                    (query-range {:corpus corpus
-                                  :from from
-                                  :to to
-                                  :context context}))])))
+                    (q/range-trigger query-results query-opts
+                                     :overwrite {:from from :to to}))])))
 
 (defn bordered-input [& {:keys [label model on-change on-key-press]}]
   {:pre [(and label model)]}
@@ -214,26 +153,9 @@
             :or {on-change identity on-key-press identity}}]
       [re-com/h-box
        :children
-       [[:div
-         {:style {:font-size "12px"
-                  :height "34px"
-                  :line-height "25px"
-                  :padding "0 0.3em"
-                  :border "1px solid #ccc"
-                  :border-right "none"
-                  :border-radius "4px 0 0 4px"
-                  :background-color "#EDEDED"
-                  :position "static"
-                  :margin "auto"}}
-         label]
-        [:input
-         {:style {:width "3.7em"
-                  :padding-left "0.3em"
-                  :padding-top "2px"
-                  :border "1px solid #ccc"
-                  :border-radius "0 4px 4px 0"
-                  :border-left "none"}
-          :type "number"
+       [[:div.bordered-input label]
+        [:input.bordered-input
+         {:type "number"
           :min "1"
           :default-value model
           :on-change #(on-change (reset! inner-value (.-value (.-target %))))
@@ -252,10 +174,10 @@
          :gap "0px"
          :children
          [[nav-button
-           (fn [query-size size from to] (pager-prev query-size size from))
+           (fn [query-size size from to] (q/pager-prev query-size size from))
            [:div [:i.zmdi.zmdi-arrow-left {:style {:margin-right "10px"}}] "prev"]] 
           [nav-button
-           (fn [query-size size from to] (pager-next query-size size to))
+           (fn [query-size size from to] (q/pager-next query-size size to))
            [:div "next" [:i.zmdi.zmdi-arrow-right {:style {:margin-left "10px"}}]]]
           [bordered-input
            :label "go->"
@@ -263,15 +185,11 @@
            :on-key-press
            (fn [k value]
              (if (= (.-charCode k) 13)
-               (let [{:keys [corpus context size]} @query-opts
-                     {:keys [query-size]} @query-results
-                     from-hit (max 0 (min (dec (js/parseInt value)) query-size))]
-                 (re-frame/dispatch [:start-throbbing :results-frame])
-                 (query-range
-                  {:corpus corpus
-                   :from from-hit
-                   :to (+ from-hit size)
-                   :context context}))))]]]
+               (let [{:keys [query-size]} @query-results
+                     {:keys [size]} @query-opts
+                     from (normalize-from (dec (js/parseInt value)) query-size)]
+                 (q/range-trigger query-results query-opts
+                                  :overwrite {:from from :to (+ from size)}))))]]]
         [re-com/h-box
          :gap "0px"
          :children
@@ -292,36 +210,19 @@
           [re-com/button
            :style {:font-size "12px" :height "34px"}
            :label "Sort page"
-           :disabled? (let [{:keys [corpus]} @query-opts]
-                        (not (some #{corpus} (:corpora (cljs-env :blacklab)))))
-           :on-click
-           (fn []
-             (let [{:keys [query-size from to]} @query-results
-                   {:keys [corpus context size]} @query-opts]
-               (re-frame/dispatch [:start-throbbing :results-frame])
-               (query-range {:corpus corpus
-                             :from from
-                             :to (+ from size)
-                             :context context
-                             :sort-map {:criterion @criterion
-                                        :prop-name @prop-name}})))]
+           :disabled? (not (some #{(:corpus @query-opts)} (:corpora (cljs-env :blacklab))))
+           :on-click #(q/range-trigger query-results query-opts
+                       :criterion-atom criterion
+                       :prop-name-atom prop-name
+                       :sort-type "range")]
           [re-com/button
            :style {:font-size "12px" :height "34px"}
            :label "Sort all"
-           :disabled? (let [{:keys [corpus]} @query-opts]
-                        (not (some #{corpus} (:corpora (cljs-env :blacklab)))))
-           :on-click
-           (fn []
-             (let [{:keys [query-size from to]} @query-results
-                   {:keys [corpus context size]} @query-opts]
-               (re-frame/dispatch [:start-throbbing :results-frame])
-               (query-range {:corpus corpus
-                             :from from
-                             :to (+ from size)
-                             :context context
-                             :sort-map {:criterion @criterion
-                                        :prop-name @prop-name
-                                        :sort-type "all"}})))]]]]])))
+           :disabled? (not (some #{(:corpus @query-opts)} (:corpora (cljs-env :blacklab))))
+           :on-click #(q/range-trigger query-results query-opts
+                       :criterion-atom criterion
+                       :prop-name-atom prop-name
+                       :sort-type "all")]]]]])))
 
 (defn query-result-label [{:keys [from to query-size]}]
   (fn [{:keys [from to query-size]}]
@@ -352,11 +253,6 @@
    :justify :center
    :padding "50px"
    :child [re-com/throbber :size :large]])
-
-(defn result-by-id [e results-map]
-  (let [id (gdataset/get (.-currentTarget e) "id")
-        hit (get-in results-map [(js/parseInt id) :hit])]
-    id))
 
 (defn update-selection [selection id flag]
   (if flag
@@ -414,7 +310,7 @@
           (= 0 @query-size)           [error-panel
                                        :status "The query returned no matching results"]         
           (= status :query-str-error) [error-panel
-                                       :status (str "Query string is misquoted at position "
+                                       :status (str "Query is misquoted starting at position "
                                                     (inc (:at status-content)))
                                        :status-content (highlight-error status-content)]
           :else                       [table-results selection])))))

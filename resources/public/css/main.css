@@ -15,6 +15,28 @@ table td.highlighted {
     /* border: 0.5px solid black !important; */
 }
 
+div.bordered-input {
+    font-size: 12px;
+    height: 34px;
+    line-height: 25px;
+    padding: 0 0.3em;
+    border: 1px solid #ccc;
+    border-right: none;
+    border-radius: 4px 0 0 4px;
+    background-color: #EDEDED;
+    position: static;
+    margin: auto;
+}
+
+input.bordered-input {
+    width: 3.7em;
+    padding-left: 0.3em;
+    padding-top: 2px;
+    border: 1px solid #ccc;
+    border-radius: 0 4px 4px 0;
+    border-left: none;
+}
+
 /* transition group */
 li#notification {
     max-width: 380px;

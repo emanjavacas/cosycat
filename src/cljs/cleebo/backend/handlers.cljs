@@ -1,7 +1,7 @@
-(ns cleebo.handlers
+(ns cleebo.backend.handlers
     (:require [taoensso.timbre :as timbre]
               [re-frame.core :as re-frame]
-              [cleebo.db :as db]))
+              [cleebo.backend.db :as db]))
 
 (re-frame/register-handler
  :initialize-db
@@ -62,5 +62,4 @@
 (re-frame/register-handler
  :set-query-results
  (fn [db [_ & [{:keys [results query-size query-str status from to] :as data}]]]
-   (timbre/debug results)
    (update-in db [:session :query-results] merge data)))

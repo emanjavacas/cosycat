@@ -1,4 +1,4 @@
-(ns cleebo.subs
+(ns cleebo.backend.subs
     (:require-macros [reagent.ratom :refer [reaction]])
     (:require [re-frame.core :as re-frame]))
 

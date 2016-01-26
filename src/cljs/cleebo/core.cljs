@@ -2,20 +2,17 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [re-com.core :as re-com]
-            [cleebo.handlers]
-            [cleebo.subs]
+            [cleebo.backend.handlers]
+            [cleebo.backend.subs]
             [cleebo.routes :as routes]
-            [cleebo.ws :refer [make-ws-ch]]
+            [cleebo.logic.ws :refer [make-ws-ch]]
             [cleebo.pages.query :refer [query-panel]]
             [cleebo.pages.settings :refer [settings-panel]]
             [cleebo.pages.debug :refer [debug-panel]]
-            [cleebo.utils :refer [notify!]]
+            [cleebo.utils :refer [notify! css-transition-group]]
             [taoensso.timbre :as timbre]
             [figwheel.client :as figwheel])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
-
-(def css-transition-group
-  (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
 
 (defmulti panels identity)
 (defmethod panels :query-panel [] [query-panel])
@@ -36,15 +33,17 @@
             :style {:line-height "20px" :font-size "15px"}}]
           [re-com/label :label label]]]]])))
 
-(def notification-colors
-  {:info ""})
+(defn notification [id message]
+  ^{:key id}
+  [:li#notification
+   {:on-click #(re-frame/dispatch [:drop-notification id])}
+   message])
 
-(defn notification [id message & {:keys [type] :or {type :info}}]
-  (let [color (type notification-colors)]
-    ^{:key id}
-    [:li#notification
-     {:on-click #(re-frame/dispatch [:drop-notification id])}
-     message]))
+(defn notification-container [notifications]
+  [css-transition-group {:transition-name "notification"}
+   (map (fn [[id {msg :msg date :date}]]
+          (notification id (str msg " " id " " (.toDateString date))))
+        @notifications)])
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])
@@ -56,10 +55,7 @@
                  :right "5px"
                  :top "5px"
                  :z-index "1001"}}
-        [css-transition-group {:transition-name "notification"}
-         (map (fn [[id {msg :msg date :date}]]
-                (notification id (str msg " " id " " (.toDateString date))))
-              @notifications)]]
+        [notification-container notifications]]
        [:div.row 
         [:div.col-sm-2.col-md-1.sidebar ;sidebar
          [:ul.nav.nav-sidebar

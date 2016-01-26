@@ -28,8 +28,10 @@
           :children
           [[:h4 [:span.text-muted "Query Options"]]
            [kv-pairs query-opts]
-           [:h4 [:span.text-muted "Query Options"]]
-           [kv-pairs query-results]]])))))
+           [:h4 [:span.text-muted "Query Results"]]
+           [kv-pairs query-results]
+           [:h4 [:span.text-muted "Match Ids"]]
+           (map :id (filter :match (mapcat :hit (vals (:results query-results)))))]])))))
 
 (defn debug-panel []
   [re-com/v-box

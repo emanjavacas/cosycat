@@ -1,4 +1,4 @@
-(ns cleebo.ws
+(ns cleebo.logic.ws
   (:require [cognitect.transit :as t]
             [taoensso.timbre :as timbre]))
 
