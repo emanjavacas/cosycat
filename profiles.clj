@@ -8,9 +8,10 @@
         :cqp {:corpora ["PYCCLE-ECCO" "DICKENS"]
               :cqp-init-file "dev-resources/cqpserver.init"}
         :blacklab
-        {:corpora ["brown-id"]
+        {:corpora ["brown-id" "shc"]
          :blacklab-paths-map
-         {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"}}}}
+         {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"
+          "shc" "/home/enrique/code/BlackLab/shc/"}}}}
  :local {:dependencies [[com.cemerick/piggieback "0.2.1"]
                         [figwheel-sidecar "0.5.0-1"]]
          :source-paths ["src/cljs"]

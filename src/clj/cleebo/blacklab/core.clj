@@ -214,7 +214,7 @@
      (if-let [-hits (get-hits searcher query-id)]
        (let [-hits-window (-hits->window -hits from to context)
              hit-property (make-property -hits-window criterion prop-name)]
-         (.sort ^Hits -hits-window hit-property)
+         (.sort ^Hits -hits hit-property)
          (hits-handler -hits-window blsearcher))
        (throw (ex-info "Query hasn't been run yet" {:query query-id}))))))
 
@@ -244,20 +244,20 @@
 (defn check-overlap [s1 s2]
   (clojure.set/difference (into (hash-set) s1) (into (hash-set) s2)))
 
-(def paths-map {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"})
+;; (def paths-map {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"})
 
-(def searcher (new-blsearcher paths-map))
+;; (def searcher (new-blsearcher paths-map))
 
-(for [i (range 1 10)
-      :let [from (* i 100)
-            to (+ from 10)
-            hits (query searcher "brown-id" "\"a\"" from to 10 5)
-            sorted-hits (sort-range searcher "brown-id" from to 5 :left-context "word")]]
-  [(check-equals (print-ids hits) (print-ids sorted-hits))
-   (count (check-overlap (print-ids hits) (print-ids sorted-hits)))])
+;; (for [i (range 1 10)
+;;       :let [from (* i 100)
+;;             to (+ from 10)
+;;             hits (query searcher "brown-id" "\"a\"" from to 10 5)
+;;             sorted-hits (sort-range searcher "brown-id" from to 5 :left-context "word")]]
+;;   [(check-equals (print-ids hits) (print-ids sorted-hits))
+;;    (count (check-overlap (print-ids hits) (print-ids sorted-hits)))])
 
-(def hits (query searcher "brown-id" "\"a\"" 0 20 5))
-(def sorted-hits (sort-range searcher "brown-id" 0 10 5 :left-context "word"))
+;; (def hits (query searcher "brown-id" "\"a\"" 0 20 5))
+;; (def sorted-hits (sort-range searcher "brown-id" 0 10 5 :left-context "word"))
 
 ;; (query-range searcher "brown-id" 0 50 5)
 ;; (query-size searcher "brown")

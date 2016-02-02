@@ -42,6 +42,7 @@
                  [com.goldmansachs/gs-collections "6.1.0"]
                  [blacklab "1.2-SNAPSHOT"]]
   :main cleebo.core
+  :jvm-opts ["-Xmx4000M"]
   :plugins [[lein-cljsbuild "1.1.1"]
             [lein-environ "1.0.1"]
             [lein-figwheel "0.5.0-2"]]
