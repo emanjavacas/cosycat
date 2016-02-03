@@ -16,3 +16,6 @@
         writer (transit/writer out type opts)]
     (transit/write writer o)
     (.toString out *encoding*)))
+
+(defn ->int [s]
+  (Integer/parseInt s))

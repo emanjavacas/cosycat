@@ -4,7 +4,7 @@
             [cleebo.http-server :refer [new-http-server]]
             [cleebo.db :refer [new-db]]
             [cleebo.cqp :refer [new-cqi-client]]
-            [cleebo.blacklab.core :refer [new-blsearcher]]
+            [cleebo.blacklab :refer [new-bl-component]]
             [cleebo.figwheel :refer [new-figwheel]]
             [cleebo.routes.ws :refer [new-ws]]
             [clojure.pprint :as pprint]
@@ -22,7 +22,7 @@
   (let [{:keys [handler port cqp-init-file database-url blacklab-paths-map]} config-map]
     (-> (component/system-map
          :cqi-client (new-cqi-client {:init-file cqp-init-file})
-         :blacklab (new-blsearcher blacklab-paths-map)
+         :blacklab (new-bl-component blacklab-paths-map)
          :db (new-db {:url database-url})
          :ws (new-ws)
          :http-server
@@ -60,4 +60,3 @@
      (Thread. (fn []
                 (.stop system))))
     (.start system)))
-

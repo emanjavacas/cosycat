@@ -1,6 +1,5 @@
 (ns cleebo.blacklab.core
-  (:require [cleebo.blacklab.paginator]
-            [com.stuartsierra.component :as component])
+  (:require [taoensso.timbre :as timbre])
   (:import [nl.inl.blacklab.search Searcher Hit Hits Concordance Kwic TextPatternRegex]
            [nl.inl.blacklab.search.grouping
             HitProperty HitPropertyHitText HitPropertyLeftContext HitPropertyRightContext]
@@ -39,12 +38,16 @@
   (let [parsed-str (apply str (replace {\' \"} s))]
     (CorpusQueryLanguageParser/parse parsed-str)))
 
-(defn- make-searcher 
+(defn make-searcher 
   "Creates a searcher given index path. It does not close the searcher"
   ^Searcher  [^String path]
   (Searcher/open (java.io.File. path)))
 
-(defn- run-query 
+(defn destroy-searcher
+  [^Searcher searcher]
+  (.close searcher))
+
+(defn run-query 
   "Runs the query and returns the general Hits object"
   ^Hits 
   ([^Searcher searcher ^String s]
@@ -67,13 +70,6 @@
   (let [size (- to from)]
     (.setContextSize -hits context)
     (.window -hits from size)))
-
-(defn- ^Hits get-hits
-  ([searcher]
-   (get-hits searcher "default"))
-  ([searcher query-id]
-   (let [{-hits :-hits} searcher]
-     (get @-hits query-id))))
 
 ;;; middleware
 (defn wrap-clean
@@ -137,20 +133,6 @@
           :let [hit-map (make-hit-map hit hits)]]
       (handler hit-map))))
 
-(defprotocol SearcherState
-  (update-hits! [searcher query-id -new-hits])
-  (remove-hits! [searcher query-id]))
-
-(defrecord BLSearcher [searchers -hits hits-handler]
-  component/Lifecycle
-  (start [component] component)
-  (stop [component] component)
-  SearcherState
-  (update-hits! [component query-id -new-hits]
-    (swap! -hits assoc query-id -new-hits))
-  (remove-hits! [component query-id]
-    (swap! -hits dissoc query-id)))
-
 (defn ^HitProperty make-property
   "creates a property for sorting purposes"
   [^Hits -hits criterion ^String prop-name]
@@ -160,70 +142,43 @@
     :right-context (HitPropertyRightContext. -hits "contents" prop-name)))
 
 (defn query-size
-  ([searcher corpus]
-   (query-size searcher corpus "default"))
-  ([searcher corpus query-id]
-   (if-let [-hits (get-hits searcher query-id)]
-     (.size ^Hits -hits)
-     (throw (ex-info "Query hasn't been run yet" {:query query-id})))))
+  "sorts a given Hits object"
+  [-hits]
+  (.size ^Hits -hits))
 
 (defn query
-  "runs a query and returns a window of hits specified by `from` `to` and `context`"
-  ([searcher corpus query-str from to context]
-   (query searcher corpus query-str from to context "default"))
-  ([searcher corpus query-str from to context query-id]
-   (let [{{blsearcher corpus} :searchers
-           hits-handler :hits-handler} searcher
-         -hits (run-query blsearcher query-str)]
-     (update-hits! searcher query-id -hits)
-     (hits-handler (-hits->window -hits from to context) blsearcher))))
+  "runs a query and returns a window of hits specified by `from` `to` and `context`.
+  Accepts an optional function will be called for side effects with optional args and the 
+  resulting hits"
+  ([searcher hits-handler query-str from to context]
+   (query searcher hits-handler query-str from to context identity))
+  ([searcher hits-handler query-str from to context f & args]
+   (let [-hits (run-query searcher query-str)]
+;     (timbre/debug "update" (conj args -hits))
+     (apply f (concat args [-hits]))
+     (hits-handler (-hits->window -hits from to context) searcher))))
 
 (defn query-range
   "returns a window of hits specified by `from` `to` and `context` from the result of
   a previous query."
-  ([searcher corpus from to context]
-   (query-range searcher corpus from to context "default"))
-  ([searcher corpus from to context query-id]
-   (let [{{blsearcher corpus} :searchers
-          hits-handler :hits-handler} searcher]
-     (if-let [-hits (get-hits searcher query-id)]
-       (hits-handler (-hits->window -hits from to context) blsearcher)
-       (throw (ex-info "Query hasn't been run yet" {:query query-id}))))))
+  [searcher -hits hits-handler from to context]
+  (hits-handler (-hits->window -hits from to context) searcher))
 
 (defn sort-query
-  "returns a specified hits window after sorting the entire query results.
-  Throws an exception in case of missing query."
-  ([searcher corpus from to context criterion prop-name]
-   (sort-query corpus from to context criterion prop-name "default"))
-  ([searcher corpus from to context criterion prop-name query-id]
-   (let [{{blsearcher corpus} :searchers
-          hits-handler :hits-handler} searcher]
-     (if-let [-hits (get-hits searcher query-id)]
-       (let [hit-property (make-property -hits criterion prop-name)]
-         (.sort ^Hits -hits hit-property)
-         (hits-handler (-hits->window -hits from to context) blsearcher))
-       (throw (ex-info "Query hasn't been run yet" {:query query-id}))))))
+  "returns a specified hits window after sorting the entire query results."
+  [searcher -hits hits-handler from to context criterion prop-name]
+  (let [hit-property (make-property -hits criterion prop-name)]
+    (.sort ^Hits -hits hit-property)
+    (hits-handler (-hits->window -hits from to context) searcher)))
 
 (defn sort-range
-  "sorts a specified hits window. Throws an exception in case of missing query."
-  ([searcher corpus from to context criterion prop-name]
-   (sort-range searcher corpus from to context criterion prop-name "default"))
-  ([searcher corpus from to context criterion prop-name query-id]
-   (let [{{blsearcher corpus} :searchers
-          hits-handler :hits-handler} searcher]
-     (if-let [-hits (get-hits searcher query-id)]
-       (let [-hits-window (-hits->window -hits from to context)
-             hit-property (make-property -hits-window criterion prop-name)]
-         (.sort ^Hits -hits hit-property)
-         (hits-handler -hits-window blsearcher))
-       (throw (ex-info "Query hasn't been run yet" {:query query-id}))))))
-
-(defn new-blsearcher [paths-map]
-  (let [searchers (zipmap (keys paths-map) (map make-searcher (vals paths-map)))]
-    (map->BLSearcher
-     {:-hits (atom {})
-      :searchers searchers
-      :hits-handler hits-handler})))
+  "sorts a specified hits window."
+  [searcher -hits hits-handler from to context criterion prop-name]
+  (let [-hits-window (-hits->window -hits from to context)
+        hit-property (make-property -hits-window criterion prop-name)]
+    (timbre/debug hit-property)
+    (.sort ^Hits -hits-window hit-property)
+    (hits-handler -hits-window searcher)))
 
 ;;; test
 (defn raw-text [hits & {:keys [n window? pprint?] :or {n 10 window? false pprint? true}}]

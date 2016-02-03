@@ -140,11 +140,10 @@
       [re-com/button
        :style {:font-size "12px" :height "34px"}
        :label label
-       :on-click #(let [{:keys [size]} @query-opts
+       :on-click #(let [{:keys [size corpus context]} @query-opts
                         {:keys [query-size from to]} @query-results
                         [from to] (pager-fn query-size size from to)]
-                    (q/range-trigger query-results query-opts
-                                     :overwrite {:from from :to to}))])))
+                    (q/query-range corpus from to context))])))
 
 (defn bordered-input [& {:keys [label model on-change on-key-press]}]
   {:pre [(and label model)]}
@@ -164,7 +163,7 @@
 (defn nav-buttons []
   (let [query-opts (re-frame/subscribe [:query-opts])
         query-results (re-frame/subscribe [:query-results])
-        criterion (reagent/atom "match")     ;defaults
+        criterion (reagent/atom "match")
         prop-name (reagent/atom "word")]
     (fn []
       [re-com/h-box
@@ -186,10 +185,9 @@
            (fn [k value]
              (if (= (.-charCode k) 13)
                (let [{:keys [query-size]} @query-results
-                     {:keys [size]} @query-opts
+                     {:keys [corpus context size]} @query-opts
                      from (normalize-from (dec (js/parseInt value)) query-size)]
-                 (q/range-trigger query-results query-opts
-                                  :overwrite {:from from :to (+ from size)}))))]]]
+                 (q/query-range corpus from (+ from size) context))))]]]
         [re-com/h-box
          :gap "0px"
          :children
@@ -211,18 +209,18 @@
            :style {:font-size "12px" :height "34px"}
            :label "Sort page"
            :disabled? (not (some #{(:corpus @query-opts)} (:corpora (cljs-env :blacklab))))
-           :on-click #(q/range-trigger query-results query-opts
-                       :criterion-atom criterion
-                       :prop-name-atom prop-name
-                       :sort-type "range")]
+           :on-click #(let [{:keys [corpus context size]} @query-opts
+                            {:keys [from]} @query-results]
+                        (q/query-sort corpus from (+ from size) context
+                                      @criterion @prop-name :sort-range))]
           [re-com/button
            :style {:font-size "12px" :height "34px"}
            :label "Sort all"
            :disabled? (not (some #{(:corpus @query-opts)} (:corpora (cljs-env :blacklab))))
-           :on-click #(q/range-trigger query-results query-opts
-                       :criterion-atom criterion
-                       :prop-name-atom prop-name
-                       :sort-type "all")]]]]])))
+           :on-click #(let [{:keys [corpus context size]} @query-opts
+                            {:keys [from]} @query-results]
+                        (q/query-sort corpus from (+ from size) context
+                                      @criterion @prop-name :sort-query))]]]]])))
 
 (defn query-result-label [{:keys [from to query-size]}]
   (fn [{:keys [from to query-size]}]
@@ -289,12 +287,17 @@
            ^{:key i}
            [:tr
             {:data-num i}
-            (into
-             ^{:key (str  i)} [:td (inc i)]
-             (for [{:keys [id word] :as token} hit]
+            (for [{:keys [id word] :as token} hit]
                (cond
                  (:match token) ^{:key (str i "-" id)} [:td.info {:data-id id} word]
-                 :else          ^{:key (str i "-" id)} [:td {:data-id id} word])))])]]])))
+                 :else          ^{:key (str i "-" id)} [:td {:data-id id} word]))
+            ;; (into
+            ;;  ^{:key (str  i)} [:td (inc i)]
+            ;;  (for [{:keys [id word] :as token} hit]
+            ;;    (cond
+            ;;      (:match token) ^{:key (str i "-" id)} [:td.info {:data-id id} word]
+            ;;      :else          ^{:key (str i "-" id)} [:td {:data-id id} word])))
+            ])]]])))
 
 (defn results-frame [selection]
   (let [status (re-frame/subscribe [:session :query-results :status])

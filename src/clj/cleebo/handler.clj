@@ -26,18 +26,15 @@
             [buddy.auth :refer [authenticated?]]
             [buddy.auth.middleware
              :refer [wrap-authentication wrap-authorization]]
+            [cleebo.blacklab :refer [remove-hits!]]
             [cleebo.routes.auth :refer
              [safe auth-backend login-authenticate on-login-failure signup]]
             [cleebo.routes.ws :refer [ws-handler-http-kit]]
-            [cleebo.cqp :refer [cqi-query cqi-query-range]]
-            [cleebo.blacklab :refer [bl-query bl-query-range bl-sort-query]]
-            [cleebo.blacklab.core :refer [remove-hits!]]))
+            [cleebo.routes.cqp :refer [cqp-router]]            
+            [cleebo.routes.blacklab :refer [blacklab-router]]))
 
 (defn is-logged? [req]
   (get-in req [:session :identity]))
-
-(defn ->int [s]
-  (Integer/parseInt s))
 
 (def about-route
   (safe
@@ -49,67 +46,11 @@
    (fn [req] (cleebo-page :csrf *anti-forgery-token*))
    {:login-uri "/login" :is-ok? authenticated?}))
 
-(def cqp-query-route
-  (safe
-   (fn [{{cqi-client :cqi-client} :components
-         {corpus :corpus query-str :query-str context :context size :size from :from} :params}]
-     (let [result (cqi-query
-                   {:cqi-client cqi-client :corpus corpus :query-str query-str
-                    :opts {:context (->int context) :size (->int size) :from (->int from)}})]
-       {:status 200 :body result}))
-   {:login-uri "/login" :is-ok? authenticated?}))
-
-(def cqp-query-range-route
-  (safe
-   (fn [{{cqi-client :cqi-client} :components
-         {corpus :corpus from :from to :to context :context} :params}]
-     (let [result (cqi-query-range
-                   {:cqi-client cqi-client :corpus corpus
-                    :from (->int from)     :to  (->int to)
-                    :opts {:context (->int context)}})]
-       {:status 200 :body result}))
-   {:login-uri "/login" :is-ok? authenticated?}))
-
-(def bl-query-route
-  (safe
-   (fn [{{{username :username} :identity} :session 
-         {blacklab :blacklab} :components
-         {corpus :corpus query-str :query-str context :context size :size from :from} :params}]
-     (let [args [blacklab corpus query-str (->int from) (+ (->int from) (->int size))
-                 (->int context) username]
-           result (apply bl-query args)]
-       {:status 200 :body result}))
-   {:login-uri "/login" :is-ok? authenticated?}))
-
-(def bl-query-range-route
-  (safe
-   (fn [{{{username :username} :identity} :session 
-         {blacklab :blacklab} :components
-         {corpus :corpus query-str :query-str context :context to :to from :from
-          {criterion :criterion prop-name :prop-name sort-type :sort-type
-           :as sort-map
-           :or {sort-type :range}} :sort-map} :params :as req}]
-     (let [args [blacklab corpus (->int from) (->int to) (->int context)
-                 {:criterion (keyword criterion) :prop-name prop-name} username]
-           result (case (keyword sort-type)
-                    :range (apply bl-query-range args)
-                    :all (apply bl-sort-query args))]
-       {:status 200 :body result}))
-   {:login-uri "/login" :is-ok? authenticated?}))
-
 (defn logout-route
   [{{{username :username} :identity} :session
-    {blacklab :blacklab} :components}]
-  (remove-hits! blacklab username)
+    {bl-component :blacklab} :components}]
+  (remove-hits! bl-component username)
   (-> (redirect "/") (assoc :session {})))
-
-(defn which-corpus [corpus]
-  (let [cqp-corpora (get-in env [:cqp :corpora])
-        bl-corpora (get-in env [:blacklab :corpora])
-        is-in? (fn [corpus corpora] (some #{corpus} corpora))]
-    (cond (is-in? corpus cqp-corpora) :cqp
-          (is-in? corpus bl-corpora) :blacklab
-          :else :unknown-corpus)))
 
 (defroutes app-routes
   (GET "/" req (landing-page :logged? (is-logged? req)))
@@ -119,14 +60,8 @@
   (GET "/about" req (about-route req))
   (GET "/cleebo" req (cleebo-route req))
   (ANY "/logout" req (logout-route req))
-  (GET "/query" [corpus :as req]
-       (case (which-corpus corpus)
-         :cqp (cqp-query-route req)
-         :blacklab (bl-query-route req)))
-  (GET "/range" [corpus :as req]
-       (case (which-corpus corpus)        
-         :cqp (cqp-query-range-route req)
-         :blacklab (bl-query-range-route req)))
+  (GET "/blacklab" req (blacklab-router req))
+  (GET "/cqp" req (cqp-router req))
   (GET "/ws" req (ws-handler-http-kit req))
   (resources "/")
   (not-found (error-page :status 404 :title "Page not found!!")))

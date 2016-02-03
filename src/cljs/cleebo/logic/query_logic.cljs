@@ -1,7 +1,8 @@
 (ns cleebo.logic.query-logic
   (:require [re-frame.core :as re-frame]
             [ajax.core :refer [GET]]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre])
+  (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
 (defn pager-next
   ([size page-size] (pager-next size page-size 0))
@@ -34,43 +35,40 @@
     (re-frame/dispatch [:set-query-results data])
     (re-frame/dispatch [:stop-throbbing :results-frame])))
 
+(defn which-endpoint? [corpus]
+  "blacklab")
+
 (defn query
   "will need to support 'from' for in-place query-opts change"
   [{:keys [query-str corpus context size from] :or {from 0} :as query-args}]
-  (GET "/query"
+  (GET (which-endpoint? corpus)
        {:handler query-results-handler
         :error-handler error-handler
         :params {:query-str query-str
                  :corpus corpus
                  :context context
                  :from from
-                 :size size}}))
+                 :size size
+                 :route :query}}))
 
-(defn query-range [{:keys [corpus from to context sort-map]}]
-  (GET "/range"
+(defn query-range [corpus from to context]
+  (GET (which-endpoint? corpus)
        {:handler query-results-handler
         :error-handler error-handler
         :params {:corpus corpus
                  :from from
                  :to to
                  :context context
-                 :sort-map sort-map}}))
+                 :route :query-range}}))
 
-;;; triggers
-;;; sort
-(defn range-trigger
-  [query-results-atom query-opts-atom &
-   {:keys [overwrite criterion-atom prop-name-atom sort-type]}]
-  (let [{:keys [query-size from]} @query-results-atom
-        {:keys [corpus context size]} @query-opts-atom
-        sort-map (if (and criterion-atom prop-name-atom)
-                   {:criterion @criterion-atom
-                    :prop-name @prop-name-atom
-                    :sort-type sort-type})]
-    (re-frame/dispatch [:start-throbbing :results-frame])
-    (query-range (merge {:corpus corpus
-                         :from from
-                         :to (+ from size)
-                         :context context
-                         :sort-map sort-map}
-                        overwrite))))
+(defn query-sort [corpus from to context criterion prop-name sort-type]
+  (GET (which-endpoint? corpus)
+       {:handler query-results-handler
+        :error-handler error-handler
+        :params {:corpus corpus
+                 :from from
+                 :to to
+                 :context context
+                 :sort-map {:criterion criterion
+                            :prop-name prop-name}
+                 :route sort-type}}))
