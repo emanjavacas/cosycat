@@ -16,7 +16,7 @@
   {:port (:port env)
    :database-url (:database-url env)
    :cqp-init-file (get-in env [:cqp :cqp-init-file])
-   :blacklab-paths-map (get-in env [:blacklab :blacklab-paths-map] env)})
+   :blacklab-paths-map (get-in env [:blacklab :blacklab-paths-map])})
 
 (defn create-system [config-map]
   (let [{:keys [handler port cqp-init-file database-url blacklab-paths-map]} config-map]

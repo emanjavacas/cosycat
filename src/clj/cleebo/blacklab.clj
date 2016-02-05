@@ -1,5 +1,6 @@
 (ns cleebo.blacklab
   (:require [taoensso.timbre :as timbre]
+            [cleebo.utils :refer [wrap-safe]]
             [com.stuartsierra.component :as component]
             [cleebo.blacklab.core :as bl]))
 
@@ -15,37 +16,34 @@
   (if-let [current-hits (:current-hits bl-component)]
     (swap! current-hits dissoc query-id)))
 
-(defprotocol BLSearcherConnection
-  (ensure-searcher! [component searcher])
-  (close-searcher! [component searcher]))
+(defn ensure-searcher! [bl-component searcher-id]
+  (let [searcher (get-in bl-component [:searchers searcher-id])
+        path (get-in bl-component [:paths-map searcher-id])]
+    (if @searcher
+      @searcher
+      (do (timbre/info "Loading searcher: " searcher-id)
+          (reset! searcher (bl/make-searcher path))))))
+
+(defn close-searcher! [bl-component searcher-id]
+  (let [searcher (get-in bl-component [:searchers searcher-id])]
+    (when @searcher
+      (do (bl/destroy-searcher @searcher)
+          (reset! searcher nil))))  )
 
 (defn close-all-searchers! [bl-component]
   (doseq [[searcher-id searcher] (:searchers bl-component)]
-    (timbre/debug "Closing searcher: " searcher-id)
+    (timbre/info "Closing searcher: " searcher-id)
     (close-searcher! bl-component searcher-id)))
 
 (defrecord BLComponent [paths-map current-hits hits-handler]
-  BLSearcherConnection
-  (ensure-searcher! [component searcher-id]
-    (let [searcher (get-in component [:searchers searcher-id])
-          path (get paths-map searcher-id)]
-      (if @searcher
-        @searcher
-        (do (timbre/info "Loading searcher: " searcher-id)
-            (reset! searcher (bl/make-searcher path))))))
-  (close-searcher! [component searcher-id]
-    (let [searcher (get-in component [:searchers searcher-id])]
-      (when @searcher
-        (do (bl/destroy-searcher @searcher)
-            (reset! searcher nil)))))
   component/Lifecycle
   (start [component]
-    (timbre/debug "starting BLComponent")
+    (timbre/info "Starting BLComponent")
     (assoc component
            :searchers (zipmap (keys paths-map) (repeat (atom nil)))
            :current-hits (atom {})))
   (stop [component]
-    
+    (timbre/info "Shutting down BLComponent")
     (doseq [query-id (keys @(:current-hits component))]
       (remove-hits! component query-id))))
 
@@ -149,26 +147,11 @@
       :from from
       :to to})))
 
-(defn- wrap-safe
-  "turns eventual exception into a proper response body"
-  [f]
-  (fn [& args]
-    (try (let [out (apply f args)]
-           (assoc out :status {:status :ok :status-content "OK"}))
-         (catch Exception e
-           {:status {:status :error :status-content (str e)}}))))
-
 (def bl-query (wrap-safe bl-query*))
 
 (def bl-query-range (wrap-safe bl-query-range*))
 
-(def bl-sort-query
-  bl-sort-query*
-;  (wrap-safe bl-sort-query*)
-  )
+(def bl-sort-query (wrap-safe bl-sort-query*))
 
-(def bl-sort-range
-  bl-sort-range*
-;  (wrap-safe bl-sort-range*)
-  )
+(def bl-sort-range  (wrap-safe bl-sort-range*))
 

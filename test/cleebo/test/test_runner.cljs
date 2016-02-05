@@ -1,7 +1,7 @@
-(ns test-runner
+(ns cleebo.test.test-runner
   (:require
    [cljs.test :as test :refer-macros [run-tests] :refer [report]]
-   [cleebo.core-test] ))
+   [core-test] ))
 
 (enable-console-print!)
 
@@ -14,4 +14,4 @@
 (defn runner []
   (test/run-tests
    (test/empty-env ::test/default)
-   'cleebo.core-test))
+   'core-test))

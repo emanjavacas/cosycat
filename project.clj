@@ -11,7 +11,7 @@
                  [selmer "0.9.3"]
                  [hiccup "1.0.5"]
                  [reagent "0.5.1" :exclusions [cljsjs/react]]
-                 [cljsjs/react-with-addons "0.13.3-0"]
+;                 [cljsjs/react-with-addons "0.13.3-0"]
                  [re-frame "0.5.0"]
                  [re-com "0.7.0"]
                  [secretary "1.2.3"]
@@ -21,7 +21,7 @@
                  [ring/ring-json "0.4.0"]
                  [ring-transit "0.1.4"]
                  [com.cognitect/transit-clj "0.8.285"]
-                 [ring "1.4.0" :exclusions [ring/ring-jetty-adapter]]
+                 [ring "1.4.0" :exclusions [ring/ring-jetty-adapter]]                 
                  [http-kit "2.1.18"]
                  [compojure "1.4.0"]
                  [jarohen/chord "0.7.0"]
@@ -41,20 +41,37 @@
                  [junit/junit "4.8"]
                  [com.goldmansachs/gs-collections "6.1.0"]
                  [blacklab "1.2-SNAPSHOT"]]
+  
   :main cleebo.core
+  
   :jvm-opts ["-Xmx4000M"]
+  
   :plugins [[lein-cljsbuild "1.1.1"]
             [lein-environ "1.0.1"]
+            [lein-asset-minifier "0.2.2"]
             [lein-figwheel "0.5.0-2"]]
-  :source-paths ["src/clj" "src/cljc"]
+  
+  :source-paths ["src/clj" "src/cljc" "src/cljs"]
+  
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target" "test/js"]
+  
+  :minify-assets {:assets
+                  {"resources/public/js/compiled/vendor.min.js"
+                   ["resources/public/vendor/js/jquery/jquery-1.11.2.min.js"
+                    "resources/public/vendor/js/bootstrap/bootstrap.js"
+                    "resources/public/vendor/js/material-ui/material.min.js"
+                    "resources/public/vendor/js/material-ui/add-robo.js"]}}
+  
   :cljsbuild {:builds
               [{:id "dev"
-                :source-paths ["src/cljs" "src/cljc"]
+                :source-paths ["src/cljs" "src/cljc" "src/clj"]
                 :compiler {:main cleebo.core
+                           :preamble ["resources/public/vendor/js/material-ui/material.js"]
                            :output-to "resources/public/js/compiled/app.js"
                            :output-dir "resources/public/js/compiled/out"
                            :asset-path "js/compiled/out"
+                           :optimizations :none
+                           :pretty-print true
                            :source-map-timestamp true}}
                {:id "test"
                 :source-paths ["src/cljs" "src/cljc" "test/cljs"]
@@ -66,6 +83,7 @@
                {:id "min"
                 :source-paths ["src/cljs" "src/cljc"]
                 :compiler {:main cleebo.core
+                           :preamble ["resources/vendor/js/material-ui/material.js"]
                            :output-to "resources/public/js/compiled/app.js"
                            :optimizations :advanced
                            :closure-defines {goog.DEBUG false}

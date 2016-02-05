@@ -2,7 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [re-com.core :as re-com]
-            [cleebo.logic.query-logic :as q]
+            [cleebo.logic.query :as q]
             [cleebo.query-parser :refer [missing-quotes]]            
             [cleebo.utils :refer [notify! by-id normalize-from]]            
             [goog.string :as gstr]
@@ -10,8 +10,11 @@
             [goog.dom.dataset :as gdataset]
             [goog.dom.classes :as gclass]
             [taoensso.timbre :as timbre]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [material-ui.core :as ui :include-macros true])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
+
+
 
 (def corpora
   (let [{cqp-corpora :corpora} (cljs-env :cqp)
@@ -30,9 +33,11 @@
     status-content]])
 
 (defn highlight-n [s n]
-  (let [target [:span {:style {:background-color "rgba(255, 0, 0, 0.3)"}} (nth s n)]
-        pre (subs s 0 n)
-        post (subs s (inc n))]
+  (let [pre (subs s 0 n)
+        post (subs s (inc n))
+        target [:span
+                {:style {:background-color "rgba(255, 0, 0, 0.3)"}}
+                (nth s n)]]
     [:tt.text-center pre target post]))
 
 (defn replace-char [s n replacement]
@@ -278,7 +283,7 @@
          #(let [e (aget % "target")
                 button (aget % "button")]
             (when (and (zero? button) @mouse-down?)
-              (gclass/enable e "highlighted" @highlighted?)
+              (gclass/enable e "highlighted") @highlighted?
               (update-selection selection (gdataset/get e "id") @highlighted?)))
          :on-mouse-up #(swap! mouse-down? not) }
         [:thead]
@@ -293,10 +298,10 @@
                  :else          ^{:key (str i "-" id)} [:td {:data-id id} word]))
             ;; (into
             ;;  ^{:key (str  i)} [:td (inc i)]
-            ;;  (for [{:keys [id word] :as token} hit]
+            ;;  (for [{:keys [id xmlid word] :as token} hit]
             ;;    (cond
-            ;;      (:match token) ^{:key (str i "-" id)} [:td.info {:data-id id} word]
-            ;;      :else          ^{:key (str i "-" id)} [:td {:data-id id} word])))
+            ;;      (:match token) ^{:key (str i "-" xmlid)} [:td.info {:data-id xmlid} word]
+            ;;      :else          ^{:key (str i "-" xmlid)} [:td {:data-id xmlid} word])))
             ])]]])))
 
 (defn results-frame [selection]
@@ -343,4 +348,6 @@
    :style {:width "100%"}
    :children
    [[query-field]
+;    [ui/IconButton {:iconClassName "mdfi_navigation_more_vert"}]
     [query-main]]])
+

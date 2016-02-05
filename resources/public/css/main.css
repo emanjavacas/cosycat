@@ -2,7 +2,7 @@
     color: #cecece;
 }
 
-.nav>li>a:hover {
+.nav.nav-sidebar>li>a:hover {
     background-color: #464646 !important;
 }
 

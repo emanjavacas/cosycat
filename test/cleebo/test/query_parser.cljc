@@ -1,4 +1,4 @@
-(ns cleebo.query-parser-test
+(ns cleebo.test.query-parser
   (:require [clojure.test :refer [deftest testing is]]
             [cleebo.query-parser :refer [missing-quotes]]))
 

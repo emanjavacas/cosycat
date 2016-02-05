@@ -1,4 +1,4 @@
-(ns cleebo.core-test
+(ns cleebo.test.core-test
   (:require
    [cljs.test :refer-macros [deftest testing is]]
    [cleebo.core :as core]))

@@ -1,8 +1,8 @@
 (ns cleebo.cqp
   (:require [com.stuartsierra.component :as component]
+            [cleebo.utils :refer [wrap-safe]]
             [cqp-clj.core :refer [make-cqi-client connect! disconnect!] :as cqp]
             [cqp-clj.spec :refer [read-init]]
-            [environ.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
 (defrecord CQiComponent [client init-file]
@@ -37,56 +37,36 @@
 (def encodings
   {"PYCCLE-ECCO" "latin1"})
 
-(defn cqi-query* [& {:keys [cqi-client corpus query-str opts]}]
-  {:pre [(and cqi-client corpus query-str)]}
+(defn numerize-hits [hits from to context]
+  {:pre (= (count hits) (- to from))}
+  (let [formatted (mapv (fn [hit] {:hit hit}) hits)]
+    (apply array-map (interleave (range from to) formatted))))
+
+(defn cqi-query* [cqi-client corpus query-str from to context & {:keys [attrs]}]
   (let [client (:client cqi-client)
         encoding (get encodings corpus "utf8")
-        {:keys [context attrs size from to]
-         :or {context 5
-              size 10
-              from 0
-              to (+ from size)
-              attrs default-attrs}} opts]
+        attrs (or attrs default-attrs)]
     (cqp/query! client corpus query-str encoding)
-    (let [results (cqp/cpos-seq-handler
-                      client
-                      corpus
-                      (cqp/cpos-range client corpus from to)
-                      context
-                      attrs)
-          to (+ from (count results))]
-      {:results (mapv (fn [hit num] {:hit hit :num num}) results (range from to))
+    (let [hits (cqp/cpos-seq-handler client corpus (cqp/cpos-range client corpus from to)
+                                        context attrs)
+          to (+ from (count hits))]
+      {:results (numerize-hits hits from to context)
        :from from
        :to to
        :query-str query-str
        :query-size (cqp/query-size client corpus)})))
 
-(defn cqi-query-range* [& {:keys [cqi-client corpus from to opts]}]
-  {:pre [(and cqi-client corpus from to)]}
+(defn cqi-query-range* [cqi-client corpus from to context & {:keys [attrs]}]
   (let [client (:client cqi-client)
-        {:keys [context attrs]
-         :or {context 5
-              attrs default-attrs}} opts]
-    (let [results (cqp/cpos-seq-handler
-                   client
-                   corpus
-                   (cqp/cpos-range client corpus from to)
-                   context
-                   attrs)
-          to (+ from (count results))]
-      {:results (mapv (fn [hit num] {:hit hit :num num}) results (range from to))
+        attrs (or attrs default-attrs)]
+    (let [hits (cqp/cpos-seq-handler
+                client corpus (cqp/cpos-range client corpus from to) context attrs)
+          to (+ from (count hits))]
+      {:results (numerize-hits hits from to context)
        :from from
        :to to})))
 
-(defn- wrap-safe [thunk]
-  (try (let [out (thunk)]
-         (assoc out :status {:status :ok :status-content "OK"}))
-       (catch Exception e
-         {:status {:status :error :status-content (str e)}})))
+(def cqi-query (wrap-safe cqi-query*))
 
-(defn cqi-query [args-map]
-  (wrap-safe (fn [] (apply cqi-query* (apply concat args-map)))))
-
-(defn cqi-query-range [args-map]
-  (wrap-safe (fn [] (apply cqi-query-range* (apply concat args-map)))))
+(def cqi-query-range (wrap-safe cqi-query-range*))
 

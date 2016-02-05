@@ -1,4 +1,4 @@
-(ns cleebo.logic.query-logic
+(ns cleebo.logic.query
   (:require [re-frame.core :as re-frame]
             [ajax.core :refer [GET]]
             [taoensso.timbre :as timbre])
@@ -36,7 +36,11 @@
     (re-frame/dispatch [:stop-throbbing :results-frame])))
 
 (defn which-endpoint? [corpus]
-  "blacklab")
+  (let [cqp-corpora (cljs-env :cqp :corpora)
+        bl-corpora  (cljs-env :blacklab :corpora)]
+    (cond (some #{corpus} cqp-corpora) "cqp"
+          (some #{corpus} bl-corpora)  "blacklab"
+          :else (throw (js/Error "Unknown corpus")))))
 
 (defn query
   "will need to support 'from' for in-place query-opts change"

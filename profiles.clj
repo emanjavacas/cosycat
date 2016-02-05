@@ -1,6 +1,6 @@
 {:dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
                       [figwheel-sidecar "0.5.0-1"]]
-       :source-paths ["src/cljs"]
+       :source-paths ["src/cljs" "src/clj" "src/cljc"]
        :env
        {:host "146.175.15.30"
         :database-url "mongodb://127.0.0.1:27017/cleeboTest"
@@ -14,7 +14,7 @@
           "shc"      "/home/enrique/code/BlackLab/shc/"}}}}
  :local {:dependencies [[com.cemerick/piggieback "0.2.1"]
                         [figwheel-sidecar "0.5.0-1"]]
-         :source-paths ["src/cljs"]
+         :source-paths ["src/cljs" "src/cljc" "src/clj"]
          :env
          {:host "localhost"
           :database-url "mongodb://127.0.0.1:27017/cleeboTest"

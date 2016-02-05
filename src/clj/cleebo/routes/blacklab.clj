@@ -1,13 +1,10 @@
 (ns cleebo.routes.blacklab
-  (:require [cleebo.utils :refer [->int]]
+  (:require [cleebo.utils :refer [->int ->keyword]]
             [cleebo.routes.auth :refer [safe]]
             [buddy.auth :refer [authenticated?]]
             [cleebo.blacklab :refer
              [bl-query bl-query-range bl-sort-query bl-sort-range remove-hits!]]
             [taoensso.timbre :as timbre]))
-
-(defn ->keyword [s]
-  (keyword (subs s 1)))
 
 (defn bl-query-route
   [{{{username :username} :identity} :session 
