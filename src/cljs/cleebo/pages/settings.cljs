@@ -1,10 +1,8 @@
 (ns cleebo.pages.settings
   (:require [reagent.core :as reagent]
-            [re-frame.core :as re-frame]
-            [re-com.core :as re-com]))
+            [re-frame.core :as re-frame]))
 
 (defn settings-panel []
-  [re-com/v-box
-   :children
-   [[:h3 [:span.text-muted "Settings"]]
-    [re-com/line]]])
+  [:div.container-fluid
+   [:div.row [:h3 [:span.text-muted "Settings"]]]
+   [:div.row [:hr]]])

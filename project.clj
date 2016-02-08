@@ -1,7 +1,7 @@
 (defproject cleebo "0.1.0-SNAPSHOT"
   :description "Corpus query interface plus annotations"
   :license {:name "GNU v3.0"}  
-  :dependencies [[org.clojure/clojure "1.7.0"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
                  [com.novemberain/monger "3.0.0-rc2"]
@@ -10,9 +10,13 @@
                  [environ "1.0.1"]
                  [selmer "0.9.3"]
                  [hiccup "1.0.5"]
-                 [reagent "0.5.1" :exclusions [cljsjs/react]]
-;                 [cljsjs/react-with-addons "0.13.3-0"]
-                 [re-frame "0.5.0"]
+                 [reagent "0.6.0-alpha"
+;                  :exclusions [cljsjs/react]
+                  ]
+;                 [cljsjs/react-with-addons "0.13.3-0"]                 
+                 [cljsjs/react-bootstrap "0.27.3-0"
+                  :exclusions [org.webjars.bower/jquery]]
+                 [re-frame "0.7.0-alpha"]
                  [re-com "0.7.0"]
                  [secretary "1.2.3"]
                  [ring/ring-anti-forgery "1.0.0"]
@@ -31,7 +35,7 @@
                  [com.stuartsierra/component "0.3.1"]
                  [org.clojure/tools.namespace "0.2.11"]
                  [cqp-clj "0.1.0-SNAPSHOT"]
-                 ; blacklab
+                                        ; blacklab
                  [org.apache.lucene/lucene-core "4.2.1"]
                  [org.apache.lucene/lucene-analyzers-common "4.2.1"]
                  [org.apache.lucene/lucene-highlighter "4.2.1"]
@@ -54,18 +58,11 @@
   :source-paths ["src/clj" "src/cljc" "src/cljs"]
   
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target" "test/js"]
-  
-  :minify-assets {:assets
-                  {"resources/public/js/compiled/vendor.min.js"
-                   ["resources/public/vendor/js/jquery/jquery-1.11.2.min.js"
-                    "resources/public/vendor/js/bootstrap/bootstrap.js"
-                    "resources/public/vendor/js/material-ui/material.min.js"
-                    "resources/public/vendor/js/material-ui/add-robo.js"]}}
-  
+
   :cljsbuild {:builds
               [{:id "dev"
                 :source-paths ["src/cljs" "src/cljc" "src/clj"]
-                :compiler {:main cleebo.core
+                :compiler {:main "cleebo.core"
                            :preamble ["resources/public/vendor/js/material-ui/material.js"]
                            :output-to "resources/public/js/compiled/app.js"
                            :output-dir "resources/public/js/compiled/out"

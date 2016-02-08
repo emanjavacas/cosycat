@@ -11,10 +11,11 @@
             [goog.dom.classes :as gclass]
             [taoensso.timbre :as timbre]
             [clojure.string :as str]
-            [material-ui.core :as ui :include-macros true])
+            [react-bootstrap.components :as bs]
+            [cljsjs.react-bootstrap]
+;            [material-ui.core :as ui :include-macros true]
+            )
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
-
-
 
 (def corpora
   (let [{cqp-corpora :corpora} (cljs-env :cqp)
@@ -23,14 +24,11 @@
 
 (defn error-panel [& {:keys [status status-content]}]
   {:pre [(and status)]}
-  [re-com/v-box
-   :align :center
-   :padding "40px"
-   :gap "10px"
-   :children
-   [[:h3 [:span.text-muted status]]
-    [:br]
-    status-content]])
+  [:div.container-fluid
+   {:style {:padding "40px"}}
+   [:div.row [:h3 [:span.text-muted status]]]
+   [:div.row [:br]]
+   [:div.row.text-center status-content]])
 
 (defn highlight-n [s n]
   (let [pre (subs s 0 n)
@@ -56,6 +54,7 @@
 
 (defn highlight-error [{query-str :query-str at :at}]
   [:div
+   {:style {:display "inline-block"}}
    [:div.alert.alert-danger
     {:style {:border-right "none"
              :color "#333"
@@ -77,13 +76,13 @@
 (defn query-field []
   (let [query-opts (re-frame/subscribe [:query-opts])]
     (fn []
-      [re-com/h-box
-       :justify :between
-       :children
-       [[:h4 [:span.text-muted {:style {:line-height "15px"}} "Query Panel"]]
+      [:div.row
+       [:div.col-lg-4
+        [:h4 [:span.text-muted {:style {:line-height "15px"}} "Query Panel"]]]
+       [:div.col-lg-8
         [:div.form-group.has-feedback
          [:input#query-str.form-control
-          {:style {:width "640px"}
+          {:style {:width "100%"}
            :type "text"
            :name "query"
            :placeholder "Example: [pos='.*\\.']" ;remove?
@@ -109,34 +108,29 @@
           [:i.zmdi.zmdi-search.form-control-feedback
            {:style {:font-size "1.75em" :line-height "35px"}}]]]]])))
 
-(defn dropdown-opt [& {:keys [k placeholder choices width] :or {width "175px"}}]
-  {:pre [(and k placeholder choices)]}
-  [re-com/single-dropdown
-   :style {:font-size "12px"}
-   :width width
-   :placeholder placeholder
-   :choices choices
-   :model @(re-frame/subscribe [:session :query-opts k])
-   :label-fn #(str placeholder (:id %))
-   :on-change #(re-frame/dispatch [:set-session [:query-opts k] %])])
+(defn dropdown-select [& {:keys [init-label choices label-fn click-fn]}]
+  {:pre [(and init-label choices)]}
+  (let [label (reagent/atom init-label)]
+    (fn [& {:keys [init-label choices label-fn click-fn]}]
+      [bs/split-button {:title @label
+                        :onClick #(click-fn (.-textContent (.-target %)))
+                        :bsStyle "info"
+                        :onSelect (fn [e k] (label-fn k label))}
+       (for [{:keys [key label]} choices]
+         ^{:key key} [bs/menu-item {:eventKey label} label])])))
 
 (defn query-opts-menu []
-  [re-com/h-box
-   :gap "5px"
-   :children
-   [[dropdown-opt
-     :k :corpus
-     :placeholder "Corpus: "
-     :choices (map (partial hash-map :id) corpora)
-     :width "225px"]
-    [dropdown-opt
-     :k :size
-     :placeholder "Page size: "
-     :choices (map (partial hash-map :id) [5 10 15 25 35 55 85 125 190 290 435 655 985])]
-    [dropdown-opt
-     :k :context
-     :placeholder "Window size: "
-     :choices (map (partial hash-map :id) (range 1 10))]]])
+  (let [->map (fn [k l] {:key k :label l})]
+    [bs/button-group
+     [dropdown-select
+      :init-label "Corpus"
+      :choices (mapv #(->map % %) corpora)]
+     [dropdown-select
+      :init-label "Page size"
+      :choices (map #(->map % %) [5 10 15 25 35 55 85 125 190 290 435 655 985])]
+     [dropdown-select
+      :init-label "Window size"
+      :choices (map #(->map % %) (range 1 10))]]))
 
 (defn nav-button [pager-fn label]
   (let [query-opts (re-frame/subscribe [:query-opts])
@@ -248,7 +242,8 @@
          :children
          [[query-result-label @query-results]
           [nav-buttons]]]
-        [query-opts-menu]]])))
+        ;[query-opts-menu]
+        ]])))
 
 (defn throbbing-panel []
   [re-com/box
@@ -348,6 +343,5 @@
    :style {:width "100%"}
    :children
    [[query-field]
-;    [ui/IconButton {:iconClassName "mdfi_navigation_more_vert"}]
+    [query-opts-menu]
     [query-main]]])
-

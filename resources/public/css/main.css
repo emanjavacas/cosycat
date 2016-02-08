@@ -79,3 +79,7 @@ li#notification {
     opacity: 0.75;
 }
 
+/* wierdo bootstrap */
+.dropdown-toggle {
+    height: 34px;
+}

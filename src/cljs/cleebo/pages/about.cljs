@@ -5,16 +5,13 @@
 
 
 (defn about-title []
-  [re-com/title
-   :label "This is the About Page."
-   :level :level1])
+  [:h1 "This is the About Page."])
 
 (defn link-to-home-page []
-  [re-com/hyperlink-href
-   :label "go to Home Page"
-   :href "#/"])
+  [:a {:href "#/"} "go to the Home Page"])
 
 (defn about-panel []
-  [re-com/v-box :margin "45px"
-   :gap "1em"
-   :children [[about-title] [link-to-home-page]]])
+  [:div.container
+   [:div.row
+    [about-title]
+    [link-to-home-page]]])

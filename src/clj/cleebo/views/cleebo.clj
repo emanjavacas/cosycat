@@ -22,5 +22,7 @@
     [:body
      [:div#app]
      [:script (str "var csrf =\"" csrf "\";")]
+     ;; [:script {:src "vendor/js/material-ui/add-robo.js"}]
+     ;; [:script {:src "vendor/js/material-ui/material.js"}]
      [:script {:src "js/compiled/app.js"}]
      [:script "cleebo.core.init();"]]]))

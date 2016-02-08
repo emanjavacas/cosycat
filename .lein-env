@@ -1,1 +1,1 @@
-{:database-url "mongodb://127.0.0.1:27017/cleeboTest", :port 3000, :cqp-init-file "dev-resources/cqpserver.init"}
+{:host "localhost", :database-url "mongodb://127.0.0.1:27017/cleeboTest", :port 3000, :cqp {:corpora ["DICKENS"], :cqp-init-file "dev-resources/cqpserver.init"}, :blacklab {:corpora ["brown-id"], :blacklab-paths-map {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"}}}

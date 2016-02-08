@@ -1,4 +1,6 @@
-(ns material-ui.core)
+(ns material-ui.core
+;  (:require [reagent.core])
+  )
 
 (def material-tags
   '[AppBar

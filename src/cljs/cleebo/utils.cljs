@@ -3,8 +3,8 @@
             [reagent.core :as reagent]
             [goog.dom.dataset :as gdataset]))
 
-(def css-transition-group
-  (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
+;; (def css-transition-group
+;;   (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
 
 (defn normalize-from [from query-size]
   (max 0 (min from query-size)))

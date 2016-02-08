@@ -1,7 +1,6 @@
 (ns cleebo.core
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [re-com.core :as re-com]
             [cleebo.backend.handlers]
             [cleebo.backend.subs]
             [cleebo.routes :as routes]
@@ -9,7 +8,8 @@
             [cleebo.pages.query :refer [query-panel]]
             [cleebo.pages.settings :refer [settings-panel]]
             [cleebo.pages.debug :refer [debug-panel]]
-            [cleebo.utils :refer [notify! css-transition-group]]
+            [cleebo.utils :refer [notify! ;css-transition-group
+                                  ]]
             [taoensso.timbre :as timbre]
             [figwheel.client :as figwheel])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
@@ -25,13 +25,11 @@
     (fn []
       [:li {:class (when (= @active target) "active")}
        [:a {:href href :style {:color "#fff2ef"}}
-        [re-com/h-box 
-         :gap "7px"
-         :children
-         [[:i
-           {:class (str "zmdi " icon)
-            :style {:line-height "20px" :font-size "15px"}}]
-          [re-com/label :label label]]]]])))
+        [:span [:i {:class (str "zmdi " icon)                    
+                    :style {:line-height "20px"
+                            :font-size "15px"
+                            :margin-right "5px"}}]
+         label]]])))
 
 (defn notification [id message]
   ^{:key id}
@@ -39,11 +37,11 @@
    {:on-click #(re-frame/dispatch [:drop-notification id])}
    message])
 
-(defn notification-container [notifications]
-  [css-transition-group {:transition-name "notification"}
-   (map (fn [[id {msg :msg date :date}]]
-          (notification id (str msg " " id " " (.toDateString date))))
-        @notifications)])
+;; (defn notification-container [notifications]
+;;   [css-transition-group {:transition-name "notification"}
+;;    (map (fn [[id {msg :msg date :date}]]
+;;           (notification id (str msg " " id " " (.toDateString date))))
+;;         @notifications)])
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])
@@ -55,7 +53,8 @@
                  :right "5px"
                  :top "5px"
                  :z-index "1001"}}
-        [notification-container notifications]]
+;        [notification-container notifications]
+        ]
        [:div.row 
         [:div.col-sm-2.col-md-1.sidebar ;sidebar
          [:ul.nav.nav-sidebar
