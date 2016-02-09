@@ -83,3 +83,8 @@ li#notification {
 .dropdown-toggle {
     height: 34px;
 }
+
+.pad {
+    padding-right: 2px !important;
+    padding-left: 2px !important;
+}

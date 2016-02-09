@@ -6,6 +6,9 @@
 ;; (def css-transition-group
 ;;   (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
 
+(defn ->map [k l]
+  {:key k :label l})
+
 (defn normalize-from [from query-size]
   (max 0 (min from query-size)))
 
