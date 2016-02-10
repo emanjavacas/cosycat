@@ -73,41 +73,64 @@
      at
      (gstr/unescapeEntities "&#x21D1;"))]])
 
-(defn input-select [& {:keys [init-label options label-fn]}]
+(defn input-select [& {:keys [init-label options label-fn target]}]
   {:pre [(and init-label options)]}
   (let [label (reagent/atom init-label)]
-    (fn [& {:keys [init-label options label-fn]}]
+    (fn [& {:keys [init-label options label-fn target]}]
       [bs/input
        {:type "select"
-        :placeholder label
-        :onSelect (fn [e k] (label-fn k label))}
+;        :style {:width "150px"}
+;        :value @label
+;        :onChange #(.log js/console @label)
+        :onSelect (fn [e k]
+                    (re-frame/dispatch [:set-session [:query-opts target] k])
+                    (label-fn k label))}
        (for [{:keys [key label]} options]
          ^{:key key} [:option {:value label} label])])))
 
-(defn dropdown-select [{:keys [init-label options label-fn]}]
+(defn dropdown-select [{:keys [init-label options label-fn select-fn]}]
   (let [label (reagent/atom init-label)]
-    (fn [{:keys [init-label options label-fn]}]
+    (fn [{:keys [init-label options label-fn select-fn]}]
       [bs/dropdown-button
        {:title @label
-        :onSelect (fn [e k] (label-fn k label))}
+        :onSelect (fn [e k] (do (select-fn k) (label-fn k label)))}
        (for [{:keys [key label]} options]
          ^{:key key} [bs/menu-item {:eventKey label} label])])))
 
-(defn query-opts-menu []
-  [:div.row
-   [:div.col-lg-4.pad
-    [input-select
-     :init-label "Corpus"
-     :options (mapv #(->map % %) corpora)
-     :label-fn (fn [k label] (reset! label k))]]
-   [:div.col-lg-4.pad
-    [input-select
-     :init-label "Window size"
-     :options (map #(->map % %) (range 1 10))]]
-   [:div.col-lg-4.pad
-    [input-select
-     :init-label "Page size"
-     :options (map #(->map % %) [5 10 15 25 35 55 85 125 190 290 435 655 985])]]])
+(defn query-opts-menu [query-opts]
+  (fn [query-opts]
+    (let [{:keys [corpus context size]} @query-opts]
+      [:div.row
+       [:div.col-lg-4.pad
+        [:div.container-fluid
+         [:div.row
+          [:div.col-lg-4.pad [bs/label "Corpus"]]
+          [:div.col-lg-8.pad
+           [input-select
+            :init-label (str "Corpus: " corpus)
+            :options (mapv #(->map % %) corpora)
+            :label-fn (fn [k label] (reset! label (str "sort by: " k)))
+            :target :corpus]]]]]
+       [:div.col-lg-4.pad
+        [:div.container-fluid
+         [:div.row
+          [:div.col-lg-4.pad [bs/label "Window size"]]
+          [:div.col-lg-8.pad
+           [input-select
+            :init-label (str "Window size: " context)
+            :options (map #(->map % %) (range 1 10))
+            :label-fn (fn [k label] (reset! label (str "sort by: " k)))
+            :target :context]]]]]
+       [:div.col-lg-4.pad
+        [:div.container-fluid
+         [:div.row
+          [:div.col-lg-4 [bs/label "Context"]]
+          [:div.col-lg-8
+           [input-select
+            :init-label (str "Page size: " size)
+            :options (map #(->map % %) [5 10 15 25 35 55 85 125 190 290 435 655 985])
+            :label-fn (fn [k label] (reset! label (str "sort by: " k)))
+            :target :size]]]]]])))
 
 (defn query-logic [& {:keys [query-opts query-results]}]
   (fn [k]
@@ -133,7 +156,7 @@
        [:div.col-lg-10
         [:div.row
          [:div.col-lg-4
-          [query-opts-menu]]
+          [query-opts-menu query-opts]]
          [:div.col-lg-8
           [:div.input-group
            [:input#query-str.form-control
@@ -182,9 +205,8 @@
        [dropdown-select
         {:init-label "sort by: "
          :options (map #(->map % %) ["match" "left-context" "right-context"])
-         :label-fn (fn [k label]
-                     (reset! criterion k)
-                     (reset! label (str "sort by: " k)))}]
+         :label-fn (fn [k label] (reset! label (str "sort by: " k)))
+         :select-fn (fn [k] (reset! criterion k))}]
        [dropdown-select
         {:init-label "sort prop"
          :options (map #(->map % %) ["word" "pos" "lemma"])
@@ -220,9 +242,9 @@
        [:div.row
         [:div.col-lg-6
          [:div.row
-          [:div.col-lg-6.pad [query-result-label @query-results]]
-          [:div.col-lg-6.pad [pager-buttons]]]]
-        [:div.col-lg-6.pad [:div.text-right [sort-buttons query-opts query-results]]]]])))
+          [:div.col-lg-4.pad [query-result-label @query-results]]
+          [:div.col-lg-8.pad [pager-buttons]]]]
+        [:div.col-lg-6.pad [:div.pull-right [sort-buttons query-opts query-results]]]]])))
 
 (defn throbbing-panel []
   [re-com/box
@@ -241,11 +263,14 @@
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]
     (fn [selection]
-      [:table#table1.table.table-results
-       {:on-mouse-down
+      [bs/table
+       {:responsive true
+        :className "table-results"
+        :id "table"
+        :on-mouse-down
         #(let [e (aget % "target")
                button (aget % "button")]
-           (.preventDefault %)         ;avoid text selection
+           (.preventDefault %)          ;avoid text selection
            (.log js/console button)
            (when (zero? button)
              (swap! mouse-down? not)
