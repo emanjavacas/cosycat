@@ -44,6 +44,7 @@
  :set-session
  (fn [db [_ path value]]
    (let [session (:session db)]
+     (timbre/debug path value)
      (assoc db :session (assoc-in session path value)))))
 
 (re-frame/register-handler

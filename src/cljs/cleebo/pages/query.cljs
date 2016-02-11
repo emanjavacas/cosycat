@@ -1,7 +1,6 @@
 (ns cleebo.pages.query
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [re-com.core :as re-com]
             [cleebo.logic.query :as q]
             [cleebo.query-parser :refer [missing-quotes]]            
             [cleebo.utils :refer [notify! by-id ->map normalize-from]]
@@ -24,7 +23,7 @@
 
 (defn error-panel [& {:keys [status status-content]}]
   {:pre [(and status)]}
-  [:div.container-fluid
+  [:div.container-fluid.text-center
    {:style {:padding "40px"}}
    [:div.row [:h3 [:span.text-muted status]]]
    [:div.row [:br]]
@@ -73,64 +72,45 @@
      at
      (gstr/unescapeEntities "&#x21D1;"))]])
 
-(defn input-select [& {:keys [init-label options label-fn target]}]
-  {:pre [(and init-label options)]}
-  (let [label (reagent/atom init-label)]
-    (fn [& {:keys [init-label options label-fn target]}]
-      [bs/input
-       {:type "select"
-;        :style {:width "150px"}
-;        :value @label
-;        :onChange #(.log js/console @label)
-        :onSelect (fn [e k]
-                    (re-frame/dispatch [:set-session [:query-opts target] k])
-                    (label-fn k label))}
-       (for [{:keys [key label]} options]
-         ^{:key key} [:option {:value label} label])])))
-
-(defn dropdown-select [{:keys [init-label options label-fn select-fn]}]
-  (let [label (reagent/atom init-label)]
-    (fn [{:keys [init-label options label-fn select-fn]}]
-      [bs/dropdown-button
-       {:title @label
-        :onSelect (fn [e k] (do (select-fn k) (label-fn k label)))}
-       (for [{:keys [key label]} options]
-         ^{:key key} [bs/menu-item {:eventKey label} label])])))
+(defn dropdown-select [{:keys [label model options select-fn header]}]
+  (let [local-label (reagent/atom model)]
+    (fn [{:keys [label model options select-fn header] :or {select-fn identity}}]
+      [bs/dropdown
+       {:id "Dropdown"
+        :onSelect (fn [e k] (reset! local-label k) (select-fn k))}
+       [bs/button
+        {:style {:pointer-events "none !important"}}
+        [:span.text-muted label] @local-label]
+       [bs/dropdown-toggle]
+       [bs/dropdown-menu
+        (concat
+         [^{:key "header"} [bs/menu-item {:header true} header]
+          ^{:key "divider"} [bs/menu-item {:divider true}]]
+         (for [{:keys [key label]} options]
+           ^{:key key} [bs/menu-item {:eventKey label} label]))]])))
 
 (defn query-opts-menu [query-opts]
   (fn [query-opts]
     (let [{:keys [corpus context size]} @query-opts]
-      [:div.row
-       [:div.col-lg-4.pad
-        [:div.container-fluid
-         [:div.row
-          [:div.col-lg-4.pad [bs/label "Corpus"]]
-          [:div.col-lg-8.pad
-           [input-select
-            :init-label (str "Corpus: " corpus)
-            :options (mapv #(->map % %) corpora)
-            :label-fn (fn [k label] (reset! label (str "sort by: " k)))
-            :target :corpus]]]]]
-       [:div.col-lg-4.pad
-        [:div.container-fluid
-         [:div.row
-          [:div.col-lg-4.pad [bs/label "Window size"]]
-          [:div.col-lg-8.pad
-           [input-select
-            :init-label (str "Window size: " context)
-            :options (map #(->map % %) (range 1 10))
-            :label-fn (fn [k label] (reset! label (str "sort by: " k)))
-            :target :context]]]]]
-       [:div.col-lg-4.pad
-        [:div.container-fluid
-         [:div.row
-          [:div.col-lg-4 [bs/label "Context"]]
-          [:div.col-lg-8
-           [input-select
-            :init-label (str "Page size: " size)
-            :options (map #(->map % %) [5 10 15 25 35 55 85 125 190 290 435 655 985])
-            :label-fn (fn [k label] (reset! label (str "sort by: " k)))
-            :target :size]]]]]])))
+      [bs/button-toolbar
+       [dropdown-select
+        {:label "corpus: "
+         :header "Select a corpus"
+         :options (mapv #(->map % %) corpora)
+         :model corpus
+         :select-fn #(re-frame/dispatch [:set-session [:query-opts :corpus] %])}]
+       [dropdown-select
+        {:label "window: "
+         :header "Select window size"
+         :options (map #(->map % %) (range 1 10))
+         :model context
+         :select-fn #(re-frame/dispatch [:set-session [:query-opts :context] %])}]
+       [dropdown-select
+        {:label "size: "
+         :header "Select page size"
+         :options (map #(->map % %) [5 10 15 25 35 55 85 125 190 290 435 655 985])
+         :model size
+         :select-fn #(re-frame/dispatch [:set-session [:query-opts :size] %])}]])))
 
 (defn query-logic [& {:keys [query-opts query-results]}]
   (fn [k]
@@ -203,14 +183,17 @@
       [bs/button-toolbar
        {:justified true}
        [dropdown-select
-        {:init-label "sort by: "
+        {:label "sort by: "
+         :header "Select criterion"
+         :model @criterion
          :options (map #(->map % %) ["match" "left-context" "right-context"])
-         :label-fn (fn [k label] (reset! label (str "sort by: " k)))
          :select-fn (fn [k] (reset! criterion k))}]
        [dropdown-select
-        {:init-label "sort prop"
+        {:label "sort prop: "
+         :header "Select property"
          :options (map #(->map % %) ["word" "pos" "lemma"])
-         :label-fn (fn [k _] (reset! prop-name k))}]
+         :model @prop-name
+         :select-fn (fn [k] (reset! prop-name k))}]
        [bs/button
         {:disabled (not (some #{(:corpus @query-opts)} (:corpora (cljs-env :blacklab))))
          :onClick #(let [{:keys [corpus context size]} @query-opts
@@ -239,7 +222,7 @@
     (fn []
       [:div.container-fluid
        {:style {:visibility (if-not (:results @query-results) "hidden" "visible")}}
-       [:div.row
+       [:div.row {:style {:margin-top "10px"}}
         [:div.col-lg-6
          [:div.row
           [:div.col-lg-4.pad [query-result-label @query-results]]
@@ -247,22 +230,23 @@
         [:div.col-lg-6.pad [:div.pull-right [sort-buttons query-opts query-results]]]]])))
 
 (defn throbbing-panel []
-  [re-com/box
-   :align :center
-   :justify :center
-   :padding "50px"
-   :child [re-com/throbber :size :large]])
+  [:div.text-center
+   [:div.loader]])
 
 (defn update-selection [selection id flag]
   (if flag
     (swap! selection assoc id true)
     (swap! selection dissoc id)))
 
-(defn table-results [selection]
+(defn annotate-line [line visible?]
+  (let [data @(re-frame/subscribe [:session :query-results :results line])]
+    (swap! visible? not)))
+
+(defn table-results [selection visible?]
   (let [query-results (re-frame/subscribe [:query-results])
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]
-    (fn [selection]
+    (fn [selection visible?]
       [bs/table
        {:responsive true
         :className "table-results"
@@ -271,7 +255,6 @@
         #(let [e (aget % "target")
                button (aget % "button")]
            (.preventDefault %)          ;avoid text selection
-           (.log js/console button)
            (when (zero? button)
              (swap! mouse-down? not)
              (gclass/toggle e "highlighted")
@@ -290,26 +273,29 @@
           ^{:key i}
           [:tr
            {:data-num i}
-           (for [{:keys [id word] :as token} hit]
-             (cond
-               (:match token) ^{:key (str i "-" id)} [:td.info {:data-id id} word]
-               :else          ^{:key (str i "-" id)} [:td {:data-id id} word]))
-           ;; (into
-           ;;  ^{:key (str  i)} [:td (inc i)]
-           ;;  (for [{:keys [id xmlid word] :as token} hit]
-           ;;    (cond
-           ;;      (:match token) ^{:key (str i "-" xmlid)} [:td.info {:data-id xmlid} word]
-           ;;      :else          ^{:key (str i "-" xmlid)} [:td {:data-id xmlid} word])))
-           ])]])))
+           (concat
+            [^{:key (str i "ann")} [:td {:style {:width "20px" :background-color "#eeeeee"}}
+                                    [bs/button
+                                     {:bsSize "small"
+;                                      :data-num i
+                                      :onClick #(annotate-line i visible?)}
+                                     [bs/glyphicon {:glyph "pencil"}]]]
+             ^{:key (str i)} [:td  {:style {:width "20px" :background-color "#eeeeee"}}
+                              [:label (inc i)]]]
+            (for [{:keys [id xmlid word] :as token} hit]
+              (cond
+                (:match token) ^{:key (str i "-" id)} [:td.info {:data-id id} word]
+                :else          ^{:key (str i "-" id)} [:td {:data-id id} word])))])]])))
 
-(defn results-frame [selection]
+(defn results-frame [selection visible?]
   (let [status (re-frame/subscribe [:session :query-results :status])
         query-size (re-frame/subscribe [:session :query-results :query-size])
-        throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
-    (fn [selection]
+        throbbing? (re-frame/subscribe [:throbbing? :results-frame])
+        results (re-frame/subscribe [:session :query-results :results])]
+    (fn [selection visible?]
       (let [{:keys [status status-content]} @status]
         (cond
-          @throbbing?                 (throbbing-panel)
+          @throbbing?                 [throbbing-panel]
           (= status :error)           [error-panel
                                        :status "Ups! something bad happened"
                                        :status-content [:div status-content]]
@@ -319,28 +305,30 @@
                                        :status (str "Query misquoted starting at position "
                                                     (inc (:at status-content)))
                                        :status-content (highlight-error status-content)]
-          :else                       [table-results selection])))))
+          (not (nil? @results))       [table-results selection visible?]
+          :else                       [error-panel
+                                       :status "No results to be shown. 
+                                       Go do some research!"])))))
 
 (defn annotation-frame [selection]
   (fn [selection]
     (let [style {:style {:position "fixed"
                          :width "100%"
-                        ;:left "175px"                         
                          :bottom 0
                          :background-color "rgb(235, 240, 242)"}}]
       [:div style (keys @selection)])))
 
-(defn query-main []
+(defn query-main [visible?]
   (let [selection (reagent/atom {})]
-    (fn []
+    (fn [visible?]
       [:div.container-fluid
        [:div.row [toolbar]]
-       [:br]
-       [:div.row [results-frame selection]]
+       [:div.row [results-frame selection visible?]]
        [:div.row [annotation-frame selection]]])))
 
-(defn query-panel []
-  [:div.container
-   {:style {:width "100%" :padding "0px"}}
-   [:row [query-field]]
-   [:row [query-main]]])
+(defn query-panel [visible?]
+  (fn [visible?]
+    [:div.container
+     {:style {:width "100%" :padding "0px"}}
+     [:row [query-field]]
+     [:row [query-main visible?]]]))

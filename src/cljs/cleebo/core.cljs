@@ -14,8 +14,10 @@
             [figwheel.client :as figwheel])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
-(defmulti panels identity)
-(defmethod panels :query-panel [] [query-panel])
+(defmulti panels (fn [panel-key & args] panel-key))
+(defmethod panels :query-panel [panel-key & {:keys [visible?]}]
+  (timbre/debug @visible?)
+  [query-panel visible?])
 (defmethod panels :settings-panel [] [settings-panel])
 (defmethod panels :debug-panel [] [debug-panel])
 (defmethod panels :default [] [:div])
@@ -43,29 +45,37 @@
 ;;           (notification id (str msg " " id " " (.toDateString date))))
 ;;         @notifications)])
 
+(defn annotation-panel [visible?]
+  [:div.menu
+   [:div.right
+    {:class (if @visible? "visible")}]])
+
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])
-        notifications (re-frame/subscribe [:notifications])]
+        notifications (re-frame/subscribe [:notifications])
+        visible? (reagent/atom false)]
     (fn []
-      [:div.container-fluid
-       [:ul#notifications
-        {:style {:position "fixed"
-                 :right "5px"
-                 :top "5px"
-                 :z-index "1001"}}
-;        [notification-container notifications]
-        ]
-       [:div.row 
-        [:div.col-sm-2.col-md-1.sidebar ;sidebar
-         [:ul.nav.nav-sidebar
-          [sidelink :home-panel "#/home" "Home" "zmdi-home"]
-          [sidelink :query-panel "#/query" "Query" "zmdi-search"]
-          [sidelink :updates-panel "#/updates" "Updates" "zmdi-notifications"]
-          [sidelink :settings-panel "#/settings" "Settings" "zmdi-settings"]
-          [sidelink :debug-panel "#/debug" "Debug" "zmdi-bug"]          
-          [sidelink :exit          "#/exit" "Exit" "zmdi-power"]]]
-        [:div.col-sm-10.col-sm-offset-2.col-md-11.col-md-offset-1.main
-         (panels @active-panel)]]])))
+      [:div
+       [annotation-panel visible?]
+       [:div.container-fluid
+        [:ul#notifications
+         {:style {:position "fixed"
+                  :right "5px"
+                  :top "5px"
+                  :z-index "1001"}}
+                                        ;        [notification-container notifications]
+         ]
+        [:div.row 
+         [:div.col-sm-2.col-md-1.sidebar ;sidebar
+          [:ul.nav.nav-sidebar
+           [sidelink :home-panel "#/home" "Home" "zmdi-home"]
+           [sidelink :query-panel "#/query" "Query" "zmdi-search"]
+           [sidelink :updates-panel "#/updates" "Updates" "zmdi-notifications"]
+           [sidelink :settings-panel "#/settings" "Settings" "zmdi-settings"]
+           [sidelink :debug-panel "#/debug" "Debug" "zmdi-bug"]          
+           [sidelink :exit          "#/exit" "Exit" "zmdi-power"]]]
+         [:div.col-sm-10.col-sm-offset-2.col-md-11.col-md-offset-1.main
+          (panels @active-panel :visible? visible?)]]]])))
 
 (defn mount-root []
   (.log js/console "Called mount-root")

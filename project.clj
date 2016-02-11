@@ -17,7 +17,6 @@
                  [cljsjs/react-bootstrap "0.27.3-0"
                   :exclusions [org.webjars.bower/jquery]]
                  [re-frame "0.7.0-alpha"]
-                 [re-com "0.7.0"]
                  [secretary "1.2.3"]
                  [ring/ring-anti-forgery "1.0.0"]
                  [ring-ttl-session "0.3.0"]

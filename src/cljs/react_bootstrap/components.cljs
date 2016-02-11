@@ -62,3 +62,9 @@
  "Well"
  "Collapse"
  "Fade")
+
+(def dropdown-toggle
+  (reagent.core/adapt-react-class js/ReactBootstrap.Dropdown.Toggle))
+
+(def dropdown-menu
+  (reagent.core/adapt-react-class js/ReactBootstrap.Dropdown.Menu))
