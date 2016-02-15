@@ -1,7 +1,7 @@
 (ns cleebo.backend.db)
 
 (def default-db
-  {:name "CleeBo"
+  {:annotation-panel-visibility false
    :session {:query-opts {:corpus "brown-id"
                           :context 5
                           :size 10}

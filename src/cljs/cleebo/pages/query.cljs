@@ -144,8 +144,9 @@
              :type "text"
              :name "query"
              :placeholder "Example: [pos='.*\\.']" ;remove?
-             :autoCorrect "off"
-             :autoCapitalize "off"
+             :autoCorrect "false"
+             :autoCapitalize "false"
+             :autoComplete "false"
              :spellCheck "false"
              :on-key-press (query-logic :query-opts query-opts)}]
            [:span.input-group-addon
@@ -233,20 +234,19 @@
   [:div.text-center
    [:div.loader]])
 
-(defn update-selection [selection id flag]
-  (if flag
-    (swap! selection assoc id true)
-    (swap! selection dissoc id)))
-
-(defn annotate-line [line visible?]
+(defn annotate-line [line]
   (let [data @(re-frame/subscribe [:session :query-results :results line])]
-    (swap! visible? not)))
+    (re-frame/dispatch [:toggle-annotation-panel])))
 
-(defn table-results [selection visible?]
+(defn table-results []
   (let [query-results (re-frame/subscribe [:query-results])
         mouse-down? (reagent/atom false)
-        highlighted? (reagent/atom false)]
-    (fn [selection visible?]
+        highlighted? (reagent/atom false)
+        update-selection (fn [id flag]
+                           (if flag
+                             (re-frame/dispatch [:update-selection assoc id true])
+                             (re-frame/dispatch [:update-selection dissoc id])))]
+    (fn []
       [bs/table
        {:responsive true
         :className "table-results"
@@ -259,13 +259,13 @@
              (swap! mouse-down? not)
              (gclass/toggle e "highlighted")
              (reset! highlighted? (gclass/has e "highlighted"))
-             (update-selection selection (gdataset/get e "id") @highlighted?)))
+             (update-selection (gdataset/get e "id") @highlighted?)))
         :on-mouse-over
         #(let [e (aget % "target")
                button (aget % "button")]
            (when (and (zero? button) @mouse-down?)
              (gclass/enable e "highlighted" @highlighted?)
-             (update-selection selection (gdataset/get e "id") @highlighted?)))
+             (update-selection (gdataset/get e "id") @highlighted?)))
         :on-mouse-up #(swap! mouse-down? not)}
        [:thead]
        [:tbody {:style {:font-size "11px"}}
@@ -277,8 +277,7 @@
             [^{:key (str i "ann")} [:td {:style {:width "20px" :background-color "#eeeeee"}}
                                     [bs/button
                                      {:bsSize "small"
-;                                      :data-num i
-                                      :onClick #(annotate-line i visible?)}
+                                      :onClick #(annotate-line i)}
                                      [bs/glyphicon {:glyph "pencil"}]]]
              ^{:key (str i)} [:td  {:style {:width "20px" :background-color "#eeeeee"}}
                               [:label (inc i)]]]
@@ -287,12 +286,12 @@
                 (:match token) ^{:key (str i "-" id)} [:td.info {:data-id id} word]
                 :else          ^{:key (str i "-" id)} [:td {:data-id id} word])))])]])))
 
-(defn results-frame [selection visible?]
+(defn results-frame []
   (let [status (re-frame/subscribe [:session :query-results :status])
         query-size (re-frame/subscribe [:session :query-results :query-size])
         throbbing? (re-frame/subscribe [:throbbing? :results-frame])
         results (re-frame/subscribe [:session :query-results :results])]
-    (fn [selection visible?]
+    (fn []
       (let [{:keys [status status-content]} @status]
         (cond
           @throbbing?                 [throbbing-panel]
@@ -305,30 +304,72 @@
                                        :status (str "Query misquoted starting at position "
                                                     (inc (:at status-content)))
                                        :status-content (highlight-error status-content)]
-          (not (nil? @results))       [table-results selection visible?]
+          (not (nil? @results))       [table-results]
           :else                       [error-panel
                                        :status "No results to be shown. 
                                        Go do some research!"])))))
 
-(defn annotation-frame [selection]
-  (fn [selection]
-    (let [style {:style {:position "fixed"
-                         :width "100%"
-                         :bottom 0
-                         :background-color "rgb(235, 240, 242)"}}]
-      [:div style (keys @selection)])))
+(defn annotation-frame []
+  (let [selection (re-frame/subscribe [:annotation-selection])]
+    (fn []
+      (let [style {:style {:position "fixed"
+                           :width "100%"
+                           :bottom 0
+                           :background-color "rgb(235, 240, 242)"}}]
+        [:div style (keys @selection)]))))
 
-(defn query-main [visible?]
-  (let [selection (reagent/atom {})]
-    (fn [visible?]
-      [:div.container-fluid
-       [:div.row [toolbar]]
-       [:div.row [results-frame selection visible?]]
-       [:div.row [annotation-frame selection]]])))
+;; (defn annotation-frame []
+;;   (reagent/create-class
+;;    {:component-will-mount
+;;     (fn [this]
+;;       )}))
 
-(defn query-panel [visible?]
-  (fn [visible?]
-    [:div.container
-     {:style {:width "100%" :padding "0px"}}
-     [:row [query-field]]
-     [:row [query-main visible?]]]))
+(defn annotation-panel [active-panel]
+  (let [visible? (re-frame/subscribe [:annotation-panel-visibility])
+        init-height 70
+        height (reagent/atom init-height)]
+    (fn []
+      [:div.panel-container
+       [:div.child
+        (if (and (= :query-panel @active-panel) @visible?)
+          {:class "visible"
+           :style {:height (str @height "%")}})
+        [:div.container-fluid
+         {:style {:position "fixed"
+                  :left "0" :right "0" :bottom "0px"
+                  :background-color "#f8f8f8"
+                  :border-color "#e7e7e7"
+                  :min-height "45px"
+                  :padding "15px"}}
+         [:div.row
+          [:div.col-lg-10.col-sm-8
+           [:div.btn-group-vertical
+            [:button.btn.btn-info.btn-xs
+             {:on-click #(swap! height (fn [height] (min 100 (+ height 10))))}
+             [bs/glyphicon {:glyph "chevron-up"}]]
+            [:button.btn.btn-info.btn-xs
+             {:on-click #(swap! height (fn [height] (max 10 (- height 10))))}
+             [bs/glyphicon {:glyph "chevron-down"}]]]]
+          [:div.col-lg-2.col-sm-4.text-right
+           [:div.btn-toolbar
+            [:button.btn.btn-info.btn-xs
+             {:on-click #(reset! height init-height)}
+             [bs/glyphicon {:glyph "resize-small"}]]
+            [:button.btn.btn-info.btn-xs
+             {:on-click #(reset! height 100)}
+             [bs/glyphicon {:glyph "resize-full"}]]
+            [:button.btn.btn-info.btn-xs
+             {:on-click #(re-frame/dispatch [:toggle-annotation-panel])}
+             [bs/glyphicon {:glyph "remove"}]]]]]]]])))
+
+(defn query-panel []
+  (let [visible? (re-frame/subscribe [:annotation-panel-visibility])]
+    (fn []
+      [:div.container
+       {:style {:width "100%" :padding "0px 10px 0px 10px"}}
+       (if (not @visible?) [:div.row [query-field]])
+       (if (not @visible?) [:div.row [toolbar]])
+       (if (not @visible?) [:br])
+       [:div.row [results-frame]]
+       [:div.row [annotation-frame]]])))
+

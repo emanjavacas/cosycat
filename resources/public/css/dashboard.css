@@ -76,8 +76,8 @@
 }
 @media (min-width: 768px) {
   .main {
-    padding-right: 15px;	/*15*/
-    padding-left: 25px;		/*25*/
+    /* padding-right: 15px;	/\*15*\/ */
+    /* padding-left: 25px;		/\*25*\/ */
   }
 }
 .main .page-header {

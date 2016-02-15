@@ -53,6 +53,16 @@
    (timbre/debug (keys results))
    (update-in db [:session :query-results] merge data)))
 
+(re-frame/register-handler
+ :update-selection
+ (fn [db [_ & args]]
+   (apply update-in db [:selection] args)))
+
+(re-frame/register-handler
+ :toggle-annotation-panel
+ (fn [db [_ _]]
+   (update-in db [:annotation-panel-visibility] not)))
+
 (defn handle-ws [db {:keys [type msg]}]
   (case type
     :msgs (update db type conj [msg])))

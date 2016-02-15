@@ -1,7 +1,6 @@
 (ns cleebo.pages.about
   (:require [reagent.core :as reagent]
-            [re-frame.core :as re-frame]
-            [re-com.core :as re-com]))
+            [re-frame.core :as re-frame]))
 
 
 (defn about-title []

@@ -45,3 +45,13 @@
  :query-results
  (fn [db _]
    (reaction (get-in @db [:session :query-results]))))
+
+(re-frame/register-sub
+ :annotation-selection
+ (fn [db _]
+   (reaction (:selection @db))))
+
+(re-frame/register-sub
+ :annotation-panel-visibility
+ (fn [db _]
+   (reaction (:annotation-panel-visibility @db))))

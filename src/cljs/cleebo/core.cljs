@@ -5,7 +5,7 @@
             [cleebo.backend.subs]
             [cleebo.routes :as routes]
             [cleebo.logic.ws :refer [make-ws-ch]]
-            [cleebo.pages.query :refer [query-panel]]
+            [cleebo.pages.query :refer [query-panel annotation-panel]]
             [cleebo.pages.settings :refer [settings-panel]]
             [cleebo.pages.debug :refer [debug-panel]]
             [cleebo.utils :refer [notify! ;css-transition-group
@@ -16,8 +16,7 @@
 
 (defmulti panels (fn [panel-key & args] panel-key))
 (defmethod panels :query-panel [panel-key & {:keys [visible?]}]
-  (timbre/debug @visible?)
-  [query-panel visible?])
+  [query-panel])
 (defmethod panels :settings-panel [] [settings-panel])
 (defmethod panels :debug-panel [] [debug-panel])
 (defmethod panels :default [] [:div])
@@ -45,27 +44,20 @@
 ;;           (notification id (str msg " " id " " (.toDateString date))))
 ;;         @notifications)])
 
-(defn annotation-panel [visible?]
-  [:div.menu
-   [:div.right
-    {:class (if @visible? "visible")}]])
-
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])
-        notifications (re-frame/subscribe [:notifications])
-        visible? (reagent/atom false)]
+        notifications (re-frame/subscribe [:notifications])]
     (fn []
       [:div
-       [annotation-panel visible?]
        [:div.container-fluid
         [:ul#notifications
          {:style {:position "fixed"
                   :right "5px"
                   :top "5px"
                   :z-index "1001"}}
-                                        ;        [notification-container notifications]
+         ;[notification-container notifications]
          ]
-        [:div.row 
+        [:div.row
          [:div.col-sm-2.col-md-1.sidebar ;sidebar
           [:ul.nav.nav-sidebar
            [sidelink :home-panel "#/home" "Home" "zmdi-home"]
@@ -75,7 +67,11 @@
            [sidelink :debug-panel "#/debug" "Debug" "zmdi-bug"]          
            [sidelink :exit          "#/exit" "Exit" "zmdi-power"]]]
          [:div.col-sm-10.col-sm-offset-2.col-md-11.col-md-offset-1.main
-          (panels @active-panel :visible? visible?)]]]])))
+          {:style {:padding-left "0px"}}
+          [annotation-panel active-panel]
+          [:div
+           {:style {:padding-left "15px"}}
+           (panels @active-panel)]]]]])))
 
 (defn mount-root []
   (.log js/console "Called mount-root")

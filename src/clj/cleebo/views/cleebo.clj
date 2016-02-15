@@ -10,7 +10,6 @@
      [:meta {:charset "utf-8"}]
      [:link {:href bootstrap-css :rel "stylesheet"}]
      [:link {:href "vendor/css/material-design-iconic-font.min.css" :rel "stylesheet"}]
-     [:link {:href "vendor/css/re-com.css", :rel "stylesheet"}]
      [:link {:href "css/dashboard.css" :rel "stylesheet"}]     
      [:link {:href "css/main.css" :rel "stylesheet"}]
      [:link
