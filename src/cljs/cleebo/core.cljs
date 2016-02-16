@@ -5,7 +5,8 @@
             [cleebo.backend.subs]
             [cleebo.routes :as routes]
             [cleebo.logic.ws :refer [make-ws-ch]]
-            [cleebo.pages.query :refer [query-panel annotation-panel]]
+            [cleebo.pages.query :refer [query-panel]]
+            [cleebo.pages.annotation :refer [annotation-panel]]
             [cleebo.pages.settings :refer [settings-panel]]
             [cleebo.pages.debug :refer [debug-panel]]
             [cleebo.utils :refer [notify! ;css-transition-group
@@ -15,8 +16,7 @@
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
 (defmulti panels (fn [panel-key & args] panel-key))
-(defmethod panels :query-panel [panel-key & {:keys [visible?]}]
-  [query-panel])
+(defmethod panels :query-panel [panel-key & args] [query-panel])
 (defmethod panels :settings-panel [] [settings-panel])
 (defmethod panels :debug-panel [] [debug-panel])
 (defmethod panels :default [] [:div])

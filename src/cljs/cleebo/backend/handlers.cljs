@@ -44,26 +44,58 @@
  :set-session
  (fn [db [_ path value]]
    (let [session (:session db)]
-     (timbre/debug path value)
      (assoc db :session (assoc-in session path value)))))
 
 (re-frame/register-handler
  :set-query-results
  (fn [db [_ & [{:keys [results query-size query-str status from to] :as data}]]]
-   (timbre/debug (keys results))
-   (update-in db [:session :query-results] merge data)))
+   (let [query-results (dissoc data :results)]
+     (-> db
+         (update-in [:session :query-results] merge query-results)
+         ;; this leaks, of course, try to only retain marked hits
+         ;; and overwrite those coming from blacklab
+         (update-in [:session :results] merge results)))))
 
 (re-frame/register-handler
- :update-selection
- (fn [db [_ & args]]
-   (apply update-in db [:selection] args)))
+ :mark-hit
+ (fn [db [_ hit-num]]
+   (assert (get-in db [:session :results hit-num]))
+   (update-in db [:session :results hit-num :meta :marked] true)))
 
 (re-frame/register-handler
- :toggle-annotation-panel
- (fn [db [_ _]]
-   (update-in db [:annotation-panel-visibility] not)))
+ :mark-token
+ (fn [db [_ hit-num token-id]]
+   (let [hit (get-in db [:session :results hit-num :hit])]
+     (assert (and hit (some #(= token-id (:id %)) hit)))
+     (assoc-in db
+               [:session :results hit-num :hit]
+               (map (fn [{:keys [id] :as token}]
+                      (if (= id token-id)
+                        (assoc token :marked true)
+                        token))
+                    hit)))))
 
-(defn handle-ws [db {:keys [type msg]}]
+(re-frame/register-handler
+ :demark-hit
+ (fn [db [_ hit-num]]
+   (assert (get-in db [:session :results hit-num]))
+   (update-in db [:session :results hit-num :meta :marked] false)))
+
+(re-frame/register-handler
+ :demark-token
+ (fn [db [_ hit-num token-id]]
+   (let [hit (get-in db [:session :results hit-num :hit])]
+     (assert hit)
+     (assert (some #(= token-id (:id %)) hit))
+     (assoc-in db
+               [:session :results hit-num :hit]
+               (map (fn [{:keys [id] :as token}]
+                      (if (= id token-id)
+                        (dissoc token :marked)
+                        token))
+                    hit)))))
+
+(defn handle-ws-msg [db {:keys [type msg]}]
   (case type
     :msgs (update db type conj [msg])))
 
@@ -73,5 +105,5 @@
    (let [{:keys [status type msg]} data]
      (cond
        (= status :error) (do (timbre/debug msg) db)
-       (= status :ok)    (handle-ws db {:type type :msg msg})
+       (= status :ok)    (handle-ws-msg db {:type type :msg msg})
        :else             (do (timbre/debug "Unknown status: " status) db)))))

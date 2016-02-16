@@ -13,20 +13,23 @@
          s)))
 
 (defn summary-session []
-  (let [session (re-frame/subscribe [:session])]
+  (let [query-opts (re-frame/subscribe [:query-opts])
+        query-results (re-frame/subscribe [:query-results])
+        results (re-frame/subscribe [:session :results])]
     (fn []
-      (let [asession @session ;(update-in @session [:query-results] dissoc :results)
-            query-opts (:query-opts asession)
-            query-results (:query-results asession)]
-        (conj
-         [:div.container-fluid
-          [:div.row [:h4 [:span.text-muted "Query Options"]]]
-          [:div.row [kv-pairs query-opts]]
-          [:div.row [:h4 [:span.text-muted "Query Results"]]]
-          [:div.row [kv-pairs query-results]]
-          [:div.row [:h4 [:span.text-muted "Match Ids"]]]
-          [:div.row
-           (map :id (filter :match (mapcat :hit (vals (:results query-results)))))]])))))
+      (conj
+       [:div.container-fluid
+        [:div.row [:h4 [:span.text-muted "Query Options"]]]
+        [:div.row [kv-pairs @query-opts]]
+        [:div.row [:h4 [:span.text-muted "Query Results"]]]
+        [:div.row [kv-pairs @query-results]]
+        [:div.row [:h4 [:span.text-muted "Results"]]]
+        [:div.row [kv-pairs @results]]
+        [:div.row [:h4 [:span.text-muted "Selected tokens"]]]
+        [:div.row [kv-pairs ]]
+        [:div.row [:h4 [:span.text-muted "Match Ids"]]]
+        [:div.row
+         (map :id (filter :match (mapcat :hit (vals @results))))]]))))
 
 (defn debug-panel []
   [:div.container-fluid

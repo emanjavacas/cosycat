@@ -1,6 +1,7 @@
 (ns cleebo.backend.subs
     (:require-macros [reagent.ratom :refer [reaction]])
-    (:require [re-frame.core :as re-frame]))
+    (:require [re-frame.core :as re-frame]
+              [taoensso.timbre :as timbre]))
 
 (re-frame/register-sub
  :name
@@ -47,11 +48,17 @@
    (reaction (get-in @db [:session :query-results]))))
 
 (re-frame/register-sub
- :annotation-selection
+ :results
  (fn [db _]
-   (reaction (:selection @db))))
+   (let [results (reaction (get-in @db [:session :results]))
+         query-results (reaction (get-in @db [:session :query-results]))
+         from (reaction (:from @query-results))
+         to (reaction (:to @query-results))]
+     (timbre/debug from to)
+     (reaction (select-keys @results (range @from @to))))))
 
 (re-frame/register-sub
- :annotation-panel-visibility
+ :marked-tokens
  (fn [db _]
-   (reaction (:annotation-panel-visibility @db))))
+   (let [results (reaction (get-in @db [:session :results]))]
+)))
