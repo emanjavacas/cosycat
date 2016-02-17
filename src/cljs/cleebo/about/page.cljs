@@ -1,4 +1,4 @@
-(ns cleebo.pages.about
+(ns cleebo.about.page
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]))
 

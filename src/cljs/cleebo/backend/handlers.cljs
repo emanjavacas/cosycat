@@ -1,7 +1,8 @@
 (ns cleebo.backend.handlers
     (:require [taoensso.timbre :as timbre]
               [re-frame.core :as re-frame]
-              [cleebo.backend.db :as db]))
+              [cleebo.backend.db :as db]
+              [cleebo.utils :refer [filter-marked]]))
 
 (re-frame/register-handler
  :initialize-db
@@ -27,11 +28,13 @@
 
 (re-frame/register-handler
  :start-throbbing
+ [(when ^boolean goog.DEBUG re-frame/debug)]
  (fn [db [_ panel]]
    (assoc-in db [:throbbing? panel] true)))
 
 (re-frame/register-handler
  :stop-throbbing
+ [(when ^boolean goog.DEBUG re-frame/debug)]
  (fn [db [_ panel]]
    (assoc-in db [:throbbing? panel] false)))
 
@@ -52,46 +55,34 @@
    (let [query-results (dissoc data :results)]
      (-> db
          (update-in [:session :query-results] merge query-results)
-         ;; this leaks, of course, try to only retain marked hits
-         ;; and overwrite those coming from blacklab
-         (update-in [:session :results] merge results)))))
+         (update-in [:session :results]
+                    (fn [old-results new-results]
+                      (merge new-results (filter-marked old-results)))
+                    results)))))
 
 (re-frame/register-handler
  :mark-hit
- (fn [db [_ hit-num]]
-   (assert (get-in db [:session :results hit-num]))
-   (update-in db [:session :results hit-num :meta :marked] true)))
+ [(when ^boolean goog.DEBUG re-frame/debug)]
+ (fn [db [_ {:keys [hit-num flag]}]]
+   (assert (get-in db [:session :results hit-num])
+           (str "Couldn't find hit number " hit-num))
+   (assoc-in db [:session :results hit-num :meta :marked] flag)))
 
 (re-frame/register-handler
  :mark-token
- (fn [db [_ hit-num token-id]]
+ [(when ^boolean goog.DEBUG re-frame/debug)]
+ (fn [db [_ {:keys [hit-num token-id flag]}]]
    (let [hit (get-in db [:session :results hit-num :hit])]
-     (assert (and hit (some #(= token-id (:id %)) hit)))
+     (assert hit (str ":mark-token " "Couldn't find hit number " hit-num))
+     (assert (some #(= token-id (:id %)) hit)
+             (str ":mark-token " "Couldn't find token: " token-id))
      (assoc-in db
                [:session :results hit-num :hit]
                (map (fn [{:keys [id] :as token}]
                       (if (= id token-id)
-                        (assoc token :marked true)
-                        token))
-                    hit)))))
-
-(re-frame/register-handler
- :demark-hit
- (fn [db [_ hit-num]]
-   (assert (get-in db [:session :results hit-num]))
-   (update-in db [:session :results hit-num :meta :marked] false)))
-
-(re-frame/register-handler
- :demark-token
- (fn [db [_ hit-num token-id]]
-   (let [hit (get-in db [:session :results hit-num :hit])]
-     (assert hit)
-     (assert (some #(= token-id (:id %)) hit))
-     (assoc-in db
-               [:session :results hit-num :hit]
-               (map (fn [{:keys [id] :as token}]
-                      (if (= id token-id)
-                        (dissoc token :marked)
+                        (if flag
+                          (assoc token :marked true)
+                          (dissoc token :marked))
                         token))
                     hit)))))
 

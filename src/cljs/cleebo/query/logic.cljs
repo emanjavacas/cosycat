@@ -1,4 +1,4 @@
-(ns cleebo.logic.query
+(ns cleebo.query.logic
   (:require [re-frame.core :as re-frame]
             [ajax.core :refer [GET]]
             [taoensso.timbre :as timbre])

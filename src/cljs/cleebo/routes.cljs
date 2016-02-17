@@ -24,6 +24,10 @@
     (re-frame/dispatch [:set-active-panel :settings-panel]))
   (defroute "/debug" []
     (re-frame/dispatch [:set-active-panel :debug-panel]))
+  (defroute "/updates" []
+    (re-frame/dispatch [:set-active-panel :updates-panel]))
+  (defroute "/annotation" []
+    (re-frame/dispatch [:set-active-panel :annotation-panel]))
   (defroute "/exit" []
     (.assign js/location "/logout"))
   (hook-browser-navigation!))

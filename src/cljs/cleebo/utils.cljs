@@ -1,10 +1,18 @@
 (ns cleebo.utils
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
-            [goog.dom.dataset :as gdataset]))
+            [goog.dom.dataset :as gdataset])
+  (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
-;; (def css-transition-group
-;;   (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
+(def corpora
+  (let [{cqp-corpora :corpora} (cljs-env :cqp)
+        {bl-corpora :corpora}  (cljs-env :blacklab)]
+    (concat cqp-corpora bl-corpora)))
+
+(defn filter-marked [results]
+  (into {} (filter (fn [[hit-num {:keys [hit meta]}]]
+                     (:marked meta))
+                   results)))
 
 (defn ->map [k l]
   {:key k :label l})

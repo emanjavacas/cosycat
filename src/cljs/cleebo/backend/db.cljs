@@ -2,6 +2,7 @@
 
 (def default-db
   {:annotation-panel-visibility false
+   :active-panel :query-panel
    :selection {:tokens {}
                :lines  {}}
    :session {:query-opts {:corpus "brown-id"

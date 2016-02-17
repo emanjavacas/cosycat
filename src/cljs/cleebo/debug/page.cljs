@@ -1,4 +1,4 @@
-(ns cleebo.pages.debug
+(ns cleebo.debug.page
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]))
 
@@ -15,7 +15,8 @@
 (defn summary-session []
   (let [query-opts (re-frame/subscribe [:query-opts])
         query-results (re-frame/subscribe [:query-results])
-        results (re-frame/subscribe [:session :results])]
+        results (re-frame/subscribe [:session :results])
+        marked-hits (re-frame/subscribe [:marked-hits])]
     (fn []
       (conj
        [:div.container-fluid
@@ -25,8 +26,10 @@
         [:div.row [kv-pairs @query-results]]
         [:div.row [:h4 [:span.text-muted "Results"]]]
         [:div.row [kv-pairs @results]]
+        [:div.row [:h4 [:span.text-muted "Marked hits"]]]
+        [:div.row [kv-pairs @marked-hits]]
         [:div.row [:h4 [:span.text-muted "Selected tokens"]]]
-        [:div.row [kv-pairs ]]
+;        [:div.row [kv-pairs ]]
         [:div.row [:h4 [:span.text-muted "Match Ids"]]]
         [:div.row
          (map :id (filter :match (mapcat :hit (vals @results))))]]))))

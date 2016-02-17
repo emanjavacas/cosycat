@@ -1,6 +1,7 @@
 (ns cleebo.backend.subs
     (:require-macros [reagent.ratom :refer [reaction]])
     (:require [re-frame.core :as re-frame]
+              [cleebo.utils :refer [filter-marked]]
               [taoensso.timbre :as timbre]))
 
 (re-frame/register-sub
@@ -17,9 +18,7 @@
  :notifications
  (fn [db _]
    (let [notifications (reaction (:notifications @db))]
-     (reaction (reverse (sort-by (fn [[_ {date :date}]]
-                                   date)
-                                 @notifications))))))
+     (reaction (reverse (sort-by (fn [[_ {date :date}]] date) @notifications))))))
 
 (re-frame/register-sub
  :throbbing?
@@ -54,11 +53,10 @@
          query-results (reaction (get-in @db [:session :query-results]))
          from (reaction (:from @query-results))
          to (reaction (:to @query-results))]
-     (timbre/debug from to)
      (reaction (select-keys @results (range @from @to))))))
 
 (re-frame/register-sub
- :marked-tokens
+ :marked-hits
  (fn [db _]
    (let [results (reaction (get-in @db [:session :results]))]
-)))
+     (reaction (filter-marked @results)))))
