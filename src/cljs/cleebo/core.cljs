@@ -4,15 +4,17 @@
             [cleebo.backend.handlers]
             [cleebo.backend.subs]
             [cleebo.routes :as routes]
-            [cleebo.ws :refer [make-ws-ch]]
+            [cleebo.ws :as ws]
+            [cleebo.localstorage :as ls]
             [cleebo.query.page :refer [query-panel]]
             [cleebo.annotation.page :refer [annotation-panel]]
             [cleebo.settings.page :refer [settings-panel]]
             [cleebo.updates.page :refer [updates-panel]]
             [cleebo.debug.page :refer [debug-panel]]
-            [cleebo.utils :refer [notify!]]
+            [cleebo.utils :refer [notify! coerce-json]]
             [taoensso.timbre :as timbre]
-            [figwheel.client :as figwheel])
+            [figwheel.client :as figwheel]
+            [devtools.core :as devtools])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
 (defmulti panels identity)
@@ -59,18 +61,26 @@
            (panels @active-panel)]]]]])))
 
 (defn mount-root []
-  (.log js/console "Called mount-root")
   (reagent/render [#'main-panel] (.getElementById js/document "app")))
-
-(defn set-ws-ch []
-  (make-ws-ch
-   (str "ws://" (.-host js/location) "/ws")
-   #(re-frame/dispatch [:ws-in %])))
 
 (defn ^:export init []
   (let [host (cljs-env :host)]
+    ;; init devtools
+    (devtools/enable-feature! :sanity-hints :dirac)
+    (devtools/install!)
+    ;; declare app routes
     (routes/app-routes)
-    (set-ws-ch)
-    (re-frame/dispatch-sync [:initialize-db])
+    ;; web-sockets
+    (ws/set-ws-ch)
+    ;; start db
+    (if-let [dump (ls/fetch :db :coercion-fn (coerce-json))]
+      ;; if an old version is found in LS, promt for recovery
+      ;; obviously this has to be done in 
+      (re-frame/dispatch-sync [:reset-db dump])
+      (re-frame/dispatch-sync [:initialize-db]))
+    ;; handle refreshes
+    (.addEventListener js/window "beforeunload" #(re-frame/dispatch [:dump-db]))
+    ;; render root
     (mount-root)
+    ;; start figwheel server
     (figwheel/start {:websocket-url (str "ws://" host ":3449/figwheel-ws")})))

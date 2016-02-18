@@ -1,16 +1,17 @@
 (ns cleebo.backend.db)
 
 (def default-db
-  {:annotation-panel-visibility false
-   :active-panel :query-panel
-   :selection {:tokens {}
-               :lines  {}}
+  "defines app default state"
+  {:active-panel :query-panel
    :session {:query-opts {:corpus "brown-id"
                           :context 5
                           :size 10}
-             :results {}
              :query-results {:query-size nil
                              :query-str nil
                              :status {:status nil :status-text nil}
                              :from 0
-                             :to 0}}})
+                             :to 0}
+             :results {}}})
+
+
+

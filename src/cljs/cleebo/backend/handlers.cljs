@@ -2,12 +2,33 @@
     (:require [taoensso.timbre :as timbre]
               [re-frame.core :as re-frame]
               [cleebo.backend.db :as db]
+              [cleebo.localstorage :as ls]
+              [cleebo.backend.middleware
+               :refer [standard-middleware no-debug-middleware]]
               [cleebo.utils :refer [filter-marked]]))
 
 (re-frame/register-handler
  :initialize-db
- (fn  [_ _]
+ (fn [_ _]
    db/default-db))
+
+(re-frame/register-handler
+ :reset-db
+ standard-middleware
+ (fn [_ _]
+   db/default-db))
+
+(re-frame/register-handler
+ :load-db
+ standard-middleware
+ (fn [db [_ new-db]]
+   new-db))
+
+(re-frame/register-handler
+ :dump-db
+ (fn [db _]
+   (ls/put! :db db)
+   db))
 
 (re-frame/register-handler
  :set-active-panel
@@ -28,20 +49,15 @@
 
 (re-frame/register-handler
  :start-throbbing
- [(when ^boolean goog.DEBUG re-frame/debug)]
+ standard-middleware
  (fn [db [_ panel]]
    (assoc-in db [:throbbing? panel] true)))
 
 (re-frame/register-handler
  :stop-throbbing
- [(when ^boolean goog.DEBUG re-frame/debug)]
+ standard-middleware
  (fn [db [_ panel]]
    (assoc-in db [:throbbing? panel] false)))
-
-(re-frame/register-handler
- :set-name
- (fn [db [_ name]]
-   (assoc db :name name)))
 
 (re-frame/register-handler
  :set-session
@@ -51,6 +67,7 @@
 
 (re-frame/register-handler
  :set-query-results
+ no-debug-middleware
  (fn [db [_ & [{:keys [results query-size query-str status from to] :as data}]]]
    (let [query-results (dissoc data :results)]
      (-> db
@@ -62,20 +79,15 @@
 
 (re-frame/register-handler
  :mark-hit
- [(when ^boolean goog.DEBUG re-frame/debug)]
+ standard-middleware
  (fn [db [_ {:keys [hit-num flag]}]]
-   (assert (get-in db [:session :results hit-num])
-           (str "Couldn't find hit number " hit-num))
    (assoc-in db [:session :results hit-num :meta :marked] flag)))
 
 (re-frame/register-handler
  :mark-token
- [(when ^boolean goog.DEBUG re-frame/debug)]
+ standard-middleware
  (fn [db [_ {:keys [hit-num token-id flag]}]]
    (let [hit (get-in db [:session :results hit-num :hit])]
-     (assert hit (str ":mark-token " "Couldn't find hit number " hit-num))
-     (assert (some #(= token-id (:id %)) hit)
-             (str ":mark-token " "Couldn't find token: " token-id))
      (assoc-in db
                [:session :results hit-num :hit]
                (map (fn [{:keys [id] :as token}]

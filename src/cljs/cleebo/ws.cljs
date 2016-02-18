@@ -1,5 +1,6 @@
 (ns cleebo.ws
   (:require [cognitect.transit :as t]
+            [re-frame.core :as re-frame]
             [taoensso.timbre :as timbre]))
 
 (defonce ws-ch (atom nil))
@@ -26,3 +27,8 @@
       (reset! ws-ch c)
       (timbre/info "Connected to " url))
     (throw (js/Error. "Websocket connection failed!"))))
+
+(defn set-ws-ch []
+  (make-ws-ch
+   (str "ws://" (.-host js/location) "/ws")
+   #(re-frame/dispatch [:ws-in %])))

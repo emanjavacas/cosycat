@@ -5,6 +5,11 @@
               [taoensso.timbre :as timbre]))
 
 (re-frame/register-sub
+ :db
+ (fn [db _]
+   (reaction @db)))
+
+(re-frame/register-sub
  :name
  (fn [db _]
    (reaction (:name @db))))

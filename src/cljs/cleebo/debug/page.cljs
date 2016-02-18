@@ -1,6 +1,11 @@
 (ns cleebo.debug.page
   (:require [reagent.core :as reagent]
-            [re-frame.core :as re-frame]))
+            [re-frame.core :as re-frame]
+            [taoensso.timbre :as timbre]
+            [react-bootstrap.components :as bs]
+            [cleebo.utils :refer [coerce-json]]
+            [cleebo.backend.middleware :refer [db-schema]]
+            [cleebo.localstorage :as ls]))
 
 (defn kv-pairs [s]
   (into [:div]
@@ -34,9 +39,48 @@
         [:div.row
          (map :id (filter :match (mapcat :hit (vals @results))))]]))))
 
+(defn ls-dump []
+  [bs/button
+   {:on-click #(re-frame/dispatch [:dump-db])}
+   "Dump to LocalStorage"])
+
+(defn ls-read []
+  [bs/button
+   {:on-click #(let [dump (ls/fetch :db :coercion-fn (coerce-json))]
+                 (.log js/console dump))}
+   "Read from LocalStorage"])
+
+(defn ls-reset []
+  [bs/button
+   {:on-click #(if-let [dump (ls/fetch :db :coercion-fn (coerce-json))]
+                 (do
+                   (timbre/info "Reloaded db from LocalStorage")
+                   (re-frame/dispatch [:load-db dump]))
+                 (timbre/info "Couldn't reload db from LocalStorage"))}
+   "Reload db from LocalStorage"])
+
+(defn open-modal []
+  (let [open? (reagent/atom false)]
+    (fn []
+      [:div
+       [bs/button
+        {:on-click #(reset! open? true)}
+        "Launch modal"]
+       [bs/modal
+        {:show @open? :on-hide #(reset! open? false)}
+        [bs/button
+         {:on-click #(reset! open? false)}
+         "Close"]]])))
+
 (defn debug-panel []
   [:div.container-fluid
    [:div.row
     [:h3 [:span.text-muted "Debug Panel"]]]
    [:div.row [:hr]]
+   [:div.row
+    [bs/button-toolbar
+     [ls-dump]
+     [ls-read]
+     [ls-reset]
+     [open-modal]]]
    [:div.row [summary-session]]])

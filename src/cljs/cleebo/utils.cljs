@@ -1,7 +1,9 @@
 (ns cleebo.utils
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
-            [goog.dom.dataset :as gdataset])
+            [goog.dom.dataset :as gdataset]
+            [schema.coerce :as coerce]
+            [cleebo.backend.middleware :refer [db-schema]])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
 (def corpora
@@ -40,3 +42,18 @@
     (re-frame/dispatch
      [:add-notification
       {:msg msg :id id}])))
+
+(defn keyword-if-not-int [s]
+  (if (js/isNaN s)
+    (keyword s)
+    (js/parseInt s)))
+
+(defn keywordify [m]
+  (cond
+    (map? m) (into {} (for [[k v] m]
+                        [(keyword-if-not-int k) (keywordify v)]))
+    (coll? m) (vec (map keywordify m))
+    :else m))
+
+(defn coerce-json [& {:keys [schema] :or {schema db-schema}}]
+  (coerce/coercer schema coerce/json-coercion-matcher))
