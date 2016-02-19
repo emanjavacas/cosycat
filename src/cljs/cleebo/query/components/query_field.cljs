@@ -49,11 +49,11 @@
                        [:set-session [:query-results :status]
                         {:status :query-str-error
                          :status-content {:query-str query-str :at at}}])
-            :finished (do (re-frame/dispatch [:start-throbbing :results-frame])
-                          (q/query args-map))))))))
+            :finished (q/query args-map)))))))
 
-(defn query-field []
-  (let [query-opts (re-frame/subscribe [:query-opts])]
+(defn query-field [query-str]
+  (let [query-opts (re-frame/subscribe [:query-opts])
+        query-str-atom (reagent/atom @query-str)]
     (fn []
       [:div.row
        [:div.col-lg-2
@@ -68,11 +68,13 @@
             {:style {:width "100%"}
              :type "text"
              :name "query"
+             :value @query-str-atom
              :placeholder "Example: [pos='.*\\.']" ;remove?
              :autoCorrect "false"
              :autoCapitalize "false"
              :autoComplete "false"
              :spellCheck "false"
+             :on-change #(reset! query-str-atom (.-value (.-target %)))
              :on-key-press (query-logic :query-opts query-opts)}]
            [:span.input-group-addon
             [bs/glyphicon {:glyph "search"}]]]]]]])))

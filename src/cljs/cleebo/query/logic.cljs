@@ -24,6 +24,7 @@
 
 ;;; handlers
 (defn error-handler [{:keys [status status-content]}]
+  (re-frame/dispatch [:stop-throbbing :results-frame])
   (re-frame/dispatch
    [:set-session
     [:query-results :status]
@@ -45,6 +46,7 @@
 (defn query
   "will need to support 'from' for in-place query-opts change"
   [{:keys [query-str corpus context size from] :or {from 0} :as query-args}]
+  (re-frame/dispatch [:start-throbbing :results-frame])
   (GET (which-endpoint? corpus)
        {:handler query-results-handler
         :error-handler error-handler
@@ -56,6 +58,7 @@
                  :route :query}}))
 
 (defn query-range [corpus from to context]
+  (re-frame/dispatch [:start-throbbing :results-frame])
   (GET (which-endpoint? corpus)
        {:handler query-results-handler
         :error-handler error-handler
@@ -66,6 +69,7 @@
                  :route :query-range}}))
 
 (defn query-sort [corpus from to context criterion prop-name sort-type]
+  (re-frame/dispatch [:start-throbbing :results-frame])
   (GET (which-endpoint? corpus)
        {:handler query-results-handler
         :error-handler error-handler

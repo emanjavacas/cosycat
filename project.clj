@@ -16,7 +16,7 @@
 ;                  :exclusions [cljsjs/react]
                   ]
 ;                 [cljsjs/react-with-addons "0.13.3-0"]                 
-                 [cljsjs/react-bootstrap "0.27.3-0"
+                 [cljsjs/react-bootstrap "0.28.1-1"
                   :exclusions [org.webjars.bower/jquery]]
                  [re-frame "0.7.0-alpha"]
                  [secretary "1.2.3"]

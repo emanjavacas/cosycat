@@ -32,9 +32,11 @@
                                        Go do some research!"])))))
 
 (defn query-panel []
-  [:div.container
-   {:style {:width "100%" :padding "0px 10px 0px 10px"}}
-   [:div.row [query-field]]
-   [:div.row [toolbar]]
-   [:br]
-   [:div.row [results-frame]]])
+  (let [query-str (re-frame/subscribe [:session :query-results :query-str])]
+    (fn []
+      [:div.container
+       {:style {:width "100%" :padding "0px 10px 0px 10px"}}
+       [:div.row [query-field query-str]]
+       [:div.row [toolbar]]
+       [:br]
+       [:div.row [results-frame]]])))

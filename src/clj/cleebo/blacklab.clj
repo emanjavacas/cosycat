@@ -66,7 +66,7 @@
 (defn format-hit
   "pads hi-kwic with an empty hit in case of missing context"
   ([hit context]
-   (format-hit hit context (fn [id] {:id id :word ""})))
+   (format-hit hit context (fn [id] {:id (str "miss-" id) :word ""})))
   ([hit context empty-hit]
    (let [match-idxs (keep-indexed (fn [i hit] (when (:match hit) i)) hit)
          left  (- context (first match-idxs))
