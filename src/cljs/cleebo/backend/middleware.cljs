@@ -45,17 +45,16 @@
    :size s/Int})
 
 (def query-results-schema
-  {:query-size s/Int;(s/conditional nil? nil :else s/Int)
-   :query-str  s/Str;(s/conditional nil? nil :else s/Str)
+  {:query-size s/Int
+   :query-str  s/Str
    :from       s/Int
    :to         s/Int
-   :status {:status         s/Keyword;(s/conditional nil? nil :else s/Keyword)
-            :status-content s/Str;(s/conditional nil? nil :else s/Str)
-            }})
+   :status {:status         s/Keyword
+            :status-content s/Str}})
 
 (def db-schema
   {:active-panel s/Keyword
-   :throbbing? {s/Keyword s/Bool}
+   (s/optional-key :throbbing?) {s/Keyword s/Bool}
    :session {:query-opts query-opts-schema
              :query-results query-results-schema
              :results (s/conditional empty? {} :else results-schema)}})

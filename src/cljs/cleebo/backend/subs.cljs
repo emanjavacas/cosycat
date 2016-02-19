@@ -1,7 +1,7 @@
 (ns cleebo.backend.subs
     (:require-macros [reagent.ratom :refer [reaction]])
     (:require [re-frame.core :as re-frame]
-              [cleebo.utils :refer [filter-marked]]
+              [cleebo.utils :refer [filter-marked-hits]]
               [taoensso.timbre :as timbre]))
 
 (re-frame/register-sub
@@ -64,4 +64,14 @@
  :marked-hits
  (fn [db _]
    (let [results (reaction (get-in @db [:session :results]))]
-     (reaction (filter-marked @results)))))
+     (reaction (filter-marked-hits @results)))))
+
+(re-frame/register-sub
+ :marked-tokens
+ (fn [db _]
+   (let [results (reaction (get-in @db [:session :results]))]
+     (reaction (mapcat (fn [[hit-num {:keys [hit meta]}]]
+                         (->> hit
+                              (filter :marked)
+                              (map #(assoc % :hit-num hit-num))))
+                       @results)))))

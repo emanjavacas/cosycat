@@ -8,7 +8,7 @@
                           :size 10}
              :query-results {:query-size nil
                              :query-str nil
-                             :status {:status nil :status-text nil}
+                             :status {:status nil :status-content nil}
                              :from 0
                              :to 0}
              :results {}}})

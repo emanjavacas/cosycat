@@ -1,5 +1,6 @@
 (ns cleebo.query.components.highlight-error
-  (:require [goog.string :as gstr]))
+  (:require [goog.string :as gstr]
+            [cleebo.utils :refer [nbsp]]))
 
 (defn highlight-n [s n]
   (let [pre (subs s 0 n)
@@ -13,9 +14,6 @@
   (let [pre (subs s 0 n)
         post (subs s (inc n))]
     (str pre replacement post)))
-
-(defn nbsp [& [n]]
-  (gstr/unescapeEntities "&nbsp;"))
 
 (defn highlight-error [{query-str :query-str at :at}]
   [:div

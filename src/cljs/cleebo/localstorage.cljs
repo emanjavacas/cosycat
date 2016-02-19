@@ -12,11 +12,15 @@
   "Returns value of `key' from browser's localStorage."
   [key & {:keys [coercion-fn] :or {coercion-fn identity}}]
   (if-let [val (.getItem (.-localStorage js/window) key)]
-    (-> val
-        js/JSON.parse
-        js->clj
-        keywordify
-        coercion-fn)))
+    (try
+      (-> val
+          js/JSON.parse
+          js->clj
+          keywordify
+          coercion-fn)
+      (catch :default e
+        (.log js/console "Couldn't coerce stored database")
+        nil))))
 
 (defn remove!
   "Remove the browser's localStorage value for the given `key`"

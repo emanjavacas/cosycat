@@ -32,12 +32,7 @@
         [:div.row [:h4 [:span.text-muted "Results"]]]
         [:div.row [kv-pairs @results]]
         [:div.row [:h4 [:span.text-muted "Marked hits"]]]
-        [:div.row [kv-pairs @marked-hits]]
-        [:div.row [:h4 [:span.text-muted "Selected tokens"]]]
-;        [:div.row [kv-pairs ]]
-        [:div.row [:h4 [:span.text-muted "Match Ids"]]]
-        [:div.row
-         (map :id (filter :match (mapcat :hit (vals @results))))]]))))
+        [:div.row [kv-pairs @marked-hits]]]))))
 
 (defn ls-dump []
   [bs/button
@@ -48,7 +43,7 @@
   [bs/button
    {:on-click #(let [dump (ls/fetch :db :coercion-fn (coerce-json))]
                  (.log js/console dump))}
-   "Read from LocalStorage"])
+   "Print LocalStorage to console"])
 
 (defn ls-reset []
   [bs/button
@@ -59,28 +54,28 @@
                  (timbre/info "Couldn't reload db from LocalStorage"))}
    "Reload db from LocalStorage"])
 
-(defn open-modal []
-  (let [open? (reagent/atom false)]
-    (fn []
-      [:div
-       [bs/button
-        {:on-click #(reset! open? true)}
-        "Launch modal"]
-       [bs/modal
-        {:show @open? :on-hide #(reset! open? false)}
-        [bs/button
-         {:on-click #(reset! open? false)}
-         "Close"]]])))
+(defn open-modal [open?]
+  (fn [open?]
+    [bs/button
+     {:on-click #(reset! open? true)}
+     "Launch modal"]))
 
 (defn debug-panel []
-  [:div.container-fluid
-   [:div.row
-    [:h3 [:span.text-muted "Debug Panel"]]]
-   [:div.row [:hr]]
-   [:div.row
-    [bs/button-toolbar
-     [ls-dump]
-     [ls-read]
-     [ls-reset]
-     [open-modal]]]
-   [:div.row [summary-session]]])
+  (let [open? (reagent/atom false)]
+    (fn []
+      [:div.container-fluid
+       [:div.row
+        [:h3 [:span.text-muted "Debug Panel"]]]
+       [:div.row [:hr]]
+       [:div.row
+        [bs/button-toolbar
+         [ls-dump]
+         [ls-read]
+         [ls-reset]
+         [open-modal open?]]
+        [bs/modal
+         {:show @open? :on-hide #(reset! open? false)}
+         [bs/button
+          {:on-click #(reset! open? false)}
+          "Close"]]]
+       [:div.row [summary-session]]])))

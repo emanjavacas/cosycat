@@ -2,6 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [goog.dom.dataset :as gdataset]
+            [goog.string :as gstr]
             [schema.coerce :as coerce]
             [cleebo.backend.middleware :refer [db-schema]])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
@@ -11,10 +12,13 @@
         {bl-corpora :corpora}  (cljs-env :blacklab)]
     (concat cqp-corpora bl-corpora)))
 
-(defn filter-marked [results]
+(defn filter-marked-hits [results]
   (into {} (filter (fn [[hit-num {:keys [hit meta]}]]
-                     (:marked meta))
+                     (or (:has-marked meta) (:marked meta)))
                    results)))
+
+(defn nbsp [& {:keys [n] :or {n 1}}]
+  (apply str (repeat n (gstr/unescapeEntities "&nbsp;"))))
 
 (defn ->map [k l]
   {:key k :label l})
@@ -57,3 +61,7 @@
 
 (defn coerce-json [& {:keys [schema] :or {schema db-schema}}]
   (coerce/coercer schema coerce/json-coercion-matcher))
+
+(defn make-annotation [m]
+  (assoc m :username js/username :time (js/Date.)))
+

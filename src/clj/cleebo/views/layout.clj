@@ -27,8 +27,7 @@
    [:link
     {:type "text/css" :rel "stylesheet"
      :href "http://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic"}]
-   [:link {:href bootstrap-css :rel "stylesheet"}]
-   [:link {:href "vendor/css/re-com.css" :rel "stylesheet"}]]
+   [:link {:href bootstrap-css :rel "stylesheet"}]]
     [:body
      (nav logged?)
      [:div.container  {:style "padding: 80px 40px 0 40px;"} ;body

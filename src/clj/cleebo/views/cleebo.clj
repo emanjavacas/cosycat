@@ -2,7 +2,7 @@
   (:require [hiccup.core :refer [html]]
             [cleebo.views.layout :refer [bootstrap-css]]))
 
-(defn cleebo-page [& {:keys [csrf]}]
+(defn cleebo-page [& {:keys [csrf username]}]
   (html
    [:html
     {:lang "en"}
@@ -10,6 +10,7 @@
      [:meta {:charset "utf-8"}]
      [:link {:href bootstrap-css :rel "stylesheet"}]
      [:link {:href "vendor/css/material-design-iconic-font.min.css" :rel "stylesheet"}]
+     [:link {:href "vendor/css/hint.min.css" :rel "stylesheet"}]
      [:link {:href "css/dashboard.css" :rel "stylesheet"}]     
      [:link {:href "css/main.css" :rel "stylesheet"}]
      [:link
@@ -21,6 +22,7 @@
     [:body
      [:div#app]
      [:script (str "var csrf =\"" csrf "\";")]
+     [:script (str "var username =\"" username "\";")]
      ;; [:script {:src "vendor/js/material-ui/add-robo.js"}]
      ;; [:script {:src "vendor/js/material-ui/material.js"}]
      [:script {:src "js/compiled/app.js"}]

@@ -68,3 +68,25 @@
 
 (def dropdown-menu
   (reagent.core/adapt-react-class js/ReactBootstrap.Dropdown.Menu))
+
+(def navbar-collapse
+  (reagent.core/adapt-react-class js/ReactBootstrap.Navbar.Collapse))
+
+(def navbar-header
+  (reagent.core/adapt-react-class js/ReactBootstrap.Navbar.Header))
+
+(def navbar-brand
+  (reagent.core/adapt-react-class js/ReactBootstrap.Navbar.Brand))
+
+(def navbar-toggle
+  (reagent.core/adapt-react-class js/ReactBootstrap.Navbar.Toggle))
+
+(def navbar-link
+  (reagent.core/adapt-react-class js/ReactBootstrap.Navbar.Link))
+
+(def navbar-text
+  (reagent.core/adapt-react-class js/ReactBootstrap.Navbar.Text))
+
+
+
+

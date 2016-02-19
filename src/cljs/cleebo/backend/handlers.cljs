@@ -5,7 +5,7 @@
               [cleebo.localstorage :as ls]
               [cleebo.backend.middleware
                :refer [standard-middleware no-debug-middleware]]
-              [cleebo.utils :refer [filter-marked]]))
+              [cleebo.utils :refer [filter-marked-hits]]))
 
 (re-frame/register-handler
  :initialize-db
@@ -14,7 +14,7 @@
 
 (re-frame/register-handler
  :reset-db
- standard-middleware
+ no-debug-middleware
  (fn [_ _]
    db/default-db))
 
@@ -74,29 +74,73 @@
          (update-in [:session :query-results] merge query-results)
          (update-in [:session :results]
                     (fn [old-results new-results]
-                      (merge new-results (filter-marked old-results)))
+                      (merge new-results (filter-marked-hits old-results)))
                     results)))))
+
+(defn demark-all-tokens [hit]
+  (map #(dissoc % :marked) hit))
 
 (re-frame/register-handler
  :mark-hit
  standard-middleware
  (fn [db [_ {:keys [hit-num flag]}]]
-   (assoc-in db [:session :results hit-num :meta :marked] flag)))
+   (if flag
+     (assoc-in db [:session :results hit-num :meta :marked] true)
+     (let [{:keys [hit meta] :as hit-map} (get-in db [:session :results hit-num])
+           hit-map (assoc hit-map :hit (demark-all-tokens hit))
+           hit-map (assoc-in hit-map [:meta :marked] false)
+           hit-map (assoc-in hit-map [:meta :has-marked] false)]
+       (assoc-in db [:session :results hit-num] hit-map)))))
+
+(defn update-token [{:keys [hit meta] :as hit-map} token-id token-fn]
+  (assoc
+   hit-map
+   :hit
+   (map (fn [{:keys [id] :as token}]
+          (if (= id token-id)
+            (token-fn token)
+            token))
+        hit)))
+
+(defn has-marked?
+  "for a given hit-map we look if the current (de)marking update
+  leave behind marked tokens. The result will be false if no marked
+  tokens remain, otherwise it returns the token-id of the token
+  being marked for debugging purposes"
+  [{:keys [hit meta] :as hit-map} flag token-id]
+  (if flag
+    true
+    (let [marked-tokens (filter :marked hit)]
+      (case (count marked-tokens)
+            0 (throw (js/Error. "Trying to demark a token, but no marked tokens found"))
+            1 (do (assert (= token-id (:id (first marked-tokens)))) false)
+            (some #(= token-id %) (map :id marked-tokens))))))
 
 (re-frame/register-handler
  :mark-token
  standard-middleware
  (fn [db [_ {:keys [hit-num token-id flag]}]]
-   (let [hit (get-in db [:session :results hit-num :hit])]
-     (assoc-in db
-               [:session :results hit-num :hit]
-               (map (fn [{:keys [id] :as token}]
-                      (if (= id token-id)
-                        (if flag
-                          (assoc token :marked true)
-                          (dissoc token :marked))
-                        token))
-                    hit)))))
+   (let [hit-map (get-in db [:session :results hit-num])
+         has-marked (has-marked? hit-map flag token-id)
+         hit-map (assoc-in hit-map [:meta :has-marked] (boolean has-marked))
+         token-fn (fn [token] (if flag
+                                (assoc token :marked true)
+                                (dissoc token :marked)))]
+     (assoc-in
+      db
+      [:session :results hit-num]
+      (update-token hit-map token-id token-fn)))))
+
+(re-frame/register-handler
+ :annotate
+ standard-middleware
+ (fn [db [_ {:keys [hit-num token-id ann]}]]
+   (let [hit-map (get-in db [:session :results hit-num])
+         token-fn (fn [token] (assoc token :ann ann))]
+     (assoc-in
+      db
+      [:session :results hit-num]
+      (update-token hit-map token-id token-fn)))))
 
 (defn handle-ws-msg [db {:keys [type msg]}]
   (case type

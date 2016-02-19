@@ -3,7 +3,7 @@
             [environ.core :refer [env]]
             [taoensso.timbre :as timbre]
             [compojure.core
-             :refer [GET POST ANY defroutes wrap-routes]]
+             :refer [GET POST ANY HEAD defroutes wrap-routes]]
             [compojure.route :refer [not-found resources]]
             [prone.middleware :refer [wrap-exceptions]]
             [cleebo.views.error :refer [error-page]]
@@ -43,7 +43,8 @@
 
 (def cleebo-route
   (safe
-   (fn [req] (cleebo-page :csrf *anti-forgery-token*))
+   (fn [{{{username :username} :identity} :session}]
+     (cleebo-page :csrf *anti-forgery-token* :username username))
    {:login-uri "/login" :is-ok? authenticated?}))
 
 (defn logout-route

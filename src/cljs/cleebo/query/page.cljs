@@ -19,7 +19,7 @@
         (cond
           @throbbing?                 [throbbing-panel]
           (= status :error)           [error-panel
-                                       :status "Ups! something bad happened"
+                                       :status "Oops! something bad happened"
                                        :status-content [:div status-content]]
           (= 0 @query-size)           [error-panel
                                        :status "The query returned no matching results"]
@@ -28,7 +28,7 @@
                                                     (inc (:at status-content)))
                                        :status-content (highlight-error status-content)]
           (not (nil? @query-size))    [results-table]
-          :else                       [error-panel :status "No results to be shown. 
+          :else                       [error-panel :status "No results to be shown... 
                                        Go do some research!"])))))
 
 (defn query-panel []
