@@ -7,12 +7,13 @@
             [cleebo.routes :as routes]
             [cleebo.ws :as ws]
             [cleebo.localstorage :as ls]
+            [cleebo.components :refer [notification-container notification]]
             [cleebo.query.page :refer [query-panel]]
             [cleebo.annotation.page :refer [annotation-panel]]
             [cleebo.settings.page :refer [settings-panel]]
             [cleebo.updates.page :refer [updates-panel]]
             [cleebo.debug.page :refer [debug-panel]]
-            [cleebo.utils :refer [notify! coerce-json nbsp]]
+            [cleebo.utils :refer [coerce-json nbsp]]
             [taoensso.timbre :as timbre]
             [figwheel.client :as figwheel]
             [devtools.core :as devtools]
@@ -39,12 +40,6 @@
                            :margin-right "5px"}}]
         label]])))
 
-(defn notification [id message]
-  ^{:key id}
-  [:li#notification
-   {:on-click #(re-frame/dispatch [:drop-notification id])}
-   message])
-
 (defn navbar []
   [bs/navbar
    {:inverse true
@@ -60,11 +55,40 @@
     [navlink :debug-panel "#/debug" "Debug" "zmdi-bug"]          
     [navlink :exit          "#/exit" "Exit" "zmdi-power"]]])
 
+(defn load-from-ls-modal [open?]
+  (fn [open?]
+    [bs/modal
+     {:show @open? :on-hide #(reset! open? false)}
+     [bs/modal-header
+      [bs/modal-title
+       [:div "Watch out!" [:span.pull-right [:i.zmdi.zmdi-storage]]]]]
+     [bs/modal-body
+      [:p "Cleebo found unsaved activities in your browser."]
+      [:p "Do you want to restore it? Select 'yes' or 'no'"]
+      [:br]
+      [:p.text-muted "Note that you might not be able to restore it later"]]
+     [bs/modal-footer
+      [bs/button-toolbar
+       {:className "pull-right"}
+       [bs/button
+        {:on-click #(let [dump (ls/fetch :db :coercion-fn (coerce-json))]
+                      (timbre/debug (:active-panel dump))
+                      (re-frame/dispatch [:load-db dump])
+                      (re-frame/dispatch [:close-init-modal]))}
+        "yes"]
+       [bs/button
+        {:on-click #(re-frame/dispatch [:close-init-modal])}
+        "no"]]]]))
+
 (defn main-panel []
-  (let [active-panel (re-frame/subscribe [:active-panel])]
+  (let [active-panel (re-frame/subscribe [:active-panel])
+        open-modal? (re-frame/subscribe [:open-init-modal])
+        notifications (re-frame/subscribe [:notifications])]
     (fn []
       [:div
        [navbar]
+       [notification-container notifications]
+       [load-from-ls-modal open-modal?]
        [:div.container-fluid
         {:style {:padding "75px 50px 0 50px"}}
         (panels @active-panel)]])))
@@ -73,7 +97,8 @@
   (reagent/render [#'main-panel] (.getElementById js/document "app")))
 
 (defn ^:export init []
-  (let [host (cljs-env :host)]
+  (let [host (cljs-env :host)
+        is-open? (reagent/atom false)]
     ;; init devtools
     (devtools/enable-feature! :sanity-hints :dirac)
     (devtools/install!)
@@ -82,11 +107,9 @@
     ;; web-sockets
     (ws/set-ws-ch)
     ;; start db
+    (re-frame/dispatch-sync [:initialize-db])
     (if-let [dump (ls/fetch :db :coercion-fn (coerce-json))]
-      ;; if an old version is found in LS, prompt for recovery
-      ;; obviously this has to be done in 
-      (re-frame/dispatch-sync [:load-db dump])
-      (re-frame/dispatch-sync [:initialize-db]))
+      (re-frame/dispatch-sync [:open-init-modal]))
     ;; handle refreshes
     (.addEventListener js/window "beforeunload" #(re-frame/dispatch [:dump-db]))
     ;; render root

@@ -26,9 +26,20 @@
 
 (re-frame/register-handler
  :dump-db
+ standard-middleware
  (fn [db _]
    (ls/put! :db db)
    db))
+
+(re-frame/register-handler
+ :open-init-modal
+ (fn [db _]
+   (assoc-in db [:init-modal] true)))
+
+(re-frame/register-handler
+ :close-init-modal
+ (fn [db _]
+   (assoc-in db [:init-modal] false)))
 
 (re-frame/register-handler
  :set-active-panel
@@ -65,17 +76,20 @@
    (let [session (:session db)]
      (assoc db :session (assoc-in session path value)))))
 
+(defn keywordify-results [results]
+  (into {} (map (juxt :id identity) results)))
+
 (re-frame/register-handler
  :set-query-results
- no-debug-middleware
+ standard-middleware
  (fn [db [_ & [{:keys [results query-size query-str status from to] :as data}]]]
-   (let [query-results (dissoc data :results)]
+   (let [query-results (dissoc data :results)
+         merge-results (fn [old-results] (merge (keywordify-results results)
+                                                (filter-marked-hits old-results)))]
      (-> db
          (update-in [:session :query-results] merge query-results)
-         (update-in [:session :results]
-                    (fn [old-results new-results]
-                      (merge new-results (filter-marked-hits old-results)))
-                    results)))))
+         (assoc-in [:session :results] (map :id results))
+         (update-in [:session :results-by-id] merge-results)))))
 
 (defn demark-all-tokens [hit]
   (map #(dissoc % :marked) hit))
@@ -83,14 +97,14 @@
 (re-frame/register-handler
  :mark-hit
  standard-middleware
- (fn [db [_ {:keys [hit-num flag]}]]
+ (fn [db [_ {:keys [hit-id flag]}]]
    (if flag
-     (assoc-in db [:session :results hit-num :meta :marked] true)
-     (let [{:keys [hit meta] :as hit-map} (get-in db [:session :results hit-num])
+     (assoc-in db [:session :results-by-id hit-id :meta :marked] true)
+     (let [{:keys [hit meta] :as hit-map} (get-in db [:session :results-by-id hit-id])
            hit-map (assoc hit-map :hit (demark-all-tokens hit))
            hit-map (assoc-in hit-map [:meta :marked] false)
            hit-map (assoc-in hit-map [:meta :has-marked] false)]
-       (assoc-in db [:session :results hit-num] hit-map)))))
+       (assoc-in db [:session :results-by-id hit-id] hit-map)))))
 
 (defn update-token [{:keys [hit meta] :as hit-map} token-id token-fn]
   (assoc
@@ -119,8 +133,8 @@
 (re-frame/register-handler
  :mark-token
  standard-middleware
- (fn [db [_ {:keys [hit-num token-id flag]}]]
-   (let [hit-map (get-in db [:session :results hit-num])
+ (fn [db [_ {:keys [hit-id token-id flag]}]]
+   (let [hit-map (get-in db [:session :results-by-id hit-id])
          has-marked (has-marked? hit-map flag token-id)
          hit-map (assoc-in hit-map [:meta :has-marked] (boolean has-marked))
          token-fn (fn [token] (if flag
@@ -128,18 +142,18 @@
                                 (dissoc token :marked)))]
      (assoc-in
       db
-      [:session :results hit-num]
+      [:session :results-by-id hit-id]
       (update-token hit-map token-id token-fn)))))
 
 (re-frame/register-handler
  :annotate
  standard-middleware
- (fn [db [_ {:keys [hit-num token-id ann]}]]
-   (let [hit-map (get-in db [:session :results hit-num])
+ (fn [db [_ {:keys [hit-id token-id ann]}]]
+   (let [hit-map (get-in db [:session :results-by-id hit-id])
          token-fn (fn [token] (assoc token :ann ann))]
      (assoc-in
       db
-      [:session :results hit-num]
+      [:session :results-by-id hit-id]
       (update-token hit-map token-id token-fn)))))
 
 (defn handle-ws-msg [db {:keys [type msg]}]

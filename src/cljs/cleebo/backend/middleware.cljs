@@ -28,16 +28,27 @@
    ;; any other additional keys
    s/Keyword                s/Any})
 
+(def annotation-schema
+  {:time     s/Int
+   s/Keyword s/Any})
+
 (def token-meta-schema
   {;; optional keys
    (s/optional-key :marked) s/Bool
-   (s/optional-key :ann)    s/Any
+   (s/optional-key :ann)    annotation-schema
    ;; any other additional keys
    s/Keyword                s/Any})
 
-(def results-schema
+(def results-by-id-schema
+  "Internal representation of results. A map from ids to hit-maps"
   {s/Int {:hit  [token-hit-schema]
+          :id   s/Int
           :meta token-meta-schema}})
+
+(def results-schema
+  "current results being displayed are represented as an ordered list
+  of hits ids. Each id map to an entry in the :results-by-id map"
+  [s/Int])
 
 (def query-opts-schema
   {:corpus s/Str
@@ -54,10 +65,13 @@
 
 (def db-schema
   {:active-panel s/Keyword
+   :init-modal   s/Bool
    (s/optional-key :throbbing?) {s/Keyword s/Bool}
+   :settings {:delay s/Int}
    :session {:query-opts query-opts-schema
              :query-results query-results-schema
-             :results (s/conditional empty? {} :else results-schema)}})
+             :results-by-id (s/conditional empty? {} :else results-by-id-schema)
+             :results (s/conditional empty? [] :else results-schema)}})
 
 (defn validate-db-schema
   [db]

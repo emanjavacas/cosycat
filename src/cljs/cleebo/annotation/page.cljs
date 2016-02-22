@@ -2,6 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
+            [cleebo.utils :refer [parse-time]]
             [cleebo.components :refer [error-panel]]))
 
 (defn hit-token [{:keys [id word match marked]}]
@@ -11,11 +12,11 @@
 ;       [:span {:class "hint--bottom" :data-hint "Hi there!"} ""]
        ])))
 
-(defn hit-row [hit-num hit]
-  (fn [hit-num hit]
+(defn hit-row [{:keys [hit id meta]}]
+  (fn [{:keys [hit id meta]}]
     (into [:tr]
           (for [token hit]
-            ^{:key (str hit-num "-" (:id token))} [hit-token token]))))
+            ^{:key (str id "-" (:id token))} [hit-token token]))))
 
 (def example-anns [{:key "animacy" :value "M"} {:key "aspect" :value "perfect"}])
 
@@ -25,20 +26,20 @@
     :on-click #(.log js/console "NEW")}
    [bs/glyphicon {:glyph "plus"}]])
 
-(defn annotation-row [hit hit-num]
-  (fn [hit hit-num]
+(defn annotation-row [{:keys [hit meta id]}]
+  (fn [{:keys [hit meta id]}]
     (into
      [:tr]
-     (for [{:keys [id xmlid word ann] :as token} hit
-           :let [key (str hit-num "-" id "props")]]
-       ^{:key key}
-       [:td {:style {:max-width "65px"}}
-        [:table {:style {:font-size "13px" :max-width "100%" :min-height "50px"}}
+     (for [{:keys [word ann] :as token} hit]
+       ^{:key (str id "-" (:id token) "props")}
+       [:td 
+        [:table; {:style {:font-size "13px" :max-width "100%" :min-height "50px"}}
          [:thead]
          [:tbody
           (if ann
-            (for [[k v] (seq ann)]
-              ^{:key (str hit-num "-" id "-anns-" k)}
+            (for [[k v] (seq ann)
+                  :let [v (if (= :time k) (parse-time v) v)]]
+              ^{:key (str id "-" (:id token) "-anns-" k)}
               [:tr {:style {:padding "15px"}}
                [:td {:style {:text-align "left"  :padding-top "5px" :padding-bottom "5px"}} (str k)]
                [:td {:style {:text-align "right" :padding-top "5px" :padding-bottom "5px"}}
@@ -55,10 +56,10 @@
      [:tbody {:style {:font-size "13px"}}
       (doall
        (interleave
-        (for [[hit-num {:keys [hit meta]}] (sort-by first @marked-hits)]
-          ^{:key hit-num} [hit-row hit-num hit])
-        (for [[hit-num {:keys [hit meta]}] (sort-by first @marked-hits)]
-          ^{:key (str hit-num "anns")} [annotation-row hit hit-num])))]]))
+        (for [[_ {:keys [id] :as hit-map}] @marked-hits]
+          ^{:key id} [hit-row hit-map])
+        (for [[_ {:keys [id] :as hit-map}] @marked-hits]
+          ^{:key (str id "anns")} [annotation-row hit-map])))]]))
 
 (defn back-to-query-button []
   [bs/button {:href "#/query"}

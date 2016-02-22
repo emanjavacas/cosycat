@@ -13,23 +13,32 @@
 (defn results-frame []
   (let [status (re-frame/subscribe [:session :query-results :status])
         query-size (re-frame/subscribe [:session :query-results :query-size])
-        throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
+        query-str (re-frame/subscribe [:session :query-results :query-str])
+        throbbing? (re-frame/subscribe [:throbbing? :results-frame])
+        has-error (fn [status] (= status :error))
+        query-error (fn [status] (= status :query-str-error))
+        empty-results (fn [query-str query-size]
+                        (and (not (= "" query-str)) (zero? query-size)))
+        has-results (fn [query-size] (not (zero? query-size)))]
     (fn []
       (let [{:keys [status status-content]} @status]
         (cond
           @throbbing?                 [throbbing-panel]
-          (= status :error)           [error-panel
-                                       :status "Oops! something bad happened"
-                                       :status-content [:div status-content]]
-          (= 0 @query-size)           [error-panel
-                                       :status "The query returned no matching results"]
-          (= status :query-str-error) [error-panel
-                                       :status (str "Query misquoted starting at position "
-                                                    (inc (:at status-content)))
-                                       :status-content (highlight-error status-content)]
-          (not (nil? @query-size))    [results-table]
-          :else                       [error-panel :status "No results to be shown... 
-                                       Go do some research!"])))))
+          (has-error status)   [error-panel
+                                :status "Oops! something bad happened"
+                                :status-content [:div status-content]]
+          (query-error status) [error-panel
+                                :status (str "Query misquoted starting at position "
+                                             (inc (:at status-content)))
+                                :status-content (highlight-error status-content)]
+          (empty-results
+           @query-str
+           @query-size)        [error-panel
+                                :status "The query returned no matching results"]
+          (has-results
+           @query-size)        [results-table]
+          :else                [error-panel
+                                :status "No results to be shown... Go do some research!"])))))
 
 (defn query-panel []
   (let [query-str (re-frame/subscribe [:session :query-results :query-str])]
@@ -40,3 +49,4 @@
        [:div.row [toolbar]]
        [:br]
        [:div.row [results-frame]]])))
+ 

@@ -81,7 +81,9 @@
   [hits from to context]
   {:pre (= (count hits) (- to from))}
   (let [formatted (map (fn [hit-map] (update hit-map :hit #(format-hit % context))) hits)]
-    (apply array-map (interleave (range from to) formatted))))
+    formatted
+;    (apply array-map (interleave (range from to) formatted))
+    ))
 
 (defn- bl-query*
   "runs a query, updating the current-hits in the Blacklab component and

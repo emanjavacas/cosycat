@@ -4,6 +4,7 @@
             [goog.dom.dataset :as gdataset]
             [goog.string :as gstr]
             [schema.coerce :as coerce]
+            [taoensso.timbre :as timbre]
             [cleebo.backend.middleware :refer [db-schema]])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
@@ -12,10 +13,15 @@
         {bl-corpora :corpora}  (cljs-env :blacklab)]
     (concat cqp-corpora bl-corpora)))
 
-(defn filter-marked-hits [results]
-  (into {} (filter (fn [[hit-num {:keys [hit meta]}]]
-                     (or (:has-marked meta) (:marked meta)))
-                   results)))
+(def css-transition-group
+  (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
+
+(defn filter-marked-hits
+  [results-by-id]
+  (into {} (filter
+            (fn [[_ {:keys [meta]}]]
+              (or (:has-marked meta) (:marked meta)))
+            results-by-id)))
 
 (defn nbsp [& {:keys [n] :or {n 1}}]
   (apply str (repeat n (gstr/unescapeEntities "&nbsp;"))))
@@ -40,12 +46,16 @@
       (.getTime)
       (.toString 36)))
 
-(defn notify! [{msg :msg}]
-  (let [id (time-id)]
-    (js/setTimeout #(re-frame/dispatch [:drop-notification id]) 5000)
-    (re-frame/dispatch
-     [:add-notification
-      {:msg msg :id id}])))
+(defn parse-time [i]
+  (let [js-date (js/Date. i)]
+    (.toDateString js-date)))
+
+(defn notify! [& {:keys [msg]}]
+  {:pre [(and msg)]}
+  (let [delay (re-frame/subscribe [:settings :delay])
+        id (time-id)]
+    (js/setTimeout #(re-frame/dispatch [:drop-notification id]) @delay)
+    (re-frame/dispatch [:add-notification {:msg msg :id id}])))
 
 (defn keyword-if-not-int [s]
   (if (js/isNaN s)
@@ -54,8 +64,7 @@
 
 (defn keywordify [m]
   (cond
-    (map? m) (into {} (for [[k v] m]
-                        [(keyword-if-not-int k) (keywordify v)]))
+    (map? m) (into {} (for [[k v] m] [(keyword-if-not-int k) (keywordify v)]))
     (coll? m) (vec (map keywordify m))
     :else m))
 
@@ -63,5 +72,7 @@
   (coerce/coercer schema coerce/json-coercion-matcher))
 
 (defn make-annotation [m]
-  (assoc m :username js/username :time (js/Date.)))
+  (assoc m :username js/username :time (.now js/Date)))
 
+(defn select-values [m ks]
+  (reduce #(conj %1 (m %2)) [] ks))

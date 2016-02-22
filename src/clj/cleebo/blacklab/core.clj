@@ -58,7 +58,8 @@
      -hits)))
 
 (defn- make-hit-map
-  "Base handler that takes a Hit and gives a clojure data struct"
+  "Base handler that takes a Hit and gives a clojure data struct.
+  We need to keep -hits around because KWIC relies on it"
   [^Hit -hit ^Hits -hits]
   (let [kwic (.getKwic -hits -hit)
         props (map keyword (.getProperties kwic))
@@ -73,30 +74,9 @@
 
 ;;; middleware
 (defn wrap-clean
-  "Basic handler that removes the hit key from hit-map"
+  "Basic handler that removes the -hit key from hit-map"
 ;  [handler]
   [hit-map] (dissoc hit-map :-hit :-hits))
-
-(defn wrap-doc-by-name
-  "Handler for extracting doc metadata"
-  [handler]
-  (fn [hit-map ^Searcher searcher field-name]
-    (let [^Hit -hit (:-hit hit-map)
-          ^Document doc (.document searcher (.doc -hit))
-          ^String field (.stringValue (.getField doc field-name))
-          new-map (assoc-in hit-map [:meta (keyword field-name)] field)]
-      (handler new-map))))
-
-(defn wrap-doc-by-names
-  "Extract multiple fields at once"
-  [handler]
-  (fn [hit-map ^Searcher searcher & field-names]
-    (let [^Hit -hit (:-hit hit-map)
-          ^Document doc (.document searcher (.doc -hit))
-          get-value (fn [field-name] (.stringValue (.getField doc field-name)))
-          fields (zipmap (map keyword field-names) (map get-value field-names))
-          new-map (assoc hit-map :meta fields)]
-      (handler new-map))))
 
 (defn wrap-doc
   "Extract all doc fields"
@@ -126,8 +106,15 @@
           new-map (assoc hit-map :hit hit-match)]
       (handler new-map))))
 
+(defn wrap-hit-id
+  "Add hit id"
+  [handler]
+  (fn [{:keys [-hit hit] :as hit-map}]
+    (let [new-map (assoc hit-map :id (.hashCode -hit))]
+      (handler new-map))))
+
 (defn hits-handler [hits searcher]
-  (let [middleware (-> wrap-clean wrap-match (wrap-doc searcher))
+  (let [middleware (-> wrap-clean wrap-match wrap-hit-id (wrap-doc searcher))
         handler (fn [hit] (middleware hit))]
     (for [^Hit hit hits
           :let [hit-map (make-hit-map hit hits)]]
@@ -201,7 +188,9 @@
 
 ;; (def paths-map {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"})
 
-;; (def searcher (new-blsearcher paths-map))
+;; (def searcher (make-searcher (get paths-map "brown-id")))
+
+;; (def -hits (run-query searcher "\"a\""))
 
 ;; (for [i (range 1 10)
 ;;       :let [from (* i 100)

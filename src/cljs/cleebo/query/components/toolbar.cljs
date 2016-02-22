@@ -93,10 +93,10 @@
           (if (= (.-charCode pressed) 13)
             (let [k (by-id "token-ann-key")
                   v (by-id "token-ann-val")]
-              (doseq [{:keys [hit-num id]} @marked-tokens]
+              (doseq [{:keys [hit-id id]} @marked-tokens]
                 (re-frame/dispatch
                  [:annotate
-                  {:hit-num hit-num
+                  {:hit-id hit-id
                    :token-id id
                    :ann (make-annotation {k v})}])))))}]]]))
 
@@ -168,7 +168,7 @@
         query-results (re-frame/subscribe [:query-results])]
     (fn []
       [:div.container-fluid
-       {:style {:visibility (if-not (:query-size @query-results) "hidden" "visible")}}
+       {:style {:visibility (if (zero? (:query-size @query-results)) "hidden" "visible")}}
        [:div.row {:style {:margin-top "10px"}}
         [:div.col-lg-6
          [:div.row

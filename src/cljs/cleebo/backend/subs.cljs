@@ -1,7 +1,7 @@
 (ns cleebo.backend.subs
     (:require-macros [reagent.ratom :refer [reaction]])
     (:require [re-frame.core :as re-frame]
-              [cleebo.utils :refer [filter-marked-hits]]
+              [cleebo.utils :refer [filter-marked-hits select-values]]
               [taoensso.timbre :as timbre]))
 
 (re-frame/register-sub
@@ -10,9 +10,9 @@
    (reaction @db)))
 
 (re-frame/register-sub
- :name
+ :open-init-modal
  (fn [db _]
-   (reaction (:name @db))))
+   (reaction (:init-modal @db))))
 
 (re-frame/register-sub
  :active-panel
@@ -37,6 +37,12 @@
      (reaction (get-in @session path)))))
 
 (re-frame/register-sub
+ :settings
+ (fn [db [_ & path]]
+   (let [settings (reaction (:settings @db))]
+     (reaction (get-in @settings path)))))
+
+(re-frame/register-sub
  :query-opts
  (fn [db _]
    (reaction (get-in @db [:session :query-opts]))))
@@ -55,23 +61,21 @@
  :results
  (fn [db _]
    (let [results (reaction (get-in @db [:session :results]))
-         query-results (reaction (get-in @db [:session :query-results]))
-         from (reaction (:from @query-results))
-         to (reaction (:to @query-results))]
-     (reaction (select-keys @results (range @from @to))))))
+         results-by-id (reaction (get-in @db [:session :results-by-id]))]
+     (reaction (select-values @results-by-id @results)))))
 
-(re-frame/register-sub
+(re-frame/register-sub ;all marked hits, also if currently not in table-results
  :marked-hits
  (fn [db _]
-   (let [results (reaction (get-in @db [:session :results]))]
-     (reaction (filter-marked-hits @results)))))
+   (let [results-by-id (reaction (get-in @db [:session :results-by-id]))]
+     (reaction (filter-marked-hits @results-by-id)))))
 
 (re-frame/register-sub
  :marked-tokens
  (fn [db _]
-   (let [results (reaction (get-in @db [:session :results]))]
-     (reaction (mapcat (fn [[hit-num {:keys [hit meta]}]]
+   (let [results-by-id (reaction (get-in @db [:session :results-by-id]))]
+     (reaction (mapcat (fn [[_ {:keys [hit id meta]}]]
                          (->> hit
                               (filter :marked)
-                              (map #(assoc % :hit-num hit-num))))
-                       @results)))))
+                              (map #(assoc % :hit-id id))))
+                       @results-by-id)))))

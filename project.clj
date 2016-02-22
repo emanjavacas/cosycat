@@ -13,11 +13,10 @@
                  [selmer "0.9.3"]
                  [hiccup "1.0.5"]
                  [reagent "0.6.0-alpha"
-;                  :exclusions [cljsjs/react]
-                  ]
-;                 [cljsjs/react-with-addons "0.13.3-0"]                 
+                  :exclusions [cljsjs/react]]
                  [cljsjs/react-bootstrap "0.28.1-1"
-                  :exclusions [org.webjars.bower/jquery]]
+                  :exclusions [org.webjars.bower/jquery cljsjs/react]]
+                 [cljsjs/react-with-addons "0.14.3-0"] 
                  [re-frame "0.7.0-alpha"]
                  [secretary "1.2.3"]
                  [ring/ring-anti-forgery "1.0.0"]
@@ -36,7 +35,7 @@
                  [com.stuartsierra/component "0.3.1"]
                  [org.clojure/tools.namespace "0.2.11"]
                  [cqp-clj "0.1.0-SNAPSHOT"]
-                                        ; blacklab
+                 ; blacklab
                  [org.apache.lucene/lucene-core "4.2.1"]
                  [org.apache.lucene/lucene-analyzers-common "4.2.1"]
                  [org.apache.lucene/lucene-highlighter "4.2.1"]

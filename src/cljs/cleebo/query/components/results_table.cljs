@@ -1,6 +1,7 @@
 (ns cleebo.query.components.results-table
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
+            [taoensso.timbre :as timbre]
             [goog.dom :as gdom]
             [goog.dom.classes :as gclass]
             [goog.dom.dataset :as gdataset]
@@ -18,7 +19,7 @@
         (reset! highlighted? (gclass/has e "highlighted"))
         (re-frame/dispatch
          [:mark-token
-          {:hit-num (js/parseInt (gdataset/get (gdom/getParentElement e) "hit"))
+          {:hit-id (js/parseInt (gdataset/get (gdom/getParentElement e) "hit"))
            :token-id (gdataset/get e "id")
            :flag @highlighted?}]))
       (when (= 2 button)
@@ -32,7 +33,7 @@
         (gclass/enable e "highlighted" @highlighted?)
         (re-frame/dispatch
          [:mark-token
-          {:hit-num (js/parseInt (gdataset/get (gdom/getParentElement e) "hit"))
+          {:hit-id (js/parseInt (gdataset/get (gdom/getParentElement e) "hit"))
            :token-id (gdataset/get e "id")
            :flag @highlighted?}])))))
 
@@ -51,9 +52,9 @@
         :style {:border-bottom (if ann "5px turquoise solid")}}
        word])))
 
-(defn results-row [hit-num hit meta]
-  (fn [hit-num hit meta]
-    [:tr {:data-hit hit-num}
+(defn results-row [hit-num {:keys [hit id meta]}]
+  (fn [hit-num {:keys [hit id meta]}]
+    [:tr {:data-hit id}
      (concat
       ;; checkbox
       [^{:key (str hit-num "-check")}
@@ -63,7 +64,7 @@
                        :on-change #(let [flag (.-checked (.-target %))]
                                      (re-frame/dispatch
                                       [:mark-hit
-                                       {:hit-num hit-num
+                                       {:hit-id id
                                         :flag flag}]))}]]
        ;; hit number
        ^{:key (str hit-num "-num")}
@@ -75,6 +76,7 @@
 
 (defn results-table []
   (let [results (re-frame/subscribe [:results])
+        from (re-frame/subscribe [:session :query-results :from])
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]
     (fn []
@@ -89,7 +91,10 @@
        [:tbody {:style {:font-size "11px"}}
         (doall
          (interleave
-          (for [[hit-num {:keys [hit meta]}] (sort-by first @results)]
-            ^{:key hit-num} [results-row hit-num hit meta])
-          (for [[hit-num {:keys [hit meta]}] (sort-by first @results)]
+          (for [[idx {:keys [hit meta id] :as hit-map}] (map-indexed vector @results)
+                :let [hit-num (+ idx @from)]]
+            ^{:key hit-num} [results-row hit-num hit-map])
+          (for [[idx {:keys [hit meta]}] (map-indexed vector @results)
+                :let [hit-num (+ idx @from)]]
             ^{:key (str hit-num "rep")} [:tr])))]])))
+

@@ -3,7 +3,7 @@
             [re-frame.core :as re-frame]
             [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]
-            [cleebo.utils :refer [coerce-json]]
+            [cleebo.utils :refer [coerce-json notify!]]
             [cleebo.backend.middleware :refer [db-schema]]
             [cleebo.localstorage :as ls]))
 
@@ -20,19 +20,22 @@
 (defn summary-session []
   (let [query-opts (re-frame/subscribe [:query-opts])
         query-results (re-frame/subscribe [:query-results])
-        results (re-frame/subscribe [:session :results])
+        results (re-frame/subscribe [:session :results-by-id])
+        result-keys (re-frame/subscribe [:session :results])
         marked-hits (re-frame/subscribe [:marked-hits])]
+    (timbre/debug @results)
     (fn []
-      (conj
-       [:div.container-fluid
-        [:div.row [:h4 [:span.text-muted "Query Options"]]]
-        [:div.row [kv-pairs @query-opts]]
-        [:div.row [:h4 [:span.text-muted "Query Results"]]]
-        [:div.row [kv-pairs @query-results]]
-        [:div.row [:h4 [:span.text-muted "Results"]]]
-        [:div.row [kv-pairs @results]]
-        [:div.row [:h4 [:span.text-muted "Marked hits"]]]
-        [:div.row [kv-pairs @marked-hits]]]))))
+      [:div.container-fluid
+       [:div.row [:h4 [:span.text-muted "Query Options"]]]
+       [:div.row [kv-pairs @query-opts]]
+       [:div.row [:h4 [:span.text-muted "Query Results"]]]
+       [:div.row [kv-pairs @query-results]]
+       [:div.row [:h4 [:span.text-muted "Results"]]]
+       (into [:div] (map (fn [k] [:div.row k]) @result-keys))
+       [:div.row [:h4 [:span.text-muted "Results by key"]]]
+       [:div.row [kv-pairs @results]]
+       [:div.row [:h4 [:span.text-muted "Marked hits"]]]
+       [:div.row [kv-pairs @marked-hits]]])))
 
 (defn ls-dump []
   [bs/button
@@ -54,6 +57,11 @@
                  (timbre/info "Couldn't reload db from LocalStorage"))}
    "Reload db from LocalStorage"])
 
+(defn notification []
+  [bs/button
+   {:on-click #(notify! :msg "Hi there!")}
+   "Notify!"])
+
 (defn open-modal [open?]
   (fn [open?]
     [bs/button
@@ -69,6 +77,7 @@
        [:div.row [:hr]]
        [:div.row
         [bs/button-toolbar
+         [notification]
          [ls-dump]
          [ls-read]
          [ls-reset]
