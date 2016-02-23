@@ -3,9 +3,7 @@
             [reagent.core :as reagent]
             [goog.dom.dataset :as gdataset]
             [goog.string :as gstr]
-            [schema.coerce :as coerce]
-            [taoensso.timbre :as timbre]
-            [cleebo.backend.middleware :refer [db-schema]])
+             [taoensso.timbre :as timbre])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
 (def corpora
@@ -67,9 +65,6 @@
     (map? m) (into {} (for [[k v] m] [(keyword-if-not-int k) (keywordify v)]))
     (coll? m) (vec (map keywordify m))
     :else m))
-
-(defn coerce-json [& {:keys [schema] :or {schema db-schema}}]
-  (coerce/coercer schema coerce/json-coercion-matcher))
 
 (defn make-annotation [m]
   (assoc m :username js/username :time (.now js/Date)))

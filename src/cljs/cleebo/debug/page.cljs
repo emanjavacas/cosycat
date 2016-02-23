@@ -3,7 +3,7 @@
             [re-frame.core :as re-frame]
             [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]
-            [cleebo.utils :refer [coerce-json notify!]]
+            [cleebo.utils :refer [notify!]]
             [cleebo.backend.middleware :refer [db-schema]]
             [cleebo.localstorage :as ls]))
 
@@ -23,7 +23,6 @@
         results (re-frame/subscribe [:session :results-by-id])
         result-keys (re-frame/subscribe [:session :results])
         marked-hits (re-frame/subscribe [:marked-hits])]
-    (timbre/debug @results)
     (fn []
       [:div.container-fluid
        [:div.row [:h4 [:span.text-muted "Query Options"]]]
@@ -44,13 +43,13 @@
 
 (defn ls-read []
   [bs/button
-   {:on-click #(let [dump (ls/fetch :db :coercion-fn (coerce-json))]
+   {:on-click #(let [dump (ls/recover-db)]
                  (.log js/console dump))}
    "Print LocalStorage to console"])
 
 (defn ls-reset []
   [bs/button
-   {:on-click #(if-let [dump (ls/fetch :db :coercion-fn (coerce-json))]
+   {:on-click #(if-let [dump (ls/recover-db)]
                  (do
                    (timbre/info "Reloaded db from LocalStorage")
                    (re-frame/dispatch [:load-db dump]))
@@ -59,7 +58,7 @@
 
 (defn notification []
   [bs/button
-   {:on-click #(notify! :msg "Hi there!")}
+   {:on-click #(notify! :msg "Shut UP!")}
    "Notify!"])
 
 (defn open-modal [open?]

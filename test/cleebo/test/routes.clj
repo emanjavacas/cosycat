@@ -14,12 +14,16 @@
                 [ks v'] (flatten-keys v)]
             [(cons k ks) v']))))
 
+(defn filter-meta
+  [coll]
+  (remove (partial some #{:meta}) coll))
+
 (deftest flatten-keys-test
   (testing "how helper function works"
     (is (= (keys (flatten-keys {:a {:a1 "a1" :b1 {:a2 "a2"}}}))
            '((:a :a1) (:a :b1 :a2))))))
 
-(deftest bl-route
+(deftest bl-route-test
   (let [path-maps (get-in env [:blacklab :blacklab-paths-map] env)
         bl-component (-> (bl/new-bl-component path-maps) (.start))
         bl-out (bl-route/bl-query-route
@@ -29,8 +33,21 @@
                           :query-str "\"a\""
                           :context "5"
                           :size "3"
-                          :from "0"}})
-        cqp-init (get-in env [:cqp :cqp-init-file])
+                          :from "0"}})]
+    (.stop bl-component)
+    (testing "I/O for blacklab routes"
+      (is (= (sort [[:results]
+                    [:from]
+                    [:to]
+                    [:query-str]
+                    [:query-size]
+                    [:status :status]
+                    [:status :status-content]])
+             (sort (mapv vec (filter-meta (keys (flatten-keys bl-out))))))))))
+
+
+(deftest cqp-route-test
+  (let [cqp-init (get-in env [:cqp :cqp-init-file])
         cqi-client (-> (cqp/new-cqi-client {:init-file cqp-init}) (.start))
         cqp-out (cqp-route/cqp-query-route
                  {:components {:cqi-client cqi-client}
@@ -38,11 +55,9 @@
                            :query-str "\"a\""
                            :context "5"
                            :size "3"
-                           :from "0"}})
-        filter-meta (fn [coll] (remove (partial some #{:meta}) coll))]
-    (.stop bl-component)
+                           :from "0"}})]
     (.stop cqi-client)
-    (testing "I/O for blacklab routes"
+    (testing "I/O for cqp routes"
       (is (= (sort [[:results 0 :hit] [:results 1 :hit] [:results 2 :hit]
                     [:from]
                     [:to]
@@ -50,6 +65,4 @@
                     [:query-size]
                     [:status :status]
                     [:status :status-content]])
-             (sort (mapv vec (filter-meta (keys (flatten-keys cqp-out)))))
-             (sort (mapv vec (filter-meta (keys (flatten-keys bl-out))))))))))
-
+             (sort (mapv vec (filter-meta (keys (flatten-keys cqp-out))))))))))

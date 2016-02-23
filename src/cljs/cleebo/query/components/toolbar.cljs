@@ -6,6 +6,7 @@
             [goog.string :as gstr]
             [cleebo.utils :refer [->map by-id make-annotation]]
             [cleebo.components :refer [dropdown-select]]
+            [cleebo.query.components.annotation-popup :refer [annotation-popup]]
             [cleebo.query.logic :as q])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
@@ -75,88 +76,19 @@
      (let [from (inc from) to (min to query-size)]
        (gstr/format "Displaying %d-%d of %d hits" from to query-size))]))
 
-(defn input-row [marked-tokens]
-  (fn [marked-tokens]
-    [:tr
-     ^{:key "key-input"}
-     [:td
-      [:input#token-ann-key.form-control
-       {:type "text"
-        :name "key-input"}]]
-     ^{:key "value-input"}
-     [:td
-      [:input#token-ann-val.form-control
-       {:type "text"
-        :name "value-input"
-        :on-key-press
-        (fn [pressed]
-          (if (= (.-charCode pressed) 13)
-            (let [k (by-id "token-ann-key")
-                  v (by-id "token-ann-val")]
-              (doseq [{:keys [hit-id id]} @marked-tokens]
-                (re-frame/dispatch
-                 [:annotate
-                  {:hit-id hit-id
-                   :token-id id
-                   :ann (make-annotation {k v})}])))))}]]]))
-
-(defn inner-thead [k1 k2]
-  [:thead
-   [:tr
-    [:th {:style {:padding-bottom "10px" :text-align "left"}}  k1]
-    [:th {:style {:padding-bottom "10px" :text-align "right"}} k2]]])
-
 (defn annotation-hit-button []
   (let [marked-hits (re-frame/subscribe [:marked-hits])]
     (fn []
       [bs/button
        {:bsStyle "info"
-        :style {:visibility (if (zero? (count @marked-hits)) "hidden" "visible")}       
+        :style {:visibility (if (zero? (count @marked-hits)) "hidden" "visible")}
         :href "#/annotation"}
        "Annotate"])))
-
-(defn token-annotation-table [marked-tokens]
-  (fn [marked-tokens]
-    [:table {:width "100%"}
-     [:caption [:h4 "Annotation"]]
-     (inner-thead "Key" "Value")
-     [:tbody
-      [input-row marked-tokens]]]))
-
-(defn token-counts-table [marked-tokens]
-  (fn [marked-tokens]
-    [:table {:width "100%"}
-     (inner-thead "Token" "Count")
-     [:tbody
-      {:style {:font-size "14px !important"}}
-      (for [[word c] (frequencies (map :word @marked-tokens))]
-        ^{:key (str word "pop")}
-        [:tr
-         [:td {:style {:padding-bottom "10px" :text-align "left"}} word]
-         [:td {:style {:text-align "right"}}
-          [bs/label c]]])]]))
 
 (defn annotation-token-button []
   (let [marked-tokens (re-frame/subscribe [:marked-tokens])]
     (fn []
-      [bs/overlay-trigger
-       {:trigger "click"
-        :rootClose true
-        :placement "bottom"
-        :overlay (reagent/as-component
-                  [bs/popover
-                   {:style {:min-width "500px"}
-                    :title (reagent/as-component
-                            [:span
-                             {:style {:font-size "18px"}}
-                             "Tokens marked for annotation"])}
-                   ^{:key "cnt-table"} [token-counts-table marked-tokens]
-                   [:hr]
-                   ^{:key "ann-table"} [token-annotation-table marked-tokens]])}
-       [bs/button
-        {:bsStyle "info"
-         :style {:visibility (if (zero? (count @marked-tokens)) "hidden" "visible")}}
-        "Annotate Tokens"]])))
+      [annotation-popup marked-tokens])))
 
 (defn annotation-button []
   [bs/button-toolbar

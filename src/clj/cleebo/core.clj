@@ -2,7 +2,7 @@
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer [refresh refresh-all]]
             [cleebo.http-server :refer [new-http-server]]
-            [cleebo.db :refer [new-db]]
+            [cleebo.db.component :refer [new-db]]
             [cleebo.cqp :refer [new-cqi-client]]
             [cleebo.blacklab :refer [new-bl-component]]
             [cleebo.figwheel :refer [new-figwheel]]

@@ -13,7 +13,7 @@
             [cleebo.settings.page :refer [settings-panel]]
             [cleebo.updates.page :refer [updates-panel]]
             [cleebo.debug.page :refer [debug-panel]]
-            [cleebo.utils :refer [coerce-json nbsp]]
+            [cleebo.utils :refer [nbsp]]
             [taoensso.timbre :as timbre]
             [figwheel.client :as figwheel]
             [devtools.core :as devtools]
@@ -71,7 +71,7 @@
       [bs/button-toolbar
        {:className "pull-right"}
        [bs/button
-        {:on-click #(let [dump (ls/fetch :db :coercion-fn (coerce-json))]
+        {:on-click #(let [dump (ls/recover-db)]
                       (timbre/debug (:active-panel dump))
                       (re-frame/dispatch [:load-db dump])
                       (re-frame/dispatch [:close-init-modal]))}
@@ -108,8 +108,9 @@
     (ws/set-ws-ch)
     ;; start db
     (re-frame/dispatch-sync [:initialize-db])
-    (if-let [dump (ls/fetch :db :coercion-fn (coerce-json))]
-      (re-frame/dispatch-sync [:open-init-modal]))
+    (if-let [dump (ls/recover-db)]
+      (do (.log js/console dump)
+          (re-frame/dispatch-sync [:open-init-modal])))
     ;; handle refreshes
     (.addEventListener js/window "beforeunload" #(re-frame/dispatch [:dump-db]))
     ;; render root

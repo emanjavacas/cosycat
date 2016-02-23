@@ -3,7 +3,7 @@
             [compojure.response :refer [render]]
             [ring.util.response :refer [redirect response]]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]           
-            [cleebo.db :refer [lookup-user is-user? new-user]]
+            [cleebo.db.users :refer [lookup-user is-user? new-user]]
             [cleebo.views.error :refer [error-page]]
             [cleebo.views.login :refer [login-page]]
             [buddy.auth.accessrules :refer [restrict]]

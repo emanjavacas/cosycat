@@ -66,6 +66,7 @@
 (def db-schema
   {:active-panel s/Keyword
    :init-modal   s/Bool
+   :notifications s/Any
    (s/optional-key :throbbing?) {s/Keyword s/Bool}
    :settings {:delay s/Int}
    :session {:query-opts query-opts-schema

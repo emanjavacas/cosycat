@@ -28,7 +28,7 @@
  :dump-db
  standard-middleware
  (fn [db _]
-   (ls/put! :db db)
+   (ls/put :db db)
    db))
 
 (re-frame/register-handler
@@ -157,6 +157,7 @@
       (update-token hit-map token-id token-fn)))))
 
 (defn handle-ws-msg [db {:keys [type msg]}]
+  (timbre/debug "Handled message of type" type msg)
   (case type
     :msgs (update db type conj [msg])))
 

@@ -3,6 +3,7 @@
 (def default-db
   "defines app default state"
   {:active-panel :query-panel
+   :notifications {}
    :init-modal false
    :throbbing? {:main-panel false}
    :settings {:delay 5000}

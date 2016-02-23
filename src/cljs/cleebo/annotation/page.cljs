@@ -8,9 +8,7 @@
 (defn hit-token [{:keys [id word match marked]}]
   (fn [{:keys [id word match marked]}]
     (let [info (if match "info" "")]
-      [:td.highlighted {:class (str info) :data-id id}  word
-;       [:span {:class "hint--bottom" :data-hint "Hi there!"} ""]
-       ])))
+      [:td.highlighted {:class (str info) :data-id id}  word])))
 
 (defn hit-row [{:keys [hit id meta]}]
   (fn [{:keys [hit id meta]}]
@@ -77,4 +75,3 @@
           :status "No hits marked for annotation..."
           :status-content [back-to-query-button]]
          [annotation-queue marked-hits])])))
-
