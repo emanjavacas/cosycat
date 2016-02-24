@@ -18,19 +18,20 @@
         (do (.error js/console e.stack)
             (throw e))))))
 
+(def annotation-schema
+  {:ann {s/Any s/Any}
+   :username s/Str
+   :timestamp s/Int})
+
 (def token-hit-schema
   {;; required keys
    (s/required-key :word)   s/Str
    (s/required-key :id)     s/Any
    ;; optional keys
    (s/optional-key :marked) s/Bool
-   (s/optional-key :ann)    s/Any
+   (s/optional-key :anns)   [annotation-schema]
    ;; any other additional keys
    s/Keyword                s/Any})
-
-(def annotation-schema
-  {:time     s/Int
-   s/Keyword s/Any})
 
 (def token-meta-schema
   {;; optional keys

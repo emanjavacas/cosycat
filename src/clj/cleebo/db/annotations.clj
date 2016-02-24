@@ -2,29 +2,29 @@
   (:require [monger.collection :as mc]
             [monger.operators :refer :all]
             [schema.core :as s]
+            [cleebo.shared-schemas :refer
+             [annotation-schema ->span-ann]]
             [schema.coerce :as coerce]))
 
-(def annotation-schema
-  {s/Str {s/Str s/Str
-          :time s/Int}})
+(def coll "annotations")
 
-(defn new-token-annotation [db cpos user ann]
-  {:pre [(integer? cpos)]}
-  (let [db-conn (:db db)
-        coll "annotations"]
-    (mc/save db-conn coll (merge {:_id cpos} {user ann}))))
+(s/defn ^:always-validate new-token-annotation
+  [db cpos :- s/Int ann :- annotation-schema]
+  (let [db-conn (:db db)]
+    (mc/update db-conn coll {:_id cpos} {$push {:anns ann}} {:upsert true})))
 
-(defmulti make-span-ann (fn [IOB ann] IOB))
-(defmethod make-span-ann ["I" :I :i] [ann] {:span {:IOB "I" :ann ann}})
-(defmethod make-span-ann ["B" :B :b] [ann] {:span {:IOB "B" :ann ann}})
-(defmethod make-span-ann ["O" :O :o] [ann] {:span {:IOB "O" :ann ann}})
-
-(defn new-span-annotation [db from to user ann]
-  {:pre [(and (integer? from) (integer? to))]}
-  (let [db-conn (:db db)
-        coll "annotations"]
+(s/defn ^:always-validate new-span-annotation
+  [db from :- s/Int to :- s/Int ann :- annotation-schema]
+  (let [db-conn (:db db)]
     (doseq [cpos (range from to)]
-      (cond
-        (= cpos from) (mc/save db-conn coll (merge {:_id cpos} {user (make-span-ann :B ann)}))
-        (= cpos to)   (mc/save db-conn coll (merge {:_id cpos} {user (make-span-ann :O ann)}))
-        :else         (mc/save db-conn coll (merge {:_id cpos} {user (make-span-ann :I ann)}))))))
+      (let [ann-doc (cond
+                      (= cpos from) (->span-ann "B" ann)
+                      (= cpos to)   (->span-ann "O" ann)
+                      :else         (->span-ann "i" ann))]
+        (mc/update db-conn coll {:_id cpos} {$push {:anns ann-doc}} {:upsert true})))))
+
+(s/defn ^:always-validate fetch-annotation :- (s/maybe [annotation-schema])
+  [db cpos :- s/Int]
+  (let [db-conn (:db db)]
+    (-> (mc/find-one-as-map db-conn coll {:_id cpos})
+        :anns)))

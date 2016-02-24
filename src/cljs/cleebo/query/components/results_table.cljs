@@ -44,12 +44,12 @@
         (swap! mouse-down? not)))))
 
 (defn hit-token [{:keys [id word match marked ann]}]
-  (fn [{:keys [id word match marked ann]}]
+  (fn [{:keys [id word match marked anns]}]
     (let [highlighted (if marked "highlighted" "")
           info (if match "info" "")]
       [:td
        {:class (str info highlighted) :data-id id
-        :style {:border-bottom (if ann "5px turquoise solid")}}
+        :style {:border-bottom (if anns "5px turquoise solid")}}
        word])))
 
 (defn results-row [hit-num {:keys [hit id meta]}]

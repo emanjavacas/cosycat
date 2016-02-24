@@ -7,7 +7,8 @@
             [cleebo.routes :as routes]
             [cleebo.ws :as ws]
             [cleebo.localstorage :as ls]
-            [cleebo.components :refer [notification-container notification]]
+            [cleebo.components :refer
+             [notification-container notification load-from-ls-modal]]
             [cleebo.query.page :refer [query-panel]]
             [cleebo.annotation.page :refer [annotation-panel]]
             [cleebo.settings.page :refer [settings-panel]]
@@ -54,31 +55,6 @@
     [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"]
     [navlink :debug-panel "#/debug" "Debug" "zmdi-bug"]          
     [navlink :exit          "#/exit" "Exit" "zmdi-power"]]])
-
-(defn load-from-ls-modal [open?]
-  (fn [open?]
-    [bs/modal
-     {:show @open? :on-hide #(reset! open? false)}
-     [bs/modal-header
-      [bs/modal-title
-       [:div "Watch out!" [:span.pull-right [:i.zmdi.zmdi-storage]]]]]
-     [bs/modal-body
-      [:p "Cleebo found unsaved activities in your browser."]
-      [:p "Do you want to restore it? Select 'yes' or 'no'"]
-      [:br]
-      [:p.text-muted "Note that you might not be able to restore it later"]]
-     [bs/modal-footer
-      [bs/button-toolbar
-       {:className "pull-right"}
-       [bs/button
-        {:on-click #(let [dump (ls/recover-db)]
-                      (timbre/debug (:active-panel dump))
-                      (re-frame/dispatch [:load-db dump])
-                      (re-frame/dispatch [:close-init-modal]))}
-        "yes"]
-       [bs/button
-        {:on-click #(re-frame/dispatch [:close-init-modal])}
-        "no"]]]]))
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])

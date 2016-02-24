@@ -2,6 +2,8 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cleebo.utils :refer [css-transition-group]]
+            [cleebo.localstorage :as ls]
+            [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]))
 
 (defn error-panel [& {:keys [status status-content]}]
@@ -48,3 +50,28 @@
     (map (fn [[id {msg :msg date :date}]]
            (notification id (str msg " " id " " (.toDateString date))))
          @notifications)]])
+
+(defn load-from-ls-modal [open?]
+  (fn [open?]
+    [bs/modal
+     {:show @open? :on-hide #(swap! open? not)}
+     [bs/modal-header
+      [bs/modal-title
+       [:div "Watch out!" [:span.pull-right [:i.zmdi.zmdi-storage]]]]]
+     [bs/modal-body
+      [:p "Cleebo found unsaved activities in your browser."]
+      [:p "Do you want to restore it? Select 'yes' or 'no'"]
+      [:br]
+      [:p.text-muted "Note that you might not be able to restore it later"]]
+     [bs/modal-footer
+      [bs/button-toolbar
+       {:className "pull-right"}
+       [bs/button
+        {:on-click #(let [dump (ls/recover-db)]
+                      (timbre/debug (:active-panel dump))
+                      (re-frame/dispatch [:load-db dump])
+                      (re-frame/dispatch [:close-init-modal]))}
+        "yes"]
+       [bs/button
+        {:on-click #(re-frame/dispatch [:close-init-modal])}
+        "no"]]]]))

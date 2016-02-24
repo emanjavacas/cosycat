@@ -65,6 +65,5 @@
     (case type
       :annotation (let [{:keys [cpos ann]} data
                         db (:db components)]
-                    (timbre/debug cpos ann)
-                    (new-token-annotation db (Integer/parseInt cpos) user ann))
+                    (new-token-annotation db (Integer/parseInt cpos) ann))
       :msgs (notify-clients ws-from ws-channels payload))))

@@ -6,9 +6,9 @@
             [cleebo.components :refer [error-panel]]))
 
 (defn hit-token [{:keys [id word match marked]}]
-  (fn [{:keys [id word match marked]}]
+  (fn [{:keys [id word match marked anns]}]
     (let [info (if match "info" "")]
-      [:td.highlighted {:class (str info) :data-id id}  word])))
+      [:td.highlighted {:class (str info) :data-id id} word])))
 
 (defn hit-row [{:keys [hit id meta]}]
   (fn [{:keys [hit id meta]}]
@@ -25,24 +25,26 @@
    [bs/glyphicon {:glyph "plus"}]])
 
 (defn annotation-row [{:keys [hit meta id]}]
-  (fn [{:keys [hit meta id]}]
-    (into
-     [:tr]
-     (for [{:keys [word ann] :as token} hit]
-       ^{:key (str id "-" (:id token) "props")}
-       [:td 
-        [:table; {:style {:font-size "13px" :max-width "100%" :min-height "50px"}}
-         [:thead]
-         [:tbody
-          (if ann
-            (for [[k v] (seq ann)
-                  :let [v (if (= :time k) (parse-time v) v)]]
-              ^{:key (str id "-" (:id token) "-anns-" k)}
-              [:tr {:style {:padding "15px"}}
-               [:td {:style {:text-align "left"  :padding-top "5px" :padding-bottom "5px"}} (str k)]
-               [:td {:style {:text-align "right" :padding-top "5px" :padding-bottom "5px"}}
-                [bs/label v]]])
-            [:tr])]]]))))
+  (let [style {:padding-top "5px" :padding-bottom "5px"}]
+    (fn [{:keys [hit meta id]}]
+      (into
+       [:tr]
+       (for [{:keys [word anns] :as token} hit]
+         ^{:key (str (:id token))}
+         [:td 
+          [:table; {:style {:font-size "13px" :max-width "100%" :min-height "50px"}}
+           [:thead]
+           [:tbody
+            (if anns
+              (for [{:keys [ann username timestamp]} (seq anns)
+                    :let [[k] (keys ann)
+                          [v] (vals ann)]]
+                ^{:key (str (:id token) "-anns-" k)}
+                [:tr {:style {:padding "15px" :font-size "12px"}}
+                 [:td {:style (merge style {:text-align "left"})} (str k)]
+                 [:td {:style (merge style {:text-align "right"})}
+                  [bs/label [:span {:class "hint--bottom" :data-hint username} v]]]])
+              [:tr])]]])))))
 
 (defn annotation-queue [marked-hits]
   (fn [marked-hits]

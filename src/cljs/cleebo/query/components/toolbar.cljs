@@ -4,7 +4,7 @@
             [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]
             [goog.string :as gstr]
-            [cleebo.utils :refer [->map by-id make-annotation]]
+            [cleebo.utils :refer [->map by-id]]
             [cleebo.components :refer [dropdown-select]]
             [cleebo.query.components.annotation-popup :refer [annotation-popup]]
             [cleebo.query.logic :as q])

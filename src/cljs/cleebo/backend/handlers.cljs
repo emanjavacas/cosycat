@@ -150,7 +150,7 @@
  standard-middleware
  (fn [db [_ {:keys [hit-id token-id ann]}]]
    (let [hit-map (get-in db [:session :results-by-id hit-id])
-         token-fn (fn [token] (assoc token :ann ann))]
+         token-fn (fn [token] (update token :anns #(concat % [ann])))]
      (assoc-in
       db
       [:session :results-by-id hit-id]

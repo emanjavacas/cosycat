@@ -66,8 +66,5 @@
     (coll? m) (vec (map keywordify m))
     :else m))
 
-(defn make-annotation [m]
-  (assoc m :username js/username :time (.now js/Date)))
-
 (defn select-values [m ks]
   (reduce #(conj %1 (m %2)) [] ks))

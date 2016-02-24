@@ -10,9 +10,10 @@
   [s]
   (keyword (str "cleebo.db.roles/" s)))
 
+(def coll "users")
+
 (defn new-user [db {:keys [username password]} & {:keys [roles] :or {roles [:user]}}]
   (let [db-conn (:db db)
-        coll "users"
         roles (filter identity (map app-roles roles))]
     (if (not (mc/find-one-as-map db-conn coll {:username username}))
       (let [user {:username username
@@ -25,11 +26,11 @@
 
 (defn is-user? [db {:keys [username password]}]
   (let [db-conn (:db db)]
-    (boolean (mc/find-one-as-map db-conn "users" {:username username}))))
+    (boolean (mc/find-one-as-map db-conn coll {:username username}))))
 
 (defn lookup-user [db username password]
   (let [db-conn (:db db)]
-    (if-let [user (mc/find-one-as-map db-conn "users" {:username username})]
+    (if-let [user (mc/find-one-as-map db-conn coll {:username username})]
       (if (hashers/check password (:password user))
         (-> user
             (update :roles #(into #{} (map ->keyword %)))
@@ -39,4 +40,4 @@
 (defn remove-user [db username]
   (let [db-conn (:db db)]
     (if (is-user? db {:username username})
-      (mc/remove db-conn "users" {:username username}))))
+      (mc/remove db-conn coll {:username username}))))
