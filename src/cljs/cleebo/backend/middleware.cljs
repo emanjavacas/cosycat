@@ -4,7 +4,8 @@
             [taoensso.timbre :as timbre]
             [schema.core :as s :include-macros true]
             [schema.spec.core :as spec]
-            [schema.spec.collection :as coll]))
+            [schema.spec.collection :as coll]
+            [cleebo.shared-schemas :refer [annotation-schema]]))
 
 (enable-console-print!)
 
@@ -17,11 +18,6 @@
       (catch :default e
         (do (.error js/console e.stack)
             (throw e))))))
-
-(def annotation-schema
-  {:ann {s/Any s/Any}
-   :username s/Str
-   :timestamp s/Int})
 
 (def token-hit-schema
   {;; required keys
@@ -36,6 +32,7 @@
 (def token-meta-schema
   {;; optional keys
    (s/optional-key :marked) s/Bool
+   (s/optional-key :has-marked) s/Bool
    (s/optional-key :ann)    annotation-schema
    ;; any other additional keys
    s/Keyword                s/Any})
@@ -70,6 +67,7 @@
    :notifications s/Any
    (s/optional-key :throbbing?) {s/Keyword s/Bool}
    :settings {:delay s/Int}
+   :annotations {s/Any s/Any}
    :session {:query-opts query-opts-schema
              :query-results query-results-schema
              :results-by-id (s/conditional empty? {} :else results-by-id-schema)

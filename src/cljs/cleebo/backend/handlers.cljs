@@ -98,15 +98,11 @@
  :mark-hit
  standard-middleware
  (fn [db [_ {:keys [hit-id flag]}]]
-   (if flag
-     (assoc-in db [:session :results-by-id hit-id :meta :marked] true)
-     (let [{:keys [hit meta] :as hit-map} (get-in db [:session :results-by-id hit-id])
-           hit-map (assoc hit-map :hit (demark-all-tokens hit))
-           hit-map (assoc-in hit-map [:meta :marked] false)
-           hit-map (assoc-in hit-map [:meta :has-marked] false)]
-       (assoc-in db [:session :results-by-id hit-id] hit-map)))))
+   (assoc-in db [:session :results-by-id hit-id :meta :marked] (boolean flag))))
 
-(defn update-token [{:keys [hit meta] :as hit-map} token-id token-fn]
+(defn update-token
+  "apply token-fn where due"
+  [{:keys [hit meta] :as hit-map} token-id token-fn]
   (assoc
    hit-map
    :hit
@@ -122,6 +118,7 @@
   tokens remain, otherwise it returns the token-id of the token
   being marked for debugging purposes"
   [{:keys [hit meta] :as hit-map} flag token-id]
+  (timbre/debug flag)
   (if flag
     true
     (let [marked-tokens (filter :marked hit)]
@@ -137,9 +134,7 @@
    (let [hit-map (get-in db [:session :results-by-id hit-id])
          has-marked (has-marked? hit-map flag token-id)
          hit-map (assoc-in hit-map [:meta :has-marked] (boolean has-marked))
-         token-fn (fn [token] (if flag
-                                (assoc token :marked true)
-                                (dissoc token :marked)))]
+         token-fn #(if flag (assoc % :marked true) (dissoc % :marked))]
      (assoc-in
       db
       [:session :results-by-id hit-id]
@@ -155,6 +150,9 @@
       db
       [:session :results-by-id hit-id]
       (update-token hit-map token-id token-fn)))))
+
+;; (re-frame/register-handler
+;;  :next-annotation-token)
 
 (defn handle-ws-msg [db {:keys [type msg]}]
   (timbre/debug "Handled message of type" type msg)

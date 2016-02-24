@@ -16,7 +16,9 @@
                              :from 0
                              :to 0}
              :results-by-id {}
-             :results []}})
+             :results []}
+   :annotations {:current-annotation-hit   0
+                 :current-annotation-token 0}})
 
 
 

@@ -6,7 +6,8 @@
             [goog.string :as gstr]
             [cleebo.utils :refer [->map by-id]]
             [cleebo.components :refer [dropdown-select]]
-            [cleebo.query.components.annotation-popup :refer [annotation-popup]]
+            [cleebo.query.components.annotation-modal
+             :refer [annotation-modal-button]]
             [cleebo.query.logic :as q])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
@@ -85,15 +86,10 @@
         :href "#/annotation"}
        "Annotate"])))
 
-(defn annotation-token-button []
-  (let [marked-tokens (re-frame/subscribe [:marked-tokens])]
-    (fn []
-      [annotation-popup marked-tokens])))
-
 (defn annotation-button []
   [bs/button-toolbar
    [annotation-hit-button]
-   [annotation-token-button]])
+   [annotation-modal-button]])
 
 (defn toolbar []
   (let [query-opts (re-frame/subscribe [:query-opts])

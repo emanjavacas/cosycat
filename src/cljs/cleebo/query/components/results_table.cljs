@@ -60,7 +60,7 @@
       [^{:key (str hit-num "-check")}
        [:td.check {:style {:width "20px" :background-color "#eeeeee"}}
         [:input.check {:type "checkbox"
-                       :checked (or (:marked meta) (:has-marked meta))
+                       :checked (:marked meta)
                        :on-change #(let [flag (.-checked (.-target %))]
                                      (re-frame/dispatch
                                       [:mark-hit

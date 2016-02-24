@@ -18,7 +18,7 @@
   [results-by-id]
   (into {} (filter
             (fn [[_ {:keys [meta]}]]
-              (or (:has-marked meta) (:marked meta)))
+              (:marked meta))
             results-by-id)))
 
 (defn nbsp [& {:keys [n] :or {n 1}}]
