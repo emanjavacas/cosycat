@@ -11,14 +11,21 @@
         {bl-corpora :corpora}  (cljs-env :blacklab)]
     (concat cqp-corpora bl-corpora)))
 
+(def color-codes
+  {:info "#72a0e5"
+   :error "#ff0000"
+   :ok "#00ff00"})
+
 (def css-transition-group
   (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
 
 (defn filter-marked-hits
-  [results-by-id]
+  "filter hits according to whether are tick-checked, optionally
+  include those containing marked tokens but not tick-cheked"
+  [results-by-id & {:keys [has-marked?] :or {has-marked? false}}]
   (into {} (filter
             (fn [[_ {:keys [meta]}]]
-              (:marked meta))
+              (or (:marked meta) (and has-marked? (:has-marked meta))))
             results-by-id)))
 
 (defn nbsp [& {:keys [n] :or {n 1}}]
@@ -47,13 +54,6 @@
 (defn parse-time [i]
   (let [js-date (js/Date. i)]
     (.toDateString js-date)))
-
-(defn notify! [& {:keys [msg]}]
-  {:pre [(and msg)]}
-  (let [delay (re-frame/subscribe [:settings :delay])
-        id (time-id)]
-    (js/setTimeout #(re-frame/dispatch [:drop-notification id]) @delay)
-    (re-frame/dispatch [:add-notification {:msg msg :id id}])))
 
 (defn keyword-if-not-int [s]
   (if (js/isNaN s)

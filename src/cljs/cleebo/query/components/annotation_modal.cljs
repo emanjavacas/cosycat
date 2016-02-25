@@ -3,7 +3,6 @@
             [re-frame.core :as re-frame]
             [cleebo.shared-schemas :refer [make-ann]]
             [cleebo.utils :refer [by-id]]
-            [cleebo.ws :refer [send-transit-msg!]]
             [react-bootstrap.components :as bs]))
 
 (defn dispatch-annotations
@@ -12,7 +11,6 @@
         v (by-id "token-ann-val")]
     (doseq [{:keys [hit-id id]} @marked-tokens
             :let [ann (make-ann {k v} js/username)]]
-      (send-transit-msg! {:type :annotation :data {:cpos id :ann ann}})
       (re-frame/dispatch
        [:annotate
         {:hit-id hit-id

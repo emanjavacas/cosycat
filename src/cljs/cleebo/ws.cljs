@@ -31,4 +31,4 @@
 (defn set-ws-ch []
   (make-ws-ch
    (str "ws://" (.-host js/location) "/ws")
-   #(re-frame/dispatch [:ws-in %])))
+   #(re-frame/dispatch [:receive-ws %])))

@@ -10,7 +10,6 @@
 (def cell-style
   {:width "80px"
    :padding "0px"
-;   :border-sizing "border-box"
    :border "0px solid #eee"
    :margin "5px"})
 
@@ -20,7 +19,8 @@
           (for [{:keys [word match anns] :as token} hit
                 :let [info (if match "info")]]
             ^{:key (str id "-" (:id token))}
-            [:td {:style (assoc cell-style :border-bottom (if anns "4px turquoise solid"))}
+            [:td {:style cell-style
+                  :class (if anns "has-annotation")}
              word]))))
 
 (defn parse-annotation [s]
@@ -28,28 +28,28 @@
     (make-ann {k v} js/username)))
 
 (defn focus-row [{:keys [hit id meta]} current-token]
-  (into [:tr]
-        (for [[idx token] (map-indexed vector hit)]
-          ^{:key (str "focus-" id "-" (:id token))}
-          [:td {:style cell-style}
-           [:input.focus-cell
-            {:on-key-down
-             (fn [pressed]
-               (if (= 13 (.-keyCode pressed))
-                 (let [ann (parse-annotation (.. pressed -target -value))]
-                   (re-frame/dispatch
-                    [:annotate
-                     {:hit-id id
-                      :token-id (:id token)
-                      :ann ann}]))))
-             :on-focus #(reset! current-token idx)}]])))
+  (into
+   [:tr]
+   (for [[idx token] (map-indexed vector hit)]
+     ^{:key (str "focus-" id "-" (:id token))}
+     [:td {:style cell-style}
+      [:input.focus-cell
+       {:on-key-down
+        (fn [pressed]
+          (if (= 13 (.-keyCode pressed))
+            (let [ann (parse-annotation (.. pressed -target -value))]
+              (re-frame/dispatch
+               [:annotate
+                {:hit-id id
+                 :token-id (:id token)
+                 :ann ann}]))))
+        :on-focus #(reset! current-token idx)}]])))
 
 (defn annotation-queue [marked-hits current-hit current-token]
   (fn [marked-hits current-hit current-token]
     (let [hit-map (get-in (vec (vals @marked-hits)) [@current-hit])]
       [bs/table
-       {;:style {:border-collapse "collapse"}
-        :bordered true
+       {:bordered true
         :id "tableAnnotation"}
        [:thead]
        [:tbody {:style {:font-size "14px"}}
@@ -92,35 +92,33 @@
         [:div.row
          {:style {:padding-bottom "15px"}}
          [:label.pull-right
-          (str "Annotating token(s) from hit " @current-hit)]]
+          (str "Annotating hit #" @current-hit " of " (count @marked-hits) " hits")]]
         [:div.row
          [:div.col-lg-12.pad 
           [bs/panel
            {:className "text-center"}
            word]]]
-        [:div.row
-         [bs/table
-          {:style {:font-size "14px"}}
-          [:thead
-           [:tr
-            [:th
-             {:style {:text-align "left"}}
-             [:label "key"]]
-            [:th
-             {:style {:text-align "right"}}
-             [:label "value"]]]]
-          [:tbody
-           (if anns
-             (for [{:keys [ann username timestamp]} (seq anns)
-                   :let [[k] (keys ann)
-                         [v] (vals ann)]]
-               ^{:key (str id "-anns-" k)}
-               [:tr {:style {:font-size "16px"}}
-                [:td {:style (merge style {:text-align "left"})} [bs/label (str k)]]
-                [:td {:style (merge style {:text-align "right"})} [bs/label (str v)]]]))]]]]])))
+        (if anns
+          [:div.row
+           [bs/table
+            {:style {:font-size "14px"}
+             :condensed true}
+            [:thead
+             [:tr
+              [:th.text-center [:label "key"]]
+              [:th.text-center [:label "value"]]]]
+            [:tbody
+             (if anns
+               (for [{:keys [ann username timestamp]} (seq anns)
+                     :let [[k] (keys ann)
+                           [v] (vals ann)]]
+                 ^{:key (str id "-anns-" k)}
+                 [:tr {:style {:font-size "16px"}}
+                  [:td.text-center {:style style} (str k)]
+                  [:td.text-center {:style style} (str v)]]))]]])]])))
 
 (defn annotation-panel []
-  (let [marked-hits (re-frame/subscribe [:marked-hits])
+  (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])
         current-hit (re-frame/subscribe [:current-annotation-hit])
         current-token (reagent/atom 0)]
     (fn []

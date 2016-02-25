@@ -23,7 +23,10 @@
  :notifications
  (fn [db _]
    (let [notifications (reaction (:notifications @db))]
-     (reaction (reverse (sort-by (fn [[_ {date :date}]] date) @notifications))))))
+     (reaction (reverse
+                (sort-by (fn [{:keys [date]}] date)
+                         (for [[_ notification] @notifications]
+                           notification)))))))
 
 (re-frame/register-sub
  :throbbing?
@@ -61,9 +64,9 @@
 
 (re-frame/register-sub ;all marked hits, also if currently not in table-results
  :marked-hits
- (fn [db _]
+ (fn [db [_ {:keys [has-marked?]}]]
    (let [results-by-id (reaction (get-in @db [:session :results-by-id]))]
-     (reaction (filter-marked-hits @results-by-id)))))
+     (reaction (filter-marked-hits @results-by-id :has-marked? has-marked?)))))
 
 (re-frame/register-sub
  :marked-tokens

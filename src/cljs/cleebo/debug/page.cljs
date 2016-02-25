@@ -3,7 +3,6 @@
             [re-frame.core :as re-frame]
             [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]
-            [cleebo.utils :refer [notify!]]
             [cleebo.backend.middleware :refer [db-schema]]
             [cleebo.localstorage :as ls]))
 
@@ -56,10 +55,10 @@
                  (timbre/info "Couldn't reload db from LocalStorage"))}
    "Reload db from LocalStorage"])
 
-(defn notification []
+(defn notification-button []
   [bs/button
-   {:on-click #(notify! :msg "Shut UP!")}
-   "Notify!"])
+   {:on-click #(re-frame/dispatch [:notify {:msg "Hello World! How are you doing?"}])}
+   "Notify"])
 
 (defn open-modal [open?]
   (fn [open?]
@@ -76,7 +75,7 @@
        [:div.row [:hr]]
        [:div.row
         [bs/button-toolbar
-         [notification]
+         [notification-button]
          [ls-dump]
          [ls-read]
          [ls-reset]

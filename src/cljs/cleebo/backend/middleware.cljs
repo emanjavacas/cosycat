@@ -58,13 +58,20 @@
    :query-str  s/Str
    :from       s/Int
    :to         s/Int
-   :status {:status         s/Keyword
+   :status {:status         (s/enum :ok :error)
             :status-content s/Str}})
+
+(def notification-schema
+  {(s/required-key :id) s/Any
+   (s/required-key :data) {(s/required-key :msg)    s/Any
+                           (s/optional-key :by)     s/Any
+                           (s/optional-key :status) (s/enum :ok :error :info)
+                           (s/optional-key :date)   s/Any}})
 
 (def db-schema
   {:active-panel s/Keyword
    :init-modal   s/Bool
-   :notifications s/Any
+   :notifications {s/Any notification-schema}
    (s/optional-key :throbbing?) {s/Keyword s/Bool}
    :settings {:delay s/Int}
    :annotations {s/Any s/Any}

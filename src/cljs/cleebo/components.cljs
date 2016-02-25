@@ -1,7 +1,7 @@
 (ns cleebo.components
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [css-transition-group]]
+            [cleebo.utils :refer [css-transition-group color-codes]]
             [cleebo.localstorage :as ls]
             [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]))
@@ -31,24 +31,47 @@
          (for [{:keys [key label]} options]
            ^{:key key} [bs/menu-item {:eventKey label} label]))]])))
 
-(defn notification [id message]
+(defn notification-child [msg date by status]
+  [:div.container-fluid
+   {:style {:padding "0 20px"}}
+   [:div.row
+    {:style {:padding "0px"
+             :padding-bottom "20px"
+             :margin "0px"
+             :font-weight "bold"}}
+    msg [:span.label
+         {:style {:margin-left "10px"
+                  :font-size "20px"
+                  :color (color-codes status)}}
+         [:i.zmdi
+          {:style {:line-height 1.4}
+           :class (case status
+                    :info  "zmdi-info"
+                    :ok    "zmdi-storage"
+                    :error "zmdi-alert-circle")}]]]
+   (when date
+     [:div.row.pull-right
+      {:style {:padding-bottom "10px"}}
+      (.toLocaleString date "en-US")])
+   (when by [:div.row.pull-right
+             {:style {:padding-bottom "10px"}}
+             by])])
+
+(defn notification
+  [{id :id {msg :msg date :date by :by status :status} :data}]
   ^{:key id}
   [:li#notification
    {:on-click #(re-frame/dispatch [:drop-notification id])}
-   message])
+   [notification-child msg date by (or status :info)]])
 
 (defn notification-container [notifications]
   [:ul#notifications
-   {:style {:position "fixed"
-            :right "5px"
-            :top "55px"
-            :z-index "1001"}}
    [css-transition-group
     {:transition-name "notification"
      :transition-enter-timeout 5000
      :transition-leave-timeout 5000}
-    (map (fn [[id {msg :msg date :date}]]
-           (notification id (str msg " " id " " (.toDateString date))))
+    (map (fn [{:keys [id data] :as payload}]
+           (notification {:id id :data data}))
          @notifications)]])
 
 (defn load-from-ls-modal [open?]
@@ -68,7 +91,6 @@
        {:className "pull-right"}
        [bs/button
         {:on-click #(let [dump (ls/recover-db)]
-                      (timbre/debug (:active-panel dump))
                       (re-frame/dispatch [:load-db dump])
                       (re-frame/dispatch [:close-init-modal]))}
         "yes"]

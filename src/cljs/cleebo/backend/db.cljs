@@ -6,7 +6,7 @@
    :notifications {}
    :init-modal false
    :throbbing? {:main-panel false}
-   :settings {:delay 5000}
+   :settings {:delay 7500}
    :session {:query-opts {:corpus "brown-id"
                           :context 5
                           :size 10}

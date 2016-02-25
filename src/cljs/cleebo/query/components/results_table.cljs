@@ -43,13 +43,15 @@
       (when (and (zero? button) (not (gclass/has (aget event "target") "check")))
         (swap! mouse-down? not)))))
 
-(defn hit-token [{:keys [id word match marked ann]}]
+
+(defn hit-token [{:keys [id word match marked anns]}]
   (fn [{:keys [id word match marked anns]}]
     (let [highlighted (if marked "highlighted" "")
+          has-annotation (if anns "has-annotation" "")
           info (if match "info" "")]
       [:td
-       {:class (str info highlighted) :data-id id
-        :style {:border-bottom (if anns "5px turquoise solid")}}
+       {:class (str (if marked "highlighted") " " (if anns "has-annotation") " "  (if match "info"))
+        :data-id id}
        word])))
 
 (defn results-row [hit-num {:keys [hit id meta]}]
@@ -90,11 +92,7 @@
        [:thead]
        [:tbody {:style {:font-size "11px"}}
         (doall
-         (interleave
-          (for [[idx {:keys [hit meta id] :as hit-map}] (map-indexed vector @results)
-                :let [hit-num (+ idx @from)]]
-            ^{:key hit-num} [results-row hit-num hit-map])
-          (for [[idx {:keys [hit meta]}] (map-indexed vector @results)
-                :let [hit-num (+ idx @from)]]
-            ^{:key (str hit-num "rep")} [:tr])))]])))
+         (for [[idx {:keys [hit meta id] :as hit-map}] (map-indexed vector @results)
+               :let [hit-num (+ idx @from)]]
+           ^{:key hit-num} [results-row hit-num hit-map]))]])))
 

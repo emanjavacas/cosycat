@@ -22,6 +22,13 @@ table td.highlighted {
     /* border: 0.5px solid black !important; */
 }
 
+.has-annotation {
+    /* -webkit-box-shadow:inset 0px 0px 0px 10px #f00; */
+    /* -moz-box-shadow:inset 0px 0px 0px 10px #f00; */
+    /* box-shadow:inset 0px 0px 0px 10px #f00; */
+    box-shadow: 0 0px black inset,0 -3px turquoise inset, 0px 0 blue inset, 0px 0 green inset;
+}
+
 /* bordered input: deprecated */
 div.bordered-input {
     font-size: 12px;
@@ -46,11 +53,19 @@ input.bordered-input {
 }
 
 /* notifications */
+
+ul#notifications {
+    position: fixed;
+    right: 15px;
+    top: 55px;
+    z-index: 1001;
+}
+
 li#notification {
     max-width: 380px;
-    min-height: 55px;
+    min-height: 25px;
     margin-top: 5px;
-    padding: 22px;
+    padding: 12px;
     line-height: 1.4;
     cursor: pointer;
     border-radius: 5px;
