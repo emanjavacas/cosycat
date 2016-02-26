@@ -66,7 +66,7 @@
  :marked-hits
  (fn [db [_ {:keys [has-marked?]}]]
    (let [results-by-id (reaction (get-in @db [:session :results-by-id]))]
-     (reaction (filter-marked-hits @results-by-id :has-marked? has-marked?)))))
+     (reaction (vals (filter-marked-hits @results-by-id :has-marked? has-marked?))))))
 
 (re-frame/register-sub
  :marked-tokens

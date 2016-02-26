@@ -73,8 +73,8 @@
    :init-modal   s/Bool
    :notifications {s/Any notification-schema}
    (s/optional-key :throbbing?) {s/Keyword s/Bool}
+   (s/optional-key :annotations) {s/Any s/Any}
    :settings {:delay s/Int}
-   :annotations {s/Any s/Any}
    :session {:query-opts query-opts-schema
              :query-results query-results-schema
              :results-by-id (s/conditional empty? {} :else results-by-id-schema)

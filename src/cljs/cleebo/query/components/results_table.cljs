@@ -50,7 +50,7 @@
           has-annotation (if anns "has-annotation" "")
           info (if match "info" "")]
       [:td
-       {:class (str (if marked "highlighted") " " (if anns "has-annotation") " "  (if match "info"))
+       {:class (str (if marked "highlighted ") (if anns "has-annotation ") (if match "info"))
         :data-id id}
        word])))
 

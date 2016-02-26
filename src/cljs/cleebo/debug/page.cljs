@@ -33,7 +33,7 @@
        [:div.row [:h4 [:span.text-muted "Results by key"]]]
        [:div.row [kv-pairs @results]]
        [:div.row [:h4 [:span.text-muted "Marked hits"]]]
-       [:div.row [kv-pairs @marked-hits]]])))
+       [:div.row [kv-pairs (map (juxt :id identity) @marked-hits)]]])))
 
 (defn ls-dump []
   [bs/button

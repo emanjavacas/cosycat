@@ -17,8 +17,9 @@
                              :to 0}
              :results-by-id {}
              :results []}
-   :annotations {:current-annotation-hit   0
-                 :current-annotation-token 0}})
+   ;; :annotations {:current-annotation-hit   0
+   ;;               :current-annotation-token 0}
+   })
 
 
 
