@@ -7,7 +7,7 @@
               [cleebo.ws :refer [send-transit-msg!]]
               [cleebo.localstorage :as ls]
               [cleebo.backend.middleware
-               :refer [standard-middleware no-debug-middleware]]
+               :refer [standard-middleware no-debug-middleware db-schema]]
               [cleebo.utils :refer [filter-marked-hits time-id]]))
 
 (re-frame/register-handler
@@ -25,24 +25,36 @@
  :load-db
  standard-middleware
  (fn [db [_ new-db]]
-   new-db))
+   (try
+     (s/validate db-schema new-db)
+     new-db
+     (catch :default e
+       (re-frame/dispatch [:notify
+                           {:msg "Oops! Couldn't load backup"
+                            :status :error}])
+       db))))
 
 (re-frame/register-handler
  :dump-db
  standard-middleware
  (fn [db _]
-   (ls/put :db db)
+   (let [now (js/Date)]
+     (ls/put now db)
+     (re-frame/dispatch
+      [:notify
+       {:msg "State succesfully backed-up"
+        :status :ok}]))
    db))
 
 (re-frame/register-handler
- :open-init-modal
+ :open-ls-modal
  (fn [db _]
-   (assoc-in db [:init-modal] true)))
+   (assoc-in db [:ls-modal] true)))
 
 (re-frame/register-handler
- :close-init-modal
+ :close-ls-modal
  (fn [db _]
-   (assoc-in db [:init-modal] false)))
+   (assoc-in db [:ls-modal] false)))
 
 (re-frame/register-handler
  :set-active-panel

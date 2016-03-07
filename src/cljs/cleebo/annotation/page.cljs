@@ -4,7 +4,7 @@
             [react-bootstrap.components :as bs]
             [cleebo.components :refer [error-panel]]
             [cleebo.annotation.components.control-panel :refer [control-panel]]
-            [cleebo.annotation.components.annotation-row :refer [annotation-row]]
+            [cleebo.annotation.components.annotation-component :refer [annotation-component]]
             [cleebo.annotation.components.annotation-queue :refer [annotation-queue]]))
 
 (defn back-to-query-button []
@@ -27,7 +27,7 @@
          [:div
           [:div.row
            {:style {:height "30%"}}
-           [:div.col-lg-12 [annotation-row marked-hits current-hit current-token]]]
+           [:div.col-lg-12 [annotation-component marked-hits current-hit current-token]]]
           [:div.row
            [:div.col-lg-8 [annotation-queue marked-hits current-hit current-token]]
            [:div.col-lg-4.col-lg-offset-0

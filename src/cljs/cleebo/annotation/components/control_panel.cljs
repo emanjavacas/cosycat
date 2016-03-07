@@ -55,20 +55,20 @@
           :condensed true}
          [:thead
           [:tr
-           [:th.text-center [:label "key"]]
-           [:th.text-center [:label "value"]]]]
+           [:th.text-center [:label "Annotation type"]]
+           [:th.text-center [:label "Value"]]]]
          [:tbody
-          (for [{:keys [ann username timestamp]} (seq anns)
-                :let [[k] (keys ann)
-                      [v] (vals ann)]]
-            ^{:key (str id "-anns-" k)}
+          (for [{{key :key value :value} :ann
+                 username :username
+                 timestamp :timestamp} (seq anns)]
+            ^{:key (str id "-anns-" key)}
             [:tr {:style {:font-size "16px"}}
              [:td.text-center
               {:style {:padding-top "5px" :padding-bottom "5px"}}
-              [bs/label (reagent/as-component (str k))]]
+              key]
              [:td.text-center
               {:style {:padding-top "5px" :padding-bottom "5px"}}
-              (str v)]])]]))))
+              [bs/label (reagent/as-component value)]]])]]))))
 
 (defn control-panel [marked-hits current-hit current-token]
   (fn [marked-hits current-hit current-token]

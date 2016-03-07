@@ -1,6 +1,5 @@
 (ns cleebo.views.cleebo
-  (:require [hiccup.core :refer [html]]
-            [cleebo.views.layout :refer [bootstrap-css]]))
+  (:require [hiccup.core :refer [html]]))
 
 (defn cleebo-page [& {:keys [csrf username]}]
   (html
@@ -8,10 +7,10 @@
     {:lang "en"}
     [:head
      [:meta {:charset "utf-8"}]
-     [:link {:href bootstrap-css :rel "stylesheet"}]
+     [:link {:href "vendor/css/bootstrap.min.css" :rel "stylesheet"}]
      [:link {:href "vendor/css/material-design-iconic-font.min.css" :rel "stylesheet"}]
      [:link {:href "vendor/css/hint.min.css" :rel "stylesheet"}]
-     [:link {:href "css/dashboard.css" :rel "stylesheet"}]     
+     ;; [:link {:href "css/dashboard.css" :rel "stylesheet"}]     
      [:link {:href "css/main.css" :rel "stylesheet"}]
      [:link
       {:type "text/css" :rel "stylesheet"

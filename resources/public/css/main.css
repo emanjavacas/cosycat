@@ -56,7 +56,7 @@ li#notification {
 }
 
 /* wierdo bootstrap */
-.dropdown-toggle {
+#my-dropdown.dropdown-toggle {
     height: 34px;
 }
 

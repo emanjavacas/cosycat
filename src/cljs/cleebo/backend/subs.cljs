@@ -10,9 +10,9 @@
    (reaction @db)))
 
 (re-frame/register-sub
- :open-init-modal
+ :open-ls-modal
  (fn [db _]
-   (reaction (:init-modal @db))))
+   (reaction (:ls-modal @db))))
 
 (re-frame/register-sub
  :active-panel

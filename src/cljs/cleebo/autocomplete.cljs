@@ -44,7 +44,3 @@
 
 (defprotocol IUIList
   (-set-items! [list items]))
-
-(defn menu-proc [select cancel menu data]
-  (let [ctrl (chan)
-        sel  (->> (selector ))]))

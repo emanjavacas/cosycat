@@ -30,11 +30,7 @@
     [:div [:i.zmdi.zmdi-arrow-left {:style {:margin-right "10px"}}] "prev"]] 
    [pager-button
     (fn [query-size size from to] (q/pager-next query-size size to))
-    [:div "next" [:i.zmdi.zmdi-arrow-right {:style {:margin-left "10px"}}]]]
-   [bs/split-button
-    {:title "Go!"
-     :role "menuitem"
-     :onClick #(timbre/debug %)}]])
+    [:div "next" [:i.zmdi.zmdi-arrow-right {:style {:margin-left "10px"}}]]]])
 
 
 (defn sort-buttons [query-opts query-results]
@@ -81,7 +77,7 @@
   (let [marked-hits (re-frame/subscribe [:marked-hits])]
     (fn []
       [bs/button
-       {:bsStyle "info"
+       {:bsStyle "primary"
         :style {:visibility (if (zero? (count @marked-hits)) "hidden" "visible")}
         :href "#/annotation"}
        "Annotate"])))

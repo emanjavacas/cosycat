@@ -1,5 +1,6 @@
 (ns cleebo.localstorage
-  (:require [cleebo.utils :refer [keywordify]]
+  (:require [re-frame.core :as re-frame]
+            [cleebo.utils :refer [keywordify]]
             [taoensso.timbre :as timbre]
             [cleebo.backend.middleware :refer [db-schema]]
             [schema.core :as s]
@@ -25,19 +26,30 @@
         js->clj
         keywordify)))
 
-(defn recover-db
-  [& {:keys [path] :or {path [:db]}}]
-  (let [coercion-fn (coerce-json path)]
-    (try
-      (if-let [db (fetch :db)]
-        (do (.log js/console (coercion-fn db))
-            (coercion-fn db)))
-      (catch :default e
-        (timbre/debug "Couldn't coerce DB")
-        nil))))
-
 (defn delete
   "Remove the browser's localStorage value for the given `key`"
   [key]
   (.removeItem (.-localStorage js/window) key))
+
+(defn recover-db
+  [k & {:keys [path] :or {path [:db]}}]
+  (let [coercion-fn (coerce-json path)]
+    (try
+      (let [db (fetch k)]
+        (.log js/console (coercion-fn db))
+        (assoc-in (coercion-fn db) [:notifications] {}))
+      (catch :default e
+        (timbre/debug "Couldn't coerce DB")
+        nil))))
+
+(defn recover-all-db-keys []
+  (let [ks (js->clj (.keys js/Object js/localStorage))]
+    (reverse (sort-by #(.parse js/Date %) ks))))
+
+(defn dump-db [& {:keys [max-dbs] :or {max-dbs 10}}]
+  (let [dbs (recover-all-db-keys)]
+    (when (> (count dbs) max-dbs)
+      (doseq [k (drop 9 dbs)]
+        (delete k)))
+    (re-frame/dispatch [:dump-db])))
 

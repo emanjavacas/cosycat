@@ -68,3 +68,7 @@
 
 (defn select-values [m ks]
   (reduce #(conj %1 (m %2)) [] ks))
+
+(defn date-str->locale [date-str]
+  (.toLocaleString (js/Date. date-str) "en-US"))
+

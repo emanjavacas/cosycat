@@ -4,7 +4,7 @@
   "defines app default state"
   {:active-panel :query-panel
    :notifications {}
-   :init-modal false
+   :ls-modal false
    :throbbing? {:main-panel false}
    :settings {:delay 7500}
    :session {:query-opts {:corpus "brown-id"
@@ -16,10 +16,7 @@
                              :from 0
                              :to 0}
              :results-by-id {}
-             :results []}
-   ;; :annotations {:current-annotation-hit   0
-   ;;               :current-annotation-token 0}
-   })
+             :results []}})
 
 
 

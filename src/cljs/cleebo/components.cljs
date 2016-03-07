@@ -1,7 +1,7 @@
 (ns cleebo.components
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [css-transition-group color-codes]]
+            [cleebo.utils :refer [css-transition-group color-codes date-str->locale]]
             [cleebo.localstorage :as ls]
             [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]))
@@ -18,7 +18,7 @@
   (let [local-label (reagent/atom model)]
     (fn [{:keys [label model options select-fn header] :or {select-fn identity}}]
       [bs/dropdown
-       {:id "Dropdown"
+       {:id "my-dropdown"
         :onSelect (fn [e k] (reset! local-label k) (select-fn k))}
        [bs/button
         {:style {:pointer-events "none !important"}}
@@ -59,42 +59,69 @@
 
 (defn notification
   [{id :id {msg :msg date :date by :by status :status} :data}]
-  ^{:key id}
-  [:li#notification
-   {:on-click #(re-frame/dispatch [:drop-notification id])}
-   [notification-child msg date by (or status :info)]])
+  (fn [{id :id {msg :msg date :date by :by status :status} :data}]
+    [:li#notification
+     {:on-click #(re-frame/dispatch [:drop-notification id])}
+     [notification-child msg date by (or status :info)]]))
 
-(defn notification-container [notifications]
-  [:ul#notifications
-   [css-transition-group
-    {:transition-name "notification"
-     :transition-enter-timeout 5000
-     :transition-leave-timeout 5000}
-    (map (fn [{:keys [id data] :as payload}]
-           (notification {:id id :data data}))
-         @notifications)]])
+(defn notification-container []
+  (let [notifications (re-frame/subscribe [:notifications])]
+    (fn []
+      [:ul#notifications
+       [css-transition-group
+        {:transition-name "notification"
+         :transition-enter-timeout 500
+         :transition-leave-timeout 500}
+        (map (fn [{:keys [id data] :as payload}]
+               ^{:key id} [notification {:id id :data data}])
+             @notifications)]])))
+
+(defn load-from-ls-row [backup]
+  [:tr
+   [:td
+    {:style {:cursor "pointer"}
+     :on-click #(let [dump (ls/recover-db backup)]
+                  (re-frame/dispatch [:load-db dump])
+                  (re-frame/dispatch [:close-ls-modal]))}
+    (date-str->locale backup)]])
 
 (defn load-from-ls-modal [open?]
   (fn [open?]
     [bs/modal
-     {:show @open? :on-hide #(swap! open? not)}
+     {:show @open?
+      :on-hide #(re-frame/dispatch [:close-ls-modal])}
      [bs/modal-header
+      {:closeButton true}
       [bs/modal-title
-       [:div "Watch out!" [:span.pull-right [:i.zmdi.zmdi-storage]]]]]
+       [:div [:span
+              {:style {:padding-right "20px"}}
+              [:i.zmdi.zmdi-storage]]
+        "Application history"]]]
      [bs/modal-body
-      [:p "Cleebo found unsaved activities in your browser."]
-      [:p "Do you want to restore it? Select 'yes' or 'no'"]
-      [:br]
-      [:p.text-muted "Note that you might not be able to restore it later"]]
-     [bs/modal-footer
-      [bs/button-toolbar
-       {:className "pull-right"}
-       [bs/button
-        {:on-click #(let [dump (ls/recover-db)]
-                      (re-frame/dispatch [:load-db dump])
-                      (re-frame/dispatch [:close-init-modal]))}
-        "yes"]
-       [bs/button
-        {:on-click #(re-frame/dispatch [:close-init-modal])}
-        "no"]]]]))
+      (let [history (ls/recover-all-db-keys)]
+        (if (empty? history)
+          [:div.text-muted "No backups have been found"]
+          [:div
+           [:div.text-muted "Application state backups: choose one to time-travel to."]
+           [:br]
+           [bs/table
+            {:hover true}
+            [:thead]
+            [:tbody
+             (for [backup history
+                   :let [timestamp (.parse js/Date backup)]]
+               ^{:key timestamp} [load-from-ls-row backup])]]]))]]))
 
+
+
+;; [bs/modal-footer
+;;  [bs/button-toolbar
+;;   {:className "pull-right"}
+;;   [bs/button
+;;    ;; {:on-click #(let [dump (ls/recover-db)]
+;;    ;;               (re-frame/dispatch [:load-db dump])
+;;    ;;               (re-frame/dispatch [:close-init-modal]))}
+;;    "yes"]
+;;   [bs/button
+;;    {:on-click #(re-frame/dispatch [:close-ls-modal])}
+;;    "no"]]]

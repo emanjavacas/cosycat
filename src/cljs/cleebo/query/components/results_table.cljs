@@ -54,14 +54,15 @@
         :data-id id}
        word])))
 
-(defn results-row [hit-num {:keys [hit id meta]}]
-  (fn [hit-num {:keys [hit id meta]}]
+(defn results-row [hit-num tabindex {:keys [hit id meta]}]
+  (fn [hit-num tabindex {:keys [hit id meta]}]
     [:tr {:data-hit id}
      (concat
       ;; checkbox
       [^{:key (str hit-num "-check")}
        [:td.check {:style {:width "20px" :background-color "#eeeeee"}}
         [:input.check {:type "checkbox"
+                       :tab-index (inc tabindex)
                        :checked (:marked meta)
                        :on-change #(let [flag (.-checked (.-target %))]
                                      (re-frame/dispatch
@@ -94,5 +95,5 @@
         (doall
          (for [[idx {:keys [hit meta id] :as hit-map}] (map-indexed vector @results)
                :let [hit-num (+ idx @from)]]
-           ^{:key hit-num} [results-row hit-num hit-map]))]])))
+           ^{:key hit-num} [results-row hit-num idx hit-map]))]])))
 

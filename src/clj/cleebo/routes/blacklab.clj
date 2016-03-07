@@ -2,6 +2,7 @@
   (:require [cleebo.utils :refer [->int ->keyword]]
             [cleebo.routes.auth :refer [safe]]
             [buddy.auth :refer [authenticated?]]
+            [cleebo.db.annotations :refer [fetch-annotation]]
             [cleebo.blacklab :refer
              [bl-query bl-query-range bl-sort-query bl-sort-range remove-hits!]]
             [taoensso.timbre :as timbre]))
@@ -54,11 +55,23 @@
     (bl-sort-range blacklab corpus from to context sort-map query-id)))
 
 (def blacklab-router
-  (safe (fn [{{route :route} :params :as req}]
-          (let [out (case (->keyword route)
-                      :query (bl-query-route req)
-                      :query-range (bl-query-range-route req)
-                      :sort-query (bl-sort-query-route req)
-                      :sort-range (bl-sort-range-route req))]
-            {:status 200 :body out}))
+  (safe (fn [{{db :db} :components
+              {route :route} :params :as req}]
+          (let [{:keys [results] :as out}
+                (case (->keyword route)
+                  :query (bl-query-route req)
+                  :query-range (bl-query-range-route req)
+                  :sort-query (bl-sort-query-route req)
+                  :sort-range (bl-sort-range-route req))
+                results (for [[idx {:keys [hit] :as hit-map}] (map-indexed vector results)
+                              :let [from (:id (first hit))
+                                    to   (:id (last hit))
+                                    anns (fetch-annotation db (->int from) (->int to))
+                                    new-hit (map (fn [{:keys [id] :as token}]
+                                                   (if-let [token-anns (get anns (->int id))]
+                                                     (assoc token :anns (:anns token-anns))
+                                                     token))
+                                                 hit)]]
+                          (assoc hit-map :hit new-hit))]
+            {:status 200 :body (assoc out :results results)}))
         {:login-uri "/login" :is-ok? authenticated?}))

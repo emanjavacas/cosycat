@@ -10,7 +10,7 @@
   (let [k (by-id "token-ann-key")
         v (by-id "token-ann-val")]
     (doseq [{:keys [hit-id id]} @marked-tokens
-            :let [ann (make-ann {k v} js/username)]]
+            :let [ann (make-ann k v js/username)]]
       (re-frame/dispatch
        [:annotate
         {:hit-id hit-id
@@ -104,9 +104,8 @@
         annotation-modal-show (reagent/atom false)]
     (fn []
       [bs/button
-       {:bsStyle "info"
+       {:bsStyle "primary"
         :style {:visibility (if (zero? (count @marked-tokens)) "hidden" "visible")}
         :onClick #(swap! annotation-modal-show not)}
        [:div "Annotate Tokens"
         [annotation-modal annotation-modal-show marked-tokens]]])))
-

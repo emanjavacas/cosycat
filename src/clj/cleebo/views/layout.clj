@@ -5,7 +5,9 @@
 (declare base nav tabs footer)
 
 (def bootstrap-css
-  "http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css")
+  "vendor/css/bootstrap.min.css"
+  ;; "http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css"
+  )
 
 (def bootstrap-js
   "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js")

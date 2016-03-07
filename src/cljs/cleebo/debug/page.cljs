@@ -37,52 +37,38 @@
 
 (defn ls-dump []
   [bs/button
-   {:on-click #(re-frame/dispatch [:dump-db])}
+   {:on-click ls/dump-db}
    "Dump to LocalStorage"])
 
-(defn ls-read []
+(defn ls-print []
   [bs/button
-   {:on-click #(let [dump (ls/recover-db)]
-                 (.log js/console dump))}
-   "Print LocalStorage to console"])
+   {:on-click #(let [ks (ls/recover-all-db-keys)]
+                 (.log js/console ks))}
+   "Print LocalStorages to console"])
 
-(defn ls-reset []
+(defn ls-reload []
   [bs/button
-   {:on-click #(if-let [dump (ls/recover-db)]
-                 (do
-                   (timbre/info "Reloaded db from LocalStorage")
+   {:on-click #(if-let [ks (ls/recover-all-db-keys)]
+                 (let [dump (ls/recover-db (last ks))]
                    (re-frame/dispatch [:load-db dump]))
-                 (timbre/info "Couldn't reload db from LocalStorage"))}
-   "Reload db from LocalStorage"])
+                 (timbre/info "No DBs in LocalStorage"))}
+   "Reload last db from LocalStorage"])
 
 (defn notification-button []
   [bs/button
    {:on-click #(re-frame/dispatch [:notify {:msg "Hello World! How are you doing?"}])}
    "Notify"])
 
-(defn open-modal [open?]
-  (fn [open?]
-    [bs/button
-     {:on-click #(reset! open? true)}
-     "Launch modal"]))
-
 (defn debug-panel []
-  (let [open? (reagent/atom false)]
-    (fn []
-      [:div.container-fluid
-       [:div.row
-        [:h3 [:span.text-muted "Debug Panel"]]]
-       [:div.row [:hr]]
-       [:div.row
-        [bs/button-toolbar
-         [notification-button]
-         [ls-dump]
-         [ls-read]
-         [ls-reset]
-         [open-modal open?]]
-        [bs/modal
-         {:show @open? :on-hide #(reset! open? false)}
-         [bs/button
-          {:on-click #(reset! open? false)}
-          "Close"]]]
-       [:div.row [summary-session]]])))
+  (fn []
+    [:div.container-fluid
+     [:div.row
+      [:h3 [:span.text-muted "Debug Panel"]]]
+     [:div.row [:hr]]
+     [:div.row
+      [bs/button-toolbar
+       [notification-button]
+       [ls-dump]
+       [ls-print]
+       [ls-reload]]]
+     [:div.row [summary-session]]]))
