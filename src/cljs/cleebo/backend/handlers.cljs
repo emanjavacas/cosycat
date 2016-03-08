@@ -3,12 +3,10 @@
               [re-frame.core :as re-frame]
               [schema.core :as s]
               [cleebo.backend.db :as db]
-              [cleebo.shared-schemas :refer [annotation-schema]]
-              [cleebo.ws :refer [send-transit-msg!]]
               [cleebo.localstorage :as ls]
               [cleebo.backend.middleware
                :refer [standard-middleware no-debug-middleware db-schema]]
-              [cleebo.utils :refer [filter-marked-hits time-id]]))
+              [cleebo.utils :refer [filter-marked-hits time-id update-token]]))
 
 (re-frame/register-handler
  :initialize-db
@@ -116,26 +114,11 @@
          (assoc-in [:session :results] (map :id results))
          (update-in [:session :results-by-id] merge-results)))))
 
-(defn demark-all-tokens [hit]
-  (map #(dissoc % :marked) hit))
-
 (re-frame/register-handler
  :mark-hit
  standard-middleware
  (fn [db [_ {:keys [hit-id flag]}]]
    (assoc-in db [:session :results-by-id hit-id :meta :marked] (boolean flag))))
-
-(defn update-token
-  "apply token-fn where due"
-  [{:keys [hit meta] :as hit-map} token-id token-fn]
-  (assoc
-   hit-map
-   :hit
-   (map (fn [{:keys [id] :as token}]
-          (if (= id token-id)
-            (token-fn token)
-            token))
-        hit)))
 
 (defn has-marked?
   "for a given hit-map we look if the current (de)marking update
@@ -163,59 +146,3 @@
       db
       [:session :results-by-id hit-id]
       (update-token hit-map token-id token-fn)))))
-
-(re-frame/register-handler
- :annotate
- standard-middleware
- (fn [db [_ {:keys [hit-id token-id ann]}]]
-   (let [hit-map (get-in db [:session :results-by-id hit-id])
-         token-fn (fn [token] (update token :anns #(concat % [ann])))]
-     (re-frame/dispatch
-      [:sent-ws
-       {:type :annotation
-        :data {:cpos token-id
-               :ann ann}}])
-     (assoc-in
-      db
-      [:session :results-by-id hit-id]
-      (update-token hit-map token-id token-fn)))))
-
-(re-frame/register-handler
- :sent-ws
- standard-middleware
- (fn [db [_ {:keys [type data] :as payload}]]
-   (send-transit-msg! payload)
-;   (assoc-in db [:requests type] {:status :runnning})
-   db))
-
-(declare on-ws-success on-ws-error)
-(re-frame/register-handler
- :receive-ws
- (fn [db [_ payload]]
-   (let [{:keys [status type data]} payload]
-     (cond
-       (= status :error) (on-ws-error   db {:type type :data data})
-       (= status :ok)    (on-ws-success db {:type type :data data})
-       :else             (throw (js/Error. (str "Unknown status: " status)))))))
-
-(defn annotation-route [{:keys [cpos] :as data}]
-  (re-frame/dispatch
-   [:notify
-    {:msg "Hooray! Annotation stored"
-     :status :ok}]))
-
-(defn on-ws-success
-  [db {:keys [type data] :as payload}]
-  (case type
-    :annotation (annotation-route data))
-  db)
-
-(defn on-ws-error [db {:keys [type data]}]
-  (let [msg (case type
-              :annotation "Oops! We couldn't store your annotation"
-              "Oops there was a dwarfs in the channel")]
-    (re-frame/dispatch
-     [:notify
-      {:msg msg
-       :status :error}])
-    db))

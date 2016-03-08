@@ -79,22 +79,6 @@
                        @results-by-id)))))
 
 (re-frame/register-sub
- :marked-tokens-in-hit
- (fn [db [_ hit-id]]
-   (let [results-by-id (reaction (get-in @db [:session :results-by-id hit-id]))]
-     (reaction (filter :marked @results-by-id)))))
-
-(re-frame/register-sub
- :current-annotation-hit
- (fn [db _]
-   (reaction (get-in @db [:annotations :current-annotation-hit]))))
-
-(re-frame/register-handler
- :current-annotation-token
- (fn [db _]
-   (reaction (get-in db [:annotations :current-annotation-token]))))
-
-(re-frame/register-sub
  :msgs
  (fn [db _]
    (reaction (:msgs @db))))

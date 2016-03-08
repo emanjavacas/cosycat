@@ -1,6 +1,6 @@
 (ns cleebo.blacklab
   (:require [taoensso.timbre :as timbre]
-            [cleebo.utils :refer [wrap-safe]]
+            [cleebo.utils :refer [wrap-safe dummy-hit]]
             [com.stuartsierra.component :as component]
             [cleebo.blacklab.core :as bl]))
 
@@ -66,14 +66,14 @@
 (defn format-hit
   "pads hi-kwic with an empty hit in case of missing context"
   ([hit context]
-   (format-hit hit context (fn [id] {:id (str "miss-" id) :word ""})))
-  ([hit context empty-hit]
+   (format-hit hit context dummy-hit))
+  ([hit context empty-hit-fn]
    (let [match-idxs (keep-indexed (fn [i hit] (when (:match hit) i)) hit)
          left  (- context (first match-idxs))
          right (- context (- (count hit) (inc (last match-idxs))))]
-     (concat (map empty-hit (range left))
+     (concat (map empty-hit-fn (range left))
              hit
-             (map empty-hit (range right))))))
+             (map empty-hit-fn (range right))))))
 
 (defn numerize-hits
   "formats and adds numeric ids to the hit-kwics

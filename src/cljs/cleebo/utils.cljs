@@ -72,3 +72,14 @@
 (defn date-str->locale [date-str]
   (.toLocaleString (js/Date. date-str) "en-US"))
 
+(defn update-token
+  "apply token-fn where due"
+  [{:keys [hit meta] :as hit-map} token-id token-fn]
+  (assoc
+   hit-map
+   :hit
+   (map (fn [{:keys [id] :as token}]
+          (if (= id token-id)
+            (token-fn token)
+            token))
+        hit)))

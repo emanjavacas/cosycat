@@ -2,7 +2,7 @@
   (:require [cleebo.utils :refer [->int ->keyword]]
             [cleebo.routes.auth :refer [safe]]
             [buddy.auth :refer [authenticated?]]
-            [cleebo.db.annotations :refer [fetch-annotation]]
+            [cleebo.db.annotations :refer [merge-annotations]]
             [cleebo.blacklab :refer
              [bl-query bl-query-range bl-sort-query bl-sort-range remove-hits!]]
             [taoensso.timbre :as timbre]))
@@ -63,15 +63,6 @@
                   :query-range (bl-query-range-route req)
                   :sort-query (bl-sort-query-route req)
                   :sort-range (bl-sort-range-route req))
-                results (for [[idx {:keys [hit] :as hit-map}] (map-indexed vector results)
-                              :let [from (:id (first hit))
-                                    to   (:id (last hit))
-                                    anns (fetch-annotation db (->int from) (->int to))
-                                    new-hit (map (fn [{:keys [id] :as token}]
-                                                   (if-let [token-anns (get anns (->int id))]
-                                                     (assoc token :anns (:anns token-anns))
-                                                     token))
-                                                 hit)]]
-                          (assoc hit-map :hit new-hit))]
-            {:status 200 :body (assoc out :results results)}))
+                results-merged (merge-annotations db results)]
+            {:status 200 :body (assoc out :results results-merged)}))
         {:login-uri "/login" :is-ok? authenticated?}))

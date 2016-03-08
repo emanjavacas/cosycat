@@ -4,6 +4,7 @@
             [react-bootstrap.components :as bs]
             [cleebo.backend.handlers]
             [cleebo.backend.subs]
+            [cleebo.backend.ws-routes.annotation-route]
             [cleebo.routes :as routes]
             [cleebo.ws :as ws]
             [cleebo.localstorage :as ls]

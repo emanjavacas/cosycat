@@ -10,6 +10,7 @@
   (let [k (by-id "token-ann-key")
         v (by-id "token-ann-val")]
     (doseq [{:keys [hit-id id]} @marked-tokens
+            :when (not (-> id js/parseInt js/isNaN))
             :let [ann (make-ann k v js/username)]]
       (re-frame/dispatch
        [:annotate
