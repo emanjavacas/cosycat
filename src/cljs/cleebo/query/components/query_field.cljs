@@ -56,9 +56,7 @@
         query-str-atom (reagent/atom @query-str)]
     (fn []
       [:div.row
-       [:div.col-lg-2
-        [:h4 [:span.text-muted {:style {:line-height "15px"}} "Query Panel"]]]
-       [:div.col-lg-10
+       [:div.col-lg-12
         [:div.row
          [:div.col-lg-4
           [query-opts-menu query-opts]]

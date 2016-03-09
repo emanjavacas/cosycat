@@ -7,7 +7,8 @@
 (def popover
   (reagent/as-component
    [bs/popover
-    {:title "Hi there, I am a panel and you?"}
+    {:id "popover"
+     :title "Hi there, I am a panel and you?"}
     [:table {:width "100%"}
      [:thead]
      [:tbody

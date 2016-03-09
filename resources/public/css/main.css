@@ -134,10 +134,13 @@ div.pad {
 }
 
 /* annotation input */
-input.focus-cell:focus, input.focus-cell.clicked {
+/* input.focus-cell:focus, input.focus-cell.clicked { */
+/*     background-color: #ededf3; */
+/* } */
+
+input.focus-cell.clicked {
     background-color: #ededf3;
 }
-
 input.focus-cell {
     box-sizing: border-box;
     border: none;

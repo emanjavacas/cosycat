@@ -24,11 +24,13 @@
   component/Lifecycle
   (start [component]
     (f-repl/start-figwheel! component)
-;    (f-repl/cljs-repl) ;fighweel repl
     component)
   (stop [component]
-    (f-repl/stop-figwheel!)
-    component))
+    (try
+      (f-repl/stop-figwheel!)
+      (catch Exception e
+        component)
+      (finally component))))
 
 (defn new-figwheel []
   (map->Figwheel figwheel-config))

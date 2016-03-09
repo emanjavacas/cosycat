@@ -1,8 +1,7 @@
 (ns cleebo.query.components.annotation-modal
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.shared-schemas :refer [make-ann]]
-            [cleebo.utils :refer [by-id]]
+            [cleebo.utils :refer [by-id make-ann]]
             [react-bootstrap.components :as bs]))
 
 (defn dispatch-annotations

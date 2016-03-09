@@ -4,27 +4,28 @@
             [taoensso.timbre :as timbre]
             [schema.core :as s]
             [cleebo.utils :refer [get-token-id ->int]]
-            [cleebo.db.component :refer [ new-db]]
-            [cleebo.shared-schemas :refer
-             [annotation-schema ->span-ann]]
+            [cleebo.db.component :refer [new-db]]
+            [cleebo.shared-schemas :refer [annotation-schema]]
             [schema.coerce :as coerce]))
 
 (def coll "annotations")
+;;; todo, add corpus information
 
 (s/defn ^:always-validate new-token-annotation
   [db cpos :- s/Int ann :- annotation-schema]
   (let [db-conn (:db db)]
     (mc/update db-conn coll {:_id cpos} {$push {:anns ann}} {:upsert true})))
 
-(s/defn ^:always-validate new-span-annotation
-  [db from :- s/Int to :- s/Int ann :- annotation-schema]
-  (let [db-conn (:db db)]
-    (doseq [cpos (range from to)]
-      (let [ann-doc (cond
-                      (= cpos from) (->span-ann "B" ann)
-                      (= cpos to)   (->span-ann "O" ann)
-                      :else         (->span-ann "i" ann))]
-        (mc/update db-conn coll {:_id cpos} {$push {:anns ann-doc}} {:upsert true})))))
+;;; must go to the client
+;; (s/defn ^:always-validate new-span-annotation
+;;   [db from :- s/Int to :- s/Int ann :- annotation-schema]
+;;   (let [db-conn (:db db)]
+;;     (doseq [cpos (range from to)]
+;;       (let [ann-doc (cond
+;;                       (= cpos from) (->span-ann "B" ann)
+;;                       (= cpos to)   (->span-ann "O" ann)
+;;                       :else         (->span-ann "i" ann))]
+;;         (mc/update db-conn coll {:_id cpos} {$push {:anns ann-doc}} {:upsert true})))))
 
 (def ann-from-db-schema
   "annotation db return either `nil` or a map from 
@@ -32,8 +33,8 @@
   (s/maybe  {s/Int {:anns [annotation-schema] :_id s/Int}}))
 
 (s/defn ^:always-validate fetch-annotation :- ann-from-db-schema
-  ([db cpos] (fetch-annotation db cpos (inc cpos)))
-  ([db cpos-from cpos-to]
+  ([db cpos :- s/Int] (fetch-annotation db cpos (inc cpos)))
+  ([db cpos-from :- s/Int cpos-to :- s/Int]
    (let [db-conn (:db db)
          out (mc/find-maps db-conn coll
                            {$and [{:_id {$gte cpos-from}} {:_id {$lt  cpos-to}}]})]
@@ -50,7 +51,7 @@
        hit))
 
 (defn find-first-id [hit]
-  (first (drop-while #(neg? (get-token-id %)) hit)))
+  (first (drop-while #(neg? %) (map get-token-id hit))))
 
 (defn merge-annotations
   "collect stored annotations for a given span of hits. Annotations are 

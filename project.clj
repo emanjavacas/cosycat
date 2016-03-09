@@ -4,6 +4,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
+                 [org.clojure/core.match "0.3.0-alpha4"]
                  [com.novemberain/monger "3.0.0-rc2"]
                  [com.taoensso/timbre "4.1.4"]
                  [prismatic/schema "1.0.1"]

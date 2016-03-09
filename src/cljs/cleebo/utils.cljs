@@ -1,9 +1,11 @@
 (ns cleebo.utils
   (:require [re-frame.core :as re-frame]
+            [schema.core :as s]
             [reagent.core :as reagent]
+            [cleebo.shared-schemas :refer [annotation-schema]]
             [goog.dom.dataset :as gdataset]
             [goog.string :as gstr]
-             [taoensso.timbre :as timbre])
+            [taoensso.timbre :as timbre])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
 (def corpora
@@ -83,3 +85,18 @@
             (token-fn token)
             token))
         hit)))
+
+(s/defn ^:always-validate make-ann :- annotation-schema
+  [k v username]
+  {:ann {:key k :value v}
+   :username username
+   :timestamp (.now js/Date)})
+
+(defn- ->span-ann*
+  [IOB ann]
+  (update ann :ann (fn [ann] {:span {:IOB IOB :ann ann}})))
+
+(s/defn ^:always-validate ->span-ann  :- annotation-schema
+  [k v username IOB]
+  (->> (make-ann k v username)
+       (->span-ann* IOB)))

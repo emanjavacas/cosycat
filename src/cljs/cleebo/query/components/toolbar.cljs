@@ -71,7 +71,7 @@
     [:label
      {:style {:line-height "35px"}}
      (let [from (inc from) to (min to query-size)]
-       (gstr/format "Displaying %d-%d of %d hits" from to query-size))]))
+       (gstr/format "%d-%d of %d hits" from to query-size))]))
 
 (defn annotation-hit-button []
   (let [marked-hits (re-frame/subscribe [:marked-hits])]
@@ -84,7 +84,7 @@
 
 (defn annotation-button []
   [bs/button-toolbar
-   [annotation-hit-button]
+;   [annotation-hit-button]
    [annotation-modal-button]])
 
 (defn toolbar []

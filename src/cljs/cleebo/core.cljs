@@ -3,14 +3,13 @@
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
             [cleebo.backend.handlers]
-            [cleebo.backend.ws-routes.router]
-            [cleebo.backend.ws-routes.annotation-route]
+            [cleebo.backend.ws :refer [make-ws-channels!]]
+            [cleebo.backend.annotation-handlers]
             [cleebo.backend.subs]
             [cleebo.routes :as routes]
-            [cleebo.ws :as ws]
             [cleebo.localstorage :as ls]
-            [cleebo.components :refer
-             [notification-container load-from-ls-modal]]
+            [cleebo.components
+             :refer [notification-container load-from-ls-modal]]
             [cleebo.query.page :refer [query-panel]]
             [cleebo.annotation.page :refer [annotation-panel]]
             [cleebo.settings.page :refer [settings-panel]]
@@ -94,19 +93,19 @@
   (reagent/render [#'main-panel] (.getElementById js/document "app")))
 
 (defn ^:export init []
-  (let [host (cljs-env :host)]
-    ;; init devtools
-    (devtools/enable-feature! :sanity-hints :dirac)
-    (devtools/install!)
-    ;; declare app routes
-    (routes/app-routes)
-    ;; web-sockets
-    (ws/set-ws-ch)
-    ;; start db
-    (re-frame/dispatch-sync [:initialize-db])
-    ;; handle refreshes
-    (.addEventListener js/window "beforeunload" ls/dump-db)
-    ;; render root
-    (mount-root)
-    ;; start figwheel server
-    (figwheel/start {:websocket-url (str "ws://" host ":3449/figwheel-ws")})))
+  ;; init devtools
+  (devtools/enable-feature! :sanity-hints :dirac)
+  (devtools/install!)
+  ;; declare app routes
+  (routes/app-routes)
+  ;; web-sockets
+  (make-ws-channels!)
+  ;; start db
+  (re-frame/dispatch-sync [:initialize-db])
+  ;; handle refreshes
+  (.addEventListener js/window "beforeunload" ls/dump-db)
+  ;; render root
+  (mount-root)
+  ;; start figwheel server
+  (figwheel/start
+   {:websocket-url (str "ws://" (cljs-env :host) ":3449/figwheel-ws")}))

@@ -1,46 +1,44 @@
 (ns cleebo.autocomplete
-  (:require  [goog.userAgent :as ua]
-             [goog.events :as events]
-             [goog.events.EventType]
-             [clojure.string :as string]
-             [cljs.core.async :refer [>! <! alts! chan sliding-buffer put!]]
-             
-             ;; [blog.responsive.core :as resp]
-             ;; [blog.utils.dom :as dom]
-             ;; [blog.utils.helpers :as h]
-             ;; [blog.utils.reactive :as r]
-             )
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+  (:require [goog.string :as gstr]
+            [reagent.core :as reagent]))
 
-(defprotocol ISelectable
-  (-select! [list n])
-  (-unselect! [list n]))
+(def annotation-keys
+  {"pos"
+   ["NN" "NNP" "NM" "PP"]
+   "lemma"
+   []
+   "animate"
+   ["true" "false"]
+   "tense"
+   ["presens" "past"]})
 
-(defn selector [in list data]
-  (let [out (chan)]
-    (go (loop [highlighted ::none selected ::none]
-          (let [e (<! in)]
-            (if (= e :select)
-              (do
-                (when (number? selected)
-                  (-unselect! list selected))
-                (-select! list highlighted)
-                (>! out [:select (nth data highlighted)])
-                (recur highlighted highlighted))
-              (do
-                (>! out e)
-                (if (or (= e ::none) (number? e))
-                  (recur e selected)
-                  (recur highlighted selected)))))))
-    out))
+(defn find-tags [prefix tags]
+  (if (empty? prefix)
+    tags
+    (filter #(gstr/caseInsensitiveStartsWith % prefix) tags)))
 
-(defprotocol IHideable
-  (-hide! [view])
-  (-show! [view]))
+(defn parse-expression [expr]
+  (if (not (re-find #".*=.*" expr))
+    (find-tags expr (keys annotation-keys))
+    (let [[k v] (clojure.string/split expr #"=")]
+      (if v
+        (map #(str k "=" %) (find-tags v (get annotation-keys k [])))
+        (find-tags k (keys annotation-keys))))))
 
-(defprotocol ITextField
-  (-set-text! [field text])
-  (-text [field]))
-
-(defprotocol IUIList
-  (-set-items! [list items]))
+(defn autocomplete-jq [{:keys [id] :as args-map}]
+  (reagent/create-class
+   {:reagent-render
+    (fn [args-map]
+      [:div [:input args-map]])
+    :component-did-mount
+    (fn []
+      (js/$
+       (fn []
+         (.autocomplete
+          (js/$ (str "#" id))
+          (clj->js {:source (fn [req res]
+                              (try 
+                                (let [term (.-term req)]
+                                  (res (clj->js (parse-expression term))))
+                                (catch :default e
+                                  (res (clj->js {})))))})))))}))

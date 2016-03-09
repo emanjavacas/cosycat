@@ -2,7 +2,8 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
-            [cleebo.shared-schemas :refer [make-ann]]
+            [cleebo.utils :refer [make-ann]]
+            [cleebo.autocomplete :refer [autocomplete-jq]]
             [goog.string :as gstr]))
 
 (def cell-style
@@ -28,7 +29,18 @@
   (let [[k v] (gstr/splitLimit s "=" 2)]
     (make-ann k v js/username)))
 
-(defn focus-row [{:keys [hit id meta]} current-token-idx]
+(defn on-key-down [id token-id]
+  (fn [pressed]
+    (if (= 13 (.-keyCode pressed))
+      (let [ann (parse-annotation (.. pressed -target -value))]
+        (set! (.-value (.-target pressed)) "") ;blankspace input
+        (re-frame/dispatch
+         [:annotate
+          {:hit-id id
+           :token-id token-id
+           :ann ann}])))))
+
+(defn focus-row [{:keys [hit id meta]}]
   (fn [{:keys [hit id meta]} current-token-idx]
     (into
      [:tr]
@@ -36,18 +48,10 @@
        ^{:key (str "focus-" id "-" (:id token))}
        [:td
         {:style {:padding "0px"}}
-        [:input
-         {:class (str "focus-cell " (if (= @current-token-idx idx) "clicked"))
-          :on-key-down
-          (fn [pressed]
-            (if (= 13 (.-keyCode pressed))
-              (let [ann (parse-annotation (.. pressed -target -value))]
-                (set! (.-value (.-target pressed)) "") ;blankspace input
-                (re-frame/dispatch
-                 [:annotate
-                  {:hit-id id
-                   :token-id (:id token)
-                   :ann ann}]))))
+        [autocomplete-jq
+         {:id (str "input-" (:id token))
+          :class (str "focus-cell " (if (= @current-token-idx idx) "clicked"))
+          :on-key-down (on-key-down id (:id token))
           :on-focus #(reset! current-token-idx idx)}]]))))
 
 (defn ann-types [hit-map]
@@ -55,7 +59,6 @@
        (map :ann)
        (map :key)
        (into (hash-set)))]
-    (.log js/console thing)
     thing))
 
 (defn annotation-component [marked-hits current-hit-idx current-token-idx]

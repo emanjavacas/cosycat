@@ -20,7 +20,9 @@
   (let [searcher (get-in bl-component [:searchers searcher-id])
         path (get-in bl-component [:paths-map searcher-id])]
     (if @searcher
-      @searcher
+      (do
+        (timbre/debug "Searcher: " @searcher " already loaded")
+        @searcher)
       (do (timbre/info "Loading searcher: " searcher-id)
           (reset! searcher (bl/make-searcher path))))))
 
@@ -40,12 +42,13 @@
   (start [component]
     (timbre/info "Starting BLComponent")
     (assoc component
-           :searchers (zipmap (keys paths-map) (repeat (atom nil)))
+           :searchers (zipmap (keys paths-map) (repeatedly (fn [] (atom nil))))
            :current-hits (atom {})))
   (stop [component]
     (timbre/info "Shutting down BLComponent")
-    (doseq [query-id (keys @(:current-hits component))]
-      (remove-hits! component query-id))))
+    (if-let [current-hits (:current-hits component)]
+      (doseq [query-id (keys @current-hits)]
+        (remove-hits! component query-id)))))
 
 (defn new-bl-component
   ([paths-map]
@@ -92,7 +95,6 @@
   ([bl-component corpus query-str from to context query-id]
    (let [searcher (ensure-searcher! bl-component corpus)
          hits-handler (:hits-handler bl-component)
-         searcher (ensure-searcher! bl-component corpus)
          hits-range (bl/query searcher hits-handler query-str from to context
                               update-hits! bl-component query-id)]
      {:results (numerize-hits hits-range from to context)
