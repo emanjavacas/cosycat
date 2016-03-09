@@ -27,7 +27,6 @@
    [:notify
     {:msg "Hooray! Annotation stored"
      :status :ok}]))
-
 (defn on-ws-success
   [db {:keys [type data] :as payload}]
   (case type
