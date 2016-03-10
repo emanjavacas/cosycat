@@ -13,19 +13,28 @@
 
 (s/defn ^:always-validate new-token-annotation
   [db cpos :- s/Int ann :- annotation-schema]
-  (let [db-conn (:db db)]
-    (mc/update db-conn coll {:_id cpos} {$push {:anns ann}} {:upsert true})))
-
-;;; must go to the client
-;; (s/defn ^:always-validate new-span-annotation
-;;   [db from :- s/Int to :- s/Int ann :- annotation-schema]
-;;   (let [db-conn (:db db)]
-;;     (doseq [cpos (range from to)]
-;;       (let [ann-doc (cond
-;;                       (= cpos from) (->span-ann "B" ann)
-;;                       (= cpos to)   (->span-ann "O" ann)
-;;                       :else         (->span-ann "i" ann))]
-;;         (mc/update db-conn coll {:_id cpos} {$push {:anns ann-doc}} {:upsert true})))))
+  (let [db-conn (:db db)
+        {timestamp :timestamp
+         username :username
+         {key :key value :value} :ann} ann]
+    (let [[old-anns] (mc/find-maps db-conn coll {:_id cpos "anns.ann.key" key})]
+      (if (not (empty? old-anns))
+        (let [old-ann (first (filter #(= key (get-in % [:ann :key])) (:anns old-anns)))]
+          (println "OLD-ANN!" (doall old-anns))
+          (mc/find-and-modify
+           db-conn coll
+           {:_id cpos "anns.ann.key" key}
+           {$set {"anns.$.ann.key" key "anns.$.ann.value" value
+                  "anns.$.username" username "anns.$.timestamp" timestamp
+                  "anns.$.history" (concat [(dissoc old-ann :history)] (:history old-ann))}}
+           {:return-new true
+            :upsert true}))
+        (mc/find-and-modify
+         db-conn coll
+         {:_id cpos}
+         {$push {:anns ann}}
+         {:return-new true
+          :upsert true})))))
 
 (def ann-from-db-schema
   "annotation db return either `nil` or a map from 
@@ -65,7 +74,7 @@
               new-hit (merge-annotations-hit hit anns-from-db)]]
     (assoc hit-map :hit new-hit)))
 
-;(def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
-;(mc/find-maps (:db db))
-;(timbre/debug (fetch-annotation db 410))
+;; (def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
+;; (mc/find-maps (:db db))
+;; (timbre/debug (fetch-annotation db 410))
 

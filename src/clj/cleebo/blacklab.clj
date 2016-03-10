@@ -46,6 +46,7 @@
            :current-hits (atom {})))
   (stop [component]
     (timbre/info "Shutting down BLComponent")
+    (close-all-searchers! component)
     (if-let [current-hits (:current-hits component)]
       (doseq [query-id (keys @current-hits)]
         (remove-hits! component query-id)))))

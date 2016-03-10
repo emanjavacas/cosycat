@@ -3,6 +3,7 @@
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
             [cleebo.utils :refer [make-ann]]
+            [cleebo.backend.ws-routes :refer [dispatch-annotation]]
             [cleebo.autocomplete :refer [autocomplete-jq]]
             [goog.string :as gstr]))
 
@@ -27,18 +28,15 @@
 
 (defn parse-annotation [s]
   (let [[k v] (gstr/splitLimit s "=" 2)]
-    (make-ann k v js/username)))
+    (if (and k v)
+      [k v])))
 
 (defn on-key-down [id token-id]
   (fn [pressed]
     (if (= 13 (.-keyCode pressed))
-      (let [ann (parse-annotation (.. pressed -target -value))]
-        (set! (.-value (.-target pressed)) "") ;blankspace input
-        (re-frame/dispatch
-         [:annotate
-          {:hit-id id
-           :token-id token-id
-           :ann ann}])))))
+      (if-let [[k v] (parse-annotation (.. pressed -target -value))]
+        (do (set! (.-value (.-target pressed)) "") ;blankspace input
+            (dispatch-annotation k v id token-id))))))
 
 (defn focus-row [{:keys [hit id meta]}]
   (fn [{:keys [hit id meta]} current-token-idx]

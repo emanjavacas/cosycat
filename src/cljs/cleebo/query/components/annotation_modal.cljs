@@ -2,6 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cleebo.utils :refer [by-id make-ann]]
+            [cleebo.backend.ws-routes :refer [dispatch-annotation]]
             [react-bootstrap.components :as bs]))
 
 (defn dispatch-annotations
@@ -9,13 +10,8 @@
   (let [k (by-id "token-ann-key")
         v (by-id "token-ann-val")]
     (doseq [{:keys [hit-id id]} @marked-tokens
-            :when (not (-> id js/parseInt js/isNaN))
-            :let [ann (make-ann k v js/username)]]
-      (re-frame/dispatch
-       [:annotate
-        {:hit-id hit-id
-         :token-id id
-         :ann ann}]))))
+            :when (not (-> id js/parseInt js/isNaN))] ;avoid dummy tokens
+      (dispatch-annotation k v hit-id id))))
 
 (defn input-row [marked-tokens]
   (fn [marked-tokens]

@@ -1,4 +1,5 @@
-(ns cleebo.backend.db)
+(ns cleebo.backend.db
+  (:require-macros [cleebo.env :refer [cljs-env]]))
 
 (def default-db
   "defines app default state"
@@ -7,7 +8,7 @@
    :ls-modal false
    :throbbing? {:main-panel false}
    :settings {:delay 7500}
-   :session {:query-opts {:corpus "brown-id"
+   :session {:query-opts {:corpus (first (cljs-env :blacklab :corpora))
                           :context 5
                           :size 10}
              :query-results {:query-size 0

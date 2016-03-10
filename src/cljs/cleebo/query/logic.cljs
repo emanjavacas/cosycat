@@ -4,6 +4,7 @@
             [taoensso.timbre :as timbre])
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
+;;; TODO: throbbing should go through re-frame handlers
 (defn pager-next
   ([size page-size] (pager-next size page-size 0))
   ([size page-size from]

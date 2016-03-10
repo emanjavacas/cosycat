@@ -27,7 +27,7 @@
        [dropdown-select
         {:label "size: "
          :header "Select page size"
-         :options (map #(->map % %) [5 10 15 25 35 55 85 125 190 290 435 655 985])
+         :options (map #(->map % %) [5 10 15 25 35 55 85 125])
          :model size
          :select-fn #(re-frame/dispatch [:set-session [:query-opts :size] %])}]])))
 
@@ -58,9 +58,9 @@
       [:div.row
        [:div.col-lg-12
         [:div.row
-         [:div.col-lg-4
+         [:div.col-lg-5
           [query-opts-menu query-opts]]
-         [:div.col-lg-8
+         [:div.col-lg-7
           [:div.input-group
            [:input#query-str.form-control
             {:style {:width "100%"}
