@@ -3,8 +3,7 @@
             [schema.core :as s]
             [cleebo.shared-schemas :refer [ws-from-server]]
             [cleebo.utils :refer [write-str read-str]]
-            [cleebo.db.annotations :refer [new-token-annotation]]
-            [cleebo.cqp :refer [cqi-query cqi-query-range]]
+            [cleebo.components.db.annotations :refer [new-token-annotation]]
             [com.stuartsierra.component :as component]
             [org.httpkit.server :as kit]))
 

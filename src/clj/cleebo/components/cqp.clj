@@ -1,4 +1,4 @@
-(ns cleebo.cqp
+(ns cleebo.components.cqp
   (:require [com.stuartsierra.component :as component]
             [cleebo.utils :refer [wrap-safe]]
             [cqp-clj.core :refer [make-cqi-client connect! disconnect!] :as cqp]
@@ -10,10 +10,10 @@
   (start [component]
     (try
       (let [client (make-cqi-client (read-init init-file))]
-        (timbre/info "Connected to CQPServer")
+        (timbre/info "Succesfully connected to CQPServer")
         (assoc component :client client))
       (catch Exception e
-        (timbre/info "CQP service not available due to Exception:" (str e))
+        (timbre/info "CQP service not available due to Exception:" (.getMessage e))
         (assoc component :client nil))))
   (stop [component]
     (timbre/info "Shutting down connection to CQPServer")

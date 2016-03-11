@@ -1,4 +1,4 @@
-(ns cleebo.blacklab
+(ns cleebo.components.blacklab
   (:require [taoensso.timbre :as timbre]
             [cleebo.utils :refer [wrap-safe dummy-hit]]
             [com.stuartsierra.component :as component]

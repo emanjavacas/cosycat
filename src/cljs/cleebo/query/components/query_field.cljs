@@ -62,7 +62,7 @@
           [query-opts-menu query-opts]]
          [:div.col-lg-7
           [:div.input-group
-           [:input#query-str.form-control
+           [:input#query-str.form-control.form-control-no-border
             {:style {:width "100%"}
              :type "text"
              :name "query"

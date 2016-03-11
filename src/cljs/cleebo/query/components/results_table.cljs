@@ -60,7 +60,7 @@
      (concat
       ;; checkbox
       [^{:key (str hit-num "-check")}
-       [:td.check {:style {:width "20px" :background-color "#eeeeee"}}
+       [:td.check {:style {:width "20px" :background-color "#F9F9F9"}}
         [:input.check {:type "checkbox"
                        :tab-index (inc tabindex)
                        :checked (:marked meta)
@@ -71,8 +71,8 @@
                                         :flag flag}]))}]]
        ;; hit number
        ^{:key (str hit-num "-num")}
-       [:td.check  {:style {:width "20px" :background-color "#eeeeee"}}
-        [:label.check (inc hit-num)]]]
+       [:td.check  {:style {:width "20px" :background-color "#F9F9F9"}}
+        [:label.check {:style {:font-weight "bold"}} (inc hit-num)]]]
       ;; hit
       (for [token hit]
         ^{:key (str hit-num "-" (:id token))} [hit-token token]))]))
@@ -84,7 +84,10 @@
         highlighted? (reagent/atom false)]
     (fn []
       [bs/table
-       {:responsive true :className "table-results" :id "table"
+       {:responsive true
+;        :bordered true
+        :striped true
+        :className "table-results" :id "table"
         :on-mouse-down (on-mouse-down mouse-down? highlighted?)        
         :on-mouse-over (on-mouse-over mouse-down? highlighted?)
         :on-mouse-up (on-mouse-up mouse-down? highlighted?)

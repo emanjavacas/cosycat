@@ -60,7 +60,7 @@
 
 (defn navbar []
   [bs/navbar
-   {:inverse true
+   {:inverse false
     :fixedTop true
     :fluid true}
    [bs/navbar-header

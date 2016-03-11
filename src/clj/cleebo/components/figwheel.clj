@@ -1,6 +1,7 @@
-(ns cleebo.figwheel
+(ns cleebo.components.figwheel
   (:require [environ.core :refer [env]]
             [figwheel-sidecar.repl-api :as f-repl]
+            [taoensso.timbre :as timbre]
             [com.stuartsierra.component :as component]))
 
 (def host (get env :host "146.175.15.30"))
@@ -23,13 +24,14 @@
 (defrecord Figwheel []
   component/Lifecycle
   (start [component]
+    (timbre/info "Starting figwheel component")
     (f-repl/start-figwheel! component)
     component)
   (stop [component]
     (try
       (f-repl/stop-figwheel!)
       (catch Exception e
-        component)
+        (timbre/info "Exception when closing figwheel" (.getMessage e)))
       (finally component))))
 
 (defn new-figwheel []

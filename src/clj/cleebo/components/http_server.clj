@@ -1,4 +1,4 @@
-(ns cleebo.http-server
+(ns cleebo.components.http-server
   (:require [cleebo.handler :refer [make-handler]]
             [com.stuartsierra.component :as component]
             [taoensso.timbre :as timbre]

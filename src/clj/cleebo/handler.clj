@@ -26,7 +26,7 @@
             [buddy.auth :refer [authenticated?]]
             [buddy.auth.middleware
              :refer [wrap-authentication wrap-authorization]]
-            [cleebo.blacklab :refer [remove-hits!]]
+            [cleebo.components.blacklab :refer [remove-hits!]]
             [cleebo.routes.auth :refer
              [safe auth-backend login-authenticate on-login-failure signup]]
             [cleebo.routes.ws :refer [ws-handler-http-kit]]

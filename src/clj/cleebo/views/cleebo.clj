@@ -8,7 +8,12 @@
     [:head
      [:meta {:charset "utf-8"}]
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-     (include-css "vendor/css/bootstrap.min.css")
+     ;; (include-css "vendor/css/bootstrap.min.css")
+     ;; (include-css "vendor/css/bootstrap.flat.min.css")
+     ;; (include-css "vendor/css/bootstrap.superhero.min.css")
+     ;; (include-css "vendor/css/bootstrap.sandstone.min.css")
+     ;; (include-css "vendor/css/bootstrap.darkly.min.css")
+     (include-css "vendor/css/bootstrap.lumen.css.min")
      (include-css  "vendor/css/material-design-iconic-font.min.css")
      (include-css "vendor/css/hint.min.css")
      (include-css "css/main.css")
