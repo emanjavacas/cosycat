@@ -45,7 +45,9 @@
 (defn ws-from-client
   [{:keys [type data] :as payload}]
   (case type
-    :annotation {:hit-id s/Int
-                 :token-id s/Int
-                 :ann annotation-schema}
-    :notify     {}))
+    :annotation {:type s/Keyword
+                 :data {:hit-id s/Int
+                        :token-id s/Int
+                        :ann annotation-schema}}
+    :notify     {:type s/Keyword
+                 :data {}}))

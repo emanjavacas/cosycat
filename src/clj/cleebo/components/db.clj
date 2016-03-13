@@ -1,4 +1,4 @@
-(ns cleebo.db.component
+(ns cleebo.components.db
   (:require [monger.core :as mg]
             [com.stuartsierra.component :as component]
             [environ.core :refer [env]]

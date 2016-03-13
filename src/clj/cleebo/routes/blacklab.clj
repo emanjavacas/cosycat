@@ -3,7 +3,7 @@
             [cleebo.routes.auth :refer [safe]]
             [buddy.auth :refer [authenticated?]]
             [cleebo.db.annotations :refer [merge-annotations]]
-            [cleebo.blacklab :refer
+            [cleebo.components.blacklab :refer
              [bl-query bl-query-range bl-sort-query bl-sort-range remove-hits!]]
             [taoensso.timbre :as timbre]))
 

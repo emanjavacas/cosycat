@@ -3,7 +3,7 @@
             [cleebo.utils :refer [->int ->keyword]]
             [cleebo.routes.auth :refer [safe]]
             [buddy.auth :refer [authenticated?]]
-            [cleebo.cqp :refer [cqi-query cqi-query-range]]))
+            [cleebo.components.cqp :refer [cqi-query cqi-query-range]]))
 
 (defn cqp-query-route
   [{{cqi-client :cqi-client} :components

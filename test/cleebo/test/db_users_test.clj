@@ -3,7 +3,7 @@
             [com.stuartsierra.component :as component]
             [cleebo.db.users :refer [new-user is-user? lookup-user remove-user]]
             [cleebo.db.roles :refer [app-roles]]
-            [cleebo.db.component :refer [new-db]]))
+            [cleebo.components.db :refer [new-db]]))
 
 (def db (component/start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
 

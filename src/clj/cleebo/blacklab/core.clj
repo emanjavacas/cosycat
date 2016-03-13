@@ -1,6 +1,7 @@
 (ns cleebo.blacklab.core
   (:require [taoensso.timbre :as timbre])
-  (:import [nl.inl.blacklab.search Searcher Hit Hits Concordance Kwic TextPatternRegex]
+  (:import [nl.inl.blacklab.search Searcher
+            Hit Hits Concordance Kwic TextPatternRegex]
            [nl.inl.blacklab.search.grouping
             HitProperty HitPropertyHitText HitPropertyLeftContext HitPropertyRightContext]
            [nl.inl.blacklab.queryParser.corpusql CorpusQueryLanguageParser]
@@ -12,7 +13,7 @@
 
 (defn update-range
   "Updates v applying function f to the items at the positions
-  by a range. See #'range for its function signature"
+  by a range. See `range` for its function signature"
   [v f & args]
   (if args
     (let [arange (apply range args)]
@@ -135,13 +136,12 @@
 
 (defn query
   "runs a query and returns a window of hits specified by `from` `to` and `context`.
-  Accepts an optional function will be called for side effects with optional args and the 
-  resulting hits"
+  Accepts an optional function that will be called for side effects with optional args
+  and the resulting hits"
   ([searcher hits-handler query-str from to context]
    (query searcher hits-handler query-str from to context identity))
   ([searcher hits-handler query-str from to context f & args]
    (let [-hits (run-query searcher query-str)]
-;     (timbre/debug "update" (conj args -hits))
      (apply f (concat args [-hits]))
      (hits-handler (-hits->window -hits from to context) searcher))))
 
@@ -163,28 +163,36 @@
   [searcher -hits hits-handler from to context criterion prop-name]
   (let [-hits-window (-hits->window -hits from to context)
         hit-property (make-property -hits-window criterion prop-name)]
-    (timbre/debug hit-property)
     (.sort ^Hits -hits-window hit-property)
     (hits-handler -hits-window searcher)))
 
+(defn snippet ;todo home-made function to handle xml-conc; add anns to it?
+  [^Hits -hits hit-idx snippet-size]
+  (let [^Hit -hit (.get -hits hit-idx)
+        ^Concordance conc (.getConcordance -hits -hit snippet-size)]
+    (->> [(.left conc) (.match conc) (.right conc)]
+         (map #(XmlUtil/xmlToPlainText %))
+         (zipmap [:left :match :right]))))
+
 ;;; test
-(defn raw-text [hits & {:keys [n window? pprint?] :or {n 10 window? false pprint? true}}]
-  (let [tokens (if window?
-                 (map (partial map :word) (map :hit (take n hits)))
-                 (map :word (filter :match (mapcat :hit (take n hits)))))]
-    (if pprint?
-      (clojure.pprint/pprint (map #(apply str (interleave (repeat " ") %)) tokens))
-      tokens)))
+;; (defn raw-text
+;;   [hits & {:keys [n window? pprint?] :or {n 10 window? false pprint? true}}]
+;;   (let [tokens (if window?
+;;                  (map (partial map :word) (map :hit (take n hits)))
+;;                  (map :word (filter :match (mapcat :hit (take n hits)))))]
+;;     (if pprint?
+;;       (clojure.pprint/pprint (map #(apply str (interleave (repeat " ") %)) tokens))
+;;       tokens)))
 
-(defn print-ids [hits & {:keys [print?] :or {print? false}}]
-  (let [f (if print? prn identity)]
-    (f (map :id (filter :match (mapcat :hit hits))))))
+;; (defn print-ids [hits & {:keys [print?] :or {print? false}}]
+;;   (let [f (if print? prn identity)]
+;;     (f (map :id (filter :match (mapcat :hit hits))))))
 
-(defn check-equals [s1 s2]
-  (= (into (hash-set) s1) (into (hash-set) s2)))
+;; (defn check-equals [s1 s2]
+;;   (= (into (hash-set) s1) (into (hash-set) s2)))
 
-(defn check-overlap [s1 s2]
-  (clojure.set/difference (into (hash-set) s1) (into (hash-set) s2)))
+;; (defn check-overlap [s1 s2]
+;;   (clojure.set/difference (into (hash-set) s1) (into (hash-set) s2)))
 
 ;; (def paths-map {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"})
 

@@ -5,7 +5,8 @@
             [cleebo.utils :refer [make-ann]]
             [cleebo.backend.ws-routes :refer [dispatch-annotation]]
             [cleebo.autocomplete :refer [autocomplete-jq]]
-            [goog.string :as gstr]))
+            [goog.string :as gstr]
+            [taoensso.timbre :as timbre]))
 
 (def cell-style
   {:width "80px"
@@ -16,14 +17,16 @@
 (defn hit-row [{:keys [hit id meta]} current-token-idx]
   (fn [{:keys [hit id meta]} current-token-idx]
     (into
-     [:tr]
+     [:tr
+      {:on-mouse-down #(.log js/console %)}]
      (for [[idx {:keys [word match anns] :as token}] (map-indexed vector hit)
            :let [info (if match "info")]]
        ^{:key (str id "-" (:id token))}
        [:td
         {:style {:cursor "pointer"}
          :class (str (if anns "has-annotation ") info)
-         :on-click #(reset! current-token-idx idx)}
+;         :on-click #(reset! current-token-idx idx)
+         }
         word]))))
 
 (defn parse-annotation [s]

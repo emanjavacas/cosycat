@@ -3,7 +3,7 @@
               [com.stuartsierra.component :as component]
               [cleebo.db.annotations
                :refer [new-token-annotation fetch-annotation]]
-              [cleebo.db.component :refer [new-db]]))
+              [cleebo.components.db :refer [new-db]]))
 
 ;; (def db (component/start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
 ;; (def annotation-data {:ann {"hey" "ho"}, :username "user", :timestamp 1456308774136})

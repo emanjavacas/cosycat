@@ -4,7 +4,7 @@
             [taoensso.timbre :as timbre]
             [schema.core :as s]
             [cleebo.utils :refer [get-token-id ->int]]
-            [cleebo.db.component :refer [new-db]]
+            [cleebo.components.db :refer [new-db]]
             [cleebo.shared-schemas :refer [annotation-schema]]
             [schema.coerce :as coerce]))
 

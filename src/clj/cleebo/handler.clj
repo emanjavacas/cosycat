@@ -29,7 +29,7 @@
             [cleebo.components.blacklab :refer [remove-hits!]]
             [cleebo.routes.auth :refer
              [safe auth-backend login-authenticate on-login-failure signup]]
-            [cleebo.routes.ws :refer [ws-handler-http-kit]]
+            [cleebo.components.ws :refer [ws-handler-http-kit]]
             [cleebo.routes.cqp :refer [cqp-router]]            
             [cleebo.routes.blacklab :refer [blacklab-router]]))
 

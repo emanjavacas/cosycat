@@ -4,7 +4,9 @@ body {
 }
 /* chrome outline */
 *:focus {
-    outline: none;
+    box-shadow: 0 0 100px 100px rgba(255, 255, 255, 0.5) inset !important;
+    outline: 0 !important;
+    
 }
 
 .form-control-gray:focus {

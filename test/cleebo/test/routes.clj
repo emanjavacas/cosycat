@@ -1,8 +1,8 @@
 (ns cleebo.test.routes
   (:require [cleebo.routes.cqp :as cqp-route]
-            [cleebo.cqp :as cqp]
+            [cleebo.components.cqp :as cqp]
             [cleebo.routes.blacklab :as bl-route]
-            [cleebo.blacklab :as bl]
+            [cleebo.components.blacklab :as bl]
             [environ.core :refer [env]]
             [clojure.test :refer [deftest testing is]]))
 
