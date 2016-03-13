@@ -36,7 +36,7 @@
     (timbre/info "Starting WS component")
     (if (and clients chans)
       component
-      (let [chans {:ws-in (chan) :ws-out (chan)} ;apply routes
+      (let [chans {:ws-in (chan) :ws-out (chan)}
             component (assoc component :clients (atom {}) :chans chans)]
         (ws-routes component)
         component)))
@@ -75,6 +75,7 @@
       (go (loop []
             (if-let [{:keys [ws-target ws-from payload]} (<! ws-out)]
               (let [ws-target-ch (get @clients ws-target)]
+                (timbre/info "sending" payload)
                 (kit/send! ws-target-ch (write-str payload :json))
                 (recur)))))
       (kit/on-close ws-ch (fn [status] (disconnect-client ws username status)))
@@ -82,7 +83,6 @@
        ws-ch
        (fn [payload] ;apply route-handler?
          (let [parsed-payload (read-str payload :json)]
-           (timbre/info username "sends message" parsed-payload)
            (put! ws-in {:ws-from username :payload parsed-payload})))))))
 
 (defn annotation-route [ws payload]

@@ -25,7 +25,7 @@
 
 (deftest bl-route-test
   (let [path-maps (get-in env [:blacklab :blacklab-paths-map] env)
-        bl-component (-> (bl/new-bl-component path-maps) (.start))
+        bl-component (-> (bl/new-bl path-maps) (.start))
         bl-out (bl-route/bl-query-route
                 {:session {:identity {:username "foo"}}
                  :components {:blacklab bl-component}

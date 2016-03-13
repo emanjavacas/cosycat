@@ -22,6 +22,7 @@
         (set! (.-onerror ws-chan) #(timbre/info "WS error"))
         (set! (.-onmessage ws-chan)
               (fn [payload]
+                (timbre/info "got" payload)
                 (->> payload
                      .-data
                      (t/read json-reader)
