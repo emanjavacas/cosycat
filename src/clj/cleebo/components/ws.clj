@@ -54,16 +54,18 @@
   (map->WS {}))
 
 (defn connect-client [ws ws-ch ws-name]
-  (let [{{ws-out :ws-out} :chans clients :clients} ws]
+  (let [{{ws-out :ws-out} :chans clients :clients} ws
+        payload (update-in (messages :hello) [:data] assoc :by ws-name)]
     (timbre/info ws-name "opened ws-channel connection")
-    (notify-clients ws (update-in (messages :hello) [:data] assoc :by ws-name))
-    (swap! clients assoc ws-name ws-ch)))
+    (swap! clients assoc ws-name ws-ch)
+    (notify-clients ws payload :ws-from ws-name)))
 
 (defn disconnect-client [ws ws-name status]
-  (let [{{ws-out :ws-out} :chans clients :clients} ws]
+  (let [{{ws-out :ws-out} :chans clients :clients} ws
+        payload  (update-in (messages :goodbye) [:data] assoc :by ws-name)]
     (timbre/info ws-name "closed ws-channel connection with status: " status)
-    (notify-clients ws (update-in (messages :goodbye) [:data] assoc :by ws-name))
-    (swap! clients dissoc ws-name)))
+    (swap! clients dissoc ws-name)
+    (notify-clients ws payload :ws-from ws-name)))
 
 (defn ws-handler-http-kit [req]
   (let [{{ws :ws} :components
@@ -75,7 +77,8 @@
       (go (loop []
             (if-let [{:keys [ws-target ws-from payload]} (<! ws-out)]
               (let [ws-target-ch (get @clients ws-target)]
-                (timbre/info "sending" payload)
+                (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
+                (timbre/info "clients" @clients)
                 (kit/send! ws-target-ch (write-str payload :json))
                 (recur)))))
       (kit/on-close ws-ch (fn [status] (disconnect-client ws username status)))

@@ -1,33 +1,17 @@
 (ns cleebo.query.components.annotation-modal
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [by-id make-ann]]
+            [cleebo.utils :refer [by-id make-ann parse-annotation]]
+            [cleebo.autocomplete :refer [autocomplete-jq]]
             [cleebo.backend.ws-routes :refer [dispatch-annotation]]
             [react-bootstrap.components :as bs]))
 
 (defn dispatch-annotations
   [marked-tokens]
-  (let [k (by-id "token-ann-key")
-        v (by-id "token-ann-val")]
+  (if-let [[k v] (-> (by-id "token-ann-key") parse-annotation)]
     (doseq [{:keys [hit-id id]} @marked-tokens
             :when (not (-> id js/parseInt js/isNaN))] ;avoid dummy tokens
       (dispatch-annotation k v hit-id id))))
-
-(defn input-row [marked-tokens]
-  (fn [marked-tokens]
-    [:tr
-     ^{:key "key-input"}
-     [:td
-      [:input#token-ann-key.form-control
-       {:type "text"
-        :placeholder "Annotation key"
-        :name "key-input"}]]
-     ^{:key "value-input"}
-     [:td
-      [:input#token-ann-val.form-control
-       {:type "text"
-        :placeholder "Annotation Value"
-        :name "value-input"}]]]))
 
 (defn inner-thead [k1 k2]
   [:thead
@@ -37,15 +21,21 @@
 
 (defn token-annotation-table [marked-tokens]
   (fn [marked-tokens]
-    [:table {:width "100%"}
-     [:caption [:h4 "Annotation"]]
-     (inner-thead "Key" "Value")
+    [:table
+     {:width "100%"}
      [:tbody
-      [input-row marked-tokens]]]))
+      [:tr
+       [:td "Annotation"]
+       [:td
+        [autocomplete-jq
+         {:source :complex-source
+          :class "form-control form-control-no-border"
+          :id "token-ann-key"}]]]]]))
 
 (defn token-counts-table [marked-tokens]
   (fn [marked-tokens]
-    [:table {:width "100%"}
+    [:table
+     {:width "100%"}
      (inner-thead "Token" "Count")
      [:tbody
       {:style {:font-size "14px !important"}}
@@ -60,7 +50,9 @@
   (let [deselect-on-close (reagent/atom false)]
     (fn [annotation-modal-show marked-tokens]
       [bs/modal
-       {:show @annotation-modal-show :on-hide #(swap! annotation-modal-show not)}
+       {:class "large"
+        :show @annotation-modal-show
+        :on-hide #(swap! annotation-modal-show not)}
        [bs/modal-header
         {:closeButton true}
         [bs/modal-title
@@ -69,9 +61,9 @@
        [bs/modal-body
         [:div.container-fluid
          [:div.row
-          ^{:key "cnt-table"} [token-counts-table marked-tokens]
+          ^{:key "ann-table"} [token-annotation-table marked-tokens]
           [:hr]
-          ^{:key "ann-table"} [token-annotation-table marked-tokens]]]]
+          ^{:key "cnt-table"} [token-counts-table marked-tokens]]]]
        [bs/modal-footer
         [:div.container-fluid.pull-left
          {:style {:line-height "40px !important"}}

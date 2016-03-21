@@ -36,6 +36,7 @@
                  [com.stuartsierra/component "0.3.1"]
                  [org.clojure/tools.namespace "0.2.11"]
                  [cqp-clj "0.1.0-SNAPSHOT"]
+                 [org.hackrslab/random-avatar "0.2.3"]
                  ; blacklab
                  [org.apache.lucene/lucene-core "4.2.1"]
                  [org.apache.lucene/lucene-analyzers-common "4.2.1"]
@@ -47,6 +48,7 @@
                  [com.goldmansachs/gs-collections "6.1.0"]
                  [blacklab "1.2-SNAPSHOT"]]
   
+  :repositories [["hackrslab-repository" "http://hackrslab.github.io/maven-repo"]]  
   :main cleebo.core
   
   :jvm-opts ["-Xmx4000M"]

@@ -15,7 +15,7 @@
      (let [{:keys [hit-id token-id anns]} data]
        (re-frame/dispatch
         [:notify
-         {:msg (str "Stored annotation for token " token-id)
+         {:message (str "Stored annotation for token " token-id)
           :status :ok}])
        (re-frame/dispatch
         [:add-annotation
@@ -28,8 +28,8 @@
      (let [{:keys [token-id reason e username]} data]
        (re-frame/dispatch
         [:notify
-         {:msg (str "Couldn't store annotation for token: " token-id
-                    " Reason: " reason)}]
+         {:message (str "Couldn't store annotation for token: " token-id
+                        " Reason: " reason)}]
         (update-in db [:throbbing?] dissoc token-id)))
      
      [:out :annotation _]
@@ -37,22 +37,23 @@
        (if-let [throbbing? (= timestamp (get-in db [:throbbing? token-id]))]
          (do (re-frame/dispatch
               [:notify
-               {:msg (str "Processing annotation")
+               {:message (str "Processing annotation")
                 :status :info}])
              db)
          (do (re-frame/dispatch
               [:notify
-               {:msg (str "Sent annotation for token " token-id)
+               {:message (str "Sent annotation for token " token-id)
                 :status :info}])
              (send-ws payload)
              (assoc-in db [:throbbing? token-id] timestamp))))
      ;; notify routes
-     [:in :notify :ok]
+     [:in :notify _]
      (let [{:keys [by message]} data]
        (do (re-frame/dispatch
             [:notify
-             {:msg (str by " says " message)
-              :status :info}])
+             {:message (str by " says " message)
+              :by by
+              :status status}])
            db)))))
 
 (re-frame/register-handler

@@ -37,7 +37,7 @@
                                  :reason   s/Keyword
                                  (s/optional-key :e) s/Str
                                  (s/optional-key :username) s/Str}}
-    [:notify     :ok]    {:status s/Keyword
+    [:notify     _]    {:status s/Keyword
                           :type    s/Keyword
                           :data {:message s/Str
                                  :by s/Str}}))

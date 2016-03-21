@@ -31,38 +31,69 @@
          (for [{:keys [key label]} options]
            ^{:key key} [bs/menu-item {:eventKey label} label]))]])))
 
-(defn notification-child [msg date by status]
-  [:div.container-fluid
-   {:style {:padding "0 20px"}}
-   [:div.row
-    {:style {:padding "0px"
-             :padding-bottom "20px"
-             :margin "0px"
-             :font-weight "bold"}}
-    msg [:span.label
-         {:style {:margin-left "10px"
-                  :font-size "20px"
-                  :color (color-codes status)}}
-         [:i.zmdi
-          {:style {:line-height 1.4}
-           :class (case status
-                    :info  "zmdi-info"
-                    :ok    "zmdi-storage"
-                    :error "zmdi-alert-circle")}]]]
-   (when date
-     [:div.row.pull-right
-      {:style {:padding-bottom "10px"}}
-      (.toLocaleString date "en-US")])
-   (when by [:div.row.pull-right
-             {:style {:padding-bottom "10px"}}
-             by])])
+;; (defn notification-child [msg date by status]
+;;   [:div.container-fluid
+;;    {:style {:padding "0 10px 0 0"}}
+;;    [:div
+;;     {:style {:padding "0px"
+;;              :padding-bottom "20px"
+;;              :margin "0px"
+;;              :font-weight "bold"}}
+;;     msg]
+;;    [:div
+;;     [:div
+;;      [:span.label.pull-left
+;;       {:style {:margin-left "10px"
+;;                :margin-top "0px"
+;;                :font-size "20px"
+;;                :color (color-codes status)}}
+;;       [:i.zmdi
+;;        {:style {:line-height "1.4em"
+;;                 :font-size "16px"}
+;;         :class (case status
+;;                  :info  "zmdi-info"
+;;                  :ok    "zmdi-storage"
+;;                  :error "zmdi-alert-circle")}]]]
+;;     [:div.row
+;;      (when "a"
+;;        [:div.row
+;;      ;   {:style {:padding-bottom "10px"}}
+;;         "User"])]
+;;     [:div.row.pull-right
+;;      {:style {:padding-bottom "10px"}}
+;;      (.toLocaleString date "en-US")]]])
+
+(defn status-icon [status]
+  [:span.label.pull-left
+   {:style {:margin-left "10px"
+            :margin-top "0px"
+            :font-size "20px"
+            :color (color-codes status)}}
+   [:i.zmdi
+    {:style {:line-height "1.4em"
+             :font-size "16px"}
+     :class (case status
+              :info  "zmdi-info"
+              :ok    "zmdi-storage"
+              :error "zmdi-alert-circle")}]])
+
+(defn notification-child
+  [message date status & {:keys [by]}]
+  (let [by (or by "server")]
+    [:div.notification
+     {:class "success"}
+     [:div.illustration
+      [:img {:src (str "img/avatars/" by ".png")}]]
+     [:div.text
+      [:div.title message]
+      [:div.text (.toLocaleString date "en-US")]]]))
 
 (defn notification
-  [{id :id {msg :msg date :date by :by status :status} :data}]
-  (fn [{id :id {msg :msg date :date by :by status :status} :data}]
+  [{id :id {message :message date :date by :by status :status} :data}]
+  (fn [{id :id {message :message date :date by :by status :status} :data}]
     [:li#notification
      {:on-click #(re-frame/dispatch [:drop-notification id])}
-     [notification-child msg date by (or status :info)]]))
+     [notification-child message date (or status :info) :by by]]))
 
 (defn notification-container []
   (let [notifications (re-frame/subscribe [:notifications])]
@@ -70,9 +101,9 @@
       [:ul#notifications
        [css-transition-group
         {:transition-name "notification"
-         :transition-enter-timeout 500
-         :transition-leave-timeout 500}
-        (map (fn [{:keys [id data] :as payload}]
+         :transition-enter-timeout 650
+         :transition-leave-timeout 650}
+        (map (fn [{:keys [id data]}]
                ^{:key id} [notification {:id id :data data}])
              @notifications)]])))
 

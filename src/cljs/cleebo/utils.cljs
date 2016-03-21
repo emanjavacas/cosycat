@@ -100,3 +100,8 @@
   [k v username IOB]
   (->> (make-ann k v username)
        (->span-ann* IOB)))
+
+(defn parse-annotation [s]
+  (let [[k v] (gstr/splitLimit s "=" 2)]
+    (if (and k v)
+      [k v])))

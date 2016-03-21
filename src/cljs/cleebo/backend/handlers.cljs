@@ -28,7 +28,7 @@
      new-db
      (catch :default e
        (re-frame/dispatch [:notify
-                           {:msg "Oops! Couldn't load backup"
+                           {:message "Oops! Couldn't load backup"
                             :status :error}])
        db))))
 
@@ -40,7 +40,7 @@
      (ls/put now db)
      (re-frame/dispatch
       [:notify
-       {:msg "State succesfully backed-up"
+       {:message "State succesfully backed-up"
         :status :ok}]))
    db))
 
@@ -73,10 +73,11 @@
 
 (re-frame/register-handler
  :notify
- (fn [db [_ {:keys [msg by status] :as data}]]
+ (fn [db [_ {:keys [message by status] :as data}]]
    (let [id (time-id)
          delay (get-in db [:settings :delay])]
-     (js/setTimeout #(re-frame/dispatch [:drop-notification id]) delay)
+     (timbre/debug data)
+     (js/setTimeout #(re-frame/dispatch [:drop-notification id]) 10000)
      (re-frame/dispatch [:add-notification {:data data :id id}]))
    db))
 

@@ -2,7 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
-            [cleebo.utils :refer [make-ann]]
+            [cleebo.utils :refer [make-ann parse-annotation]]
             [cleebo.backend.ws-routes :refer [dispatch-annotation]]
             [cleebo.autocomplete :refer [autocomplete-jq]]
             [goog.string :as gstr]
@@ -25,14 +25,8 @@
        [:td
         {:style {:cursor "pointer"}
          :class (str (if anns "has-annotation ") info)
-;         :on-click #(reset! current-token-idx idx)
-         }
+         :on-click #(reset! current-token-idx idx)}
         word]))))
-
-(defn parse-annotation [s]
-  (let [[k v] (gstr/splitLimit s "=" 2)]
-    (if (and k v)
-      [k v])))
 
 (defn on-key-down [id token-id]
   (fn [pressed]
@@ -50,7 +44,8 @@
        [:td
         {:style {:padding "0px"}}
         [autocomplete-jq
-         {:id (str "input-" (:id token))
+         {:source :complex-source
+          :id (str "input-" (:id token))
           :class (str "focus-cell " (if (= @current-token-idx idx) "clicked"))
           :on-key-down (on-key-down id (:id token))
           :on-focus #(reset! current-token-idx idx)}]]))))
@@ -68,6 +63,7 @@
       [bs/table
        {:condensed true
         :responsive true
+        :striped true
         :id "table-annotation"}
        [:thead]
        [:tbody {:style {:font-size "14px"}}
@@ -86,11 +82,3 @@
                                  anns))]
                  ^{:key (str ann id)} [:td [:span (str key "=" value)]]
                  ^{:key (str ann id)} [:td [:span]])))]))]])))
-
-       ;; [:tbody {:style {:font-size "14px"}}
-       ;;  ;; ^{:key (:id hit-map)}
-       ;;  [hit-row hit-map current-token-idx]
-       ;;  ;; ^{:key (str "f-" (:id hit-map))}
-       ;;  [focus-row hit-map current-token-idx]
-       ;;  ;; ^{:key (str "f-")}  
-       ;;  [:tr (str (merge-annotations hit-map))]]

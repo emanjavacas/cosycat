@@ -63,10 +63,10 @@
 
 (def notification-schema
   {(s/required-key :id) s/Any
-   (s/required-key :data) {(s/required-key :msg)    s/Any
-                           (s/optional-key :by)     s/Any
-                           (s/optional-key :status) (s/enum :ok :error :info)
-                           (s/optional-key :date)   s/Any}})
+   (s/required-key :data) {(s/required-key :message) s/Any
+                           (s/optional-key :by)      s/Any
+                           (s/optional-key :status)  (s/enum :ok :error :info)
+                           (s/optional-key :date)    s/Any}})
 
 (def db-schema
   {:active-panel s/Keyword

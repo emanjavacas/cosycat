@@ -6,6 +6,7 @@
             [cleebo.db.users :refer [lookup-user is-user? new-user]]
             [cleebo.views.error :refer [error-page]]
             [cleebo.views.login :refer [login-page]]
+            [cleebo.avatar :refer [new-avatar]]
             [buddy.auth.accessrules :refer [restrict]]
             [buddy.auth.backends.session :refer [session-backend]]))
 
@@ -28,13 +29,13 @@
         db (get-in req [:components :db])
         user {:username username :password password}
         is-user (is-user? db user)
-        password-match (= password repeatpassword)]
-    (timbre/debug user is-user db password-match)
+        password-match? (= password repeatpassword)]
     (cond
-      (not password-match) (on-signup-failure req "Password mismatch")
-      is-user              (on-signup-failure req "User already exists")
+      (not password-match?) (on-signup-failure req "Password mismatch")
+      is-user               (on-signup-failure req "User already exists")
       :else (let [user (new-user db user)
-                  new-session (assoc session :identity user)]
+                  new-session (assoc session :identity user)
+                  _ (new-avatar username)]
               (-> (redirect (get-in req [:session :next] "/"))
                   (assoc :session new-session))))))
 
