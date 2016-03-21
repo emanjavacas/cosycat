@@ -6,20 +6,17 @@
 
 ;{:_id "cpos" :anns [{:ann {"key" "value"} :username "foo" :timestamp 21930198012}]}
 
-(def span-annotation-schema
-  {:span {:IOB s/Str :ann {:key s/Str :value s/Str}}})
-
 (def token-annotation-schema
   {:key s/Str :value s/Any})
 
 (def annotation-schema
   {:ann {:key   s/Str
-         :value (s/conditional :IOB {:IOB s/Str} :else s/Str)}
+         :value (s/conditional :IOB {:IOB s/Any :value s/Str} :else s/Str)}
    :timestamp s/Int
    :username s/Str
    (s/optional-key :history)
    [{:ann {:key   s/Str
-           :value (s/conditional :IOB {:IOB s/Str} :else s/Str)}
+           :value (s/conditional :IOB {:IOB s/Any :value s/Str} :else s/Str)}
      :timestamp s/Int
      :username s/Str}]})
 
@@ -38,7 +35,7 @@
                                  (s/optional-key :e) s/Str
                                  (s/optional-key :username) s/Str}}
     [:notify     _]    {:status s/Keyword
-                          :type    s/Keyword
+                          :type s/Keyword
                           :data {:message s/Str
                                  :by s/Str}}))
 
@@ -51,3 +48,4 @@
                         :ann annotation-schema}}
     :notify     {:type s/Keyword
                  :data {}}))
+

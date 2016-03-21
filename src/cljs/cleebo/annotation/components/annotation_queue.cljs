@@ -26,7 +26,6 @@
   (fn [marked-hits current-hit]
     [bs/table
      {:style {:font-size "14px"}
-      :responsive true
       :striped true
       :id "table-queue"}
      [:thead]

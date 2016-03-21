@@ -2,7 +2,8 @@
   (:require [re-frame.core :as re-frame]
             [cleebo.utils :refer [update-token make-ann]]
             [cleebo.backend.ws :refer [send-ws]]
-            [cleebo.backend.middleware :refer [standard-middleware]])
+            [cleebo.backend.middleware :refer [standard-middleware]]
+            [schema.core :as s])
   (:require-macros [cljs.core.match :refer [match]]))
 
 (re-frame/register-handler
@@ -65,15 +66,6 @@
        (assoc-in
         db
         [:session :results-by-id hit-id]
-        (update-token hit-map token-id token-fn)))
+        (update-token hit-map (str token-id) token-fn)))
      db)))
-
-(defn dispatch-annotation [k v hit-id token-id]
-  (let [ann (make-ann k v js/username)]
-    (re-frame/dispatch
-     [:ws :out {:type :annotation
-                :status :ok
-                :data {:hit-id hit-id
-                       :token-id token-id
-                       :ann ann}}])))
 

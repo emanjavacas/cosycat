@@ -1,9 +1,8 @@
 (ns cleebo.query.components.annotation-modal
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [by-id make-ann parse-annotation]]
+            [cleebo.utils :refer [by-id parse-annotation dispatch-annotation]]
             [cleebo.autocomplete :refer [autocomplete-jq]]
-            [cleebo.backend.ws-routes :refer [dispatch-annotation]]
             [react-bootstrap.components :as bs]))
 
 (defn dispatch-annotations

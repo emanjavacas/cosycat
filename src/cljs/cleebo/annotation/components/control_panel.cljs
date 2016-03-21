@@ -21,15 +21,13 @@
   (fn [marked-hits current-hit current-token]
     (let [top-hit (dec (count @marked-hits))
           top-token (dec (count (:hit (nth @marked-hits @current-hit))))]
-      [:div.container-fluid
-       [:div.row
-        [bs/button-toolbar
-         {:className "pull-right"}
-         [bs/button-group
-          [token-control-button "fast-backward" safe-dec :current-hit current-hit]
-          [token-control-button "backward" safe-dec      :current-token current-token]
-          [token-control-button "forward" (safe-inc top-token) :current-token current-token]
-          [token-control-button "fast-forward" (safe-inc top-hit) :current-hit current-hit]]]]])))
+      [bs/button-toolbar
+       {:className "pull-right"}
+       [bs/button-group
+        [token-control-button "fast-backward" safe-dec :current-hit current-hit]
+        [token-control-button "backward" safe-dec      :current-token current-token]
+        [token-control-button "forward" (safe-inc top-token) :current-token current-token]
+        [token-control-button "fast-forward" (safe-inc top-hit) :current-hit current-hit]]])))
 
 (defn control-panel-header [marked-hits current-hit current-token]
   (fn [marked-hits current-hit current-token]
@@ -70,17 +68,21 @@
               {:style {:padding-top "5px" :padding-bottom "5px"}}
               [bs/label (reagent/as-component value)]]])]]))))
 
+;; (defn control-panel [marked-hits current-hit current-token]
+;;   (fn [marked-hits current-hit current-token]
+;;     (let [{:keys [hit meta id]} (nth @marked-hits @current-hit)
+;;           {:keys [word anns id]} (nth hit @current-token)]
+;;       [:div.panel.panel-default
+;;        {:style {:border-radius "1px"}}
+;;        [:div.panel-heading
+;;         [control-panel-header marked-hits current-hit current-token]]
+;;        [:div.panel-body
+;;         [:div.container-fluid
+;;          [:div.row [token-control-buttons marked-hits current-hit current-token]]
+;;          [:br]
+;;          [:div.row [control-panel-current word]]
+;;          [:div.row [control-panel-anns marked-hits current-hit current-token]]]]])))
+
 (defn control-panel [marked-hits current-hit current-token]
   (fn [marked-hits current-hit current-token]
-    (let [{:keys [hit meta id]} (nth @marked-hits @current-hit)
-          {:keys [word anns id]} (nth hit @current-token)]
-      [:div.panel.panel-default
-       {:style {:border-radius "1px"}}
-       [:div.panel-heading
-        [control-panel-header marked-hits current-hit current-token]]
-       [:div.panel-body
-        [:div.container-fluid
-         [:div.row [token-control-buttons marked-hits current-hit current-token]]
-         [:br]
-         [:div.row [control-panel-current word]]
-         [:div.row [control-panel-anns marked-hits current-hit current-token]]]]])))
+    [:div [token-control-buttons marked-hits current-hit current-token]]))

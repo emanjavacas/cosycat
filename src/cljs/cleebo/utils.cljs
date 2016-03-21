@@ -36,6 +36,11 @@
 (defn ->map [k l]
   {:key k :label l})
 
+(defn ->int [s]
+  (try (js/parseInt s)
+       (catch :default e
+         s)))
+
 (defn normalize-from [from query-size]
   (max 0 (min from query-size)))
 
@@ -92,14 +97,35 @@
    :username username
    :timestamp (.now js/Date)})
 
-(defn- ->span-ann*
-  [IOB ann]
-  (update ann :ann (fn [ann] {:span {:IOB IOB :ann ann}})))
+(s/defn ^:always-validate make-span-ann  :- annotation-schema
+  [k :- s/Str v :- s/Str username :- s/Str IOB :- (s/enum :I :O :B)]
+  {:ann {:key k :value {:IOB IOB :value v}}
+   :username username
+   :timestamp (.now js/Date)})
 
-(s/defn ^:always-validate ->span-ann  :- annotation-schema
-  [k v username IOB]
-  (->> (make-ann k v username)
-       (->span-ann* IOB)))
+(s/defn ^:always-validate dispatch-annotation
+  [k v hit-id :- s/Int token-id :- s/Int]
+  (let [ann (make-ann k v js/username)]
+    (re-frame/dispatch
+     [:ws :out {:type :annotation
+                :status :ok
+                :data {:hit-id hit-id
+                       :token-id token-id
+                       :ann ann}}])))
+
+(s/defn ^:always-validate dispatch-span-annotation 
+  [k v hit-id :- s/Int token-ids :- [s/Int]]
+  (let [c (dec (count token-ids))]
+    (doseq [[idx token-id] (map-indexed vector token-ids)
+            :let [IOB (cond (= idx 0) :B
+                            (= idx c) :O
+                            :else     :I)]]
+      (re-frame/dispatch
+       [:ws :out {:type :annotation
+                  :status :ok
+                  :data {:hit-id hit-id
+                         :token-id token-id
+                         :ann (make-span-ann k v js/username IOB)}}]))))
 
 (defn parse-annotation [s]
   (let [[k v] (gstr/splitLimit s "=" 2)]

@@ -92,7 +92,7 @@
   (let [{ws-from :ws-from {:keys [type status data]} :payload} payload
         {token-id :token-id hit-id :hit-id ann :ann} data]
     (try
-      (let [{:keys [anns]} (new-token-annotation (:db ws) (->int token-id) ann)
+      (let [{:keys [anns]} (new-token-annotation (:db ws) token-id ann)
             payload {:data {:token-id token-id :hit-id hit-id :anns anns}
                      :status :ok :type :annotation}]
         ;; eventually notify other clients of the new annotation

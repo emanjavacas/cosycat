@@ -13,16 +13,16 @@
 
 (s/defn ^:always-validate new-token-annotation
   [db cpos :- s/Int ann :- annotation-schema]
-  (let [db-conn (:db db)
+  (let [{db :db} db
         {timestamp :timestamp
          username :username
          {key :key value :value} :ann} ann]
-    (let [[old-anns] (mc/find-maps db-conn coll {:_id cpos "anns.ann.key" key})]
+    (let [[old-anns] (mc/find-maps db coll {:_id cpos "anns.ann.key" key})]
       (if (not (empty? old-anns))
         (let [old-ann (first (filter #(= key (get-in % [:ann :key])) (:anns old-anns)))]
           (println "OLD-ANN!" (doall old-anns))
           (mc/find-and-modify
-           db-conn coll
+           db coll
            {:_id cpos "anns.ann.key" key}
            {$set {"anns.$.ann.key" key "anns.$.ann.value" value
                   "anns.$.username" username "anns.$.timestamp" timestamp
@@ -30,7 +30,7 @@
            {:return-new true
             :upsert true}))
         (mc/find-and-modify
-         db-conn coll
+         db coll
          {:_id cpos}
          {$push {:anns ann}}
          {:return-new true
@@ -44,9 +44,8 @@
 (s/defn ^:always-validate fetch-annotation :- ann-from-db-schema
   ([db cpos :- s/Int] (fetch-annotation db cpos (inc cpos)))
   ([db cpos-from :- s/Int cpos-to :- s/Int]
-   (let [db-conn (:db db)
-         out (mc/find-maps db-conn coll
-                           {$and [{:_id {$gte cpos-from}} {:_id {$lt  cpos-to}}]})]
+   (let [{db :db} db
+         out (mc/find-maps db coll {$and [{:_id {$gte cpos-from}} {:_id {$lt  cpos-to}}]})]
      (zipmap (map :_id out) out))))
 
 (defn merge-annotations-hit

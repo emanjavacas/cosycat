@@ -11,7 +11,6 @@
   (fn [event]
     (let [e      (aget event "target")
           button (aget event "button")]
-      (.log js/console button)
       (.preventDefault event)                                 ;avoid text selection
       (when (and (zero? button) (not (gclass/has e "check"))) ;check button type
         (gclass/toggle e "highlighted")
@@ -21,9 +20,7 @@
          [:mark-token
           {:hit-id (js/parseInt (gdataset/get (gdom/getParentElement e) "hit"))
            :token-id (gdataset/get e "id")
-           :flag @highlighted?}]))
-      (when (= 2 button)
-        (.preventDefault event)))))
+           :flag @highlighted?}])))))
 
 (defn on-mouse-over [mouse-down? highlighted?]
   (fn [event]
@@ -43,14 +40,13 @@
       (when (and (zero? button) (not (gclass/has (aget event "target") "check")))
         (swap! mouse-down? not)))))
 
-
 (defn hit-token [{:keys [id word match marked anns]}]
   (fn [{:keys [id word match marked anns]}]
-    (let [highlighted (if marked "highlighted" "")
-          has-annotation (if anns "has-annotation" "")
+    (let [highlighted (if marked "highlighted " "")
+          has-annotation (if anns "has-annotation " "")
           info (if match "info" "")]
       [:td
-       {:class (str (if marked "highlighted ") (if anns "has-annotation ") (if match "info"))
+       {:class (str highlighted has-annotation info)
         :data-id id}
        word])))
 
@@ -85,9 +81,9 @@
     (fn []
       [bs/table
        {:responsive true
-;        :bordered true
         :striped true
-        :className "table-results" :id "table"
+        :className "table-results"
+        :id "table"
         :on-mouse-down (on-mouse-down mouse-down? highlighted?)        
         :on-mouse-over (on-mouse-over mouse-down? highlighted?)
         :on-mouse-up (on-mouse-up mouse-down? highlighted?)

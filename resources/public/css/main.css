@@ -37,7 +37,16 @@ table td.has-annotation {
     /* -webkit-box-shadow:inset 0px 0px 0px 10px #f00; */
     /* -moz-box-shadow:inset 0px 0px 0px 10px #f00; */
     /* box-shadow:inset 0px 0px 0px 10px #f00; */
-    box-shadow: 0 0px black inset,0 -3px turquoise inset, 0px 0 blue inset, 0px 0 green inset;
+    box-shadow: 0 0px black inset,0 -3px #ba9588 inset, 0px 0 blue inset, 0px 0 green inset;
+}
+
+table td.is-span {
+    box-shadow: 0 0px black inset,0 -3px #b8d6cf inset, 0px 0 blue inset, 0px 0 green inset;
+}
+
+table .info {
+    background-color: rgba(117, 202, 235, 0.42) !important; 
+    color: #555555 !important;
 }
 
 /* notifications */
@@ -194,11 +203,6 @@ div.pad {
   }
 }
 
-/* annotation input */
-/* input.focus-cell:focus, input.focus-cell.clicked { */
-/*     background-color: #ededf3; */
-/* } */
-
 input.focus-cell.clicked {
     background-color: #ededf3;
 }
@@ -213,6 +217,3 @@ input.focus-cell {
 table#table-annotation {
     text-align: center;
 }
-
-
-
