@@ -33,6 +33,10 @@ table td.highlighted {
     /* border: 0.5px solid black !important; */
 }
 
+table#table-annotation tr.queue-row:hover td {
+    background-color: #fcfdfd;
+}
+
 table td.has-annotation {
     /* -webkit-box-shadow:inset 0px 0px 0px 10px #f00; */
     /* -moz-box-shadow:inset 0px 0px 0px 10px #f00; */
@@ -203,9 +207,14 @@ div.pad {
   }
 }
 
-input.focus-cell.clicked {
+/* input.focus-cell.clicked { */
+/*     background-color: #ededf3; */
+/* } */
+
+input.focus-cell:focus {
     background-color: #ededf3;
 }
+
 input.focus-cell {
     box-sizing: border-box;
     border: none;

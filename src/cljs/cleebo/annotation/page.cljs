@@ -14,9 +14,8 @@
    "Back to query"])
 
 (defn annotation-panel []
-  (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])
-        current-hit (reagent/atom 0)
-        current-token (reagent/atom 0)]
+  (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
+    (.log js/console @marked-hits)
     (fn []
       [:div.container-fluid
        {:style {:width "100%" :padding "0 10px 0 10px"}}
@@ -25,14 +24,9 @@
           :status "No hits marked for annotation..."
           :status-content [back-to-query-button]]
          [:div
+          [:div.row
+;           [:div.col-lg-12 [control-panel]]
+           ]
           [:div
-;           {:style {:border "1px solid"}}
            [:div.row
-            [:div.col-lg-12 [control-panel marked-hits current-hit current-token]]]
-           [:div.row
-            {:style {:margin-bottom "50px"}}
-            [:div.col-lg-12 [annotation-queue marked-hits current-hit current-token]]]]
-          [:div
-;           {:style {:border "1px solid"}}
-           [:div.row
-            [:div.col-lg-12 [annotation-component marked-hits current-hit current-token]]]]])])))
+            [:div.col-lg-12 [annotation-component marked-hits]]]]])])))

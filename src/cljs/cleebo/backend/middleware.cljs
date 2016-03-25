@@ -68,17 +68,19 @@
                            (s/optional-key :status)  (s/enum :ok :error :info)
                            (s/optional-key :date)    s/Any}})
 
+(def settings-schema
+  {:delay s/Int})
+
 (def db-schema
   {:active-panel s/Keyword
    :ls-modal   s/Bool
    :notifications {s/Any notification-schema}
-   :settings {:delay s/Int}
+   :settings settings-schema
    :session {:query-opts query-opts-schema
-                      :query-results query-results-schema
-                      :results-by-id (s/conditional empty? {} :else results-by-id-schema)
-                      :results (s/conditional empty? [] :else results-schema)}
-   (s/optional-key :throbbing?) {s/Keyword s/Bool}
-   (s/optional-key :dumped-date) s/Str})
+             :query-results query-results-schema
+             :results-by-id (s/conditional empty? {} :else results-by-id-schema)
+             :results (s/conditional empty? [] :else results-schema)}
+   (s/optional-key :throbbing?) {s/Keyword s/Bool}})
 
 (defn validate-db-schema
   [db]

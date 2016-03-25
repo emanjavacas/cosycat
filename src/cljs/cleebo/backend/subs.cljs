@@ -78,7 +78,3 @@
                               (map #(assoc % :hit-id id))))
                        @results-by-id)))))
 
-(re-frame/register-sub
- :msgs
- (fn [db _]
-   (reaction (:msgs @db))))
