@@ -31,38 +31,6 @@
          (for [{:keys [key label]} options]
            ^{:key key} [bs/menu-item {:eventKey label} label]))]])))
 
-;; (defn notification-child [msg date by status]
-;;   [:div.container-fluid
-;;    {:style {:padding "0 10px 0 0"}}
-;;    [:div
-;;     {:style {:padding "0px"
-;;              :padding-bottom "20px"
-;;              :margin "0px"
-;;              :font-weight "bold"}}
-;;     msg]
-;;    [:div
-;;     [:div
-;;      [:span.label.pull-left
-;;       {:style {:margin-left "10px"
-;;                :margin-top "0px"
-;;                :font-size "20px"
-;;                :color (color-codes status)}}
-;;       [:i.zmdi
-;;        {:style {:line-height "1.4em"
-;;                 :font-size "16px"}
-;;         :class (case status
-;;                  :info  "zmdi-info"
-;;                  :ok    "zmdi-storage"
-;;                  :error "zmdi-alert-circle")}]]]
-;;     [:div.row
-;;      (when "a"
-;;        [:div.row
-;;      ;   {:style {:padding-bottom "10px"}}
-;;         "User"])]
-;;     [:div.row.pull-right
-;;      {:style {:padding-bottom "10px"}}
-;;      (.toLocaleString date "en-US")]]])
-
 (defn status-icon [status]
   [:span.label.pull-left
    {:style {:margin-left "10px"

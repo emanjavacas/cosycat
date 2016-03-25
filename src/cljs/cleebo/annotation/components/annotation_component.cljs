@@ -3,7 +3,7 @@
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
             [cleebo.utils :refer
-             [parse-annotation dispatch-annotation dispatch-span-annotation ->int]]
+             [parse-annotation dispatch-annotation dispatch-span-annotation ->int css-transition-group]]
             [cleebo.autocomplete :refer [autocomplete-jq]]
             [goog.string :as gstr]
             [goog.dom.dataset :as gdataset]
@@ -40,7 +40,7 @@
   (fn [{:keys [hit id meta]}]
     (into
      [:tr
-      {:style {:background-color "#ccccaa"}}]
+      {:style {:background-color "#cedede"}}]
      (for [[idx {:keys [word match anns] :as token}] (map-indexed vector hit)
            :let [info (if match "info")]]
        ^{:key (str id "-" (:id token))}
@@ -59,8 +59,7 @@
 (defn focus-row [{:keys [hit id meta]}]
   (fn [{:keys [hit id meta]}]
     (into
-     [:tr
-      {:style {:background-color "#aacccc"}}]
+     [:tr]
      (for [[idx token] (map-indexed vector hit)
            :let [token-id (:id token)]]
        ^{:key (str "focus-" id "-" token-id)}
@@ -126,7 +125,7 @@
        {:responsive true
         :id "table-annotation"}
        [:thead]
-       [:tbody {:style {:font-size "14px"}}
+       [:tbody
         (doall
          (for [hit-map @marked-hits
                [id row-fn] (rows hit-map marked-hits current-hit-id)]
