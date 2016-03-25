@@ -37,6 +37,10 @@ table#table-annotation tr.queue-row:hover td {
     background-color: #fcfdfd;
 }
 
+tr.queue-row > td {
+    border-bottom: 1em !important;
+}
+
 table td.has-annotation {
     /* -webkit-box-shadow:inset 0px 0px 0px 10px #f00; */
     /* -moz-box-shadow:inset 0px 0px 0px 10px #f00; */
@@ -202,15 +206,15 @@ div.pad {
   }
 }
 
-/* input.focus-cell.clicked { */
+/* input.input-cell.clicked { */
 /*     background-color: #ededf3; */
 /* } */
 
-input.focus-cell:focus {
+input.input-cell.highlighted {
     background-color: #cedede;
 }
 
-input.focus-cell {
+input.input-cell {
     background-color: #dde8e8;
     box-sizing: border-box;
     border: none;

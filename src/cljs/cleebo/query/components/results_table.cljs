@@ -36,8 +36,9 @@
 
 (defn on-mouse-up [mouse-down? highlighted?]
   (fn [event]
-    (let [button (aget event "button")]
-      (when (and (zero? button) (not (gclass/has (aget event "target") "check")))
+    (let [button (aget event "button")
+          e      (aget event "target")]
+      (when (and (zero? button) (not (gclass/has e "check")))
         (swap! mouse-down? not)))))
 
 (defn hit-token [{:keys [id word match marked anns]}]
