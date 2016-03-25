@@ -104,6 +104,15 @@
 (defn find-ann-by-key [by-key anns]
   (first (filter (fn [{{key :key} :ann}] (= by-key key)) anns)))
 
+(defn key-val [k v]
+  ;; [:table {:width "100%"}
+  ;;  [:tbody
+  ;;   [:tr
+  ;;    [:td {:style {:text-align "left"}} k]
+  ;;    [:td {:style {:text-align "right"}} [bs/label v]]]]]
+  [:span (str k "=" v)]
+  )
+
 (defn style-iob [{key :key {value :value IOB :IOB} :value}]
   (let [background (case IOB
                      "I" "#e8f2eb"
@@ -112,12 +121,12 @@
                      "white")]
     [:td {:style {:background-color background}
           :class "is-span"}
-     [:span (when (= "B" IOB) (str key "=" value))]]))
+     [:span (when (= "B" IOB) [key-val key value])]]))
 
 (defn annotation-cell [ann]
   (fn [ann]
     (let [{timestamp :timestamp username :username {key :key value :value} :ann} ann
-          span (cond (string? value)  [:td [:span (str key "=" value)]]
+          span (cond (string? value)  [:td [key-val key value]]
                      (map? value)     (style-iob (:ann ann))
                      (nil? value)     [:td [:span ""]])]
       span)))

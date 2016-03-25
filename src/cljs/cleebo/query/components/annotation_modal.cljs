@@ -1,7 +1,7 @@
 (ns cleebo.query.components.annotation-modal
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [by-id parse-annotation dispatch-annotation]]
+            [cleebo.utils :refer [by-id ->int parse-annotation dispatch-annotation]]
             [cleebo.autocomplete :refer [autocomplete-jq]]
             [react-bootstrap.components :as bs]))
 
@@ -10,7 +10,7 @@
   (if-let [[k v] (-> (by-id "token-ann-key") parse-annotation)]
     (doseq [{:keys [hit-id id]} @marked-tokens
             :when (not (-> id js/parseInt js/isNaN))] ;avoid dummy tokens
-      (dispatch-annotation k v hit-id id))))
+      (dispatch-annotation k v (->int hit-id) (->int id)))))
 
 (defn inner-thead [k1 k2]
   [:thead

@@ -37,7 +37,7 @@ table td.has-annotation {
     /* -webkit-box-shadow:inset 0px 0px 0px 10px #f00; */
     /* -moz-box-shadow:inset 0px 0px 0px 10px #f00; */
     /* box-shadow:inset 0px 0px 0px 10px #f00; */
-    box-shadow: 0 0px black inset,0 -3px #ba9588 inset, 0px 0 blue inset, 0px 0 green inset;
+    box-shadow: 0 0px black inset,0 -3px #d5bfb7 inset, 0px 0 blue inset, 0px 0 green inset;
 }
 
 table td.is-span {

@@ -34,8 +34,11 @@
 (defn query-results-handler [data]
   (let [{query-size :query-size} data
         data (if (zero? query-size) (assoc data :results nil) data)]
-    (re-frame/dispatch [:set-query-results data])
-    (re-frame/dispatch [:stop-throbbing :results-frame])))
+    (if (string? data)
+      (.assign js/location "/logout")
+      (do
+        (re-frame/dispatch [:set-query-results data])
+        (re-frame/dispatch [:stop-throbbing :results-frame])))))
 
 (defn which-endpoint? [corpus]
   (let [cqp-corpora (cljs-env :cqp :corpora)
