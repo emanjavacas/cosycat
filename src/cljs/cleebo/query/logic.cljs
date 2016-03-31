@@ -23,6 +23,13 @@
            (neg?  new-from) [0 (+ new-from page-size)]
            :else            [new-from from]))))
 
+(defn which-endpoint? [corpus]
+  (let [cqp-corpora (cljs-env :cqp :corpora)
+        bl-corpora  (cljs-env :blacklab :corpora)]
+    (cond (some #{corpus} cqp-corpora) "cqp"
+          (some #{corpus} bl-corpora)  "blacklab"
+          :else (throw (js/Error "Unknown corpus")))))
+
 ;;; handlers
 (defn error-handler [{:keys [status status-content]}]
   (re-frame/dispatch [:stop-throbbing :results-frame])
@@ -32,21 +39,14 @@
     {:status status :status-content status-content}]))
 
 (defn query-results-handler [data]
-  (let [{query-size :query-size} data
-        data (if (zero? query-size) (assoc data :results nil) data)]
+  (let [{query-size :query-size} data]
     (if (string? data)
       (.assign js/location "/logout")
       (do
         (re-frame/dispatch [:set-query-results data])
         (re-frame/dispatch [:stop-throbbing :results-frame])))))
 
-(defn which-endpoint? [corpus]
-  (let [cqp-corpora (cljs-env :cqp :corpora)
-        bl-corpora  (cljs-env :blacklab :corpora)]
-    (cond (some #{corpus} cqp-corpora) "cqp"
-          (some #{corpus} bl-corpora)  "blacklab"
-          :else (throw (js/Error "Unknown corpus")))))
-
+;;; actions
 (defn query
   "will need to support 'from' for in-place query-opts change"
   [{:keys [query-str corpus context size from] :or {from 0} :as query-args}]

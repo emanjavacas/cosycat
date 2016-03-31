@@ -4,21 +4,27 @@
             #?(:clj [clojure.core.match :refer [match]]
                :cljs [cljs.core.match :refer-macros [match]])))
 
-;{:_id "cpos" :anns [{:ann {"key" "value"} :username "foo" :timestamp 21930198012}]}
-
 (def token-annotation-schema
   {:key s/Str :value s/Any})
 
+(def iob-annotation-schema
+  {:IOB s/Any :value s/Str :B s/Int :O s/Int})
+
 (def annotation-schema
   {:ann {:key   s/Str
-         :value (s/conditional :IOB {:IOB s/Any :value s/Str} :else s/Str)}
+         :value (s/conditional :IOB iob-annotation-schema :else s/Str)}
    :timestamp s/Int
    :username s/Str
    (s/optional-key :history)
    [{:ann {:key   s/Str
-           :value (s/conditional :IOB {:IOB s/Any :value s/Str} :else s/Str)}
+           :value (s/conditional :IOB iob-annotation-schema :else s/Str)}
      :timestamp s/Int
      :username s/Str}]})
+
+(def ann-from-db-schema
+  "annotation db return either `nil` or a map from 
+  `annotation id` to the stored annotations vector"
+  (s/maybe  {s/Int {:anns [annotation-schema] :_id s/Int}}))
 
 (defn ws-from-server
   [{:keys [type status data] :as payload}]
@@ -48,4 +54,3 @@
                         :ann annotation-schema}}
     :notify     {:type s/Keyword
                  :data {}}))
-

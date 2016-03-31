@@ -3,7 +3,7 @@
             [re-frame.core :as re-frame]
             [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]
-            [cleebo.backend.middleware :refer [db-schema]]
+            [cleebo.schemas.schemas :refer [db-schema]]
             [cleebo.localstorage :as ls]))
 
 (defn kv-pairs [s]
@@ -31,7 +31,7 @@
        [:div.row [:h4 [:span.text-muted "Results"]]]
        (into [:div] (map (fn [k] [:div.row k]) @result-keys))
        [:div.row [:h4 [:span.text-muted "Results by key"]]]
-       [:div.row [kv-pairs @results]]
+       [:div.row [kv-pairs (zipmap (keys @results) (map #(map :word (:hit %)) (vals @results)))]]
        [:div.row [:h4 [:span.text-muted "Marked hits"]]]
        [:div.row [kv-pairs (map (juxt :id identity) @marked-hits)]]])))
 

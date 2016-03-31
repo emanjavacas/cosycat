@@ -4,7 +4,7 @@
             [taoensso.timbre :as timbre]
             [com.stuartsierra.component :as component]))
 
-(def host (get env :host "146.175.15.30"))
+(def host (get env :host))
 
 (def figwheel-config
    {:figwheel-options {:css-dirs ["resources/public/css"]} ;server config

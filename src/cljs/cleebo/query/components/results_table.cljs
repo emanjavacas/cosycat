@@ -5,14 +5,15 @@
             [goog.dom :as gdom]
             [goog.dom.classes :as gclass]
             [goog.dom.dataset :as gdataset]
-            [react-bootstrap.components :as bs]))
+            [react-bootstrap.components :as bs]
+            [cleebo.query.logic :as q]))
 
 (defn on-mouse-down [mouse-down? highlighted?]
   (fn [event]
-    (let [e      (aget event "target")
-          button (aget event "button")]
+    (let [e   (aget event "target")
+          btn (aget event "button")]
       (.preventDefault event)                                 ;avoid text selection
-      (when (and (zero? button) (not (gclass/has e "check"))) ;check button type
+      (when (and (zero? btn) (not (gclass/has e "ignore-mark"))) ;check btn type
         (gclass/toggle e "highlighted")
         (swap! mouse-down? not)
         (reset! highlighted? (gclass/has e "highlighted"))
@@ -24,9 +25,9 @@
 
 (defn on-mouse-over [mouse-down? highlighted?]
   (fn [event]
-    (let [e (aget event "target")
-          button (aget event "button")]
-      (when (and (zero? button) @mouse-down? (not (gclass/has e "check")))
+    (let [e   (aget event "target")
+          btn (aget event "button")]
+      (when (and (zero? btn) @mouse-down? (not (gclass/has e "ignore-mark")))
         (gclass/enable e "highlighted" @highlighted?)
         (re-frame/dispatch
          [:mark-token
@@ -36,9 +37,9 @@
 
 (defn on-mouse-up [mouse-down? highlighted?]
   (fn [event]
-    (let [button (aget event "button")
-          e      (aget event "target")]
-      (when (and (zero? button) (not (gclass/has e "check")))
+    (let [btn (aget event "button")
+          e   (aget event "target")]
+      (when (and (zero? btn) (not (gclass/has e "ignore-mark")))
         (swap! mouse-down? not)))))
 
 (defn hit-token [{:keys [id word match marked anns]}]
@@ -51,25 +52,36 @@
         :data-id id}
        word])))
 
+(defn on-double-click [hit-idx]
+  (fn [event]
+    (aset event "cancelBubble" true)
+    (re-frame/dispatch [:fetch-snippet hit-idx])))
+
 (defn results-row [hit-num tabindex {:keys [hit id meta]}]
   (fn [hit-num tabindex {:keys [hit id meta]}]
     [:tr {:data-hit id}
      (concat
       ;; checkbox
       [^{:key (str hit-num "-check")}
-       [:td.check {:style {:width "20px" :background-color "#F9F9F9"}}
-        [:input.check {:type "checkbox"
-                       :tab-index (inc tabindex)
-                       :checked (:marked meta)
-                       :on-change #(let [flag (.-checked (.-target %))]
-                                     (re-frame/dispatch
-                                      [:mark-hit
-                                       {:hit-id id
-                                        :flag flag}]))}]]
+       [:td.ignore-mark
+        {:style {:width "20px" :background-color "#F9F9F9"}}
+        [:input.ignore-mark
+         {:type "checkbox"
+          :tab-index (inc tabindex)
+          :checked (:marked meta)
+          :on-change #(let [flag (.-checked (.-target %))]
+                        (re-frame/dispatch
+                         [:mark-hit
+                          {:hit-id id
+                           :flag flag}]))}]]
        ;; hit number
        ^{:key (str hit-num "-num")}
-       [:td.check  {:style {:width "20px" :background-color "#F9F9F9"}}
-        [:label.check {:style {:font-weight "bold"}} (inc hit-num)]]]
+       [:td.ignore-mark
+        {:style {:width "20px" :background-color "#F9F9F9" :cursor "pointer"}
+         :on-double-click (on-double-click hit-num)}
+        [:label.ignore-mark
+         {:style {:font-weight "bold" :cursor "pointer"}}
+         (inc hit-num)]]]
       ;; hit
       (for [token hit]
         ^{:key (str hit-num "-" (:id token))} [hit-token token]))]))
@@ -83,8 +95,7 @@
       [bs/table
        {:responsive true
         :striped true
-        :className "table-results"
-        :id "table"
+        :id "table-results"
         :on-mouse-down (on-mouse-down mouse-down? highlighted?)        
         :on-mouse-over (on-mouse-over mouse-down? highlighted?)
         :on-mouse-up (on-mouse-up mouse-down? highlighted?)
@@ -96,4 +107,3 @@
          (for [[idx {:keys [hit meta id] :as hit-map}] (map-indexed vector @results)
                :let [hit-num (+ idx @from)]]
            ^{:key hit-num} [results-row hit-num idx hit-map]))]])))
-

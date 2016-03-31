@@ -12,6 +12,22 @@ ul.ui-autocomplete {
     z-index: 9001;
 }
 
+i.round-button {
+    padding: 5px 8px 4px 8px;
+    cursor: pointer;
+    display: inline-block;
+    -moz-border-radius: 100px;
+    -webkit-border-radius: 100px;
+    border-radius: 100px;
+    -moz-box-shadow: 0px 0px 2px #888;
+    -webkit-box-shadow: 0px 0px 2px #888;
+    box-shadow: 0px 0px 2px #888;
+}
+
+i.round-button:hover {
+    background: #edeeed;
+}
+
 .form-control-gray:focus {
   border-color: #999;
   outline: 0;
@@ -57,6 +73,15 @@ table .info {
     color: #555555 !important;
 }
 
+/* table#table-results tr td:first-child { */
+/*     visibility: hidden; */
+/*     background-color: white; */
+/* } */
+
+/* table#table-results tr:hover td:first-child { */
+/*     visibility: visible; */
+/* } */
+
 /* notifications */
 ul#notifications {
     position: fixed;
@@ -81,6 +106,7 @@ ul#notifications {
 }
 
 .notification {
+    color: white;
     width: 360px;
     height: 90px;
     z-index: 9000;
@@ -89,7 +115,7 @@ ul#notifications {
     padding: 20px;
     margin: 0.5rem 0 1rem 0;
     border-radius: 3px;
-    background-color: #fff;
+    background-color: #838c81;
     -webkit-transition: all ease .4s;
     -moz-transition: all ease .4s;
     -o-transition: all ease .4s;
@@ -114,7 +140,7 @@ ul#notifications {
 }
 
 .notification:hover {
-    background-color: #F8F8F8;
+    background-color: #5f6b5d;
 }
 
 .notification .illustration {
@@ -206,17 +232,13 @@ div.pad {
   }
 }
 
-/* input.input-cell.clicked { */
-/*     background-color: #ededf3; */
-/* } */
-
 input.input-cell.highlighted {
     background-color: #cedede;
 }
 
 input.input-cell {
     background-color: #dde8e8;
-    box-sizing: border-box;
+    /* box-sizing: border-box; */
     border: none;
     font-size: 14px;
     width: 100%;
@@ -224,20 +246,12 @@ input.input-cell {
     padding: 0px;
 }
 
+.row-shadow {
+    -webkit-box-shadow: 2px 2px 2px 0px rgba(0, 0, 0, 0.5);
+    -moz-box-shadow: 2px 2px 2px 0px rgba(0, 0, 0, 0.5);
+    box-shadow: 2px 2px 2px 0px rgba(0, 0, 0, 0.5);
+}
+
 table#table-annotation {
     text-align: center;
-}
-
-.table-annotation-enter {
-    opacity: 0;
-    transition: opacity 0.97s linear;
-}
-
-.table-annotation-leave {
-    opacity: 0;
-    transition: opacity 0.97s linear;
-}
-
-.table-annotation-enter-active {
-    opacity: 0.8;
 }

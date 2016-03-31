@@ -39,3 +39,14 @@
                    (get-in result [:status :status]))))
         "status should be  :ok")))
 
+;; (def bl-c (-> (bl/new-bl path-maps) (.start)))
+;; (let [result (bl/bl-query bl-c "brown-id" "\"a\"" 0 10 5)
+;;       hits (get-in result [:results])]
+;;   (->> hits
+;;        (map :hit)
+;;        first
+;;        (map :word))
+;;   (->> hits
+;;        first
+;;        :id)
+;;   )

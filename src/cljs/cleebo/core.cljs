@@ -72,18 +72,18 @@
     [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"]
     [navdropdown :debug-panel "#/debug" "Debug" "zmdi-bug"
      {:label "Debug page" :href "#/debug"}
-     {:label "App snapshots" :on-select #(re-frame/dispatch [:open-ls-modal])}
+     {:label "App snapshots" :on-select #(re-frame/dispatch [:open-modal :localstorage])}
      {:label "New backup" :on-select ls/dump-db}]
     [navlink :exit          "#/exit" "Exit" "zmdi-power"]]])
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])
-        open-modal? (re-frame/subscribe [:open-ls-modal])]
+        ls-modal? (re-frame/subscribe [:modals :localstorage])]
     (fn []
       [:div
        [navbar]
        [notification-container]
-       [load-from-ls-modal open-modal?]
+       [load-from-ls-modal ls-modal?]
        [:div.container-fluid
         {:style {:padding "75px 50px 0 50px"}}
         (panels @active-panel)]])))

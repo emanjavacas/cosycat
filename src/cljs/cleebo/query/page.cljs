@@ -5,6 +5,7 @@
             [cleebo.query.components.toolbar :refer [toolbar]]
             [cleebo.query.components.query-field :refer [query-field]]
             [cleebo.query.components.results-table :refer [results-table]]
+            [cleebo.query.components.snippet-modal :refer [snippet-modal]]
             [cleebo.components :refer [error-panel]]
             [taoensso.timbre :as timbre]))
 
@@ -17,8 +18,7 @@
         throbbing? (re-frame/subscribe [:throbbing? :results-frame])
         has-error (fn [status] (= status :error))
         query-error (fn [status] (= status :query-str-error))
-        empty-results (fn [query-str query-size]
-                        (and (not (= "" query-str)) (zero? query-size)))
+        empty-results (fn [q-str q-size] (and (not (= "" q-str)) (zero? q-size)))
         has-results (fn [query-size] (not (zero? query-size)))]
     (fn []
       (let [{:keys [status status-content]} @status]
@@ -48,5 +48,6 @@
        [:div.row [query-field query-str]]
        [:div.row [toolbar]]
        [:br]
-       [:div.row [results-frame]]])))
+       [:div.row [results-frame]]
+       [snippet-modal]])))
  

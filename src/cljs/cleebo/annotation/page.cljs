@@ -3,9 +3,8 @@
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
             [cleebo.components :refer [error-panel]]
-            [cleebo.annotation.components.control-panel :refer [control-panel]]
-            [cleebo.annotation.components.annotation-component :refer [annotation-component]]
-            [cleebo.annotation.components.annotation-queue :refer [annotation-queue]]))
+            [cleebo.annotation.components.annotation-component
+             :refer [annotation-component]]))
 
 (defn back-to-query-button []
   [bs/button {:href "#/query"}
@@ -23,10 +22,5 @@
          [error-panel
           :status "No hits marked for annotation..."
           :status-content [back-to-query-button]]
-         [:div
-          [:div.row
-;           [:div.col-lg-12 [control-panel]]
-           ]
-          [:div
-           [:div.row
-            [:div.col-lg-12 [annotation-component marked-hits]]]]])])))
+         [:div.row
+          [:div.col-lg-12 [annotation-component marked-hits]]])])))

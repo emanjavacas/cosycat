@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [cleebo.utils :refer [keywordify]]
             [taoensso.timbre :as timbre]
-            [cleebo.backend.middleware :refer [db-schema]]
+            [cleebo.schemas.schemas :refer [db-schema]]
             [schema.core :as s]
             [schema.coerce :as coerce]))
 
@@ -35,12 +35,11 @@
   [k & {:keys [path] :or {path [:db]}}]
   (let [coercion-fn (coerce-json path)]
     (try
-      (let [db (fetch k)]
-        (.log js/console (coercion-fn db))
-        (assoc-in (coercion-fn db) [:notifications] {}))
+      (let [db (fetch k)
+            parsed-db (coercion-fn db)]
+        (assoc-in parsed-db [:notifications] {}))
       (catch :default e
-        (timbre/debug "Couldn't coerce DB")
-        nil))))
+        (timbre/debug "Couldn't coerce DB")))))
 
 (defn recover-all-db-keys []
   (let [ks (js->clj (.keys js/Object js/localStorage))]

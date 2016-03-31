@@ -21,6 +21,13 @@
 (def css-transition-group
   (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
 
+(defn deep-merge
+   "Recursively merges maps. If keys are not maps, the last value wins."
+   [& vals]
+   (if (every? map? vals)
+     (apply merge-with deep-merge vals)
+     (last vals)))
+
 (defn filter-marked-hits
   "filter hits according to whether are tick-checked, optionally
   include those containing marked tokens but not tick-cheked"
@@ -91,6 +98,11 @@
             token))
         hit)))
 
+(defn parse-annotation [s]
+  (let [[k v] (gstr/splitLimit s "=" 2)]
+    (if (and k v)
+      [k v])))
+
 (s/defn ^:always-validate make-ann :- annotation-schema
   [k v username]
   {:ann {:key k :value v}
@@ -126,8 +138,3 @@
                   :data {:hit-id hit-id
                          :token-id token-id
                          :ann (make-span-ann k v js/username IOB)}}]))))
-
-(defn parse-annotation [s]
-  (let [[k v] (gstr/splitLimit s "=" 2)]
-    (if (and k v)
-      [k v])))

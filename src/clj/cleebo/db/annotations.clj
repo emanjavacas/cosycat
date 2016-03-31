@@ -5,41 +5,47 @@
             [schema.core :as s]
             [cleebo.utils :refer [get-token-id ->int]]
             [cleebo.components.db :refer [new-db]]
-            [cleebo.shared-schemas :refer [annotation-schema]]
+            [cleebo.shared-schemas :refer [annotation-schema ann-from-db-schema]]
             [schema.coerce :as coerce]))
 
 (def coll "annotations")
 ;;; todo, add corpus information
 
+(defn- new-annotation [db coll cpos ann]
+  (mc/find-and-modify
+   db coll
+   {:_id cpos}
+   {$push {:anns ann}}
+   {:return-new true
+    :upsert true}))
+
+(defn update-annotation
+  [db coll cpos
+   {timestamp :timestamp
+    username :username
+    {k :key v :value} :ann :as ann}
+   old-ann]
+  (mc/find-and-modify
+   db coll
+   {:_id cpos "anns.ann.key" k}
+   {$set {"anns.$.ann.key" k "anns.$.ann.value" v
+          "anns.$.username" username "anns.$.timestamp" timestamp
+          "anns.$.history" (concat [(dissoc old-ann :history)] (:history old-ann))}}
+   {:return-new true
+    :upsert true}))
+
+(defn find-ann-by-key [anns k]
+  (first (filter #(= k (get-in % [:ann :key])) anns)))
+
 (s/defn ^:always-validate new-token-annotation
   [db cpos :- s/Int ann :- annotation-schema]
   (let [{db :db} db
-        {timestamp :timestamp
-         username :username
-         {key :key value :value} :ann} ann]
-    (let [[old-anns] (mc/find-maps db coll {:_id cpos "anns.ann.key" key})]
-      (if (not (empty? old-anns))
-        (let [old-ann (first (filter #(= key (get-in % [:ann :key])) (:anns old-anns)))]
-          (println "OLD-ANN!" (doall old-anns))
-          (mc/find-and-modify
-           db coll
-           {:_id cpos "anns.ann.key" key}
-           {$set {"anns.$.ann.key" key "anns.$.ann.value" value
-                  "anns.$.username" username "anns.$.timestamp" timestamp
-                  "anns.$.history" (concat [(dissoc old-ann :history)] (:history old-ann))}}
-           {:return-new true
-            :upsert true}))
-        (mc/find-and-modify
-         db coll
-         {:_id cpos}
-         {$push {:anns ann}}
-         {:return-new true
-          :upsert true})))))
-
-(def ann-from-db-schema
-  "annotation db return either `nil` or a map from 
-  `annotation id` to the stored annotations vector"
-  (s/maybe  {s/Int {:anns [annotation-schema] :_id s/Int}}))
+        k (get-in ann [:ann :key])
+        [old-anns] (mc/find-maps db coll {:_id cpos "anns.ann.key" k})]
+    (if (empty? old-anns)
+      (new-annotation db coll cpos ann)
+      (let [old-ann (find-ann-by-key (:anns old-anns) k)]
+        (update-annotation db coll cpos ann old-ann)))))
 
 (s/defn ^:always-validate fetch-annotation :- ann-from-db-schema
   ([db cpos :- s/Int] (fetch-annotation db cpos (inc cpos)))
@@ -73,7 +79,8 @@
               new-hit (merge-annotations-hit hit anns-from-db)]]
     (assoc hit-map :hit new-hit)))
 
-;; (def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
-;; (mc/find-maps (:db db))
-;; (timbre/debug (fetch-annotation db 410))
+;(def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
+;(mc/find-maps (:db db) coll )
+;(timbre/debug (fetch-annotation db 410))
+
 

@@ -4,7 +4,7 @@
             [buddy.auth :refer [authenticated?]]
             [cleebo.db.annotations :refer [merge-annotations]]
             [cleebo.components.blacklab :refer
-             [bl-query bl-query-range bl-sort-query bl-sort-range remove-hits!]]
+             [bl-query bl-query-range bl-sort-query bl-sort-range bl-snippet remove-hits!]]
             [taoensso.timbre :as timbre]))
 
 (defn bl-query-route
@@ -54,15 +54,38 @@
         query-id username]
     (bl-sort-range blacklab corpus from to context sort-map query-id)))
 
+(defn bl-snippet-route
+  [{{{username :username} :identity} :session
+    {blacklab :blacklab} :components
+    {hit-idx :hit-idx snippet-size :snippet-size} :params}]
+  (let [query-id username
+        hit-idx (->int hit-idx)
+        snippet-size (->int snippet-size)]
+    (bl-snippet blacklab hit-idx snippet-size query-id)))
+
+(defn with-results-annotations [body db]
+  (let [{:keys [results] :as out} body]
+    (assoc body :results (merge-annotations db results))))
+
+(defmulti blacklab-routes
+  (fn [{{route :route} :params :as req}]
+    (->keyword route)))
+
+(defmethod blacklab-routes :query [{{db :db} :components :as req}]
+  (with-results-annotations (bl-query-route req) db))
+
+(defmethod blacklab-routes :query-range [{{db :db} :components :as req}]
+  (with-results-annotations (bl-query-range-route req) db))
+
+(defmethod blacklab-routes :sort-query [{{db :db} :components :as req}]
+  (with-results-annotations (bl-sort-query-route req) db))
+
+(defmethod blacklab-routes :sort-range [{{db :db} :components :as req}]
+  (with-results-annotations (bl-sort-range-route req) db))
+
+(defmethod blacklab-routes :snippet [req]
+  (bl-snippet-route req))
+
 (def blacklab-router
-  (safe (fn [{{db :db} :components
-              {route :route} :params :as req}]
-          (let [{:keys [results] :as out}
-                (case (->keyword route)
-                  :query (bl-query-route req)
-                  :query-range (bl-query-range-route req)
-                  :sort-query (bl-sort-query-route req)
-                  :sort-range (bl-sort-range-route req))
-                results-merged (merge-annotations db results)]
-            {:status 200 :body (assoc out :results results-merged)}))
+  (safe (fn [req] {:status 200 :body (blacklab-routes req)})
         {:login-uri "/login" :is-ok? authenticated?}))

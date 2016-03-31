@@ -81,14 +81,14 @@
     {:style {:cursor "pointer"}
      :on-click #(let [dump (ls/recover-db backup)]
                   (re-frame/dispatch [:load-db dump])
-                  (re-frame/dispatch [:close-ls-modal]))}
+                  (re-frame/dispatch [:close-modal :localstorage]))}
     (date-str->locale backup)]])
 
 (defn load-from-ls-modal [open?]
   (fn [open?]
     [bs/modal
      {:show @open?
-      :on-hide #(re-frame/dispatch [:close-ls-modal])}
+      :on-hide #(re-frame/dispatch [:close-modal :localstorage])}
      [bs/modal-header
       {:closeButton true}
       [bs/modal-title
@@ -110,8 +110,6 @@
              (for [backup history
                    :let [timestamp (.parse js/Date backup)]]
                ^{:key timestamp} [load-from-ls-row backup])]]]))]]))
-
-
 
 ;; [bs/modal-footer
 ;;  [bs/button-toolbar

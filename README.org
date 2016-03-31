@@ -1,1 +1,85 @@
-# cleebo
+* TO DO list:
+** Backend
+*** Systematic logging
+*** Refactoring for production
+*** Route notifications
+Depending on whether the notification requires user response or not 
+and whether the user is online or not: store notification in user
+profile for later use (eventually emailing)
+
+*** Blacklab
+**** kill query on incoming query
+
+** DB
+*** Bulk inserts (does this work atomically in MongoDB?)
+*** Notifications
+**** Filter notifications according to stored profiles
+Different notification profiles: 
+- Debug mode (get all)
+- Project mode (only project-related notifications)
+- Followee relationships (get notified about followees actions)
+- Don't disturb modus (get only obligatory notifications 
+  but don't show them on top; store them in Updates)
+
+*** Annotation categories database
+
+**** Schemes
+
+***** Simple
+#+BEGIN_SRC json
+{
+    "pos": [
+	"NN",
+	"NNP",
+	"PP"
+    ],
+    "animate": [
+	"human",
+	"non-human",
+	"animal",
+	"inanimate"
+    ]
+}
+#+END_SRC
+
+**** Or more complex, which of course implies more complex annotation schemes (including tag metadata)
+#+BEGIN_SRC json
+[
+    {
+	"key": "pos",
+	"systems": [
+	    {
+		"name": "default Tagset",
+		"source": "inline",
+		"tags": [
+		    "NN",
+		    "NNP",
+		    "PP"
+		]
+	    },
+	    {
+		"name": "STTS",
+		"source": "http://www.ims.uni-stuttgart.de/forschung/ressourcen/lexika/TagSets/stts-table.html"	
+	    }
+	]
+    }
+]
+#+END_SRC
+
+** Front end
+*** Annotation page
+**** Fix span annotations
+**** Retrieve textual context
+**** Group annotation by colors
+*** Query page
+**** Warn/skip greedy quantifiers
+**** Query on button click
+*** Home page
+**** Show connection status
+*** WS
+**** Reconnect on error
+*** DB
+**** Store user profile settings
+**** Force Update of marked hits after new query? Or just remove marked hits after new query
+**** Store user query history? or working with different queries simultaneously
+

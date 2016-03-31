@@ -144,14 +144,17 @@
       :from from
       :to to})))
 
-(defn- bl-snippet
+(defn- bl-snippet*
   ([bl hit-idx snippet-size]
-   (bl-snippet bl hit-idx snippet-size "default"))
+   (bl-snippet* bl hit-idx snippet-size "default"))
   ([bl hit-idx snippet-size query-id]
-   (let [hits (get-hits bl query-id)]
-     (bl/snippet hits hit-idx snippet-size))))
+   (let [hits (get-hits bl query-id)
+         snippet (bl/snippet hits hit-idx snippet-size)]
+     {:snippet snippet :hit-idx hit-idx})))
 
 (def bl-query (wrap-safe bl-query*))
 (def bl-query-range (wrap-safe bl-query-range*))
 (def bl-sort-query (wrap-safe bl-sort-query*))
 (def bl-sort-range  (wrap-safe bl-sort-range*))
+(def bl-snippet (wrap-safe bl-snippet*))
+
