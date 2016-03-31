@@ -69,7 +69,7 @@ Different notification profiles:
 ** Front end
 *** Annotation page
 **** Fix span annotations
-**** Retrieve textual context
+**** DONE Retrieve textual context
 **** Group annotation by colors
 *** Query page
 **** Warn/skip greedy quantifiers

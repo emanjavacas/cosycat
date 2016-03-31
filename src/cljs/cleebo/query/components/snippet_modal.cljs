@@ -4,9 +4,31 @@
             [react-bootstrap.components :as bs]
             [taoensso.timbre :as timbre]))
 
-(defn fetch-more-snippet [hit-idx new-snippet-size context]
+(defn fetch-more-snippet [hit-idx snippet-size delta context]
   (re-frame/dispatch
-   [:fetch-snippet hit-idx :snippet-size new-snippet-size :context context]))
+   [:fetch-snippet hit-idx :snippet-size (+ snippet-size delta) :context context]))
+
+(defn more-button [hit-idx snippet-size delta context glyph]
+  (fn [hit-idx snippet-size delta-atom context glyph]
+    [:div.text-center
+     [:i.round-button
+      {:on-click #(fetch-more-snippet hit-idx @snippet-size (swap! delta + 10) context)}
+      [bs/glyphicon {:glyph glyph}]]]))
+
+(defn text-snippet [left match right]
+  (fn [left match right]
+    [:div
+     left
+     [:p.text-center
+      {:style {:font-weight "bold" :margin-bottom 0}}
+      match]
+     right]))
+
+(defn on-hide [left-delta right-delta]
+  (fn []
+    (re-frame/dispatch [:close-modal :snippet])
+    (reset! left-delta 0)
+    (reset! right-delta 0)))
 
 (defn snippet-modal []
   (let [snippet-modal? (re-frame/subscribe [:modals :snippet])
@@ -16,9 +38,7 @@
     (fn []
       [bs/modal
        {:show (boolean @snippet-modal?)
-        :on-hide #(do (re-frame/dispatch [:close-modal :snippet])
-                      (reset! left-delta 0)
-                      (reset! right-delta 0))}
+        :on-hide (on-hide left-delta right-delta)}
        [bs/modal-header
         {:closeButton true}
         [:h4 "Snippet"]]
@@ -26,24 +46,8 @@
         (let [{:keys [snippet hit-idx]} @snippet-modal?
               {:keys [left match right]} snippet]
           [:div.text-justify
-           [:div.text-center
-            [:i.round-button
-             {:on-click #(fetch-more-snippet
-                          hit-idx
-                          (+ @snippet-size (swap! left-delta + 15))
-                          :left)}
-             [bs/glyphicon {:glyph "menu-up"}]]]
-           [:br]
-           left
-           [:p.text-center
-            {:style {:font-weight "bold" :margin-bottom 0}}
-            match]
-           right
+           [more-button hit-idx snippet-size left-delta :left "menu-up"]
            [:br] [:br]
-           [:div.text-center
-            [:i.round-button
-             {:on-click #(fetch-more-snippet
-                          hit-idx
-                          (+ @snippet-size (swap! right-delta + 15))
-                          :right)}
-             [bs/glyphicon {:glyph "menu-down"}]]]])]])))
+           [text-snippet left match right]
+           [:br] [:br]
+           [more-button hit-idx snippet-size right-delta :right "menu-down"]])]])))
