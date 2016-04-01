@@ -1,7 +1,8 @@
 (ns cleebo.query.components.annotation-modal
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [by-id ->int parse-annotation dispatch-annotation]]
+            [cleebo.utils :refer [by-id ->int parse-annotation]]
+            [cleebo.backend.handlers.annotations :refer [dispatch-annotation]]
             [cleebo.autocomplete :refer [autocomplete-jq]]
             [react-bootstrap.components :as bs]))
 
@@ -86,13 +87,28 @@
                         (dispatch-annotations marked-tokens))}
          "Submit"]]])))
 
+(defn on-click-annotation-btn [disabled? annotation-modal-show]
+  (fn []
+    (when-not (disabled?)
+      (swap! annotation-modal-show not))))
+
+(defn disabled-button-tooltip [disabled?]
+  (if (disabled?)
+    (reagent/as-component
+     [bs/tooltip {:id "tooltip"} "No tokens selected!"])
+    (reagent/as-component [:span])))
+
 (defn annotation-modal-button []
   (let [marked-tokens (re-frame/subscribe [:marked-tokens])
-        annotation-modal-show (reagent/atom false)]
+        show? (reagent/atom false)]
     (fn []
-      [bs/button
-       {:bsStyle "primary"
-        :style {:visibility (if (zero? (count @marked-tokens)) "hidden" "visible")}
-        :onClick #(swap! annotation-modal-show not)}
-       [:div "Annotate Tokens"
-        [annotation-modal annotation-modal-show marked-tokens]]])))
+      (let [disabled? (fn [marked-tokens] (zero? (count @marked-tokens)))]
+        [bs/overlay-trigger
+         {:overlay (disabled-button-tooltip #(disabled? marked-tokens))
+          :placement "right"}
+         [bs/button
+          {:bsStyle "primary"
+           :style (when (disabled? marked-tokens) {:opacity 0.65 :cursor "auto"})
+           :onClick (on-click-annotation-btn #(disabled? marked-tokens) show?)}
+          [:div "Annotate Tokens"
+           [annotation-modal show? marked-tokens]]]]))))

@@ -37,7 +37,13 @@
 (defn find-ann-by-key [anns k]
   (first (filter #(= k (get-in % [:ann :key])) anns)))
 
-(s/defn ^:always-validate new-token-annotation
+(defmulti new-token-annotation
+  "dispatch based on type (either a particular value or a vector of that value)"
+  (fn [db token-id ann]
+    [(type token-id) (type ann)]))
+
+(s/defmethod ^:always-validate new-token-annotation
+  [java.lang.Long clojure.lang.PersistentArrayMap]
   [db cpos :- s/Int ann :- annotation-schema]
   (let [{db :db} db
         k (get-in ann [:ann :key])
@@ -46,6 +52,13 @@
       (new-annotation db coll cpos ann)
       (let [old-ann (find-ann-by-key (:anns old-anns) k)]
         (update-annotation db coll cpos ann old-ann)))))
+
+(s/defmethod ^:always-validate new-token-annotation
+  [clojure.lang.PersistentVector clojure.lang.PersistentVector]
+  [db cposs :- [s/Int] anns :- [annotation-schema]]
+  (for [[cpos ann] (map vector cposs anns)]
+    (let [response-payload (new-token-annotation db cpos ann)]
+      response-payload)))
 
 (s/defn ^:always-validate fetch-annotation :- ann-from-db-schema
   ([db cpos :- s/Int] (fetch-annotation db cpos (inc cpos)))

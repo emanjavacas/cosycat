@@ -23,7 +23,7 @@
     (fn []
       (let [{:keys [status status-content]} @status]
         (cond
-          @throbbing?                 [throbbing-panel]
+          @throbbing?          [throbbing-panel]
           (has-error status)   [error-panel
                                 :status "Oops! something bad happened"
                                 :status-content [:div status-content]]
@@ -41,12 +41,13 @@
                                 :status "No results to be shown... Go do some research!"])))))
 
 (defn query-panel []
-  (let [query-str (re-frame/subscribe [:session :query-results :query-str])]
+  (let [query-str (re-frame/subscribe [:session :query-results :query-str])
+        has-query? (re-frame/subscribe [:has-query?])]
     (fn []
       [:div.container
        {:style {:width "100%" :padding "0px 10px 0px 10px"}}
        [:div.row [query-field query-str]]
-       [:div.row [toolbar]]
+       (when @has-query? [:div.row [toolbar]])
        [:br]
        [:div.row [results-frame]]
        [snippet-modal]])))

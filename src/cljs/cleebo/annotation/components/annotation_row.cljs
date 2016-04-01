@@ -1,29 +1,37 @@
 (ns cleebo.annotation.components.annotation-row
-  (:require [react-bootstrap.components :as bs]))
+  (:require [react-bootstrap.components :as bs]
+            [reagent.core :as reagent]
+            [cleebo.utils :refer [parse-time]]))
 
-(defn key-val [k v]
-  [:table {:width "100%"}
-   [:tbody
-    [:tr
-     [:td {:style {:text-align "left"}} k]
-     [:td {:style {:text-align "right"}} [bs/label v]]]]]
+(defn user-popover [user time]
+  (reagent/as-component
+   [bs/popover
+    {:id "popover"}
+    [:div user [:br]
+     [:span (parse-time time)]]]))
+
+(defn key-val [k v user time]
+  [:div k
+   [bs/overlay-trigger
+    {:overlay (user-popover user time)
+     :placement "right"}      
+    [:span {:style {:text-align "right" :margin-left "7px"}} [bs/label v]]]]
 ;  [:span (str k "=" v)]
   )
 
-(defn style-iob [{key :key {value :value IOB :IOB} :value}]
+(defn style-iob [{key :key {value :value IOB :IOB} :value user :username time :timestamp}]
   (let [background (case IOB
                      "I" "#e8f2eb"
                      "B" "#d8e9dd"
                      "O" "#d8e9dd"
                      "white")]
-    [:td {:style {:background-color background}
-          :class "is-span"}
-     [:span (when (= "B" IOB) [key-val key value])]]))
+    [:td.is-span.ann-cell {:style {:background-color background}}
+     [:span (when (= "B" IOB) [key-val key value user time])]]))
 
 (defn annotation-cell [ann]
   (fn [ann]
-    (let [{timestamp :timestamp username :username {key :key value :value} :ann} ann
-          span (cond (string? value)  [:td [key-val key value]]
+    (let [{time :timestamp user :username {key :key value :value} :ann} ann
+          span (cond (string? value)  [:td.ann-cell [key-val key value user time]]
                      (map? value)     (style-iob (:ann ann))
                      (nil? value)     [:td [:span ""]])]
       span)))

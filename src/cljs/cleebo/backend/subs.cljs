@@ -56,6 +56,11 @@
    (reaction (get-in @db [:session :query-results]))))
 
 (re-frame/register-sub
+ :has-query?
+ (fn [db _]
+   (reaction (not (zero? (get-in @db [:session :query-results :query-size]))))))
+
+(re-frame/register-sub
  :results
  (fn [db _]
    (let [results (reaction (get-in @db [:session :results]))

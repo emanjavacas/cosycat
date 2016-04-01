@@ -1,7 +1,8 @@
 (ns cleebo.annotation.components.input-row
   (:require [reagent.core :as reagent]
-            [cleebo.utils :refer
-             [parse-annotation dispatch-annotation dispatch-span-annotation ->int]]
+            [cleebo.utils :refer [parse-annotation ->int]]
+            [cleebo.backend.handlers.annotations :refer
+             [dispatch-annotation dispatch-span-annotation ]]
             [cleebo.autocomplete :refer [autocomplete-jq]]
             [goog.dom.dataset :as gdataset]
             [goog.dom.classes :as gclass]))
@@ -16,7 +17,6 @@
 
 (defn on-mouse-down [mouse-down? highlighted? selection id]
   (fn [event]
-    (.log js/console @selection)
     (let [e (aget event "target")]
 ;      (if @mouse-down? (.preventDefault event))
       (gclass/toggle e "highlighted")

@@ -7,8 +7,9 @@
              [chan go >! <! >!! <!! alts! put! take! timeout close!]]
             [clojure.core.match :refer [match]]
             [cleebo.shared-schemas :refer [ws-from-server]]
-            [cleebo.utils :refer [write-str read-str ->int]]
-            [cleebo.db.annotations :refer [new-token-annotation]]))
+            [cleebo.routes.annotations :refer [annotation-route]]
+            [cleebo.routes.notifications :refer [notify-route]]            
+            [cleebo.utils :refer [write-str read-str ->int]]))
 
 (def messages
   {:shutting-down {:status :ok
@@ -88,26 +89,6 @@
          (let [parsed-payload (read-str payload :json)]
            (put! ws-in {:ws-from username :payload parsed-payload})))))))
 
-(defn annotation-route [ws payload]
-  (let [{ws-from :ws-from {:keys [type status data]} :payload} payload
-        {token-id :token-id hit-id :hit-id ann :ann} data]
-    (try
-      (let [{:keys [anns]} (new-token-annotation (:db ws) token-id ann)
-            payload {:data {:token-id token-id :hit-id hit-id :anns anns}
-                     :status :ok :type :annotation}]
-        ;; eventually notify other clients of the new annotation
-        {:ws-target ws-from :ws-from ws-from :payload payload})
-      (catch Exception e
-        (let [payload {:status :error :type :annotation
-                       :data {:token-id token-id
-                              :reason :internal-error
-                              :e (str e)}}]
-          {:ws-target ws-from :ws-from ws-from :payload payload})))))
-
-(defn notify-route [ws payload]
-  (let [{ws-from :ws-from payload :payload} payload]
-    {:ws-target ws-from :ws-from ws-from :payload {:type :notify :data {}}}))
-
 (defn ws-routes [ws]
   (let [{{ws-in :ws-in ws-out :ws-out} :chans} ws]
     (go (loop []
@@ -120,11 +101,13 @@
               (recur)))))))
 
 (defn notify-client
+  "function wrapper over puts to out-chan"
   [ws ws-target payload & {:keys [ws-from] :or {ws-from "Server"}}]
   (let [{{ws-out :ws-out} :chans clients :clients} ws]
     (put! ws-out {:ws-target ws-target :ws-from ws-from :payload payload})))
 
 (defn notify-clients
+  "function wrapper over multiplexed puts to out-chan"
   [ws payload & {:keys [ws-from] :or {ws-from "Server"}}]
   (let [{{ws-out :ws-out} :chans clients :clients} ws]
     (doseq [[ws-name _] (seq @clients)

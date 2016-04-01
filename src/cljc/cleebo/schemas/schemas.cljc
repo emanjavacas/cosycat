@@ -38,7 +38,9 @@
 (def query-opts-schema
   {:corpus s/Str
    :context s/Int
-   :size s/Int})
+   :size s/Int
+   :criterion s/Str
+   :prop-name s/Str})
 
 (def query-results-schema
   {:query-size s/Int
@@ -56,7 +58,8 @@
                            (s/optional-key :date)    s/Any}})
 
 (def settings-schema
-  {:delay s/Int})
+  {:delay s/Int
+   :snippet-size s/Int})
 
 (def db-schema
   {:active-panel s/Keyword

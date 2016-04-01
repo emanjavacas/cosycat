@@ -65,7 +65,8 @@
     (fn [marked-hits]
       [bs/table
        {:responsive true
-        :id "table-annotation"}
+        :id "table-annotation"
+        :style {:text-align "center"}}
        [:thead]
        [:tbody
         (doall

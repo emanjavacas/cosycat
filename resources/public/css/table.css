@@ -1,0 +1,61 @@
+table td.highlighted {
+    background-color: #eee !important;
+    color: black !important;
+    /* border: 0.5px solid black !important; */
+}
+
+table#table-annotation tr.queue-row:hover td {
+    background-color: #fcfdfd;
+}
+
+tr.queue-row > td {
+    border-bottom: 1em !important;
+}
+
+table td.has-annotation {
+    box-shadow: 0 -3px #d5bfb7 inset;
+}
+
+table#table-annotation td.is-span {
+    box-shadow: 0 -3px #b8d6cf inset;
+}
+
+table .info {
+    background-color: rgba(117, 202, 235, 0.42) !important; 
+    color: #555555 !important;
+}
+
+/* annotation table */
+table#table-annotation input.input-cell.highlighted {
+    background-color: #cedede;
+}
+
+table#table-annotation input.input-cell {
+    background-color: #dde8e8;
+    /* box-sizing: border-box; */
+    border: none;
+    font-size: 14px;
+    width: 100%;
+    height: 100%;
+    padding: 0px;
+}
+
+table#table-annotation .row-shadow {
+    -webkit-box-shadow: 2px 2px 2px 0px rgba(0, 0, 0, 0.5);
+    -moz-box-shadow: 2px 2px 2px 0px rgba(0, 0, 0, 0.5);
+    box-shadow: 2px 2px 2px 0px rgba(0, 0, 0, 0.5);
+}
+
+table#table-annotation tr:hover td.ann-cell {
+    background-color: #f6f7f9;
+}
+
+/* table#table-results tr td:first-child { */
+/*     visibility: hidden; */
+/*     background-color: white; */
+/* } */
+
+/* table#table-results tr:hover td:first-child { */
+/*     visibility: visible; */
+/* } */
+

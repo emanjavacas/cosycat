@@ -49,8 +49,8 @@
   [{:keys [type data] :as payload}]
   (case type
     :annotation {:type s/Keyword
-                 :data {:hit-id s/Int
-                        :token-id s/Int
-                        :ann annotation-schema}}
+                 :data {:hit-id (s/if vector? [s/Int]   s/Int)
+                        :token-id (s/if vector? [s/Int] s/Int)
+                        :ann (s/if vector? [annotation-schema] annotation-schema)}}
     :notify     {:type s/Keyword
                  :data {}}))

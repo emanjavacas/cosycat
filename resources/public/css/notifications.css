@@ -1,0 +1,76 @@
+/* notifications */
+ul#notifications {
+    position: fixed;
+    right: 15px;
+    top: 60px;
+    z-index: 9000;
+    list-style-type: none;
+}
+
+.notification-enter {
+    opacity: 0;
+    transition: opacity 0.27s ease-out;
+}
+
+.notification-leave {
+    opacity: 0;
+    transition: opacity 0.27s ease-out;
+}
+
+.notification-enter-active {
+    opacity: 0.8;
+}
+
+.notification {
+    color: white;
+    width: 360px;
+    height: 90px;
+    z-index: 9000;
+    cursor: pointer;
+    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
+    padding: 20px;
+    margin: 0.5rem 0 1rem 0;
+    border-radius: 3px;
+    background-color: #838c81;
+    -webkit-transition: all ease .4s;
+    -moz-transition: all ease .4s;
+    -o-transition: all ease .4s;
+    -ms-transition: all ease .4s;
+    transition: all ease .4s
+}
+
+.notification.success {
+    box-shadow: 0 2px 5px 0 rgba(223, 240, 216, 0.86), 0 2px 10px 0 rgba(223, 240, 216, 0.42);
+}
+
+.notification.info {
+    box-shadow: 0 2px 5px 0 rgba(217, 237, 247, 0.46), 0 2px 10px 0 rgba(217, 237, 247, 0.42);
+}
+
+.notification.warning {
+    box-shadow: 0 2px 5px 0 rgba(252, 248, 227, 0.46), 0 2px 10px 0 rgba(252, 248, 227, 0.42);
+}
+
+.notification.danger {
+    box-shadow: 0 2px 5px 0 rgba(242, 222, 222, 0.92), 0 2px 10px 0 rgba(242, 222, 222, 0.92);
+}
+
+.notification:hover {
+    background-color: #5f6b5d;
+}
+
+.notification .illustration {
+    margin-right: 20px;
+    float: left;
+}
+
+.notification .illustration img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+}
+
+.notification .text .title {
+    font-size: 16px;
+    font-weight: bold;
+}

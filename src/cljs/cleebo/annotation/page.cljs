@@ -14,7 +14,6 @@
 
 (defn annotation-panel []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
-    (.log js/console @marked-hits)
     (fn []
       [:div.container-fluid
        {:style {:width "100%" :padding "0 10px 0 10px"}}

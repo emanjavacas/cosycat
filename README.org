@@ -12,6 +12,40 @@ profile for later use (eventually emailing)
 
 ** DB
 *** Bulk inserts (does this work atomically in MongoDB?)
+**** Bulk of token annotations doesn't need to be atomic
+If a single update fails, just notify the client.
+**** Span annotations always touch multiple documents (from B to O)
+In that case, we should try ~$isolated~:
+See [[https://docs.mongodb.org/manual/core/write-operations-atomicity/][atomicity]] and [[https://docs.mongodb.org/manual/reference/operator/update/isolated/#up._S_isolated][$isolated operator]].
+
+Following the schema below, we shouldn't be worried about doing different updates
+across documents, because the IOB annotation is always the same value
+
+#+BEGIN_SRC json
+{
+    "ann": {
+	"key": "entity",
+	"value": "organization",
+	"IOB": {
+	    "B": 2018,
+	    "O": 2021
+	}
+    },
+    "timestamp": 12345678,
+    "username": "user",
+    "history": [
+	{
+	    "ann": {
+		"key": "entity",
+		"value": "organization"
+	    },
+	    "timestamp": 12345678,
+	    "username": "user"   
+	}
+    ]
+}
+#+END_SRC
+
 *** Notifications
 **** Filter notifications according to stored profiles
 Different notification profiles: 

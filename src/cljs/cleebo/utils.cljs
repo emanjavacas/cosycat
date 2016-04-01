@@ -2,7 +2,6 @@
   (:require [re-frame.core :as re-frame]
             [schema.core :as s]
             [reagent.core :as reagent]
-            [cleebo.shared-schemas :refer [annotation-schema]]
             [goog.dom.dataset :as gdataset]
             [goog.string :as gstr]
             [taoensso.timbre :as timbre])
@@ -69,6 +68,11 @@
   (let [js-date (js/Date. i)]
     (.toDateString js-date)))
 
+(defn parse-annotation [s]
+  (let [[k v] (gstr/splitLimit s "=" 2)]
+    (if (and k v)
+      [k v])))
+
 (defn keyword-if-not-int [s]
   (if (js/isNaN s)
     (keyword s)
@@ -97,44 +101,3 @@
             (token-fn token)
             token))
         hit)))
-
-(defn parse-annotation [s]
-  (let [[k v] (gstr/splitLimit s "=" 2)]
-    (if (and k v)
-      [k v])))
-
-(s/defn ^:always-validate make-ann :- annotation-schema
-  [k v username]
-  {:ann {:key k :value v}
-   :username username
-   :timestamp (.now js/Date)})
-
-(s/defn ^:always-validate make-span-ann  :- annotation-schema
-  [k :- s/Str v :- s/Str username :- s/Str IOB :- (s/enum :I :O :B)]
-  {:ann {:key k :value {:IOB IOB :value v}}
-   :username username
-   :timestamp (.now js/Date)})
-
-(s/defn ^:always-validate dispatch-annotation
-  [k v hit-id :- s/Int token-id :- s/Int]
-  (let [ann (make-ann k v js/username)]
-    (re-frame/dispatch
-     [:ws :out {:type :annotation
-                :status :ok
-                :data {:hit-id hit-id
-                       :token-id token-id
-                       :ann ann}}])))
-
-(s/defn ^:always-validate dispatch-span-annotation 
-  [k v hit-id :- s/Int token-ids :- [s/Int]]
-  (let [c (dec (count token-ids))]
-    (doseq [[idx token-id] (map-indexed vector token-ids)
-            :let [IOB (cond (= idx 0) :B
-                            (= idx c) :O
-                            :else     :I)]]
-      (re-frame/dispatch
-       [:ws :out {:type :annotation
-                  :status :ok
-                  :data {:hit-id hit-id
-                         :token-id token-id
-                         :ann (make-span-ann k v js/username IOB)}}]))))
