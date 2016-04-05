@@ -80,7 +80,6 @@
   (let [ann-map (process-annotation k v hit-id token-id)]
     (re-frame/dispatch
      [:ws :out {:type :annotation
-                :status :ok
                 :data ann-map}])))
 
 (s/defn ^:always-validate make-span-ann  :- annotation-schema
@@ -98,7 +97,6 @@
                             :else     :I)]]
       (re-frame/dispatch
        [:ws :out {:type :annotation
-                  :status :ok
                   :data {:hit-id hit-id
                          :token-id token-id
                          :ann (make-span-ann k v js/username IOB)}}]))))

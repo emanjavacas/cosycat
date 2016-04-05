@@ -8,7 +8,19 @@ and whether the user is online or not: store notification in user
 profile for later use (eventually emailing)
 
 *** Blacklab
-**** kill query on incoming query
+**** kill current query on incoming query
+*** Sessions
+**** on-memory? sessions with up-to-date user settings
+#+BEGIN_SRC clojure
+{:username "user"
+ :roles #{::admin ::user}
+ :avatar "/avatars/user_1231231.jpg"
+ :last-connected 17682345678
+ :session {:notifications
+           {:mode :debug
+            :projects #{:periphrastical-passive
+                        :clefts}}}}
+#+END_SRC
 
 ** DB
 *** Bulk inserts (does this work atomically in MongoDB?)
@@ -19,7 +31,8 @@ In that case, we should try ~$isolated~:
 See [[https://docs.mongodb.org/manual/core/write-operations-atomicity/][atomicity]] and [[https://docs.mongodb.org/manual/reference/operator/update/isolated/#up._S_isolated][$isolated operator]].
 
 Following the schema below, we shouldn't be worried about doing different updates
-across documents, because the IOB annotation is always the same value
+across documents, because the IOB annotation is always the same value for all tokens.
+Except for history?
 
 #+BEGIN_SRC json
 {

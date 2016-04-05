@@ -9,62 +9,82 @@
             [schema.coerce :as coerce]))
 
 (def coll "annotations")
-;;; todo, add corpus information
 
-(defn- new-annotation [db coll cpos ann]
+(defn find-ann-by-key [anns k]
+  (first (filter #(= k (get-in % [:ann :key])) anns)))
+
+(defn update-ann-history [ann]
+  (concat [(dissoc ann :history)] (:history ann)))
+
+(defn- create-annotation
+  "inserts annotation for a token position without any previous annotations"
+  [db coll token-id ann]
   (mc/find-and-modify
    db coll
-   {:_id cpos}
+   {:_id token-id}
    {$push {:anns ann}}
    {:return-new true
     :upsert true}))
 
-(defn update-annotation
-  [db coll cpos
+(defn- update-annotation
+  "inserts annotation for a token position with previous
+  annotations (updating its history)"
+  [db coll token-id
    {timestamp :timestamp
     username :username
     {k :key v :value} :ann :as ann}
    old-ann]
   (mc/find-and-modify
    db coll
-   {:_id cpos "anns.ann.key" k}
+   {:_id token-id "anns.ann.key" k}
    {$set {"anns.$.ann.key" k "anns.$.ann.value" v
           "anns.$.username" username "anns.$.timestamp" timestamp
-          "anns.$.history" (concat [(dissoc old-ann :history)] (:history old-ann))}}
+          "anns.$.history" (update-ann-history old-ann)}}
    {:return-new true
     :upsert true}))
 
-(defn find-ann-by-key [anns k]
-  (first (filter #(= k (get-in % [:ann :key])) anns)))
+;;; [token-id ann hit-id]
+;;; [int      map int   ] normal situation; single ann
+;;; [vec      map vec   ] same ann for multiple tokens (doesn't imply mult hit-ids: spans)
+;;; [vec      vec vec   ] mult anns for mult tokens (implies mult hit-ids)
 
 (defmulti new-token-annotation
-  "dispatch based on type (either a particular value or a vector of that value)"
+  "dispatch based on type (either a particular value or 
+  a vector of that value for bulk annotations)"
   (fn [db token-id ann]
     [(type token-id) (type ann)]))
 
 (s/defmethod ^:always-validate new-token-annotation
   [java.lang.Long clojure.lang.PersistentArrayMap]
-  [db cpos :- s/Int ann :- annotation-schema]
+  [db token-id :- s/Int ann :- annotation-schema]
   (let [{db :db} db
         k (get-in ann [:ann :key])
-        [old-anns] (mc/find-maps db coll {:_id cpos "anns.ann.key" k})]
-    (if (empty? old-anns)
-      (new-annotation db coll cpos ann)
-      (let [old-ann (find-ann-by-key (:anns old-anns) k)]
-        (update-annotation db coll cpos ann old-ann)))))
+        [old-anns] (mc/find-maps db coll {:_id token-id "anns.ann.key" k})]
+    (try (let [{:keys [anns _id]} (if (empty? old-anns) ;no anns found for token position
+                                    (create-annotation db coll token-id ann)
+                                    (let [old-ann (find-ann-by-key (:anns old-anns) k)]
+                                      (update-annotation db coll token-id ann old-ann)))]
+        {:data {:token-id token-id :anns anns}
+         :status :ok
+         :type :annotation})
+      (catch Exception e
+        {:data {:token-id token-id
+                :reason :internal-error
+                :e (str e)}
+         :status :error
+         :type :annotation}))))
 
 (s/defmethod ^:always-validate new-token-annotation
   [clojure.lang.PersistentVector clojure.lang.PersistentVector]
-  [db cposs :- [s/Int] anns :- [annotation-schema]]
-  (for [[cpos ann] (map vector cposs anns)]
-    (let [response-payload (new-token-annotation db cpos ann)]
-      response-payload)))
+  [db token-ids :- [s/Int] anns :- [annotation-schema]]
+  (vec (doall (for [[token-id ann] (map vector token-ids anns)]
+                (new-token-annotation db token-id ann)))))
 
 (s/defn ^:always-validate fetch-annotation :- ann-from-db-schema
-  ([db cpos :- s/Int] (fetch-annotation db cpos (inc cpos)))
-  ([db cpos-from :- s/Int cpos-to :- s/Int]
+  ([db token-id :- s/Int] (fetch-annotation db token-id (inc token-id)))
+  ([db id-from :- s/Int id-to :- s/Int]
    (let [{db :db} db
-         out (mc/find-maps db coll {$and [{:_id {$gte cpos-from}} {:_id {$lt  cpos-to}}]})]
+         out (mc/find-maps db coll {$and [{:_id {$gte id-from}} {:_id {$lt id-to}}]})]
      (zipmap (map :_id out) out))))
 
 (defn merge-annotations-hit
@@ -82,7 +102,7 @@
 
 (defn merge-annotations
   "collect stored annotations for a given span of hits. Annotations are 
-  collected at one for a given hit, since we know the cpos range of its
+  collected at one for a given hit, since we know the token-id range of its
   tokens `from`: `to`"
   [db results]
   (for [{:keys [hit] :as hit-map} results
@@ -95,5 +115,3 @@
 ;(def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
 ;(mc/find-maps (:db db) coll )
 ;(timbre/debug (fetch-annotation db 410))
-
-

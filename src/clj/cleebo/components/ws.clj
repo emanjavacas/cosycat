@@ -39,7 +39,8 @@
       component
       (let [chans {:ws-in (chan) :ws-out (chan)}
             component (assoc component :clients (atom {}) :chans chans)]
-        (ws-routes component)
+        (ws-routes component {:annotation annotation-route
+                              :notify notify-route})
         component)))
   (stop [component]
     (timbre/info "Shutting down WS component")
@@ -74,12 +75,10 @@
         {{ws-in :ws-in ws-out :ws-out} :chans clients :clients} ws]
     (kit/with-channel req ws-ch
       (connect-client ws ws-ch username)
-      ;; must go somewhere else?
       (go (loop []
             (if-let [{:keys [ws-target ws-from payload]} (<! ws-out)]
               (let [ws-target-ch (get @clients ws-target)]
                 (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
-                (timbre/info "clients" @clients)
                 (kit/send! ws-target-ch (write-str payload :json))
                 (recur)))))
       (kit/on-close ws-ch (fn [status] (disconnect-client ws username status)))
@@ -89,16 +88,23 @@
          (let [parsed-payload (read-str payload :json)]
            (put! ws-in {:ws-from username :payload parsed-payload})))))))
 
-(defn ws-routes [ws]
+(defn handle-ws-routes [ws routes chan payload]
+  (let [type (get-in payload [:payload :type])]
+    (if-let [route (get routes type)]
+      (put! chan (route ws payload))
+      (timbre/info "Unidentified route:" type))))
+
+(defn ws-routes [ws routes]
   (let [{{ws-in :ws-in ws-out :ws-out} :chans} ws]
     (go (loop []
           (if-let [payload (<! ws-in)]
-            (let [{ws-from :ws-from {type :type} :payload} payload]
-              (case type
-                :annotation (put! ws-out (annotation-route ws payload))
-                :notify     (put! ws-out (notify-route ws payload))
-                (timbre/info "Unidentified route:" type))
-              (recur)))))))
+            (do
+              (timbre/info payload)
+              (if (map? payload)
+                (handle-ws-routes ws routes ws-out payload)
+                (doseq [p payload]
+                  (handle-ws-routes ws routes ws-out p)))))
+          (recur)))))
 
 (defn notify-client
   "function wrapper over puts to out-chan"

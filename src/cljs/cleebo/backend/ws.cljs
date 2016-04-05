@@ -29,6 +29,7 @@
                      (put! ws-in))))
         (go (loop []
               (let [[payload sc] (alts! [ws-in ws-out])]
+                (timbre/debug "routing:" payload)
                 (condp = sc
                   ws-in  (re-frame/dispatch [:ws :in payload])
                   ws-out (->> payload

@@ -8,7 +8,7 @@
   {:key s/Str :value s/Any})
 
 (def iob-annotation-schema
-  {:IOB s/Any :value s/Str :B s/Int :O s/Int})
+  {:IOB (s/enum "I" "O" "B") :value s/Str :B s/Int :O s/Int})
 
 (def annotation-schema
   {:ann {:key   s/Str
@@ -24,23 +24,25 @@
 (def ann-from-db-schema
   "annotation db return either `nil` or a map from 
   `annotation id` to the stored annotations vector"
-  (s/maybe  {s/Int {:anns [annotation-schema] :_id s/Int}}))
+  {s/Int {:anns [annotation-schema] :_id s/Int}})
 
 (defn ws-from-server
   [{:keys [type status data] :as payload}]
   (match [type status]
     [:annotation :ok]    {:status s/Keyword
                           :type   s/Keyword
-                          :data   {:hit-id s/Int
-                                   :token-id s/Int
-                                   :anns [annotation-schema]}}
-    [:annotation :error] {:status s/Keyword
+                          :data   {:hit-id (s/if vector? [s/Int] s/Int)
+                                   :token-id (s/if vector? [s/Int] s/Int)
+                                   :anns (s/if #(vector? (first %))
+                                          [[annotation-schema]]
+                                          [annotation-schema])}}
+    [:annotation :error] {:status s/Keyword ;todo
                           :type s/Keyword
                           :data {:token-id s/Int
                                  :reason   s/Keyword
                                  (s/optional-key :e) s/Str
                                  (s/optional-key :username) s/Str}}
-    [:notify     _]    {:status s/Keyword
+    [:notify     _]      {:status s/Keyword
                           :type s/Keyword
                           :data {:message s/Str
                                  :by s/Str}}))
@@ -54,3 +56,5 @@
                         :ann (s/if vector? [annotation-schema] annotation-schema)}}
     :notify     {:type s/Keyword
                  :data {}}))
+
+

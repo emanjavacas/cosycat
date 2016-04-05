@@ -69,5 +69,5 @@
              :query-results query-results-schema
              :results-by-id (s/conditional empty? {} :else results-by-id-schema)
              :results (s/conditional empty? [] :else results-schema)}
-   (s/optional-key :throbbing?) {s/Keyword s/Bool}
+   (s/optional-key :throbbing?) {s/Any s/Bool}
    (s/optional-key :modals)     {s/Keyword s/Any}})
