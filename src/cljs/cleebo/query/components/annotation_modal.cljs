@@ -4,14 +4,16 @@
             [cleebo.utils :refer [by-id ->int parse-annotation]]
             [cleebo.backend.handlers.annotations :refer [dispatch-annotation]]
             [cleebo.autocomplete :refer [autocomplete-jq]]
+            [schema.core :as s]
             [react-bootstrap.components :as bs]))
 
 (defn dispatch-annotations
   [marked-tokens]
   (if-let [[k v] (-> (by-id "token-ann-key") parse-annotation)]
-    (doseq [{:keys [hit-id id]} @marked-tokens
-            :when (not (-> id js/parseInt js/isNaN))] ;avoid dummy tokens
-      (dispatch-annotation k v (->int hit-id) (->int id)))))
+    (let [filtered-tokens (remove #(-> (:id %) js/parseInt js/isNaN) @marked-tokens)
+          token-ids (map :id filtered-tokens)
+          hit-ids (map :hit-id filtered-tokens)]
+      (dispatch-annotation k v (mapv ->int hit-ids) (mapv ->int token-ids)))))
 
 (defn inner-thead [k1 k2]
   [:thead
@@ -27,10 +29,13 @@
       [:tr
        [:td "Annotation"]
        [:td
-        [autocomplete-jq
-         {:source :complex-source
-          :class "form-control form-control-no-border"
-          :id "token-ann-key"}]]]]]))
+        [:input.form-control.form-control-no-border
+         {:id "token-ann-key"}]
+        ;; [autocomplete-jq
+        ;;  {:source :complex-source
+        ;;   :class "form-control form-control-no-border"
+        ;;   :id "token-ann-key"}]
+        ]]]]))
 
 (defn token-counts-table [marked-tokens]
   (fn [marked-tokens]

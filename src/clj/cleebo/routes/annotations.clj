@@ -39,7 +39,8 @@
          (map (fn [[k v]]
                 {:data v
                  :type :annotation
-                 :status k})))))
+                 :status k}))
+         vec)))
 
 (defn annotation-route [ws client-payload]
   {:pre  [(s/validate (ws-from-client (:payload client-payload)) (:payload client-payload))]
@@ -53,10 +54,11 @@
     ;; (let [clients @(:clients ws)
     ;;       {:keys [ws-in]} (:chans ws)]
     ;;   (put! ws-in {:ws-from ws-from :payload {:type :notify :data {}}}))
-    (if (map? server-payload)
+    (timbre/debug "payload" server-payload)
+    (if (map? server-payload) 
       {:ws-target ws-from :ws-from ws-from :payload server-payload}
-      (for [p server-payload]
-        {:ws-target ws-from :ws-from ws-from :payload p}))))
+      (vec (for [p server-payload]
+             {:ws-target ws-from :ws-from ws-from :payload p})))))
 
 ;; (require '[schema-generators.generators :as g]
 ;;          '[cleebo.shared-schemas :refer [annotation-schema]]
@@ -73,9 +75,12 @@
 
 ;(def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
 ;; (def ann (create-dummy-annotation "user" 3))
-;; (create-dummy-annotation "user" 2)
 
 ;; (def x (new-token-annotation db [10 11 12] ann))
 
 ;; (def y (response-payload x 10))
+;(response-payload x 10)
+
+
 ;; (s/validate [[annotation-schema]] (:anns (:data (first y))))
+

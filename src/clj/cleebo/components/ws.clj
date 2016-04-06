@@ -4,7 +4,7 @@
             [com.stuartsierra.component :as component]
             [org.httpkit.server :as kit]
             [clojure.core.async :refer
-             [chan go >! <! >!! <!! alts! put! take! timeout close!]]
+             [chan go >! <! >!! <!! alts! put! take! timeout close! go-loop]]
             [clojure.core.match :refer [match]]
             [cleebo.shared-schemas :refer [ws-from-server]]
             [cleebo.routes.annotations :refer [annotation-route]]
@@ -48,7 +48,7 @@
       component
       (do (notify-clients component (messages :shutting-down))
           (timbre/info "Waiting 5 seconds to notify clients")
-          (Thread/sleep 5000)
+          (Thread/sleep 50)
           (close-chans component)
           (assoc component :clients nil :chans nil)))))
 
@@ -76,11 +76,13 @@
     (kit/with-channel req ws-ch
       (connect-client ws ws-ch username)
       (go (loop []
-            (if-let [{:keys [ws-target ws-from payload]} (<! ws-out)]
-              (let [ws-target-ch (get @clients ws-target)]
-                (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
-                (kit/send! ws-target-ch (write-str payload :json))
-                (recur)))))
+            (if-let [p (<! ws-out)]
+              (do (timbre/debug "payload" p)
+               (let [{:keys [ws-target ws-from payload]} p] 
+                 (let [ws-target-ch (get @clients ws-target)]
+                   (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
+                   (kit/send! ws-target-ch (write-str payload :json))
+                   (recur)))))))
       (kit/on-close ws-ch (fn [status] (disconnect-client ws username status)))
       (kit/on-receive
        ws-ch
@@ -88,23 +90,19 @@
          (let [parsed-payload (read-str payload :json)]
            (put! ws-in {:ws-from username :payload parsed-payload})))))))
 
-(defn handle-ws-routes [ws routes chan payload]
-  (let [type (get-in payload [:payload :type])]
-    (if-let [route (get routes type)]
-      (put! chan (route ws payload))
-      (timbre/info "Unidentified route:" type))))
+(defn out-chan [c payload]
+  (if (map? payload)
+    (put! c payload)
+    (doseq [p payload] (put! c p))))
 
 (defn ws-routes [ws routes]
   (let [{{ws-in :ws-in ws-out :ws-out} :chans} ws]
-    (go (loop []
-          (if-let [payload (<! ws-in)]
-            (do
-              (timbre/info payload)
-              (if (map? payload)
-                (handle-ws-routes ws routes ws-out payload)
-                (doseq [p payload]
-                  (handle-ws-routes ws routes ws-out p)))))
-          (recur)))))
+    (go-loop []
+      (if-let [{ws-from :ws-from {type :type} :payload :as client-payload} (<! ws-in)]
+        (let [route (get routes type)
+              server-payload (route ws client-payload)]
+          (out-chan ws-out server-payload)))
+      (recur))))
 
 (defn notify-client
   "function wrapper over puts to out-chan"
@@ -118,5 +116,4 @@
   (let [{{ws-out :ws-out} :chans clients :clients} ws]
     (doseq [[ws-name _] (seq @clients)
             :when (not= ws-from ws-name)]
-      (timbre/info "notifying client" ws-name)
       (put! ws-out {:ws-target ws-name :ws-from ws-from :payload payload}))))

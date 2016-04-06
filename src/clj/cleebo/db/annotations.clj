@@ -43,6 +43,13 @@
    {:return-new true
     :upsert true}))
 
+(defn- handle-insert
+  [old-anns db coll token-id ann k]
+  (if (empty? old-anns) ;no anns found for token position
+    (create-annotation db coll token-id ann)
+    (let [old-ann (find-ann-by-key (:anns old-anns) k)]
+      (update-annotation db coll token-id ann old-ann))))
+
 ;;; [token-id ann hit-id]
 ;;; [int      map int   ] normal situation; single ann
 ;;; [vec      map vec   ] same ann for multiple tokens (doesn't imply mult hit-ids: spans)
@@ -60,10 +67,7 @@
   (let [{db :db} db
         k (get-in ann [:ann :key])
         [old-anns] (mc/find-maps db coll {:_id token-id "anns.ann.key" k})]
-    (try (let [{:keys [anns _id]} (if (empty? old-anns) ;no anns found for token position
-                                    (create-annotation db coll token-id ann)
-                                    (let [old-ann (find-ann-by-key (:anns old-anns) k)]
-                                      (update-annotation db coll token-id ann old-ann)))]
+    (try (let [{:keys [anns _id]} (handle-insert old-anns db coll token-id ann k)]
         {:data {:token-id token-id :anns anns}
          :status :ok
          :type :annotation})
@@ -75,10 +79,16 @@
          :type :annotation}))))
 
 (s/defmethod ^:always-validate new-token-annotation
+  [clojure.lang.PersistentVector clojure.lang.PersistentArrayMap]
+  [db token-ids :- [s/Int] the-ann :- annotation-schema]
+  (vec (for [[token-id ann] (map vector token-ids (repeat the-ann))]
+      (new-token-annotation db token-id ann))))
+
+(s/defmethod ^:always-validate new-token-annotation
   [clojure.lang.PersistentVector clojure.lang.PersistentVector]
   [db token-ids :- [s/Int] anns :- [annotation-schema]]
-  (vec (doall (for [[token-id ann] (map vector token-ids anns)]
-                (new-token-annotation db token-id ann)))))
+  (vec (for [[token-id ann] (map vector token-ids anns)]
+         (new-token-annotation db token-id ann))))
 
 (s/defn ^:always-validate fetch-annotation :- ann-from-db-schema
   ([db token-id :- s/Int] (fetch-annotation db token-id (inc token-id)))

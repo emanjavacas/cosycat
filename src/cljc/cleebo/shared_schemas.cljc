@@ -26,22 +26,28 @@
   `annotation id` to the stored annotations vector"
   {s/Int {:anns [annotation-schema] :_id s/Int}})
 
+(def ann-ok-from-server-schema
+  {:status s/Keyword
+   :type   s/Keyword
+   :data   {:hit-id   (s/if vector? [s/Int] s/Int)
+            :token-id (s/if vector? [s/Int] s/Int)
+            :anns     (s/if #(vector? (first %))
+                        [[annotation-schema]]
+                        [annotation-schema])}})
+
+(def ann-error-from-server-schema
+  {:status s/Keyword                    ;todo
+   :type s/Keyword
+   :data {:token-id s/Int
+          :reason   s/Keyword
+          (s/optional-key :e) s/Str
+          (s/optional-key :username) s/Str}})
+
 (defn ws-from-server
   [{:keys [type status data] :as payload}]
   (match [type status]
-    [:annotation :ok]    {:status s/Keyword
-                          :type   s/Keyword
-                          :data   {:hit-id (s/if vector? [s/Int] s/Int)
-                                   :token-id (s/if vector? [s/Int] s/Int)
-                                   :anns (s/if #(vector? (first %))
-                                          [[annotation-schema]]
-                                          [annotation-schema])}}
-    [:annotation :error] {:status s/Keyword ;todo
-                          :type s/Keyword
-                          :data {:token-id s/Int
-                                 :reason   s/Keyword
-                                 (s/optional-key :e) s/Str
-                                 (s/optional-key :username) s/Str}}
+    [:annotation :ok]    ann-ok-from-server-schema
+    [:annotation :error] ann-error-from-server-schema
     [:notify     _]      {:status s/Keyword
                           :type s/Keyword
                           :data {:message s/Str

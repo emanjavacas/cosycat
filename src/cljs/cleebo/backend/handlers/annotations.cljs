@@ -56,31 +56,31 @@
    :username username
    :timestamp (.now js/Date)})
 
-(def cljs-vec cljs.core/PersistentVector)
 (defmulti process-annotation
   (fn [k v hit-id token-id]
     [(type k) (type v)]))
 
-(defmethod process-annotation [js/String js/String]
-  [k v hit-id token-id]
+(s/defmethod process-annotation
+  [js/String js/String]
+  [k v hit-id :- (s/if vector? [s/Int] s/Int) token-id :- (s/if vector? [s/Int] s/Int)]
   (let [ann (make-ann k v js/username)]
     {:hit-id hit-id
      :token-id token-id
      :ann ann}))
 
-(defmethod process-annotation [cljs-vec cljs-vec]
-  [k v hit-id token-id]
-  {:pre [(apply = (map count [k v hit-id token-id]))]}
-  (let [anns (mapv (fn [k v] (make-ann k v js/username)) k v)]
-    {:hit-id hit-id
-     :token-id token-id
+(s/defmethod process-annotation
+  [cljs.core/PersistentVector cljs.core/PersistentVector]
+  [ks vs hit-ids :- [s/Int] token-ids :- [s/Int]]
+  {:pre [(apply = (map count [ks vs hit-ids token-ids]))]}
+  (let [anns (mapv (fn [k v] (make-ann k v js/username)) ks vs)]
+    {:hit-id hit-ids
+     :token-id token-ids
      :ann anns}))
 
-(defn dispatch-annotation [k v hit-id token-id]
+(defn dispatch-annotation
+  [k v hit-id token-id]
   (let [ann-map (process-annotation k v hit-id token-id)]
-    (re-frame/dispatch
-     [:ws :out {:type :annotation
-                :data ann-map}])))
+    (re-frame/dispatch [:ws :out {:type :annotation :data ann-map}])))
 
 (s/defn ^:always-validate make-span-ann  :- annotation-schema
   [k :- s/Str v :- s/Str username :- s/Str IOB :- (s/enum :I :O :B)]
