@@ -12,7 +12,7 @@
    (s/required-key :id)     s/Any
    ;; optional keys
    (s/optional-key :marked) s/Bool
-   (s/optional-key :anns)   [annotation-schema]
+   (s/optional-key :anns)   {s/Str annotation-schema}
    ;; any other additional keys
    s/Keyword                s/Any})
 
@@ -20,7 +20,6 @@
   {;; optional keys
    (s/optional-key :marked) s/Bool
    (s/optional-key :has-marked) s/Bool
-   (s/optional-key :ann)    annotation-schema ;???
    ;; any other additional keys
    s/Keyword                s/Any})
 

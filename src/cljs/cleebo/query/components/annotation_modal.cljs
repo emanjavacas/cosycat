@@ -13,7 +13,7 @@
     (let [filtered-tokens (remove #(-> (:id %) js/parseInt js/isNaN) @marked-tokens)
           token-ids (map :id filtered-tokens)
           hit-ids (map :hit-id filtered-tokens)]
-      (dispatch-annotation k v (mapv ->int hit-ids) (mapv ->int token-ids)))))
+      (dispatch-annotation {:key k :value v} (mapv ->int hit-ids) (mapv ->int token-ids)))))
 
 (defn inner-thead [k1 k2]
   [:thead

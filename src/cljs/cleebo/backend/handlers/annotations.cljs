@@ -21,9 +21,9 @@
     true
     (let [marked-tokens (filter :marked hit)]
       (case (count marked-tokens)
-            0 (throw (js/Error. "Trying to demark a token, but no marked tokens found"))
-            1 (do (assert (= token-id (:id (first marked-tokens)))) false)
-            (some #(= token-id %) (map :id marked-tokens))))))
+        0 (throw (js/Error. "Trying to demark a token, but no marked tokens found"))
+        1 (do (assert (= token-id (:id (first marked-tokens)))) false)
+        (some #(= token-id %) (map :id marked-tokens))))))
 
 (re-frame/register-handler
  :mark-token
@@ -38,50 +38,58 @@
       [:session :results-by-id hit-id]
       (update-token hit-map token-id token-fn)))))
 
-(re-frame/register-handler
+(re-frame/register-handler              ;todo iob annotations
  :add-annotation
  standard-middleware
- (fn [db [_ {:keys [hit-id token-id anns]}]]
+ (fn [db [_ {hit-id :hit-id {{scope :scope} :span {k :key} :ann} :ann :as ann}]]
    (if-let [hit-map (get-in db [:session :results-by-id hit-id])]
-     (let [token-fn (fn [token] (assoc token :anns anns))]
+     (let [token-fn (fn [token] (assoc-in token [:anns k] ann))]
        (assoc-in
         db
         [:session :results-by-id hit-id]
-        (update-token hit-map (str token-id) token-fn)))
+        (update-token hit-map (str scope) token-fn)))
      db)))
 
-(s/defn ^:always-validate make-ann :- annotation-schema
-  [k v username]
-  {:ann {:key k :value v}
+(s/defn ^:always-validate make-annotation :- annotation-schema
+  [ann username token-id]
+  {:ann ann
    :username username
+   :span {:type "token"
+          :scope token-id}
    :timestamp (.now js/Date)})
 
-(defmulti process-annotation
-  (fn [k v hit-id token-id]
-    [(type k) (type v)]))
+(defmulti package-annotation
+  (fn [ann hit-id token-id]
+    [(type ann) (type token-id)]))
 
-(s/defmethod process-annotation
-  [js/String js/String]
-  [k v hit-id :- (s/if vector? [s/Int] s/Int) token-id :- (s/if vector? [s/Int] s/Int)]
-  (let [ann (make-ann k v js/username)]
+(s/defmethod package-annotation
+  [cljs.core/PersistentArrayMap js/Number]
+  [ann hit-id :- s/Int token-id :- s/Int]
+  (let [ann (make-annotation ann js/username token-id)]
     {:hit-id hit-id
-     :token-id token-id
      :ann ann}))
 
-(s/defmethod process-annotation
-  [cljs.core/PersistentVector cljs.core/PersistentVector]
-  [ks vs hit-ids :- [s/Int] token-ids :- [s/Int]]
-  {:pre [(apply = (map count [ks vs hit-ids token-ids]))]}
-  (let [anns (mapv (fn [k v] (make-ann k v js/username)) ks vs)]
+(s/defmethod package-annotation
+  [cljs.core/PersistentArrayMap cljs.core/PersistentVector]
+  [ann hit-ids :- [s/Int] token-ids :- [s/Int]]
+  (let [anns (mapv (fn [token-id] (make-annotation ann js/username token-id)) token-ids)]
     {:hit-id hit-ids
-     :token-id token-ids
+     :ann anns}))
+
+(s/defmethod package-annotation
+  [cljs.core/PersistentVector cljs.core/PersistentVector]
+  [anns hit-ids :- [s/Int] token-ids :- [s/Int]]
+  {:pre [(apply = (map count [anns hit-ids]))]}
+  (let [anns (mapv (fn [ann t-id] (make-annotation ann js/username t-id)) anns token-ids)]
+    {:hit-id hit-ids
      :ann anns}))
 
 (defn dispatch-annotation
-  [k v hit-id token-id]
-  (let [ann-map (process-annotation k v hit-id token-id)]
+  [ann hit-id token-id]
+  (let [ann-map (package-annotation ann hit-id token-id)]
     (re-frame/dispatch [:ws :out {:type :annotation :data ann-map}])))
 
+;;; todo
 (s/defn ^:always-validate make-span-ann  :- annotation-schema
   [k :- s/Str v :- s/Str username :- s/Str IOB :- (s/enum :I :O :B)]
   {:ann {:key k :value {:IOB IOB :value v}}

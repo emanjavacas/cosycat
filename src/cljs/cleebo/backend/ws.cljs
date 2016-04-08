@@ -1,5 +1,6 @@
 (ns cleebo.backend.ws
   (:require [cognitect.transit :as t]
+            [cleebo.utils :refer [time-id]]
             [re-frame.core :as re-frame]
             [cljs.core.async :refer [chan <! >! put! take! close!]]
             [taoensso.timbre :as timbre])
@@ -31,7 +32,7 @@
                 (timbre/debug "routing:" payload)
                 (condp = sc
                   ws-in  (re-frame/dispatch [:ws :in payload])
-                  ws-out (->> payload
+                  ws-out (->> (assoc payload :payload-id (time-id))
                               (t/write json-writer)
                               (.send ws-chan))))
               (recur)))

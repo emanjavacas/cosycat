@@ -88,20 +88,25 @@
        ws-ch
        (fn [payload] ;apply route-handler?
          (let [parsed-payload (read-str payload :json)]
+           (timbre/debug "got payload" parsed-payload)
            (put! ws-in {:ws-from username :payload parsed-payload})))))))
 
-(defn out-chan [c payload]
+(defn out-chan [c payload payload-id]
   (if (map? payload)
-    (put! c payload)
-    (doseq [p payload] (put! c p))))
+    (put! c (assoc-in payload [:payload :payload-id] payload-id))
+    (doseq [p payload] (put! c (assoc-in p [:payload :payload-id] payload-id)))))
 
+
+;; {:pre  [(s/validate (ws-from-client (:payload client-payload)) (:payload client-payload))]
+;;  :post [#(s/validate (ws-from-server %) %)]}
 (defn ws-routes [ws routes]
   (let [{{ws-in :ws-in ws-out :ws-out} :chans} ws]
     (go-loop []
-      (if-let [{ws-from :ws-from {type :type} :payload :as client-payload} (<! ws-in)]
-        (let [route (get routes type)
+      (if-let [{{type :type p-id :payload-id :as p} :payload :as client-payload} (<! ws-in)]
+        (let [client-payload (assoc client-payload :payload (dissoc p :payload-id))
+              route (get routes type)
               server-payload (route ws client-payload)]
-          (out-chan ws-out server-payload)))
+          (out-chan ws-out server-payload p-id)))
       (recur))))
 
 (defn notify-client

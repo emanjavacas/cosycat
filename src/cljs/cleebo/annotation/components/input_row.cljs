@@ -35,8 +35,8 @@
   (fn [pressed]
     (if (= 13 (.-keyCode pressed))
       (if-let [[k v] (parse-annotation (.. pressed -target -value))]
-        (do
-          (dispatch-annotation k v (->int id) (->int token-id))
+        (let [ann {:key k :value v}]
+          (dispatch-annotation ann (->int id) (->int token-id))
           (set! (.-value (.-target pressed)) ""))))))
 
 (defn input-row

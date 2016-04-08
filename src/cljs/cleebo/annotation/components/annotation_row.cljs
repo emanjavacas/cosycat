@@ -35,11 +35,9 @@
       span)))
 
 (defn ann-types [hit-map]
-  (let [thing   (->> (mapcat :anns (:hit hit-map))
-       (map :ann)
-       (map :key)
-       (into (hash-set)))]
-    thing))
+  (->> (mapcat :anns (:hit hit-map))
+       keys
+       (into (hash-set))))
 
 (defn find-ann-by-key [by-key anns]
   (first (filter (fn [{{key :key} :ann}] (= by-key key)) anns)))
@@ -52,6 +50,6 @@
      (fn annotation-row-component [{:keys [hit]}]
        (into
         [:tr]
-        (for [{:keys [id anns]} hit]
-          (let [ann (find-ann-by-key key anns)]
-            ^{:key (str key id)} [annotation-cell ann]))))]))
+        (for [{:keys [id anns]} hit
+              :let [ann (get anns key)]]
+          ^{:key (str key id)} [annotation-cell ann])))]))

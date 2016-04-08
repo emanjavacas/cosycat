@@ -16,6 +16,12 @@
                   [k (apply f (map val v))])
                 (group-by key (apply concat mlist)))))
 
+;; (defn aggregate-ok [db-payload]
+;;   (update db-payload :ok (partial (apply transpose vector))))
+
+;; (defn aggregate-error [db-payload]
+;;   (update-in db-payload :error ))
+
 (defmulti response-payload
   "process the variadic output of an annotation insert
    returning the final data payload for the client(s)"
@@ -30,7 +36,7 @@
   clojure.lang.PersistentVector
   [db-payload hit-id]
   (let [hit-ids (if (vector? hit-id) hit-id (repeat hit-id))
-        data-keys [:token-id :anns :hit-id]]
+        data-keys [:ann :scope :reason :e :hit-id]]
     (->> db-payload
          (map (fn [hit-id payload] (assoc-in payload [:data :hit-id] hit-id)) hit-ids)
          (group-by :status)
@@ -40,18 +46,16 @@
          vec)))
 
 (defn annotation-route [ws client-payload]
-  {:pre  [(s/validate (ws-from-client (:payload client-payload)) (:payload client-payload))]
-   :post [#(s/validate (ws-from-server %) %)]}
   (let [{ws-from :ws-from {:keys [type status data]} :payload} client-payload
-        {token-id :token-id hit-id :hit-id ann :ann} data
+        {hit-id :hit-id ann :ann} data
         {db :db} ws
-        db-payload (new-token-annotation db token-id ann)
+        db-payload (new-token-annotation db ann)
         server-payload (response-payload db-payload hit-id)]
     ;; eventually notify other clients of the new annotation
     ;; (let [clients @(:clients ws)
     ;;       {:keys [ws-in]} (:chans ws)]
     ;;   (put! ws-in {:ws-from ws-from :payload {:type :notify :data {}}}))
-    (if (map? server-payload) 
+    (if (map? server-payload)
       {:ws-target ws-from :ws-from ws-from :payload server-payload}
       (vec (for [p server-payload]
              {:ws-target ws-from :ws-from ws-from :payload p})))))
@@ -70,13 +74,10 @@
 ;;       (peek (vec anns)))))
 
 ;(def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
+
 ;; (def ann (create-dummy-annotation "user" 3))
-
-;; (def x (new-token-annotation db [10 11 12] ann))
-
-;; (def y (response-payload x 10))
-;(response-payload x 10)
-
-
-;; (s/validate [[annotation-schema]] (:anns (:data (first y))))
+;; (identity ann)
+;; (def x (new-token-annotation db ann))
+;; (identity x)
+;(s/validate [annotation-schema]  (:ann (:data (first y))))
 

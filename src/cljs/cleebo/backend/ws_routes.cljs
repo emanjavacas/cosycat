@@ -16,79 +16,61 @@
 (def annotation-ok-tmpl "Stored annotation for token %d")
 (def annotation-ok-mult-tmpl  "Stored %d annotations!")
 
-(defmulti incoming-annotation (fn [{:keys [token-id]}] (type token-id)))
-
-(defmethod incoming-annotation cljs.core/PersistentArrayMap
-  [{:keys [hit-id token-id anns]}]
-  (let [throbbing-id token-id]
-    (re-frame/dispatch
-     [:notify
-      {:message (format annotation-ok-tmpl token-id)
-       :status :ok}])
+(defmulti incoming-annotation (fn [{:keys [ann] :as data}] (type ann)))
+(defmethod incoming-annotation
+  cljs.core/PersistentArrayMap
+  [{hit-id :hit-id {ann :ann {scope :scope} :span} :ann} ann]
+  (re-frame/dispatch
+   [:notify
+    {:message (format annotation-ok-tmpl scope)
+     :status :ok}])
+  (re-frame/dispatch
+   [:add-annotation
+    {:hit-id hit-id
+     :ann ann}]))
+(defmethod incoming-annotation
+  cljs.core/PersistentVector
+  [{:keys [hit-id ann]}]
+  (re-frame/dispatch                  ;compute an id from payload
+   [:notify
+    {:message (format annotation-ok-mult-tmpl (count ann))
+     :status :ok}])
+  (doseq [[ann hit-id] (map vector ann hit-id)]
     (re-frame/dispatch
      [:add-annotation
       {:hit-id hit-id
-       :token-id token-id
-       :anns anns}])
-    throbbing-id))
+       :ann ann}])))
 
-(defmethod incoming-annotation cljs.core/PersistentVector
-  [{:keys [hit-id token-id anns]}]
-  (let [throbbing-id "todo"]
-    (re-frame/dispatch                  ;compute an id from payload
-     [:notify
-      {:message (format annotation-ok-mult-tmpl (count anns))
-       :status :ok}])
-    (doseq [[anns hit-id token-id] (map vector anns hit-id token-id)]
-      (re-frame/dispatch
-       [:add-annotation
-        {:hit-id hit-id
-         :token-id token-id
-         :anns anns}]))
-    throbbing-id))
-
-(defmulti incoming-annotation-error (fn [{:keys [token-id]}] (type token-id)))
+(defmulti incoming-annotation-error (fn [{:keys [scope]}] (type scope)))
 (defmethod incoming-annotation-error
   js/Number
-  [{:keys [token-id reason e username]}]
-  (let [throbbing-id token-id]
-    (re-frame/dispatch
-     [:notify
-      {:message (format annotation-error-tmpl token-id reason)}])
-    throbbing-id))
-
+  [{:keys [scope reason e username]}]
+  (re-frame/dispatch
+   [:notify
+    {:message (format annotation-error-tmpl scope reason)}]))
 (defmethod incoming-annotation-error
   cljs.core/PersistentVector
-  [{:keys [token-id reason e username]}]
-  (let [throbbing-id "todo"]
-    (re-frame/dispatch
-     [:notify
-      {:message (format annotation-error-mult-tmpl (count token-id) reason)}])))
+  [{:keys [scope reason e username]}]
+  (re-frame/dispatch
+   [:notify
+    {:message (format annotation-error-mult-tmpl (count scope) e)}]))
 
 (re-frame/register-handler
  :ws
  standard-middleware
- (fn [db [_ dir {:keys [type status data] :as payload}]]
+ (fn [db [_ dir {:keys [type status data payload-id] :as payload}]]
    (match [dir type status]
      ;; annotation routes
      [:in :annotation :ok]
-     (let [throbbing-id (incoming-annotation data)]
-       (update-in db [:session :throbbing?] dissoc throbbing-id))
+     (do (incoming-annotation data)
+         (update-in db [:session :throbbing?] dissoc payload-id))
      
      [:in :annotation :error]
-     (let [throbbing-id (incoming-annotation-error data)]
-       (update-in db [:session :throbbing?] dissoc throbbing-id))
+     (update-in db [:session :throbbing?] dissoc payload-id)
      
      [:out :annotation _]
-     (let [{token-id :token-id {timestamp :timestamp} :ann} data]
-       (if-let [throbbing? (get-in db [:session :throbbing? token-id])]
-         (do (re-frame/dispatch
-              [:notify
-               {:message (str "Processing annotation")
-                :status :info}])
-             db)
-         (do (send-ws payload)
-             (assoc-in db [:session :throbbing? token-id] true))))
+     (do (send-ws payload)
+         (assoc-in db [:session :throbbing? payload-id] true))
      ;; notify routes
      [:in :notify _]
      (let [{:keys [by message]} data]
@@ -98,4 +80,3 @@
               :by by
               :status status}])
            db)))))
-
