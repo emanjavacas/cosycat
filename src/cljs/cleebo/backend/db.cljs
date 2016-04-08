@@ -3,12 +3,11 @@
 
 (def default-db
   "defines app default state"
-  {:active-panel :query-panel
-   :notifications {}
-   :throbbing? {:main-panel false}
-   :settings {:delay 7500
+  {:settings {:notifications {:delay 7500}
               :snippet-size 25}
-   :session {:query-opts {:corpus (first (cljs-env :blacklab :corpora))
+   :session {:active-panel :query-panel
+             :notifications {}
+             :query-opts {:corpus (first (cljs-env :blacklab :corpora))
                           :context 5
                           :size 10
                           :criterion "match"
@@ -20,6 +19,3 @@
                              :to 0}
              :results-by-id {}
              :results []}})
-
-
-

@@ -29,17 +29,14 @@
 (s/defmethod response-payload
   clojure.lang.PersistentVector
   [db-payload hit-id]
-  (let [hit-id (if (vector? hit-id) hit-id (repeat hit-id))
+  (let [hit-ids (if (vector? hit-id) hit-id (repeat hit-id))
         data-keys [:token-id :anns :hit-id]]
     (->> db-payload
-         (map #(assoc-in %2 [:data :hit-id] %) hit-id)
+         (map (fn [hit-id payload] (assoc-in payload [:data :hit-id] hit-id)) hit-ids)
          (group-by :status)
          (map-vals (partial map (fn [{:keys [data]}] (select-keys data data-keys))))
          (map-vals (partial apply transpose vector))
-         (map (fn [[k v]]
-                {:data v
-                 :type :annotation
-                 :status k}))
+         (map (fn [[status data]] {:data data :type :annotation :status status}))
          vec)))
 
 (defn annotation-route [ws client-payload]
@@ -54,7 +51,6 @@
     ;; (let [clients @(:clients ws)
     ;;       {:keys [ws-in]} (:chans ws)]
     ;;   (put! ws-in {:ws-from ws-from :payload {:type :notify :data {}}}))
-    (timbre/debug "payload" server-payload)
     (if (map? server-payload) 
       {:ws-target ws-from :ws-from ws-from :payload server-payload}
       (vec (for [p server-payload]

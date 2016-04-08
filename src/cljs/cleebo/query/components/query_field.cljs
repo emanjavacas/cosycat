@@ -8,36 +8,50 @@
             [cleebo.components :refer [dropdown-select]]
             [taoensso.timbre :as timbre]))
 
-(defn on-select [query-opt has-query?]
+(defn on-select [query-opt & {:keys [has-query?]}]
   (fn [v]
     (re-frame/dispatch [:set-session [:query-opts query-opt] v])
-    (when @has-query?
+    (when (and has-query? @has-query?)
       (re-frame/dispatch [:query-refresh :results-frame]))))
+
+(defn corpus-select [query-opts & {:keys [corpora]}]
+  (fn [query-opts & {:keys [corpora]}]
+    (let [{:keys [corpus]} @query-opts]
+      [dropdown-select
+       {:label "corpus: "
+        :header "Select a corpus"
+        :options (mapv #(->map % %) corpora)
+        :model corpus
+        :select-fn #(re-frame/dispatch [:set-session [:query-opts :corpus] %])}])))
+
+(defn context-select [query-opts & {:keys [has-query?]}]
+  (fn [query-opts & {:keys [has-query?]}]
+    (let [{:keys [context]} @query-opts]
+      [dropdown-select
+       {:label "window: "
+        :header "Select window size"
+        :options (map #(->map % %) (range 1 10))
+        :model context
+        :select-fn (on-select :context :has-query? has-query?)}])))
+
+(defn size-select [query-opts & {:keys [has-query?]}]
+  (fn [query-opts & {:keys [has-query?]}]
+    (let [{:keys [size]} @query-opts]
+      [dropdown-select
+       {:label "size: "
+        :header "Select page size"
+        :options (map #(->map % %) [5 10 15 25 35 55 85 125])
+        :model size
+        :select-fn (on-select :size :has-query? has-query?)}])))
 
 (defn query-opts-menu []
   (let [query-opts (re-frame/subscribe [:session :query-opts])
         has-query? (re-frame/subscribe [:has-query?])]
     (fn []
-      (let [{:keys [corpus context size]} @query-opts]
-        [bs/button-toolbar
-         [dropdown-select
-          {:label "corpus: "
-           :header "Select a corpus"
-           :options (mapv #(->map % %) corpora)
-           :model corpus
-           :select-fn #(re-frame/dispatch [:set-session [:query-opts :corpus] %])}]
-         [dropdown-select
-          {:label "window: "
-           :header "Select window size"
-           :options (map #(->map % %) (range 1 10))
-           :model context
-           :select-fn (on-select :context has-query?)}]
-         [dropdown-select
-          {:label "size: "
-           :header "Select page size"
-           :options (map #(->map % %) [5 10 15 25 35 55 85 125])
-           :model size
-           :select-fn (on-select :size has-query?)}]]))))
+      [bs/button-toolbar
+       [corpus-select query-opts :corpora corpora]
+       [context-select query-opts :has-query? has-query?]
+       [size-select query-opts :has-query? has-query?]])))
 
 (defn empty-before [s n]
   (count (filter #(= % " ")  (subs s n))))

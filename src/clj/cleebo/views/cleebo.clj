@@ -17,12 +17,12 @@
      (include-css "css/notifications.css")
      (include-css "http://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic")
      (include-css "http://fonts.googleapis.com/css?family=Roboto+Condensed:400,300")
-     (include-css "http://code.jquery.com/ui/1.11.2/themes/smoothness/jquery-ui.min.css")]
+     (include-css "vendor/css/jquery-ui.min.css")]
     [:body
      [:div#app]
      (include-js "js/compiled/app.js")
-     (include-js "https://code.jquery.com/jquery-1.11.2.min.js")
-     (include-js "http://code.jquery.com/ui/1.11.2/jquery-ui.min.js")
+     (include-js "vendor/js/jquery/jquery-1.11.2.min.js")
+     (include-js "vendor/js/jquery/jquery-ui.min.js")
      [:script (str "var csrf =\"" csrf "\";")]
      [:script (str "var username =\"" username "\";")]
      [:script "cleebo.core.init();"]]]))

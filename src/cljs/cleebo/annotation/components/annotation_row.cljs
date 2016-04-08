@@ -6,18 +6,16 @@
 (defn user-popover [user time]
   (reagent/as-component
    [bs/popover
-    {:id "popover"}
-    [:div user [:br]
-     [:span (parse-time time)]]]))
+    {:id "popover"
+     :title user}
+    [:div [:span (parse-time time)]]]))
 
 (defn key-val [k v user time]
   [:div k
    [bs/overlay-trigger
     {:overlay (user-popover user time)
      :placement "right"}      
-    [:span {:style {:text-align "right" :margin-left "7px"}} [bs/label v]]]]
-;  [:span (str k "=" v)]
-  )
+    [:span {:style {:text-align "right" :margin-left "7px"}} [bs/label v]]]])
 
 (defn style-iob [{key :key {value :value IOB :IOB} :value user :username time :timestamp}]
   (let [background (case IOB

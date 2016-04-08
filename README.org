@@ -23,6 +23,83 @@ profile for later use (eventually emailing)
 #+END_SRC
 
 ** DB
+
+*** Split annotation db in two collections
++ From corpus position to annotations (alias "cpos-ann")
+#+BEGIN_SRC json
+[
+    {
+	"_id": 51,
+	"anns": [
+	    {
+		"key": "pos",
+		"ann-id": 1
+	    },
+	    {
+		"key": "NE",
+		"ann-id": 10013
+	    },
+	    {
+		"key": "rel",
+		"ann-id": 2
+	    }
+	]
+    },
+    {
+	"_id": 52,
+	"anns": [
+	    {
+		"key": "rel",
+		"ann-id": 2
+	    }
+	]
+    }
+]
+#+END_SRC
++ Annotations (alias "anns")
+#+BEGIN_SRC json
+[
+    {
+	"_id": 1,
+	"ann": {
+	    "key": "pos",
+	    "value": "NP"
+	},
+	"span": {
+	    "type": "simple",
+	    "scope": 51
+	},
+	"username": "user",
+	"timestamp": 1457363525053,
+	"history": [
+	    {
+		"ann": {
+		    "key": "pos",
+		    "value": "NPP"
+		},
+		"username": "user",
+		"timestamp": 1457363515053
+	    }
+	]
+    },
+    {
+	"_id": 2,
+	"ann": {
+	    "key": "rel",
+	    "value": "NP"
+	},
+	"span": {
+	    "type": "IOB",
+	    "scope": {
+		"B": 51,
+		"O": 52
+	    }
+	},
+	"timestamp": 12345678,
+	"username": "user"
+    }
+]
+#+END_SRC
 *** Bulk inserts (does this work atomically in MongoDB?)
 **** Bulk of token annotations doesn't need to be atomic
 If a single update fails, just notify the client.

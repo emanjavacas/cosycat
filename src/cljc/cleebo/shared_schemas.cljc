@@ -27,18 +27,17 @@
   {s/Int {:anns [annotation-schema] :_id s/Int}})
 
 (def ann-ok-from-server-schema
+  "multiple anns implies multiple hit-ids and token-ids"
   {:status s/Keyword
    :type   s/Keyword
    :data   {:hit-id   (s/if vector? [s/Int] s/Int)
             :token-id (s/if vector? [s/Int] s/Int)
-            :anns     (s/if #(vector? (first %))
-                        [[annotation-schema]]
-                        [annotation-schema])}})
+            :anns     (s/if #(vector? (first %)) [[annotation-schema]] [annotation-schema])}})
 
 (def ann-error-from-server-schema
   {:status s/Keyword                    ;todo
    :type s/Keyword
-   :data {:token-id s/Int
+   :data {:token-id (s/if vector? [s/Int] s/Int)
           :reason   s/Keyword
           (s/optional-key :e) s/Str
           (s/optional-key :username) s/Str}})
@@ -62,5 +61,3 @@
                         :ann (s/if vector? [annotation-schema] annotation-schema)}}
     :notify     {:type s/Keyword
                  :data {}}))
-
-

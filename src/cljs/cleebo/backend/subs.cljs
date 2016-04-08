@@ -12,17 +12,17 @@
 (re-frame/register-sub
  :modals
  (fn [db [_ modal]]
-   (reaction (get-in @db [:modals modal]))))
+   (reaction (get-in @db [:session :modals modal]))))
 
 (re-frame/register-sub
  :active-panel
  (fn [db _]
-   (reaction (:active-panel @db))))
+   (reaction (get-in @db [:session :active-panel]))))
 
 (re-frame/register-sub
  :notifications
  (fn [db _]
-   (let [notifications (reaction (:notifications @db))]
+   (let [notifications (reaction (get-in @db [:session :notifications]))]
      (reaction (reverse
                 (sort-by (fn [{:keys [date]}] date)
                          (for [[_ notification] @notifications]
@@ -31,7 +31,7 @@
 (re-frame/register-sub
  :throbbing?
  (fn [db [_ panel]]
-   (reaction (get-in @db [:throbbing? panel] false))))
+   (reaction (get-in @db [:session :throbbing? panel] false))))
 
 (re-frame/register-sub
  :session

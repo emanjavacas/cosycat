@@ -29,13 +29,10 @@
       [:tr
        [:td "Annotation"]
        [:td
-        [:input.form-control.form-control-no-border
-         {:id "token-ann-key"}]
-        ;; [autocomplete-jq
-        ;;  {:source :complex-source
-        ;;   :class "form-control form-control-no-border"
-        ;;   :id "token-ann-key"}]
-        ]]]]))
+        [autocomplete-jq
+         {:source :complex-source
+          :class "form-control form-control-no-border"
+          :id "token-ann-key"}]]]]]))
 
 (defn token-counts-table [marked-tokens]
   (fn [marked-tokens]
@@ -52,7 +49,7 @@
           [bs/label c]]])]]))
 
 (defn annotation-modal [annotation-modal-show marked-tokens]
-  (let [deselect-on-close (reagent/atom false)]
+  (let [deselect-on-close (reagent/atom true)]
     (fn [annotation-modal-show marked-tokens]
       [bs/modal
        {:class "large"

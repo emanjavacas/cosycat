@@ -7,14 +7,6 @@
             [goog.dom.dataset :as gdataset]
             [goog.dom.classes :as gclass]))
 
-(defn on-key-down [id token-id]
-  (fn [pressed]
-    (if (= 13 (.-keyCode pressed))
-      (if-let [[k v] (parse-annotation (.. pressed -target -value))]
-        (do
-          (dispatch-annotation k v (->int id) (->int token-id))
-          (set! (.-value (.-target pressed)) ""))))))
-
 (defn on-mouse-down [mouse-down? highlighted? selection id]
   (fn [event]
     (let [e (aget event "target")]
@@ -39,6 +31,14 @@
   (fn [event]
     (swap! mouse-down? not)))
 
+(defn on-key-down [id token-id]
+  (fn [pressed]
+    (if (= 13 (.-keyCode pressed))
+      (if-let [[k v] (parse-annotation (.. pressed -target -value))]
+        (do
+          (dispatch-annotation k v (->int id) (->int token-id))
+          (set! (.-value (.-target pressed)) ""))))))
+
 (defn input-row
   "component for the input row"
   [{:keys [hit id meta]}]
@@ -58,7 +58,9 @@
             :id (str "input-" token-id)
             :data-id idx
             :class "input-cell"
-            :on-key-down (on-key-down id token-id)
-            :on-mouse-down (on-mouse-down mouse-down? highlighted? selection token-id)
-            :on-mouse-over (on-mouse-over mouse-down? highlighted? selection token-id)
-            :on-mouse-up (on-mouse-up mouse-down?)}]])))))
+            :on-key-down (on-key-down id token-id)}]])))))
+
+;; :on-key-down (on-key-down id token-id)
+;; :on-mouse-down (on-mouse-down mouse-down? highlighted? selection token-id)
+;; :on-mouse-over (on-mouse-over mouse-down? highlighted? selection token-id)
+;; :on-mouse-up (on-mouse-up mouse-down?)

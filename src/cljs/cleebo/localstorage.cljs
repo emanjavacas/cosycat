@@ -37,7 +37,7 @@
     (try
       (let [db (fetch k)
             parsed-db (coercion-fn db)]
-        (assoc-in parsed-db [:notifications] {}))
+        (assoc-in parsed-db [:session :notifications] {}))
       (catch :default e
         (timbre/debug "Couldn't coerce DB")))))
 

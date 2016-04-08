@@ -58,16 +58,17 @@
                            (s/optional-key :date)    s/Any}})
 
 (def settings-schema
-  {:delay s/Int
+  {:notifications {:delay s/Int}
    :snippet-size s/Int})
 
 (def db-schema
-  {:active-panel s/Keyword
-   :notifications {s/Any notification-schema}
-   :settings settings-schema
+  {:settings settings-schema
    :session {:query-opts query-opts-schema
              :query-results query-results-schema
              :results-by-id (s/conditional empty? {} :else results-by-id-schema)
-             :results (s/conditional empty? [] :else results-schema)}
-   (s/optional-key :throbbing?) {s/Any s/Bool}
-   (s/optional-key :modals)     {s/Keyword s/Any}})
+             :results (s/conditional empty? [] :else results-schema)
+             :notifications {s/Any notification-schema}
+             :active-panel s/Keyword
+             (s/optional-key :throbbing?) {s/Any s/Bool}
+             (s/optional-key :modals)     {s/Keyword s/Any}}})
+
