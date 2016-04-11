@@ -14,22 +14,25 @@
    [:div.row [:br]]
    [:div.row.text-center status-content]])
 
-(defn dropdown-select [{:keys [label model options select-fn header]}]
+(defn dropdown-select [{:keys [label model options select-fn header] :as args}]
   (let [local-label (reagent/atom model)]
     (fn [{:keys [label model options select-fn header] :or {select-fn identity}}]
-      [bs/dropdown
-       {:id "my-dropdown"
-        :onSelect (fn [e k] (reset! local-label k) (select-fn k))}
-       [bs/button
-        {:style {:pointer-events "none !important"}}
-        [:span.text-muted label] @local-label]
-       [bs/dropdown-toggle]
-       [bs/dropdown-menu
-        (concat
-         [^{:key "header"} [bs/menu-item {:header true} header]
-          ^{:key "divider"} [bs/menu-item {:divider true}]]
-         (for [{:keys [key label]} options]
-           ^{:key key} [bs/menu-item {:eventKey label} label]))]])))
+      (let [args (dissoc args :label :model :options :select-fn :header)]
+        [bs/dropdown
+         (merge
+          {:id "my-dropdown"
+           :onSelect (fn [e k] (reset! local-label k) (select-fn k))}
+          args)
+         [bs/button
+          {:style {:pointer-events "none !important"}}
+          [:span.text-muted label] @local-label]
+         [bs/dropdown-toggle]
+         [bs/dropdown-menu
+          (concat
+           [^{:key "header"} [bs/menu-item {:header true} header]
+            ^{:key "divider"} [bs/menu-item {:divider true}]]
+           (for [{:keys [key label]} options]
+             ^{:key key} [bs/menu-item {:eventKey label} label]))]]))))
 
 (defn status-icon [status]
   [:span.label.pull-left

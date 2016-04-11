@@ -64,9 +64,11 @@
       (.getTime)
       (.toString 36)))
 
-(defn parse-time [i]
+(defn parse-time [i & [opts]]
   (let [js-date (js/Date. i)]
-    (.toDateString js-date)))
+    (if opts
+      (.toLocaleDateString js-date "en-GB" (clj->js opts))
+      (.toDateString js-date))))
 
 (defn parse-annotation [s]
   (let [[k v] (gstr/splitLimit s "=" 2)]
@@ -92,12 +94,12 @@
 
 (defn update-token
   "apply token-fn where due"
-  [{:keys [hit meta] :as hit-map} token-id token-fn]
+  [{:keys [hit meta] :as hit-map} check-token-fn token-fn]
   (assoc
    hit-map
    :hit
    (map (fn [{:keys [id] :as token}]
-          (if (= id token-id)
+          (if (check-token-fn id)
             (token-fn token)
             token))
         hit)))

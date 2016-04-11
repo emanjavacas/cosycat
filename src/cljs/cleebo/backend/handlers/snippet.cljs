@@ -28,9 +28,18 @@
 (re-frame/register-handler
  :fetch-snippet
  (fn [db [_ hit-idx & {:keys [snippet-size context]}]]
-   (let [snippet-size (or snippet-size (get-in db [:settings :snippet-size]))]
+   (let [snippet-size (or snippet-size (get-in db [:settings :snippets :snippet-size]))]
      (fetch-snippet hit-idx snippet-size :context context)
      db)))
 
+(re-frame/register-handler
+ :set-snippet-size
+ (fn [db [_ snippet-size]]
+   (assoc-in db [:settings :snippets :snippet-size] snippet-size)))
+
+(re-frame/register-handler
+ :set-snippet-delta
+ (fn [db [_ snippet-delta]]
+   (assoc-in db [:settings :snippets :snippet-delta] snippet-delta)))
 
 

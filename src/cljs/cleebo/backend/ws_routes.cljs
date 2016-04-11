@@ -16,10 +16,10 @@
 (def annotation-ok-tmpl "Stored annotation for token %d")
 (def annotation-ok-mult-tmpl  "Stored %d annotations!")
 
-(defmulti incoming-annotation (fn [{:keys [ann] :as data}] (type ann)))
+(defmulti incoming-annotation (fn [{:keys [ann-map] :as data}] (type ann-map)))
 (defmethod incoming-annotation
   cljs.core/PersistentArrayMap
-  [{hit-id :hit-id {ann :ann {scope :scope} :span} :ann} ann]
+  [{hit-id :hit-id {{scope :scope} :span :as ann} :ann-map}]
   (re-frame/dispatch
    [:notify
     {:message (format annotation-ok-tmpl scope)
@@ -27,19 +27,19 @@
   (re-frame/dispatch
    [:add-annotation
     {:hit-id hit-id
-     :ann ann}]))
+     :ann-map ann}]))
 (defmethod incoming-annotation
   cljs.core/PersistentVector
-  [{:keys [hit-id ann]}]
+  [{:keys [hit-id ann-map]}]
   (re-frame/dispatch                  ;compute an id from payload
    [:notify
-    {:message (format annotation-ok-mult-tmpl (count ann))
+    {:message (format annotation-ok-mult-tmpl (count ann-map))
      :status :ok}])
-  (doseq [[ann hit-id] (map vector ann hit-id)]
+  (doseq [[ann-map hit-id] (map vector ann-map hit-id)]
     (re-frame/dispatch
      [:add-annotation
       {:hit-id hit-id
-       :ann ann}])))
+       :ann-map ann-map}])))
 
 (defmulti incoming-annotation-error (fn [{:keys [scope]}] (type scope)))
 (defmethod incoming-annotation-error
@@ -76,7 +76,7 @@
      (let [{:keys [by message]} data]
        (do (re-frame/dispatch
             [:notify
-             {:message (str by " says " message)
+             {:message (str by " says: " message)
               :by by
               :status status}])
            db)))))

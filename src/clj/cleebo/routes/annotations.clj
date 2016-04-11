@@ -36,7 +36,7 @@
   clojure.lang.PersistentVector
   [db-payload hit-id]
   (let [hit-ids (if (vector? hit-id) hit-id (repeat hit-id))
-        data-keys [:ann :scope :reason :e :hit-id]]
+        data-keys [:ann-map :scope :reason :e :hit-id]]
     (->> db-payload
          (map (fn [hit-id payload] (assoc-in payload [:data :hit-id] hit-id)) hit-ids)
          (group-by :status)
@@ -47,9 +47,9 @@
 
 (defn annotation-route [ws client-payload]
   (let [{ws-from :ws-from {:keys [type status data]} :payload} client-payload
-        {hit-id :hit-id ann :ann} data
+        {hit-id :hit-id ann-map :ann-map} data
         {db :db} ws
-        db-payload (new-token-annotation db ann)
+        db-payload (new-token-annotation db ann-map)
         server-payload (response-payload db-payload hit-id)]
     ;; eventually notify other clients of the new annotation
     ;; (let [clients @(:clients ws)

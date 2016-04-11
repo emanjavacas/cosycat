@@ -8,17 +8,26 @@
             [cleebo.shared-schemas :refer [annotation-schema cpos-ann-schema]]
             [schema.coerce :as coerce]))
 
-;; ;;; [ann hit-id]
-;; ;;; [map int   ] normal situation; single ann
-;; ;;; [vec vec   ] same ann for multiple tokens (implies mult hit-ids)
-;; ;;; [vec vec   ] mult anns for mult tokens (implies mult hit-ids)
-
-(s/defn find-ann-id :- (s/maybe {:key s/Str :ann-id s/Int})
+(defmulti find-ann-id
   "fetchs id of ann in coll `anns` for given key and token-id"
-  [{db :db} token-id k]
+  (fn [db {t :type} k] t))
+
+(defmethod find-ann-id
+  "token"
+  [{db :db} {scope :scope} k]
   (-> (mc/find-one-as-map
        db "cpos_ann"
-       {:_id token-id "anns.key" k}
+       {:_id scope "anns.key" k}
+       {"anns.$.key" true "_id" false})
+      :anns
+      first))
+
+(defmethod find-ann-id
+  "IOB"
+  [{db :db} {{B :B O :O} :scope} k]
+  (-> (mc/find-one-as-map
+       db "cpos_ann"
+       {:_id B "anns.key" k}
        {"anns.$.key" true "_id" false})
       :anns
       first))
@@ -32,24 +41,46 @@
   [{db :db} ann-id]
   (mc/find-one-as-map db "anns" {:_id ann-id} {:_id false}))
 
-(s/defn insert-annotation :- annotation-schema
+(defn compute-history [ann]
+  (let [record-ann (select-keys ann [:ann :username :timestamp])]
+    (conj (:history ann) record-ann)))
+
+(defmulti insert-annotation
   "creates new ann in coll `anns` for given ann"
+  (fn [db {{t :type} :span}] t))
+
+(s/defmethod insert-annotation
+  "token"
+  :- annotation-schema
   [{db :db} {{scope :scope} :span {k :key} :ann :as ann}]
   (let [{:keys [_id] :as ann} (mc/insert-and-return db "anns" ann)]
-    (timbre/debug ann)
     (mc/find-and-modify
      db "cpos_ann"
      {:_id scope}
      {$push {:anns {:key k :ann-id _id}}}
      {:upsert true})
-    (dissoc ann :_id)))
+    ann))
 
-(defn compute-history [ann]
-  (let [record-ann (select-keys ann [:ann :username :timestamp])]
-    (conj (:history ann) record-ann)))
+(s/defmethod insert-annotation
+  "IOB"
+  :- annotation-schema
+  [{db :db} {{{B :B O :O} :scope} :span {k :key} :ann :as ann}]
+  (let [{:keys [_id] :as ann} (mc/insert-and-return db "anns" ann)]
+    (doseq [token-id (range B (inc O))]
+      (mc/find-and-modify
+       db "cpos_ann"
+       {:_id token-id}
+       {$push {:anns {:key k :ann-id _id}}}
+       {:upsert true}))
+    ann))
 
-(s/defn update-annotation :- annotation-schema
+(defmulti update-annotation
   "updates existing ann in coll `anns` for given key"
+  (fn [db {{t :type} :span} ann-id] t))
+
+(s/defmethod update-annotation
+  "token"
+  :- annotation-schema
   [{db-conn :db :as db}
    {timestamp :timestamp
     username :username
@@ -65,6 +96,24 @@
           "history" (compute-history (find-ann-by-id db ann-id))}}
    {:return-new true}))
 
+(s/defmethod update-annotation
+  "IOB"
+  :- annotation-schema
+  [{db-conn :db :as db}
+   {timestamp :timestamp
+    username :username
+    {{B :B O :O} :scope :as scope} :span
+    {k :key v :value} :ann :as ann}
+   ann-id]
+  (mc/find-and-modify
+   db-conn "anns"
+   {:_id ann-id}
+   {$set {"ann.value" v "ann.key" k
+          "span.type" "IOB" "span.scope" scope
+          "username" username "timestamp" timestamp
+          "history" (compute-history (find-ann-by-id db ann-id))}}
+   {:return-new true}))
+
 (defmulti new-token-annotation
   "dispatch based on type (either a particular value or 
   a vector of that value for bulk annotations)"
@@ -72,12 +121,12 @@
 
 (s/defmethod ^:always-validate new-token-annotation
   clojure.lang.PersistentArrayMap
-  [db {{scope :scope} :span {k :key} :ann :as ann}]
+  [db {{scope :scope :as span} :span {k :key} :ann :as ann}]
   (try
-    (let [new-ann (if-let [{:keys [ann-id]} (find-ann-id db scope k)]
+    (let [new-ann (if-let [{:keys [ann-id]} (find-ann-id db span k)]
                     (update-annotation db ann ann-id)
                     (insert-annotation db ann))]
-      {:data {:ann new-ann}
+      {:data {:ann-map (dissoc new-ann :_id)}
        :status :ok
        :type :annotation})
     (catch Exception e
@@ -92,8 +141,9 @@
   [db anns :- [annotation-schema]]
   (mapv (fn [ann] (new-token-annotation db ann)) anns))
 
-(defn fetch-anns
-  "{token-id {ann-key1 ann ann-key2 ann} token-id2 ...}"
+(s/defn ^:always-validate fetch-anns :- (s/maybe {s/Int {s/Str annotation-schema}})
+  "{token-id {ann-key1 ann ann-key2 ann} token-id2 ...}.
+   [TODO] a single span annotation will be fetched as many times as tokens it spans"
   [db ann-ids]
   (apply merge-with conj
          (for [{token-id :_id anns :anns} ann-ids

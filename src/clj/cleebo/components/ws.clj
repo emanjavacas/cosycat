@@ -77,12 +77,11 @@
       (connect-client ws ws-ch username)
       (go (loop []
             (if-let [p (<! ws-out)]
-              (do (timbre/debug "payload" p)
-               (let [{:keys [ws-target ws-from payload]} p] 
-                 (let [ws-target-ch (get @clients ws-target)]
-                   (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
-                   (kit/send! ws-target-ch (write-str payload :json))
-                   (recur)))))))
+              (let [{:keys [ws-target ws-from payload]} p
+                    ws-target-ch (get @clients ws-target)]
+                (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
+                (kit/send! ws-target-ch (write-str payload :json))
+                (recur)))))
       (kit/on-close ws-ch (fn [status] (disconnect-client ws username status)))
       (kit/on-receive
        ws-ch
@@ -95,7 +94,6 @@
   (if (map? payload)
     (put! c (assoc-in payload [:payload :payload-id] payload-id))
     (doseq [p payload] (put! c (assoc-in p [:payload :payload-id] payload-id)))))
-
 
 ;; {:pre  [(s/validate (ws-from-client (:payload client-payload)) (:payload client-payload))]
 ;;  :post [#(s/validate (ws-from-server %) %)]}

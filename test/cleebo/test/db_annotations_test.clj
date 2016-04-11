@@ -2,7 +2,7 @@
     (:require [clojure.test :refer [deftest testing is]]
               [com.stuartsierra.component :as component]
               [cleebo.db.annotations
-               :refer [new-token-annotation fetch-annotation]]
+               :refer [new-token-annotation]]
               [cleebo.components.db :refer [new-db]]))
 
 ;; (def db (component/start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))

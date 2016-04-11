@@ -1,6 +1,7 @@
 (ns cleebo.shared-schemas
   (:require [schema.core :as s]
             [schema.coerce :as coerce]
+            [taoensso.timbre :as timbre]
             #?(:clj [clojure.core.match :refer [match]]
                :cljs [cljs.core.match :refer-macros [match]])))
 
@@ -18,15 +19,16 @@
 
 (def iob-span-schema
   {:type (s/enum "IOB")
-   :scope {:span {:B cpos-schema
-                  :O cpos-schema}}})
+   :scope {:B cpos-schema
+           :O cpos-schema}})
 
 (def annotation-schema
   {:ann {:key s/Str
          :value s/Str}
    :username s/Str
    :timestamp s/Int
-   :span token-span-schema
+   :span (s/conditional #(= (:type %) "token") token-span-schema
+                        #(= (:type %) "IOB")   iob-span-schema)
    (s/optional-key :history) history-schema})
 
 (def cpos-ann-schema
@@ -38,7 +40,7 @@
   {:status s/Keyword
    :type   s/Keyword
    :data   {:hit-id   (s/if vector? [s/Int] s/Int)
-            :ann      (s/if vector? [annotation-schema] annotation-schema)}
+            :ann-map  (s/if vector? [annotation-schema] annotation-schema)}
    :payload-id s/Any})
 
 (def ann-error-from-server-schema
@@ -65,8 +67,8 @@
   [{:keys [type data] :as payload}]
   (case type
     :annotation {:type s/Keyword
-                 :data {:hit-id (s/if vector? [s/Int]   s/Int)
-                        :ann (s/if vector? [annotation-schema] annotation-schema)}
+                 :data {:hit-id  (s/if vector? [s/Int]   s/Int)
+                        :ann-map (s/if vector? [annotation-schema] annotation-schema)}
                  :payload-id s/Any}
     :notify     {:type s/Keyword
                  :data {}

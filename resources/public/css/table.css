@@ -4,13 +4,29 @@ table td.highlighted {
     /* border: 0.5px solid black !important; */
 }
 
-table#table-annotation tr.queue-row:hover td {
-    background-color: #fcfdfd;
+table#table-annotation {
+    border-collapse: collapse !important;
 }
 
-tr.queue-row > td {
-    border-bottom: 1em !important;
+table#table-annotation tr.queue-row:hover td {
+    /* background-color: #fcfdfd; */
+    border-bottom: 1px solid #dcdcdc;
+    border-top: 1px solid #dcdcdc;
 }
+
+table#table-annotation tr.queue-row:hover td:first-child {
+    /* background-color: #fcfdfd; */
+    border-left: 1px solid #dcdcdc;
+}
+
+table#table-annotation tr.queue-row:hover td:last-child {
+    /* background-color: #fcfdfd; */
+    border-right: 1px solid #dcdcdc;
+}
+
+/* tr.queue-row > td { */
+/*     border-bottom: 1em !important; */
+/* } */
 
 table td.has-annotation {
     box-shadow: 0 -3px #d5bfb7 inset;
@@ -47,11 +63,13 @@ table#table-annotation .row-shadow {
 }
 
 table#table-annotation tr:hover td.ann-cell {
-    background-color: #f6f7f9;
+    /* background-color: #f6f7f9; */
+    background-color: #f6f6f6;
 }
 
-table#table-annotation tr:hover {
-    background-color: #fafbfc;
+table#table-annotation tr.ann-row:hover {
+    /* background-color: #fafbfc; */
+    background-color: #fafafa;
 }
 
 /* table#table-results tr td:first-child { */

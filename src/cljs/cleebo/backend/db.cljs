@@ -4,7 +4,8 @@
 (def default-db
   "defines app default state"
   {:settings {:notifications {:delay 7500}
-              :snippet-size 25}
+              :snippets {:snippet-size 25
+                         :snippet-delta 10}}
    :session {:active-panel :query-panel
              :notifications {}
              :query-opts {:corpus (first (cljs-env :blacklab :corpora))

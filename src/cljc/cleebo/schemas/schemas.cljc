@@ -58,7 +58,8 @@
 
 (def settings-schema
   {:notifications {:delay s/Int}
-   :snippet-size s/Int})
+   :snippets {:snippet-delta s/Int
+              :snippet-size s/Int}})
 
 (def db-schema
   {:settings settings-schema

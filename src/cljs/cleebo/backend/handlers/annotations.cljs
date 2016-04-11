@@ -2,8 +2,9 @@
   (:require [re-frame.core :as re-frame]
             [schema.core :as s]
             [cleebo.shared-schemas :refer [annotation-schema]]
-            [cleebo.utils :refer [update-token]]
-            [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]))
+            [cleebo.utils :refer [update-token ->int]]
+            [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
+            [taoensso.timbre :as timbre]))
 
 (re-frame/register-handler
  :mark-hit
@@ -38,73 +39,85 @@
       [:session :results-by-id hit-id]
       (update-token hit-map token-id token-fn)))))
 
+(defmulti update-annotation (fn [hit-map {{scope :scope t :type} :span}] t))
+(defmethod update-annotation
+  "token"
+  [hit-map {{scope :scope} :span {k :key} :ann :as ann-map}]
+  (let [token-fn (fn [token] (assoc-in token [:anns k] ann-map))
+        check-token-fn (fn [id] (= (str scope) id))]
+    (update-token hit-map check-token-fn token-fn)))
+
+(defmethod update-annotation
+  "IOB"
+  [hit-map {{scope :scope} :span {k :key} :ann :as ann-map}]
+  (let [{B :B O :O} scope
+        token-fn (fn [token] (assoc-in token [:anns k] ann-map))
+        check-token-fn (fn [id] (contains? (apply hash-set (range B (inc O))) (->int id)))]
+    (update-token hit-map check-token-fn token-fn)))
+
 (re-frame/register-handler              ;todo iob annotations
  :add-annotation
  standard-middleware
- (fn [db [_ {hit-id :hit-id {{scope :scope} :span {k :key} :ann} :ann :as ann}]]
+ (fn [db [_ {:keys [hit-id ann-map]}]]
    (if-let [hit-map (get-in db [:session :results-by-id hit-id])]
-     (let [token-fn (fn [token] (assoc-in token [:anns k] ann))]
-       (assoc-in
-        db
-        [:session :results-by-id hit-id]
-        (update-token hit-map (str scope) token-fn)))
+     (assoc-in
+      db
+      [:session :results-by-id hit-id]
+      (update-annotation hit-map ann-map))
      db)))
 
 (s/defn ^:always-validate make-annotation :- annotation-schema
-  [ann username token-id]
-  {:ann ann
-   :username username
-   :span {:type "token"
-          :scope token-id}
-   :timestamp (.now js/Date)})
+  ([ann username token-id]
+   {:ann ann
+    :username username
+    :span {:type "token"
+           :scope token-id}
+    :timestamp (.now js/Date)})
+  ([ann username token-from :- s/Int token-to :- s/Int]
+   {:pre [(> token-to token-from)]}
+   {:ann ann
+    :username username
+    :span {:type "IOB"
+           :scope {:B token-from
+                   :O token-to}}
+    :timestamp (.now js/Date)}))
 
 (defmulti package-annotation
-  (fn [ann hit-id token-id]
-    [(type ann) (type token-id)]))
+  "packages annotation data for sending it to server. It only supports bulk payloads
+  for token annotations [TODO: bulk payloads of span annotations]"
+  (fn [ann-map hit-id token-id & [token-to]]
+    [(type ann-map) (type token-id)]))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentArrayMap js/Number]
-  [ann hit-id :- s/Int token-id :- s/Int]
-  (let [ann (make-annotation ann js/username token-id)]
-    {:hit-id hit-id
-     :ann ann}))
+  ([ann hit-id :- s/Int token-id :- s/Int]
+   (let [ann-map (make-annotation ann js/username token-id)]
+     {:hit-id hit-id
+      :ann-map ann-map}))
+  ([ann hit-id :- s/Int token-from :- s/Int token-to :- s/Int]
+   (let [ann-map (make-annotation ann js/username token-from token-to)]
+     {:hit-id hit-id
+      :ann-map ann-map})))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentArrayMap cljs.core/PersistentVector]
   [ann hit-ids :- [s/Int] token-ids :- [s/Int]]
-  (let [anns (mapv (fn [token-id] (make-annotation ann js/username token-id)) token-ids)]
+  (let [ann-maps (mapv (fn [token-id] (make-annotation ann js/username token-id)) token-ids)]
     {:hit-id hit-ids
-     :ann anns}))
+     :ann-map ann-maps}))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentVector cljs.core/PersistentVector]
   [anns hit-ids :- [s/Int] token-ids :- [s/Int]]
   {:pre [(apply = (map count [anns hit-ids]))]}
-  (let [anns (mapv (fn [ann t-id] (make-annotation ann js/username t-id)) anns token-ids)]
+  (let [ann-maps (mapv (fn [ann t-id] (make-annotation ann js/username t-id)) anns token-ids)]
     {:hit-id hit-ids
-     :ann anns}))
+     :ann-map ann-maps}))
 
 (defn dispatch-annotation
-  [ann hit-id token-id]
-  (let [ann-map (package-annotation ann hit-id token-id)]
-    (re-frame/dispatch [:ws :out {:type :annotation :data ann-map}])))
-
-;;; todo
-(s/defn ^:always-validate make-span-ann  :- annotation-schema
-  [k :- s/Str v :- s/Str username :- s/Str IOB :- (s/enum :I :O :B)]
-  {:ann {:key k :value {:IOB IOB :value v}}
-   :username username
-   :timestamp (.now js/Date)})
-
-(s/defn ^:always-validate dispatch-span-annotation  ;redo
-  [k v hit-id :- s/Int token-ids :- [s/Int]]
-  (let [c (dec (count token-ids))]
-    (doseq [[idx token-id] (map-indexed vector token-ids)
-            :let [IOB (cond (= idx 0) :B
-                            (= idx c) :O
-                            :else     :I)]]
-      (re-frame/dispatch
-       [:ws :out {:type :annotation
-                  :data {:hit-id hit-id
-                         :token-id token-id
-                         :ann (make-span-ann k v js/username IOB)}}]))))
+  ([ann hit-id token-id]
+   (let [data (package-annotation ann hit-id token-id)]
+     (re-frame/dispatch [:ws :out {:type :annotation :data data}])))
+  ([ann hit-id token-from token-to]
+   (let [data (package-annotation ann hit-id token-from token-to)]
+     (re-frame/dispatch [:ws :out {:type :annotation :data data}]))))
