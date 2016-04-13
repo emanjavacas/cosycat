@@ -4,5 +4,5 @@
 /resources/public/js/compiled
 *~
 #*
-.lein*
-.nrepl*
+/.lein*
+/.nrepl*
