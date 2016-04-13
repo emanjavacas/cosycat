@@ -12,6 +12,26 @@
  (fn [db [_ {:keys [hit-id flag]}]]
    (assoc-in db [:session :results-by-id hit-id :meta :marked] (boolean flag))))
 
+(re-frame/register-handler
+ :mark-all-hits
+ standard-middleware
+ (fn [db _]
+   (reduce
+    (fn [acc-db hit-id]
+      (assoc-in acc-db [:session :results-by-id hit-id :meta :marked] true))
+    db
+    (get-in db [:session :results]))))
+
+(re-frame/register-handler
+ :demark-all-hits
+ standard-middleware
+ (fn [db _]
+   (reduce
+    (fn [acc-db hit-id]
+      (assoc-in acc-db [:session :results-by-id hit-id :meta :marked] false))
+    db
+    (keys (get-in db [:session :results-by-id])))))
+
 (defn has-marked?
   "for a given hit-map we look if the current (de)marking update
   leave behind marked tokens. The result will be false if no marked
@@ -33,11 +53,12 @@
    (let [hit-map (get-in db [:session :results-by-id hit-id])
          has-marked (has-marked? hit-map flag token-id)
          hit-map (assoc-in hit-map [:meta :has-marked] (boolean has-marked))
-         token-fn #(if flag (assoc % :marked true) (dissoc % :marked))]
+         check-token-fn (fn [id] (= token-id id))
+         token-fn (fn [token] (if flag (assoc token :marked true) (dissoc token :marked)))]
      (assoc-in
       db
       [:session :results-by-id hit-id]
-      (update-token hit-map token-id token-fn)))))
+      (update-token hit-map check-token-fn token-fn)))))
 
 (defmulti update-annotation (fn [hit-map {{scope :scope t :type} :span}] t))
 (defmethod update-annotation
@@ -115,9 +136,7 @@
      :ann-map ann-maps}))
 
 (defn dispatch-annotation
-  ([ann hit-id token-id]
-   (let [data (package-annotation ann hit-id token-id)]
-     (re-frame/dispatch [:ws :out {:type :annotation :data data}])))
-  ([ann hit-id token-from token-to]
-   (let [data (package-annotation ann hit-id token-from token-to)]
-     (re-frame/dispatch [:ws :out {:type :annotation :data data}]))))
+  [& args]
+  (let [data (apply package-annotation args)]
+    (re-frame/dispatch [:ws :out {:type :annotation :data data}])))
+

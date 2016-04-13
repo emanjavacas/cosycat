@@ -37,10 +37,13 @@
     (timbre/info "Starting WS component")
     (if (and clients chans)
       component
-      (let [chans {:ws-in (chan) :ws-out (chan)}
-            component (assoc component :clients (atom {}) :chans chans)]
-        (ws-routes component {:annotation annotation-route
-                              :notify notify-route})
+      (let [component (assoc component
+                             :clients (atom {})
+                             :chans {:ws-in (chan) :ws-out (chan)})]
+        (ws-routes;setup routes
+         component
+         {:annotation annotation-route
+          :notify notify-route})
         component)))
   (stop [component]
     (timbre/info "Shutting down WS component")

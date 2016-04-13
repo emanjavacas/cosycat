@@ -6,18 +6,26 @@
               [goog.history.EventType :as EventType]
               [re-frame.core :as re-frame]))
 
+(defonce history (History.))
+
+(defn nav! [token]
+  (.setToken history token))
+
 (defn hook-browser-navigation! []
-  (doto (History.)
+  (doto history
     (events/listen
      EventType/NAVIGATE
      (fn [event]
-       (secretary/dispatch! (.-token event))))
+       (let [token (.-token event)]
+         (.log js/console "Navigating to " token)
+         (.scrollTo js/window 0 0)
+         (secretary/dispatch! token))))
     (.setEnabled true)))
 
 (defn app-routes []
   (secretary/set-config! :prefix "#")
   (defroute "/" []
-    (re-frame/dispatch [:set-active-panel :query-panel]))
+    (re-frame/dispatch [:set-active-panel :front-panel]))
   (defroute "/query" []
     (re-frame/dispatch [:set-active-panel :query-panel]))
   (defroute "/settings" []

@@ -69,14 +69,12 @@
          {:type "checkbox"
           :tab-index (inc tabindex)
           :checked (:marked meta)
-          :on-change #(let [flag (.-checked (.-target %))]
-                        (re-frame/dispatch
-                         [:mark-hit
-                          {:hit-id id
-                           :flag flag}]))}]]
+          :on-change
+          #(let [flag (.-checked (.-target %))]
+             (re-frame/dispatch [:mark-hit {:hit-id id :flag flag}]))}]]
        ;; hit number
        ^{:key (str hit-num "-num")}
-       [:td.ignore-mark
+       [:td.ignore-mark.snippet-trigger
         {:style {:width "20px" :background-color "#F9F9F9" :cursor "pointer"}
          :on-double-click (on-double-click hit-num)}
         [:label.ignore-mark

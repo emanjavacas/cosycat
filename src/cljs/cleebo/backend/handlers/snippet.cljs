@@ -11,11 +11,13 @@
 
 (defn snippet-result-handler [& [context]]
   (fn [{:keys [snippet status hit-idx] :as data}]
-    (let [data (case context
-                 nil data
-                 :left (update-in data [:snippet] dissoc :right)
-                 :right (update-in data [:snippet] dissoc :left))]
-      (re-frame/dispatch [:open-modal :snippet data]))))
+    (if (string? data)
+      (.assign js/location "/logout")
+      (let [data (case context
+                   nil data
+                   :left (update-in data [:snippet] dissoc :right)
+                   :right (update-in data [:snippet] dissoc :left))]
+        (re-frame/dispatch [:open-modal :snippet data])))))
 
 (defn fetch-snippet [hit-idx snippet-size & {:keys [context]}]
   (GET "blacklab"

@@ -20,6 +20,7 @@
             [cleebo.settings.page :refer [settings-panel]]
             [cleebo.updates.page :refer [updates-panel]]
             [cleebo.debug.page :refer [debug-panel]]
+            [cleebo.front.page :refer [front-panel]]
             [cleebo.utils :refer [nbsp]]
             [taoensso.timbre :as timbre]
             [figwheel.client :as figwheel]
@@ -28,11 +29,19 @@
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
 (defmulti panels identity)
+(defmethod panels :front-panel [] [front-panel])
 (defmethod panels :query-panel [] [query-panel])
 (defmethod panels :settings-panel [] [settings-panel])
 (defmethod panels :debug-panel [] [debug-panel])
 (defmethod panels :updates-panel [] [updates-panel])
 (defmethod panels :annotation-panel [] [annotation-panel])
+
+(defn icon-label [icon label]
+  [:span [:i {:class (str "zmdi " icon)      
+              :style {:line-height "20px"
+                      :font-size "15px"
+                      :margin-right "5px"}}]
+   label])
 
 (defn navlink [target href label icon]
   (let [active (re-frame/subscribe [:active-panel])]
@@ -41,11 +50,7 @@
        {:eventKey target
         :class (if (= @active target) "active")
         :href href}
-       [:span [:i {:class (str "zmdi " icon)      
-                   :style {:line-height "20px"
-                           :font-size "15px"
-                           :margin-right "5px"}}]
-        label]])))
+       [icon-label icon label]])))
 
 (defn navdropdown [target href label icon & children]
   (let [active (re-frame/subscribe [:active-panel])]
@@ -55,7 +60,7 @@
         :id "dropdown"
         :class (if (= @active target) "active")
         :href href
-        :title label}
+        :title (reagent/as-component [icon-label icon label])}
        (for [[idx {:keys [label href on-select]}] (map-indexed vector children)
              :let [k (str label idx)]]
          ^{:key k} [bs/menu-item
@@ -64,30 +69,33 @@
                      :onSelect on-select}
                     label])])))
 
-(defn navbar []
-  [bs/navbar
-   {:inverse false
-    :fixedTop true
-    :fluid true}
-   [bs/navbar-header
-    [bs/navbar-brand (str (nbsp :n 6) "Hello " (str/capitalize js/username) "!")]]
-   [bs/nav {:pullRight true}
-    [navlink :query-panel "#/query" "Query" "zmdi-search"]
-    [navlink :annotation-panel "#/annotation" "Annotation" "zmdi-edit"]
-    [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"]
-    [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"]
-    [navdropdown :debug-panel "#/debug" "Debug" "zmdi-bug"
-     {:label "Debug page" :href "#/debug"}
-     {:label "App snapshots" :on-select #(re-frame/dispatch [:open-modal :localstorage])}
-     {:label "New backup" :on-select ls/dump-db}]
-    [navlink :exit          "#/exit" "Exit" "zmdi-power"]]])
+(defn navbar [active-panel]
+  (fn [active-panel]
+    [bs/navbar
+     {:inverse false
+      :fixedTop true
+      :fluid true}
+     [bs/navbar-header
+      [bs/navbar-brand (str (nbsp :n 6) "Hello " (str/capitalize js/username) "!")]]
+     [bs/nav {:pullRight true}
+      (when-not (= @active-panel :front-panel)
+        [navlink :query-panel "#/query" "Query" "zmdi-search"])
+      (when-not (= @active-panel :front-panel)
+        [navlink :annotation-panel "#/annotation" "Annotation" "zmdi-edit"])
+      [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"]
+      [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"]
+      [navdropdown :debug-panel "#/debug" "Debug" "zmdi-bug" ;debug mode
+       {:label "Debug page" :href "#/debug"}
+       {:label "App snapshots" :on-select #(re-frame/dispatch [:open-modal :localstorage])}
+       {:label "New backup" :on-select ls/dump-db}]
+      [navlink :exit "#/exit" "Exit" "zmdi-power"]]]))
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])
         ls-modal? (re-frame/subscribe [:modals :localstorage])]
     (fn []
       [:div
-       [navbar]
+       [navbar active-panel]
        [notification-container]
        [load-from-ls-modal ls-modal?]
        [:div.container-fluid

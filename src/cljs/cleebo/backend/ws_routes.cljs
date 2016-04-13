@@ -10,19 +10,23 @@
 (defn format [fmt & args]
   (apply gstring/format fmt args))
 
+(defn annotation-ok [{type :type {O :O B :B :as scope} :scope}]
+  (case type
+    "IOB" (format "Stored span annotation for range [%d-%d]" B O)
+    "token" (format "Stored annotation for token [%d]" scope)))
+
 ;;; message templates
 (def annotation-error-tmpl "Couldn't store annotation with id %d. Reason: [%s]")
 (def annotation-error-mult-tmpl "Couldn't store %d annotations! Reason: [%s]")
-(def annotation-ok-tmpl "Stored annotation for token %d")
 (def annotation-ok-mult-tmpl  "Stored %d annotations!")
 
 (defmulti incoming-annotation (fn [{:keys [ann-map] :as data}] (type ann-map)))
 (defmethod incoming-annotation
   cljs.core/PersistentArrayMap
-  [{hit-id :hit-id {{scope :scope} :span :as ann} :ann-map}]
+  [{hit-id :hit-id {span :span :as ann} :ann-map}]
   (re-frame/dispatch
    [:notify
-    {:message (format annotation-ok-tmpl scope)
+    {:message (annotation-ok span)
      :status :ok}])
   (re-frame/dispatch
    [:add-annotation
@@ -54,6 +58,12 @@
   (re-frame/dispatch
    [:notify
     {:message (format annotation-error-mult-tmpl (count scope) e)}]))
+(defmethod incoming-annotation-error
+  cljs.core/PersistentArrayMap
+  [{:keys [{B :B O :O} reason e username]}]
+  (re-frame/dispatch
+   [:notify
+    {:message (format annotation-error-mult-tmpl (count (range B (inc O))) e)}]))
 
 (re-frame/register-handler
  :ws
@@ -66,11 +76,13 @@
          (update-in db [:session :throbbing?] dissoc payload-id))
      
      [:in :annotation :error]
-     (update-in db [:session :throbbing?] dissoc payload-id)
+     (do (incoming-annotation-error data)
+         (update-in db [:session :throbbing?] dissoc payload-id))
      
      [:out :annotation _]
      (do (send-ws payload)
          (assoc-in db [:session :throbbing? payload-id] true))
+
      ;; notify routes
      [:in :notify _]
      (let [{:keys [by message]} data]
