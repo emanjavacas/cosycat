@@ -28,14 +28,11 @@
              :refer [wrap-authentication wrap-authorization]]
             [cleebo.components.blacklab :refer [remove-hits!]]
             [cleebo.routes.auth :refer
-             [safe auth-backend login-authenticate on-login-failure signup]]
+             [is-logged? safe auth-backend token-backend login-route signup-route]]
             [cleebo.components.ws :refer [ws-handler-http-kit]]
             [cleebo.routes.cqp :refer [cqp-router]]            
             [cleebo.routes.blacklab :refer [blacklab-router]]
             [cleebo.routes.session :refer [session-route]]))
-
-(defn is-logged? [req]
-  (get-in req [:session :identity]))
 
 (def about-route
   (safe
@@ -57,8 +54,8 @@
 (defroutes app-routes
   (GET "/" req (landing-page :logged? (is-logged? req)))
   (GET "/login" [] (login-page :csrf *anti-forgery-token*))
-  (POST "/login" [] (login-authenticate on-login-failure))
-  (POST "/signup" [] signup)
+  (POST "/login" [] login-route)
+  (POST "/signup" [] signup-route)
   (GET "/about" [] about-route)
   (GET "/cleebo" [] cleebo-route)
   (GET "/session" [] session-route)
@@ -93,6 +90,8 @@
       wrap-reload
       (wrap-authorization auth-backend)
       (wrap-authentication auth-backend)
+;      (wrap-authorization token-backend)
+;      (wrap-authentication token-backend)
       (wrap-anti-forgery {:read-token (fn [req] (get-in req [:params :csrf]))})
       (wrap-session {:store (ttl-memory-store (* 30 60))})
       (wrap-transit-params {:encoding :json-verbose})

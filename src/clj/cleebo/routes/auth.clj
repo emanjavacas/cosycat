@@ -1,5 +1,6 @@
 (ns cleebo.routes.auth
   (:require [taoensso.timbre :as timbre]
+            [clj-time.core :as time]
             [compojure.response :refer [render]]
             [ring.util.response :refer [redirect response]]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]           
@@ -7,8 +8,11 @@
             [cleebo.views.error :refer [error-page]]
             [cleebo.views.login :refer [login-page]]
             [cleebo.avatar :refer [new-avatar]]
-            [buddy.auth.accessrules :refer [restrict]]
-            [buddy.auth.backends.session :refer [session-backend]]))
+            [buddy.auth.backends.session :refer [session-backend]]
+            [buddy.sign.jws :as jws]
+            [buddy.auth.backends.token :refer [jws-backend]]))
+
+(def secret "mysupercomplexsecret")
 
 (defn on-login-failure [req]
   (render
@@ -24,39 +28,48 @@
     :error-msg msg)
    req))
 
-(defn signup [req]
-  (let [{{:keys [password repeatpassword username]} :params session :session} req
-        db (get-in req [:components :db])
-        user {:username username :password password}
+(defn signup-route
+   [{{username :username password :password repeatpassword :repeatpassword} :params
+   {db :db} :components
+   {next-url :next} :session :as req}]
+  (let [user {:username username :password password}
         is-user (is-user? db user)
         password-match? (= password repeatpassword)]
     (cond
       (not password-match?) (on-signup-failure req "Password mismatch")
       is-user               (on-signup-failure req "User already exists")
-      :else (let [user (new-user db user)
-                  new-session (assoc session :identity user)
-                  _ (new-avatar username)]
-              (-> (redirect (get-in req [:session :next] "/"))
-                  (assoc :session new-session))))))
+      :else (let [user (new-user db user)]
+              (do (new-avatar username))
+              (-> (redirect (or next-url "/"))
+                  (assoc-in [:session :identity] user))))))
 
-(defn get-username [params form-params]
-  (or (get form-params "username") (:username params "")))
+(defn login-route
+ [{{username :username password :password} :params
+   {username-form :username password-form :password} :form-params
+   {db :db} :components
+   {next-url :next} :session :as req}]
+  (let [username (or username username-form)
+        password (or password password-form)]
+    (if-let [user (lookup-user db username password)]
+      (-> (redirect (or next-url "/"))
+          (assoc-in [:session :identity] user))
+      (on-login-failure req))))
 
-(defn get-password [params form-params]
-  (or (get form-params "password") (:password params "")))
-
-(defn login-authenticate [on-login-failure]
-  (fn [{{username :username password :password} :params
-        {username-form :username password-form :password} :form-params
-        {db :db} :components
-        {next-url :next} :session :as req}]
-    (timbre/debug "login-auth" req)
-    (let [username (or username username-form)
-          password (or password password-form)]
-      (if-let [user (lookup-user db username password)]
-        (-> (redirect (or next-url "/"))
-            (assoc-in [:session :identity] user))
-        (on-login-failure req)))))
+(defn jws-login-route
+  [{{username :username password :password} :params
+    {username-form :username password-form :password} :form-params
+    {db :db} :components
+    {next-url :next} :session :as req}]
+  (let [username (or username username-form)
+        password (or password password-form)]
+    (if-let [user (lookup-user db username password)]
+      (let [claims {:user user
+                    :exp (-> 3 time/hours time/from-now)}
+            token (jws/sign claims secret)] ;check this
+        {:status 200
+         :headers {:content-type "application/json"}
+         :body {:token token}})
+      (on-login-failure req))))
 
 (defn unauthorized-handler [req meta]
   (-> (response "Unauthorized")
@@ -65,6 +78,9 @@
 (def auth-backend
   (session-backend {:unauthorized-handler unauthorized-handler}))
 
+(def token-backend
+  (jws-backend {:secret secret}))
+
 (defn safe [handler rule-map]
   (fn [req]
     (let [{:keys [login-uri is-ok?]} rule-map]
@@ -72,3 +88,6 @@
         (handler req)
         (-> (redirect login-uri)
             (assoc-in [:session :next] (:uri req)))))))
+
+(defn is-logged? [req]
+  (get-in req [:session :identity]))
