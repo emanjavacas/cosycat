@@ -32,7 +32,7 @@
   [{{{username :username} :identity} :session 
     {blacklab :blacklab} :components
     {corpus :corpus query-str :query-str context :context to :to from :from
-     {criterion :criterion prop-name :prop-name} :sort-map :as sort-map} :params}]
+     {criterion :criterion prop-name :prop-name} :sort-map} :params}]
   (let [from (->int from)
         to (->int to)
         context (->int context)
@@ -44,7 +44,7 @@
   [{{{username :username} :identity} :session 
     {blacklab :blacklab} :components
     {corpus :corpus query-str :query-str context :context to :to from :from
-     {criterion :criterion prop-name :prop-name} :sort-map :as sort-map} :params}]
+     {criterion :criterion prop-name :prop-name} :sort-map} :params}]
   (let [from (->int from)
         to (->int to)
         context (->int context)
@@ -67,6 +67,7 @@
 
 (defmulti blacklab-routes
   (fn [{{route :route} :params :as req}]
+    (timbre/debug req)
     (->keyword route)))
 
 (defmethod blacklab-routes :query [{{db :db} :components :as req}]

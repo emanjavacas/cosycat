@@ -48,13 +48,20 @@
               :ok    "zmdi-storage"
               :error "zmdi-alert-circle")}]])
 
+(defn user-thumb [user & [props]]
+  [bs/image
+   (merge {:src (str "img/avatars/" user ".png")
+           :height "42" :width "42"
+           :circle true}
+          props)])
+
 (defn notification-child
   [message date status & {:keys [by]}]
   (let [by (or by "server")]
     [:div.notification
      {:class "success"}
      [:div.illustration
-      [:img {:src (str "img/avatars/" by ".png")}]]
+      [user-thumb by]]
      [:div.text
       [:div.title message]
       [:div.text (.toLocaleString date "en-US")]]]))

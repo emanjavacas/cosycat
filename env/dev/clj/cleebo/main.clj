@@ -1,4 +1,4 @@
-(ns cleebo.core
+(ns cleebo.main
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer [refresh refresh-all]]
             [cleebo.components.http-server :refer [new-http-server]]
@@ -7,18 +7,17 @@
             [cleebo.components.blacklab :refer [new-bl]]
             [cleebo.components.figwheel :refer [new-figwheel]]
             [cleebo.components.ws :refer [new-ws]]
-            [clojure.pprint :as pprint]
-            [taoensso.timbre :as timbre]
-            [environ.core :refer [env]]
-            [clojure.string :as str]))
+            [environ.core :refer [env]]))
 
-(def config-map
-  {:port (:port env)
-   :database-url (:database-url env)
-   :cqp-init-file (get-in env [:cqp :cqp-init-file])
-   :blacklab-paths-map (get-in env [:blacklab :blacklab-paths-map])})
+(defonce system nil)
 
-(defn create-system [config-map]
+(def dev-config-map
+  {:port (env :port)
+   :database-url (env :database-url)
+   :cqp-init-file (env :cqp-init-file)
+   :blacklab-paths-map (env :blacklab-paths-map)})
+
+(defn create-dev-system [config-map]
   (let [{:keys [handler port cqp-init-file database-url blacklab-paths-map]} config-map]
     (-> (component/system-map
          :cqi-client (new-cqi-client {:init-file cqp-init-file})
@@ -33,13 +32,8 @@
           :blacklab    [:ws]
           :ws          [:db]}))))
 
-(defonce system nil)
-
 (defn init []
-  (println "\n\nStarting server with enviroment:")
-  (pprint/pprint (select-keys env [:host :database-url :cqp :blacklab]))
-  (println "\n")  
-  (alter-var-root #'system (constantly (create-system config-map))))
+  (alter-var-root #'system (constantly (create-dev-system dev-config-map))))
 
 (defn start []
   (alter-var-root #'system component/start))
@@ -53,12 +47,5 @@
 
 (defn reset []
   (stop)
-  (refresh :after 'cleebo.core/run))
+  (refresh :after 'cleebo.main/run))
 
-(defn -main [& args]
-  (let [system (create-system config-map)]
-    (.addShutdownHook 
-     (Runtime/getRuntime) 
-     (Thread. (fn []
-                (.stop system))))
-    (.start system)))

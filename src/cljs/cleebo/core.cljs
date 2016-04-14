@@ -8,13 +8,14 @@
             [cleebo.backend.handlers.query]
             [cleebo.backend.handlers.snippet]
             [cleebo.backend.handlers.annotations]
-            [cleebo.backend.handlers.notifications]   
+            [cleebo.backend.handlers.notifications]
+            [cleebo.backend.handlers.session]
             [cleebo.backend.ws :refer [make-ws-channels!]]
             [cleebo.backend.ws-routes]
             [cleebo.backend.subs]
             [cleebo.routes :as routes]
             [cleebo.localstorage :as ls]
-            [cleebo.components :refer [notification-container load-from-ls-modal]]
+            [cleebo.components :refer [notification-container load-from-ls-modal user-thumb]]
             [cleebo.query.page :refer [query-panel]]
             [cleebo.annotation.page :refer [annotation-panel]]
             [cleebo.settings.page :refer [settings-panel]]
@@ -23,10 +24,8 @@
             [cleebo.front.page :refer [front-panel]]
             [cleebo.utils :refer [nbsp]]
             [taoensso.timbre :as timbre]
-            [figwheel.client :as figwheel]
             [devtools.core :as devtools]
-            [clojure.string :as str])
-  (:require-macros [cleebo.env :as env :refer [cljs-env]]))
+            [clojure.string :as str]))
 
 (defmulti panels identity)
 (defmethod panels :front-panel [] [front-panel])
@@ -69,6 +68,18 @@
                      :onSelect on-select}
                     label])])))
 
+(defn user-brand []
+  (let [username (re-frame/subscribe [:session :user :username])]
+    (fn []
+      [bs/navbar-brand
+       [:div.container-fluid
+        {:style {:margin-top "-9.5px"}}
+        [:div.row
+         {:style {:line-height "40px" :text-align "right"}}
+         [:div.col-sm-8
+          (str (nbsp 10) (str/capitalize @username))]
+         [:div.col-sm-4 [user-thumb @username {:height "30px" :width "30px"}]]]]])))
+
 (defn navbar [active-panel]
   (fn [active-panel]
     [bs/navbar
@@ -76,7 +87,7 @@
       :fixedTop true
       :fluid true}
      [bs/navbar-header
-      [bs/navbar-brand (str (nbsp :n 6) "Hello " (str/capitalize js/username) "!")]]
+      [user-brand]]
      [bs/nav {:pullRight true}
       (when-not (= @active-panel :front-panel)
         [navlink :query-panel "#/query" "Query" "zmdi-search"])
@@ -108,6 +119,7 @@
 (defn ^:export init []
   ;; init devtools
   (devtools/enable-feature! :sanity-hints :dirac)
+  
   (devtools/install!)
   ;; declare app routes
   (routes/app-routes)
@@ -115,10 +127,9 @@
   (make-ws-channels!)
   ;; start db
   (re-frame/dispatch-sync [:initialize-db])
+  ;; fetch user data
+  (re-frame/dispatch [:fetch-user-session])
   ;; handle refreshes
   (.addEventListener js/window "beforeunload" ls/dump-db)
   ;; render root
-  (mount-root)
-  ;; start figwheel server
-  (figwheel/start
-   {:websocket-url (str "ws://" (cljs-env :host) ":3449/figwheel-ws")}))
+  (mount-root))

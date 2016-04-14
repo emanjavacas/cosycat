@@ -63,7 +63,8 @@
 
 (def db-schema
   {:settings settings-schema
-   :session {:query-opts query-opts-schema
+   :session {:user {:username s/Str}
+             :query-opts query-opts-schema
              :query-results query-results-schema
              :results-by-id (s/conditional empty? {} :else results-by-id-schema)
              :results (s/conditional empty? [] :else results-schema)

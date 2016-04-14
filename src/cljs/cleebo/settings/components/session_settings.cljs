@@ -5,7 +5,9 @@
             [cleebo.utils :refer [corpora nbsp ->map]]
             [cleebo.components :refer [dropdown-select]]
             [cleebo.query.components.query-field
-             :refer [corpus-select context-select size-select]]))
+             :refer [corpus-select context-select size-select]]
+            [cleebo.settings.components.shared-components
+             :refer [row-component]]))
 
 (def help-map
   {:corpus "This is a selector for corpora from the indexed ones"
@@ -15,22 +17,6 @@
   when viewing the match in text-mode"
    :snippet-delta "This let you control how many extra words will be retrieved when fetching more
   snippet text"})
-
-(def snippet-size-help-text)
-
-(defn row-component [& {:keys [label controllers help-text]}]
-  (fn  [& {:keys [label controllers help-text]}]
-    [:div
-     [:div.row.pull-left
-      [bs/label {:style {:font-size "14px" :line-height "2.5em"}}
-       label]]
-     [:br]
-     [:div.row [:hr]]
-     [:div.row
-      [:div.col-lg-5
-       controllers]
-      [:div.col-lg-7.text-muted @help-text]]
-     [:br]]))
 
 (defn on-mouse-over [target text-atom]
   (fn [e] (reset! text-atom (get help-map target))))

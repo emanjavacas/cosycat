@@ -46,15 +46,16 @@
   (or (get form-params "password") (:password params "")))
 
 (defn login-authenticate [on-login-failure]
-  (fn [req]
-    (let [{:keys [params form-params session]} req
-          db (get-in req [:components :db])
-          username (get-username params form-params)
-          password (get-password params form-params)]
+  (fn [{{username :username password :password} :params
+        {username-form :username password-form :password} :form-params
+        {db :db} :components
+        {next-url :next} :session :as req}]
+    (timbre/debug "login-auth" req)
+    (let [username (or username username-form)
+          password (or password password-form)]
       (if-let [user (lookup-user db username password)]
-        (let [new-session (assoc session :identity user)]
-          (-> (redirect (get-in req [:session :next] "/"))
-              (assoc :session new-session)))
+        (-> (redirect (or next-url "/"))
+            (assoc-in [:session :identity] user))
         (on-login-failure req)))))
 
 (defn unauthorized-handler [req meta]

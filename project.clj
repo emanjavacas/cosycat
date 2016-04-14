@@ -49,8 +49,9 @@
                  [com.goldmansachs/gs-collections "6.1.0"]
                  [blacklab "1.2-SNAPSHOT"]]
   
-  :repositories [["hackrslab-repository" "http://hackrslab.github.io/maven-repo"]]  
-  :main cleebo.core
+  :repositories [["hackrslab-repository" "http://hackrslab.github.io/maven-repo"]]
+
+  :main cleebo.main
   
   :jvm-opts ["-Xmx4000M"]
   
@@ -60,34 +61,27 @@
             [lein-figwheel "0.5.0-2"]]
   
   :source-paths ["src/clj" "src/cljc" "src/cljs"]
-  
-  :clean-targets ^{:protect false} ["resources/public/js/compiled" "target" "test/js"]
+
+  :min-lein-version "2.5.0"
+
+  :uberjar-name "cleebo-prod.jar"
+
+  :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
 
   :cljsbuild {:builds
-              [{:id "dev"
-                :source-paths ["src/cljs" "src/cljc" "src/clj"]
-                :compiler {:main "cleebo.core"
-                           :preamble ["resources/public/vendor/js/material-ui/material.js"]
-                           :output-to "resources/public/js/compiled/app.js"
-                           :output-dir "resources/public/js/compiled/out"
-                           :asset-path "js/compiled/out"
-                           :optimizations :none
-                           :pretty-print true
-                           :source-map-timestamp true}}
-               {:id "test"
-                :source-paths ["src/cljs" "src/cljc" "test/cljs"]
-                :notify-command ["phantomjs" "test/unit-test.js" "test/unit-test.html"]
-                :compiler {:optimizations :whitespace
-                           :pretty-print true
-                           :output-to "test/js/app_test.js"
-                           :warnings {:single-segment-namespace false}}}
-               {:id "min"
-                :source-paths ["src/cljs" "src/cljc"]
-                :compiler {:main cleebo.core
-                           :preamble ["resources/vendor/js/material-ui/material.js"]
-                           :output-to "resources/public/js/compiled/app.js"
-                           :optimizations :advanced
-                           :closure-defines {goog.DEBUG false}
-                           :pretty-print false}}]}
+              {:app {:source-paths ["src/cljs" "src/cljc" "src/clj"]
+                     :compiler {:main "cleebo.main"
+                                :output-to "resources/public/js/compiled/app.js"
+                                :output-dir "resources/public/js/compiled/out"
+                                :asset-path "js/compiled/out"
+                                :optimizations :none
+                                :pretty-print true
+                                :source-map-timestamp true}}}
+              :min {:source-paths ["src/cljs" "src/cljc" "src/clj" "env/dev/cljs"]
+                    :compiler {:output-to "resources/public/js/compiled/app.js"
+                               :optimizations :advanced
+                               :closure-defines {goog.DEBUG false}
+                               :pretty-print false}}}
+  
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]
-                 :timeout 120000})
+                 :timeout 1200000})

@@ -1,7 +1,7 @@
 (ns cleebo.views.cleebo
   (:require [hiccup.page :refer [html5 include-js include-css]]))
 
-(defn cleebo-page [& {:keys [csrf username]}]
+(defn cleebo-page [& {:keys [csrf]}]
   (html5
    [:html
     {:lang "en"}
@@ -20,9 +20,8 @@
      (include-css "vendor/css/jquery-ui.min.css")]
     [:body
      [:div#app]
-     (include-js "js/compiled/app.js")
      (include-js "vendor/js/jquery/jquery-1.11.2.min.js")
      (include-js "vendor/js/jquery/jquery-ui.min.js")
      [:script (str "var csrf =\"" csrf "\";")]
-     [:script (str "var username =\"" username "\";")]
-     [:script "cleebo.core.init();"]]]))
+;     [:script "cleebo.core.init();"]
+     (include-js "js/compiled/app.js")]]))

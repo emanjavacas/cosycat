@@ -8,8 +8,8 @@
   (:require-macros [cleebo.env :as env :refer [cljs-env]]))
 
 (def corpora
-  (let [{cqp-corpora :corpora} (cljs-env :cqp)
-        {bl-corpora :corpora}  (cljs-env :blacklab)]
+  (let [cqp-corpora (cljs-env :cqp-corpora)
+        bl-corpora (cljs-env :blacklab-corpora)]
     (concat cqp-corpora bl-corpora)))
 
 (def color-codes

@@ -2,6 +2,7 @@
   (:require [react-bootstrap.components :as bs]
             [reagent.core :as reagent]
             [cleebo.utils :refer [parse-time ->int]]
+            [cleebo.components :refer [user-thumb]]
             [schema.core :as s]
             [taoensso.timbre :as timbre]))
 
@@ -30,7 +31,7 @@
         (if-not ann
           ^{:key id} [spacer-row]
           ^{:key id} [:tr
-                      [:td [key-val ann-map]]
+                      [:td [bs/label v]]
                       [:td {:style {:width "25px"}}]
                       [:td
                        [:span.text-muted user]
@@ -55,9 +56,13 @@
     {:id "popover"
      :title (reagent/as-component
              [:div.container-fluid
-              [:div.row.pull-right [:div.text-muted user]]
-              [:br] [:br]
-              [:div.row.pull-right (human-time time)]])
+              [:div.row
+               [:div.col-sm-4
+                [user-thumb user]]
+               [:div.col-sm-8
+                [:div.row.pull-right [:div.text-muted user]]
+                [:br] [:br]
+                [:div.row.pull-right (human-time time)]]]])
      :style {:max-width "100%"}}
     [:table
      (if-not (empty? history)

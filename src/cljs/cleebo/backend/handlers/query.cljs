@@ -44,8 +44,9 @@
            :else            [new-from from]))))
 
 (defn which-endpoint? [corpus]
-  (let [cqp-corpora (cljs-env :cqp :corpora)
-        bl-corpora  (cljs-env :blacklab :corpora)]
+  (let [cqp-corpora (cljs-env :cqp-corpora)
+        bl-corpora  (cljs-env :blacklab-corpora)]
+    (timbre/debug cqp-corpora bl-corpora corpus)
     (cond (some #{corpus} cqp-corpora) "cqp"
           (some #{corpus} bl-corpora)  "blacklab"
           :else (throw (js/Error "Unknown corpus")))))
@@ -79,7 +80,7 @@
            :params {:query-str query-str
                     :corpus corpus
                     :context context
-                    :from from
+                    :from 0
                     :size size
                     :route :query}})
      db)))
@@ -93,15 +94,17 @@
          [from to] (case direction
                      :next (pager-next query-size size to)
                      :prev (pager-prev query-size size from))]
-     (re-frame/dispatch [:start-throbbing source-component])
-     (GET (which-endpoint? corpus)
-          {:handler (results-handler source-component)
-           :error-handler (error-handler source-component)
-           :params {:corpus corpus
-                    :context context
-                    :from from
-                    :to to
-                    :route :query-range}})
+     (timbre/debug from to query-size)
+     (when (and (pos? (inc from)) (<= to query-size))
+       (re-frame/dispatch [:start-throbbing source-component])
+       (GET (which-endpoint? corpus)
+            {:handler (results-handler source-component)
+             :error-handler (error-handler source-component)
+             :params {:corpus corpus
+                      :context context
+                      :from from
+                      :to to
+                      :route :query-range}}))
      db)))
 
 (re-frame/register-handler
@@ -126,8 +129,8 @@
  :query-sort
  standard-middleware
  (fn [db [_ route source-component]]
-   (let [{{:keys [corpus context size]} :query-opts
-          {:keys [from]}                :query-results} (:session db)]
+   (let [{{:keys [corpus context size criterion prop-name]} :query-opts
+          {:keys [from]} :query-results} (:session db)]
      (re-frame/dispatch [:start-throbbing source-component])
      (GET (which-endpoint? corpus)
           {:handler (results-handler source-component)
@@ -136,5 +139,7 @@
                     :context context
                     :from from
                     :to (+ from size)
-                    :route route}})
+                    :route route
+                    :sort-map {:criterion criterion
+                               :prop-name prop-name}}})
      db)))

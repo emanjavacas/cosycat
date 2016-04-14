@@ -87,6 +87,7 @@
       (update-annotation hit-map ann-map))
      db)))
 
+
 (s/defn ^:always-validate make-annotation :- annotation-schema
   ([ann username token-id]
    {:ann ann

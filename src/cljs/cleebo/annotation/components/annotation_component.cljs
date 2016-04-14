@@ -161,3 +161,4 @@
                                                  :marked-hits marked-hits
                                                  :current-hit-id current-hit-id)]
            ^{:key id} [row-fn hit-map :span-selection span-selection]))]])))
+

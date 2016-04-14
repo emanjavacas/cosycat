@@ -50,11 +50,11 @@
          :model @prop-name
          :select-fn (fn [k] (re-frame/dispatch [:set-session [:query-opts :prop-name] k]))}]
        [bs/button
-        {:disabled (not (some #{@corpus} (:corpora (cljs-env :blacklab))))
+        {:disabled (not (some #{@corpus} (cljs-env :blacklab-corpora)))
          :onClick (on-click-sort :sort-range)}
         "Sort page"]
        [bs/button
-        {:disabled (not (some #{@corpus} (:corpora (cljs-env :blacklab))))
+        {:disabled (not (some #{@corpus} (cljs-env :blacklab-corpora)))
          :onClick (on-click-sort :sort-query)}
         "Sort all"]])))
 

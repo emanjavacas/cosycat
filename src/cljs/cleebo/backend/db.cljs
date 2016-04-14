@@ -6,9 +6,10 @@
   {:settings {:notifications {:delay 7500}
               :snippets {:snippet-size 25
                          :snippet-delta 10}}
-   :session {:active-panel :query-panel
+   :session {:user {:username "user"}
+             :active-panel :query-panel
              :notifications {}
-             :query-opts {:corpus (first (cljs-env :blacklab :corpora))
+             :query-opts {:corpus (first (cljs-env :blacklab-corpora))
                           :context 5
                           :size 10
                           :criterion "match"

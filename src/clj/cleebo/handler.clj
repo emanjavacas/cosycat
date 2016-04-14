@@ -31,7 +31,8 @@
              [safe auth-backend login-authenticate on-login-failure signup]]
             [cleebo.components.ws :refer [ws-handler-http-kit]]
             [cleebo.routes.cqp :refer [cqp-router]]            
-            [cleebo.routes.blacklab :refer [blacklab-router]]))
+            [cleebo.routes.blacklab :refer [blacklab-router]]
+            [cleebo.routes.session :refer [session-route]]))
 
 (defn is-logged? [req]
   (get-in req [:session :identity]))
@@ -43,8 +44,8 @@
 
 (def cleebo-route
   (safe
-   (fn [{{{username :username} :identity} :session}]
-     (cleebo-page :csrf *anti-forgery-token* :username username))
+   (fn [req]
+     (cleebo-page :csrf *anti-forgery-token*))
    {:login-uri "/login" :is-ok? authenticated?}))
 
 (defn logout-route
@@ -55,15 +56,16 @@
 
 (defroutes app-routes
   (GET "/" req (landing-page :logged? (is-logged? req)))
-  (GET "/login" req (login-page :csrf *anti-forgery-token*))
-  (POST "/login" req (login-authenticate on-login-failure))
-  (POST "/signup" req (signup req))
-  (GET "/about" req (about-route req))
-  (GET "/cleebo" req (cleebo-route req))
-  (ANY "/logout" req (logout-route req))
-  (GET "/blacklab" req (blacklab-router req))
-  (GET "/cqp" req (cqp-router req))
-  (GET "/ws" req (ws-handler-http-kit req))
+  (GET "/login" [] (login-page :csrf *anti-forgery-token*))
+  (POST "/login" [] (login-authenticate on-login-failure))
+  (POST "/signup" [] signup)
+  (GET "/about" [] about-route)
+  (GET "/cleebo" [] cleebo-route)
+  (GET "/session" [] session-route)
+  (ANY "/logout" [] logout-route)
+  (GET "/blacklab" [] blacklab-router)
+  (GET "/cqp" [] cqp-router)
+  (GET "/ws" [] ws-handler-http-kit)
   (resources "/")
   (not-found (error-page :status 404 :title "Page not found!!")))
 

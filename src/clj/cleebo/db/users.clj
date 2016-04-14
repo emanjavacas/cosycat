@@ -3,6 +3,7 @@
             [monger.operators :refer :all]
             [buddy.hashers :as hashers]
             [taoensso.timbre :as timbre]
+            [cleebo.components.db :refer [new-db]]
             [cleebo.db.roles :refer [app-roles]]))
 
 (defn ->keyword
@@ -39,6 +40,11 @@
   (if (is-user? db {:username username})
     (mc/remove db-conn coll {:username username})))
 
+(defn user-session [{db-conn :db} username]
+  (mc/find-one-as-map
+   db-conn coll
+   {:username username}
+   {:password false :_id false}))
 
-(defn fetch-user-session [{db-conn :db :as db} username]
-  )
+;; (def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
+

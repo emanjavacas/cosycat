@@ -106,7 +106,7 @@
              :autoCapitalize "false"
              :autoComplete "false"
              :spellCheck "false"
-             :on-change #(reset! query-str-atom (.-value (.-target %)))
+             :on-change #(reset! query-str-atom (.. % -target -value))
              :on-key-press on-key-press}]
            [:span.input-group-addon
             {:on-click on-click-search
