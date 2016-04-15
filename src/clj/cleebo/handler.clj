@@ -1,6 +1,5 @@
 (ns cleebo.handler
   (:require [com.stuartsierra.component :as component]
-            [environ.core :refer [env]]
             [taoensso.timbre :as timbre]
             [compojure.core
              :refer [GET POST ANY HEAD defroutes wrap-routes]]
@@ -11,7 +10,7 @@
             [cleebo.views.landing :refer [landing-page]]
             [cleebo.views.about :refer [about-page]]
             [cleebo.views.login :refer [login-page]]
-            [ring.util.response :refer [redirect response]]
+            [ring.util.response :refer [redirect]]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
             [ring.middleware.anti-forgery
              :refer [wrap-anti-forgery *anti-forgery-token*]]
@@ -32,7 +31,8 @@
             [cleebo.components.ws :refer [ws-handler-http-kit]]
             [cleebo.routes.cqp :refer [cqp-router]]            
             [cleebo.routes.blacklab :refer [blacklab-router]]
-            [cleebo.routes.session :refer [session-route]]))
+            [cleebo.routes.sessions :refer [session-route]]
+            [cleebo.routes.projects :refer [project-route]]))
 
 (def about-route
   (safe
@@ -59,6 +59,7 @@
   (GET "/about" [] about-route)
   (GET "/cleebo" [] cleebo-route)
   (GET "/session" [] session-route)
+  (POST "/project" [] project-route)
   (ANY "/logout" [] logout-route)
   (GET "/blacklab" [] blacklab-router)
   (GET "/cqp" [] cqp-router)

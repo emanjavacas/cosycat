@@ -20,7 +20,8 @@
 (defn validate-db-schema
   [db]
   (if-let [res (s/check db-schema db)]
-    (.log js/console "validation error: " res)))
+    (do (timbre/debug "validation error:" res)
+        (.log js/console "validation error: " res))))
 
 (def standard-middleware
   [(when ^boolean goog.DEBUG log-ex)

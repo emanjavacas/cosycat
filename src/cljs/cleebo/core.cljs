@@ -15,7 +15,8 @@
             [cleebo.backend.subs]
             [cleebo.routes :as routes]
             [cleebo.localstorage :as ls]
-            [cleebo.components :refer [notification-container load-from-ls-modal user-thumb]]
+            [cleebo.components :refer
+             [notification-container load-from-ls-modal user-thumb]]
             [cleebo.query.page :refer [query-panel]]
             [cleebo.annotation.page :refer [annotation-panel]]
             [cleebo.settings.page :refer [settings-panel]]
@@ -69,7 +70,7 @@
                     label])])))
 
 (defn user-brand []
-  (let [username (re-frame/subscribe [:session :user :username])]
+  (let [username (re-frame/subscribe [:session :user-info :username])]
     (fn []
       [bs/navbar-brand
        [:div.container-fluid
@@ -77,8 +78,12 @@
         [:div.row
          {:style {:line-height "40px" :text-align "right"}}
          [:div.col-sm-8
-          (str (nbsp 10) (str/capitalize @username))]
-         [:div.col-sm-4 [user-thumb @username {:height "30px" :width "30px"}]]]]])))
+          ;; wait until user-info is fetched in main
+          (when @username (str (nbsp 10) (str/capitalize @username)))]
+         [:div.col-sm-4
+          ;; wait until user-info is fetched in main
+          (when @username
+            [user-thumb @username {:height "30px" :width "30px"}])]]]])))
 
 (defn navbar [active-panel]
   (fn [active-panel]
@@ -93,8 +98,10 @@
         [navlink :query-panel "#/query" "Query" "zmdi-search"])
       (when-not (= @active-panel :front-panel)
         [navlink :annotation-panel "#/annotation" "Annotation" "zmdi-edit"])
-      [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"]
-      [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"]
+      (when-not (= @active-panel :front-panel)
+        [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"])
+      (when-not (= @active-panel :front-panel)
+        [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"])
       [navdropdown :debug-panel "#/debug" "Debug" "zmdi-bug" ;debug mode
        {:label "Debug page" :href "#/debug"}
        {:label "App snapshots" :on-select #(re-frame/dispatch [:open-modal :localstorage])}
@@ -119,7 +126,6 @@
 (defn ^:export init []
   ;; init devtools
   (devtools/enable-feature! :sanity-hints :dirac)
-  
   (devtools/install!)
   ;; declare app routes
   (routes/app-routes)
@@ -127,8 +133,8 @@
   (make-ws-channels!)
   ;; start db
   (re-frame/dispatch-sync [:initialize-db])
-  ;; fetch user data
-  (re-frame/dispatch [:fetch-user-session])
+  ;; fetch user data and projects
+  (re-frame/dispatch [:fetch-user-info])
   ;; handle refreshes
   (.addEventListener js/window "beforeunload" ls/dump-db)
   ;; render root

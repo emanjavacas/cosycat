@@ -8,7 +8,8 @@
             [clojure.core.match :refer [match]]
             [cleebo.shared-schemas :refer [ws-from-server]]
             [cleebo.routes.annotations :refer [annotation-route]]
-            [cleebo.routes.notifications :refer [notify-route]]            
+            [cleebo.routes.notifications :refer [notify-route]]
+            [cleebo.db.users :refer [user-logout]]
             [cleebo.utils :refer [write-str read-str ->int]]))
 
 (def messages
@@ -66,9 +67,10 @@
     (notify-clients ws payload :ws-from ws-name)))
 
 (defn disconnect-client [ws ws-name status]
-  (let [{{ws-out :ws-out} :chans clients :clients} ws
-        payload  (update-in (messages :goodbye) [:data] assoc :by ws-name)]
+  (let [{{ws-out :ws-out} :chans clients :clients db :db} ws
+        payload (update-in (messages :goodbye) [:data] assoc :by ws-name)]
     (timbre/info ws-name "closed ws-channel connection with status: " status)
+    (user-logout db ws-name)
     (swap! clients dissoc ws-name)
     (notify-clients ws payload :ws-from ws-name)))
 

@@ -30,7 +30,9 @@
 (defn new-avatar
   "Creates a new avatar for a user using the `username` as `seed`"
   [username]
-  (random-avatar (str "resources/" (new-filename username)) username))
+  (let [fname (str "resources/" (new-filename username))]
+    (random-avatar fname username)
+    fname))
 
 (defn get-avatar
   "Tries to read an existing avatar, if it doesn't succeed it creates a new one"

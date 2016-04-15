@@ -61,15 +61,33 @@
    :snippets {:snippet-delta s/Int
               :snippet-size s/Int}})
 
+(def project-schema
+  {:description s/Str
+   :users [s/Str]
+   :name s/Str})
+
+(def user-schema
+  {:username s/Str
+   :avatar s/Str
+   :roles #{s/Str}
+   :created s/Int
+   (s/optional-key :active) s/Bool
+   (s/optional-key :last-active) s/Int})
+
+(def user-info-schema
+  (merge
+   user-schema
+   {(s/optional-key :projects) [project-schema]}))
+
 (def db-schema
   {:settings settings-schema
-   :session {:user {:username s/Str}
-             :query-opts query-opts-schema
+   :session {:query-opts query-opts-schema
              :query-results query-results-schema
              :results-by-id (s/conditional empty? {} :else results-by-id-schema)
              :results (s/conditional empty? [] :else results-schema)
              :notifications {s/Any notification-schema}
              :active-panel s/Keyword
              (s/optional-key :throbbing?) {s/Any s/Bool}
-             (s/optional-key :modals)     {s/Keyword s/Any}}})
-
+             (s/optional-key :modals)     {s/Keyword s/Any}
+             (s/optional-key :user-info)   user-info-schema  
+             (s/optional-key :users) [user-schema]}})

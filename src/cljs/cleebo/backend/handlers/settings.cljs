@@ -3,13 +3,6 @@
             [cleebo.backend.middleware :refer [standard-middleware]]))
 
 (re-frame/register-handler
- :set-session
- standard-middleware
- (fn [db [_ path value]]
-   (let [session (:session db)]
-     (assoc db :session (assoc-in session path value)))))
-
-(re-frame/register-handler
  :update-notification
  standard-middleware
  (fn [db [_ path f]]

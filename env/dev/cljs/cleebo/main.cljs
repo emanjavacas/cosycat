@@ -6,7 +6,8 @@
 ;; start figwheel server
 (figwheel/start
  {:websocket-url (str "ws://" (cljs-env :host) ":3449/figwheel-ws")
-  :js-load-callback mount-root})
+;  :js-load-callback mount-root
+  })
 
 ;;; init
 (.log js/console "Reloading!")

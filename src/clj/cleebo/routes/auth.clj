@@ -7,7 +7,6 @@
             [cleebo.db.users :refer [lookup-user is-user? new-user]]
             [cleebo.views.error :refer [error-page]]
             [cleebo.views.login :refer [login-page]]
-            [cleebo.avatar :refer [new-avatar]]
             [buddy.auth.backends.session :refer [session-backend]]
             [buddy.sign.jws :as jws]
             [buddy.auth.backends.token :refer [jws-backend]]))
@@ -39,7 +38,6 @@
       (not password-match?) (on-signup-failure req "Password mismatch")
       is-user               (on-signup-failure req "User already exists")
       :else (let [user (new-user db user)]
-              (do (new-avatar username))
               (-> (redirect (or next-url "/"))
                   (assoc-in [:session :identity] user))))))
 
