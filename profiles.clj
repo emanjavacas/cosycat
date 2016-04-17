@@ -6,9 +6,7 @@
              :host "146.175.15.30"
              :database-url "mongodb://127.0.0.1:27017/cleeboTest"
              :port 3000
-             :cqp-corpora ["PYCCLE-ECCO" "DICKENS"]
-             :cqp-init-file "dev-resources/cqpserver.init"
-             :blacklab-corpora ["shc"]
+             :corpora ["shc"]
              :blacklab-paths-map
              {"shc" "/home/enrique/code/BlackLab/shc/"}}}
  :local {:dependencies [[com.cemerick/piggieback "0.2.1"]
@@ -19,19 +17,24 @@
                :host "localhost"
                :database-url "mongodb://127.0.0.1:27017/cleeboTest"
                :port 3000
-               :cqp-init-file "dev-resources/cqpserver.init"
-               :cqp-corpora ["DICKENS"]
-               :blacklab-corpora ["brown-id"]
+               :corpora ["brown-id"]
                :blacklab-paths-map
                {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"}}}
  :uberjar {:source-paths ["env/prod/clj"]
            :hooks [leiningen.cljsbuild]
            :prep-tasks ["compile" ["cljsbuild" "once"]]
-           :env {:prod? true}
+           :env {:prod? true
+                 :host "localhost"
+                 :database-url "mongodb://127.0.0.1:27017/cleeboTest"
+                 :port 3000
+                 :corpora ["brown-id" "shc"]
+                 :blacklab-paths-map
+                 {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"
+                  "shc"      "/home/enrique/code/BlackLab/shc/"}}
            :omit-source true
            :aot :all
            :cljsbuild {:jar true
                        :builds {:app {:source-paths ["env/prod/cljs"]
                                       :compiler {:optimizations :advanced
-                                                 :closure-defines {:goog.DEBUG fakse}
-                                                 :pretty-print :false}}}}}}
+                                                 :closure-defines {:goog.DEBUG false}
+                                                 :pretty-print false}}}}}}

@@ -5,8 +5,7 @@
             [goog.dom :as gdom]
             [goog.dom.classes :as gclass]
             [goog.dom.dataset :as gdataset]
-            [react-bootstrap.components :as bs]
-            [cleebo.query.logic :as q]))
+            [react-bootstrap.components :as bs]))
 
 (defn on-mouse-down [mouse-down? highlighted?]
   (fn [event]

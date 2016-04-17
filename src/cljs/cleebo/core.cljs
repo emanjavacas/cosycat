@@ -10,6 +10,7 @@
             [cleebo.backend.handlers.annotations]
             [cleebo.backend.handlers.notifications]
             [cleebo.backend.handlers.session]
+            [cleebo.backend.handlers.projects]
             [cleebo.backend.ws :refer [make-ws-channels!]]
             [cleebo.backend.ws-routes]
             [cleebo.backend.subs]
@@ -29,12 +30,12 @@
             [clojure.string :as str]))
 
 (defmulti panels identity)
-(defmethod panels :front-panel [] [front-panel])
-(defmethod panels :query-panel [] [query-panel])
-(defmethod panels :settings-panel [] [settings-panel])
-(defmethod panels :debug-panel [] [debug-panel])
-(defmethod panels :updates-panel [] [updates-panel])
-(defmethod panels :annotation-panel [] [annotation-panel])
+(defmethod panels :front-panel [] [#'front-panel])
+(defmethod panels :query-panel [] [#'query-panel])
+(defmethod panels :settings-panel [] [#'settings-panel])
+(defmethod panels :debug-panel [] [#'debug-panel])
+(defmethod panels :updates-panel [] [#'updates-panel])
+(defmethod panels :annotation-panel [] [#'annotation-panel])
 
 (defn icon-label [icon label]
   [:span [:i {:class (str "zmdi " icon)      
@@ -70,7 +71,8 @@
                     label])])))
 
 (defn user-brand []
-  (let [username (re-frame/subscribe [:session :user-info :username])]
+  (let [username (re-frame/subscribe [:session :user-info :username])
+        active-project (re-frame/subscribe [:session :active-project])]
     (fn []
       [bs/navbar-brand
        [:div.container-fluid
@@ -79,7 +81,9 @@
          {:style {:line-height "40px" :text-align "right"}}
          [:div.col-sm-8
           ;; wait until user-info is fetched in main
-          (when @username (str (nbsp 10) (str/capitalize @username)))]
+          (when @username
+            (str (str/capitalize @username)
+                 (when @active-project (str "@" @active-project))))]
          [:div.col-sm-4
           ;; wait until user-info is fetched in main
           (when @username
@@ -104,8 +108,10 @@
         [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"])
       [navdropdown :debug-panel "#/debug" "Debug" "zmdi-bug" ;debug mode
        {:label "Debug page" :href "#/debug"}
-       {:label "App snapshots" :on-select #(re-frame/dispatch [:open-modal :localstorage])}
-       {:label "New backup" :on-select ls/dump-db}]
+       {:label "App snapshots"
+        :on-select #(re-frame/dispatch [:open-modal :localstorage])}
+       {:label "New backup"
+        :on-select ls/dump-db}]
       [navlink :exit "#/exit" "Exit" "zmdi-power"]]]))
 
 (defn main-panel []
@@ -121,9 +127,9 @@
         (panels @active-panel)]])))
 
 (defn mount-root []
-  (reagent/render [#'main-panel] (.getElementById js/document "app")))
+  (reagent/render [main-panel] (.getElementById js/document "app")))
 
-(defn ^:export init []
+(defn init! []
   ;; init devtools
   (devtools/enable-feature! :sanity-hints :dirac)
   (devtools/install!)
@@ -132,7 +138,9 @@
   ;; web-sockets
   (make-ws-channels!)
   ;; start db
-  (re-frame/dispatch-sync [:initialize-db])
+  (re-frame/dispatch-sync
+   [:initialize-db
+    {:session {:throbbing? {:front-panel true}}}])
   ;; fetch user data and projects
   (re-frame/dispatch [:fetch-user-info])
   ;; handle refreshes

@@ -84,11 +84,16 @@
          (assoc-in db [:session :throbbing? payload-id] true))
 
      ;; notify routes
-     [:in :notify _]
+     [:in :notify :info]
      (let [{:keys [by message]} data]
        (do (re-frame/dispatch
             [:notify
              {:message (str by " says: " message)
               :by by
               :status status}])
-           db)))))
+           db))
+     [:in :notify :signup] (do (re-frame/dispatch [:add-user data]) db)
+     [:in :notify :login] (do (re-frame/dispatch
+                               [:user-status (:username data) true]) db)
+     [:in :notify :logout] (do (re-frame/dispatch
+                                [:user-status (:username data) false]) db))))

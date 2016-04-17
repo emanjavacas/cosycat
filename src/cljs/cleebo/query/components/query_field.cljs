@@ -3,7 +3,7 @@
             [re-frame.core :as re-frame]
             [clojure.string :as str]
             [react-bootstrap.components :as bs]
-            [cleebo.utils :refer [->map corpora by-id]]
+            [cleebo.utils :refer [->map by-id]]
             [cleebo.query-parser :refer [missing-quotes]]
             [cleebo.components :refer [dropdown-select]]
             [taoensso.timbre :as timbre]))
@@ -53,10 +53,11 @@
 
 (defn query-opts-menu []
   (let [query-opts (re-frame/subscribe [:session :query-opts])
-        has-query? (re-frame/subscribe [:has-query?])]
+        has-query? (re-frame/subscribe [:has-query?])
+        corpora (re-frame/subscribe [:session :corpora])]
     (fn []
       [bs/button-toolbar
-       [corpus-select query-opts :corpora corpora]
+       [corpus-select query-opts :corpora @corpora]
        [context-select query-opts :has-query? has-query?]
        [size-select query-opts :has-query? has-query?]])))
 

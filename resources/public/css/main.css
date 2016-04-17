@@ -47,3 +47,20 @@ div.pad {
     padding-right: 2px !important;
     padding-left: 2px !important;
 }
+
+.foo-enter {
+    height: 0;
+    transition: height 0.27s ease-out;
+}
+
+.foo-leave {
+    height: 0;
+    transition: height 0.27s ease-out;
+}
+
+.foo-enter-active {
+    height: 2em;
+    opacity: 1;
+}
+
+ 

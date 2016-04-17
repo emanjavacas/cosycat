@@ -4,13 +4,7 @@
             [reagent.core :as reagent]
             [goog.dom.dataset :as gdataset]
             [goog.string :as gstr]
-            [taoensso.timbre :as timbre])
-  (:require-macros [cleebo.env :as env :refer [cljs-env]]))
-
-(def corpora
-  (let [cqp-corpora (cljs-env :cqp-corpora)
-        bl-corpora (cljs-env :blacklab-corpora)]
-    (concat cqp-corpora bl-corpora)))
+            [taoensso.timbre :as timbre]))
 
 (def color-codes
   {:info "#72a0e5"

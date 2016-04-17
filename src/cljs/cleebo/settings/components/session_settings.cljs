@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
-            [cleebo.utils :refer [corpora nbsp ->map]]
+            [cleebo.utils :refer [nbsp ->map]]
             [cleebo.components :refer [dropdown-select]]
             [cleebo.query.components.query-field
              :refer [corpus-select context-select size-select]]
@@ -26,7 +26,8 @@
 
 (defn query-opts-controller []
   (let [query-opts (re-frame/subscribe [:session :query-opts])
-        query-opts-help (reagent/atom "")]
+        query-opts-help (reagent/atom "")
+        corpora (re-frame/subscribe [:session :corpora])]
     (fn []
       [row-component
        :label "Query Options"
@@ -36,7 +37,7 @@
                       query-opts
                       :on-mouse-over (on-mouse-over :corpus query-opts-help)
                       :on-mouse-out (on-mouse-out query-opts-help)
-                      :corpora corpora]
+                      :corpora @corpora]
                      [context-select query-opts
                       :on-mouse-over (on-mouse-over :context query-opts-help)
                       :on-mouse-out (on-mouse-out query-opts-help)          

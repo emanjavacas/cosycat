@@ -42,7 +42,7 @@
 (defrecord BLComponent [paths-map current-hits hits-handler ws]
   component/Lifecycle
   (start [component]
-    (timbre/info "Starting BLComponent")
+    (timbre/info "Starting BLComponent with corpora" paths-map)
     (assoc component
            :searchers (zipmap (keys paths-map) (repeatedly (fn [] (atom nil))))
            :current-hits (atom {})))

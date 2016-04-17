@@ -7,24 +7,20 @@
              [chan go >! <! >!! <!! alts! put! take! timeout close! go-loop]]
             [clojure.core.match :refer [match]]
             [cleebo.shared-schemas :refer [ws-from-server]]
-            [cleebo.routes.annotations :refer [annotation-route]]
-            [cleebo.routes.notifications :refer [notify-route]]
             [cleebo.db.users :refer [user-logout]]
             [cleebo.utils :refer [write-str read-str ->int]]))
 
 (def messages
-  {:shutting-down {:status :ok
+  {:shutting-down {:status :info
                    :type :notify
                    :data {:message "Server is going to sleep!"
                           :by "Server"}}
    :goodbye       {:status :info
                    :type :notify
-                   :data {:message "Goodbye world!"
-                          :by ""}}
+                   :data {:message "Goodbye world!"}}
    :hello         {:status :info
                    :type :notify
-                   :data {:message "Hello world!"
-                          :by ""}}})
+                   :data {:message "Hello world!"}}})
 
 (declare notify-client notify-clients ws-routes)
 
@@ -32,19 +28,15 @@
   (let [{:keys [chans]} ws]
     (dorun (map close! (vals chans)))))
 
-(defrecord WS [clients chans db]
+(defrecord WS [clients chans db ws-route-map]
   component/Lifecycle
   (start [component]
     (timbre/info "Starting WS component")
     (if (and clients chans)
       component
-      (let [component (assoc component
-                             :clients (atom {})
-                             :chans {:ws-in (chan) :ws-out (chan)})]
-        (ws-routes;setup routes
-         component
-         {:annotation annotation-route
-          :notify notify-route})
+      (let [chans {:ws-in (chan) :ws-out (chan)}
+            component (assoc component :clients (atom {}) :chans chans)]
+        (ws-routes component ws-route-map)
         component)))
   (stop [component]
     (timbre/info "Shutting down WS component")
@@ -56,8 +48,8 @@
           (close-chans component)
           (assoc component :clients nil :chans nil)))))
 
-(defn new-ws []
-  (map->WS {}))
+(defn new-ws [ws-route-map]
+  (map->WS {:ws-route-map ws-route-map}))
 
 (defn connect-client [ws ws-ch ws-name]
   (let [{{ws-out :ws-out} :chans clients :clients} ws
@@ -100,12 +92,11 @@
     (put! c (assoc-in payload [:payload :payload-id] payload-id))
     (doseq [p payload] (put! c (assoc-in p [:payload :payload-id] payload-id)))))
 
-;; {:pre  [(s/validate (ws-from-client (:payload client-payload)) (:payload client-payload))]
-;;  :post [#(s/validate (ws-from-server %) %)]}
 (defn ws-routes [ws routes]
   (let [{{ws-in :ws-in ws-out :ws-out} :chans} ws]
     (go-loop []
-      (if-let [{{type :type p-id :payload-id :as p} :payload :as client-payload} (<! ws-in)]
+      (if-let [{{type :type p-id :payload-id :as p} :payload
+                :as client-payload} (<! ws-in)]
         (let [client-payload (assoc client-payload :payload (dissoc p :payload-id))
               route (get routes type)
               server-payload (route ws client-payload)]
@@ -114,13 +105,13 @@
 
 (defn notify-client
   "function wrapper over puts to out-chan"
-  [ws ws-target payload & {:keys [ws-from] :or {ws-from "Server"}}]
+  [ws ws-target payload & {:keys [ws-from] :or {ws-from "server"}}]
   (let [{{ws-out :ws-out} :chans clients :clients} ws]
     (put! ws-out {:ws-target ws-target :ws-from ws-from :payload payload})))
 
 (defn notify-clients
   "function wrapper over multiplexed puts to out-chan"
-  [ws payload & {:keys [ws-from] :or {ws-from "Server"}}]
+  [ws payload & {:keys [ws-from] :or {ws-from "server"}}]
   (let [{{ws-out :ws-out} :chans clients :clients} ws]
     (doseq [[ws-name _] (seq @clients)
             :when (not= ws-from ws-name)]

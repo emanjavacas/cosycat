@@ -63,6 +63,9 @@
 
 (def project-schema
   {:description s/Str
+   :updates [s/Any]
+   :created s/Int
+   :creator s/Str
    :users [s/Str]
    :name s/Str})
 
@@ -87,6 +90,8 @@
              :results (s/conditional empty? [] :else results-schema)
              :notifications {s/Any notification-schema}
              :active-panel s/Keyword
+             (s/optional-key :active-project) (s/if string? s/Str s/Bool)
+             (s/optional-key :corpora) [s/Str]
              (s/optional-key :throbbing?) {s/Any s/Bool}
              (s/optional-key :modals)     {s/Keyword s/Any}
              (s/optional-key :user-info)   user-info-schema  

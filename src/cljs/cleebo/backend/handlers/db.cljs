@@ -1,7 +1,8 @@
 (ns cleebo.backend.handlers.db
   (:require [re-frame.core :as re-frame]
             [schema.core :as s]
-            [cleebo.backend.db :as db]
+            [cleebo.utils :refer [deep-merge]]
+            [cleebo.backend.db :refer [default-db]]
             [cleebo.localstorage :as ls]
             [cleebo.backend.middleware
              :refer [standard-middleware no-debug-middleware]]
@@ -9,14 +10,16 @@
 
 (re-frame/register-handler
  :initialize-db
- (fn [_ _]
-   db/default-db))
+ (fn [_ [_ & [overwrite-init-state]]]
+   (if overwrite-init-state
+     (deep-merge default-db overwrite-init-state)
+     default-db)))
 
 (re-frame/register-handler
  :reset-db
  no-debug-middleware
  (fn [_ _]
-   db/default-db))
+   default-db))
 
 (re-frame/register-handler
  :load-db

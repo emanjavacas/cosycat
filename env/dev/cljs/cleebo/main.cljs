@@ -1,16 +1,14 @@
 (ns ^:figwheel-no-load cleebo.main
-  (:require [figwheel.client :as figwheel]
-            [cleebo.core :refer [init mount-root]])
+  (:require [figwheel.client :as figwheel :include-macros true]
+            [cleebo.core :as core])
   (:require-macros [cleebo.env :refer [cljs-env]]))
 
 ;; start figwheel server
-(figwheel/start
- {:websocket-url (str "ws://" (cljs-env :host) ":3449/figwheel-ws")
-;  :js-load-callback mount-root
-  })
+(figwheel/watch-and-reload
+ :websocket-url (str "ws://" (cljs-env :host) ":3449/figwheel-ws")
+ :jsload-callback core/mount-root)
 
 ;;; init
-(.log js/console "Reloading!")
-(init)
+(core/init!)
 
 

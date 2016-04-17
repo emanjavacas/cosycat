@@ -3,8 +3,7 @@
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [cleebo.utils :refer [filter-marked-hits]]
             [ajax.core :refer [GET]]
-            [taoensso.timbre :as timbre])
-  (:require-macros [cleebo.env :as env :refer [cljs-env]]))
+            [taoensso.timbre :as timbre]))
 
 (defn keywordify-results [results]
   (into {} (map (juxt :id identity) results)))
@@ -43,14 +42,6 @@
            (neg?  new-from) [0 (+ new-from page-size)]
            :else            [new-from from]))))
 
-(defn which-endpoint? [corpus]
-  (let [cqp-corpora (cljs-env :cqp-corpora)
-        bl-corpora  (cljs-env :blacklab-corpora)]
-    (timbre/debug cqp-corpora bl-corpora corpus)
-    (cond (some #{corpus} cqp-corpora) "cqp"
-          (some #{corpus} bl-corpora)  "blacklab"
-          :else (throw (js/Error "Unknown corpus")))))
-
 (defn error-handler
   [source-component]
   (fn [{:keys [status status-content]}]
@@ -74,7 +65,7 @@
    (let [{{:keys [corpus context size]} :query-opts
           {:keys [from]}                :query-results} (:session db)]
      (re-frame/dispatch [:start-throbbing source-component])
-     (GET (which-endpoint? corpus)
+     (GET "/blacklab"
           {:handler (results-handler source-component)
            :error-handler (error-handler source-component)
            :params {:query-str query-str
@@ -94,10 +85,9 @@
          [from to] (case direction
                      :next (pager-next query-size size to)
                      :prev (pager-prev query-size size from))]
-     (timbre/debug from to query-size)
      (when (and (pos? (inc from)) (<= to query-size))
        (re-frame/dispatch [:start-throbbing source-component])
-       (GET (which-endpoint? corpus)
+       (GET "/blacklab"
             {:handler (results-handler source-component)
              :error-handler (error-handler source-component)
              :params {:corpus corpus
@@ -115,7 +105,7 @@
           {:keys [from to query-size]}  :query-results} (:session db)
          to (min query-size (+ from size))]
      (re-frame/dispatch [:start-throbbing source-component])
-     (GET (which-endpoint? corpus)
+     (GET "/blacklab"
           {:handler (results-handler source-component)
            :error-handler (error-handler source-component)
            :params {:corpus corpus
@@ -132,7 +122,7 @@
    (let [{{:keys [corpus context size criterion prop-name]} :query-opts
           {:keys [from]} :query-results} (:session db)]
      (re-frame/dispatch [:start-throbbing source-component])
-     (GET (which-endpoint? corpus)
+     (GET "/blacklab"
           {:handler (results-handler source-component)
            :error-handler (error-handler source-component)
            :params {:corpus corpus

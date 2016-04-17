@@ -1,6 +1,7 @@
 (ns cleebo.routes.annotations
   (:require [schema.core :as s]
             [cleebo.db.annotations :refer [new-token-annotation]]
+            [cleebo.components.ws :refer [notify-clients]]
             [cleebo.shared-schemas :refer [ws-from-client ws-from-server]]
             [taoensso.timbre :as timbre]))
 
@@ -15,12 +16,6 @@
   (into {} (map (fn [[k v]]
                   [k (apply f (map val v))])
                 (group-by key (apply concat mlist)))))
-
-;; (defn aggregate-ok [db-payload]
-;;   (update db-payload :ok (partial (apply transpose vector))))
-
-;; (defn aggregate-error [db-payload]
-;;   (update-in db-payload :error ))
 
 (defmulti response-payload
   "process the variadic output of an annotation insert
@@ -49,16 +44,14 @@
   (let [{ws-from :ws-from {:keys [type status data]} :payload} client-payload
         {hit-id :hit-id ann-map :ann-map} data
         {db :db} ws
-        db-payload (new-token-annotation db ann-map)
+        db-payload (new-token-annotation db (assoc ann-map :username ws-from))
         server-payload (response-payload db-payload hit-id)]
-    ;; eventually notify other clients of the new annotation
-    ;; (let [clients @(:clients ws)
-    ;;       {:keys [ws-in]} (:chans ws)]
-    ;;   (put! ws-in {:ws-from ws-from :payload {:type :notify :data {}}}))
     (if (map? server-payload)
-      {:ws-target ws-from :ws-from ws-from :payload server-payload}
+      (do (notify-clients ws server-payload :ws-from ws-from)
+          {:ws-target ws-from :ws-from ws-from :payload server-payload})
       (vec (for [p server-payload]
-             {:ws-target ws-from :ws-from ws-from :payload p})))))
+             (do (notify-clients ws p :ws-from ws-from)
+                 {:ws-target ws-from :ws-from ws-from :payload p}))))))
 
 ;; (require '[schema-generators.generators :as g]
 ;;          '[cleebo.shared-schemas :refer [annotation-schema]]

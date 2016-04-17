@@ -7,9 +7,7 @@
             [cleebo.utils :refer [->map by-id]]
             [cleebo.components :refer [dropdown-select]]
             [cleebo.query.components.annotation-modal
-             :refer [annotation-modal-button]]
-            [cleebo.query.logic :as q])
-  (:require-macros [cleebo.env :as env :refer [cljs-env]]))
+             :refer [annotation-modal-button]]))
 
 (defn pager-button [& {:keys [direction label]}]
   [bs/button
@@ -50,12 +48,10 @@
          :model @prop-name
          :select-fn (fn [k] (re-frame/dispatch [:set-session [:query-opts :prop-name] k]))}]
        [bs/button
-        {:disabled (not (some #{@corpus} (cljs-env :blacklab-corpora)))
-         :onClick (on-click-sort :sort-range)}
+        {:onClick (on-click-sort :sort-range)}
         "Sort page"]
        [bs/button
-        {:disabled (not (some #{@corpus} (cljs-env :blacklab-corpora)))
-         :onClick (on-click-sort :sort-query)}
+        {:onClick (on-click-sort :sort-query)}
         "Sort all"]])))
 
 (defn query-result-label []
@@ -78,7 +74,6 @@
 
 (defn annotation-button []
   [bs/button-toolbar
-;   [annotation-hit-button]
    [annotation-modal-button]])
 
 (defn toolbar []

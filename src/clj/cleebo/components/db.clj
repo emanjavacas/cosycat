@@ -13,9 +13,9 @@
         (timbre/info "starting DB")
         (assoc component :db db :conn conn))))
   (stop [component]
-    (if-not (:conn component)
+    (if-not conn
       component
-      (let [conn (:conn component)]
+      (do
         (timbre/info "Shutting down DB")
         (mg/disconnect conn)
         (assoc component :db nil :conn nil)))))

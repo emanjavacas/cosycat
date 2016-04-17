@@ -6,10 +6,8 @@
             [cleebo.query.components.query-field :refer [query-field]]
             [cleebo.query.components.results-table :refer [results-table]]
             [cleebo.query.components.snippet-modal :refer [snippet-modal]]
-            [cleebo.components :refer [error-panel]]
+            [cleebo.components :refer [error-panel throbbing-panel]]
             [taoensso.timbre :as timbre]))
-
-(defn throbbing-panel [] [:div.text-center [:div.loader]])
 
 (defn results-frame []
   (let [status (re-frame/subscribe [:session :query-results :status])

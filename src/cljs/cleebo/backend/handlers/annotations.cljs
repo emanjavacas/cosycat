@@ -87,18 +87,15 @@
       (update-annotation hit-map ann-map))
      db)))
 
-
 (s/defn ^:always-validate make-annotation :- annotation-schema
-  ([ann username token-id]
+  ([ann token-id]
    {:ann ann
-    :username username
     :span {:type "token"
            :scope token-id}
     :timestamp (.now js/Date)})
-  ([ann username token-from :- s/Int token-to :- s/Int]
+  ([ann token-from :- s/Int token-to :- s/Int]
    {:pre [(> token-to token-from)]}
    {:ann ann
-    :username username
     :span {:type "IOB"
            :scope {:B token-from
                    :O token-to}}
@@ -113,18 +110,18 @@
 (s/defmethod package-annotation
   [cljs.core/PersistentArrayMap js/Number]
   ([ann hit-id :- s/Int token-id :- s/Int]
-   (let [ann-map (make-annotation ann js/username token-id)]
+   (let [ann-map (make-annotation ann  token-id)]
      {:hit-id hit-id
       :ann-map ann-map}))
   ([ann hit-id :- s/Int token-from :- s/Int token-to :- s/Int]
-   (let [ann-map (make-annotation ann js/username token-from token-to)]
+   (let [ann-map (make-annotation ann token-from token-to)]
      {:hit-id hit-id
       :ann-map ann-map})))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentArrayMap cljs.core/PersistentVector]
   [ann hit-ids :- [s/Int] token-ids :- [s/Int]]
-  (let [ann-maps (mapv (fn [token-id] (make-annotation ann js/username token-id)) token-ids)]
+  (let [ann-maps (mapv (fn [token-id] (make-annotation ann token-id)) token-ids)]
     {:hit-id hit-ids
      :ann-map ann-maps}))
 
@@ -132,7 +129,7 @@
   [cljs.core/PersistentVector cljs.core/PersistentVector]
   [anns hit-ids :- [s/Int] token-ids :- [s/Int]]
   {:pre [(apply = (map count [anns hit-ids]))]}
-  (let [ann-maps (mapv (fn [ann t-id] (make-annotation ann js/username t-id)) anns token-ids)]
+  (let [ann-maps (mapv (fn [ann t-id] (make-annotation ann t-id)) anns token-ids)]
     {:hit-id hit-ids
      :ann-map ann-maps}))
 

@@ -1,10 +1,10 @@
 (ns cleebo.routes
-    (:require-macros [secretary.core :refer [defroute]])
-    (:import goog.History)
-    (:require [secretary.core :as secretary]
-              [goog.events :as events]
-              [goog.history.EventType :as EventType]
-              [re-frame.core :as re-frame]))
+  (:require [secretary.core :as secretary]
+            [goog.events :as events]
+            [goog.history.EventType :as EventType]
+            [re-frame.core :as re-frame])
+  (:import goog.History)
+  (:require-macros [secretary.core :refer [defroute]]))
 
 (defonce history (History.))
 
@@ -25,8 +25,10 @@
 (defn app-routes []
   (secretary/set-config! :prefix "#")
   (defroute "/" []
+    (re-frame/dispatch [:set-session [:active-project] false])
     (re-frame/dispatch [:set-active-panel :front-panel]))
-  (defroute "/query" []
+  (defroute "/project/:project-name" {project-name :project-name}
+    (re-frame/dispatch [:set-session [:active-project] project-name])
     (re-frame/dispatch [:set-active-panel :query-panel]))
   (defroute "/settings" []
     (re-frame/dispatch [:set-active-panel :settings-panel]))

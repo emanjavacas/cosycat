@@ -6,6 +6,9 @@
             [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]))
 
+(defn throbbing-panel [& {:keys [css-class] :or {css-class "loader"}}]
+  [:div.text-center [:div {:class css-class}]])
+
 (defn error-panel [& {:keys [status status-content]}]
   {:pre [(and status)]}
   [:div.container-fluid.text-center

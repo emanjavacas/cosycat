@@ -21,13 +21,19 @@
         query-results (re-frame/subscribe [:query-results])
         results (re-frame/subscribe [:session :results-by-id])
         result-keys (re-frame/subscribe [:session :results])
-        marked-hits (re-frame/subscribe [:marked-hits])]
+        marked-hits (re-frame/subscribe [:marked-hits])
+        users (re-frame/subscribe [:session :users])]
     (fn []
       [:div.container-fluid
        [:div.row [:h4 [:span.text-muted "Query Options"]]]
        [:div.row [kv-pairs @query-opts]]
        [:div.row [:h4 [:span.text-muted "Query Results"]]]
        [:div.row [kv-pairs @query-results]]
+       [:div.row [:h4 [:span.text-muted "Users"]]]
+       [:div.row
+        (doall (for [user @users]
+                 ^{:key (:username user)}
+                 [kv-pairs user]))]
        [:div.row [:h4 [:span.text-muted "Results"]]]
        (into [:div] (map (fn [k] [:div.row k]) @result-keys))
        [:div.row [:h4 [:span.text-muted "Results by key"]]]

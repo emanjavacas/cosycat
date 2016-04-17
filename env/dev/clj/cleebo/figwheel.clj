@@ -1,15 +1,14 @@
-(ns cleebo.components.figwheel
+(ns cleebo.figwheel
   (:require [environ.core :refer [env]]
             [figwheel-sidecar.repl-api :as f-repl]
             [taoensso.timbre :as timbre]
             [com.stuartsierra.component :as component]))
 
 (def figwheel-config
-  {:figwheel-options {:css-dirs ["resources/public/css"]
-                      :server-port 3449} ;server config
+  {:figwheel-options {:css-dirs ["resources/public/css"]} ;server config
    :build-ids ["dev"]
    :all-builds [{:id "dev"
-                 :source-paths ["src/cljs" "src/cljc" "env/dev/cljs" "src/clj"]
+                 :source-paths ["src/cljs" "src/cljc" "env/dev/cljs"]
                  :figwheel {:websocket-url (str "ws://" (env :host) ":3449/figwheel-ws")
                             :on-jsload "cleebo.core/mount-root"
                             :websocket-host :js-client-host}
@@ -17,7 +16,6 @@
                             :asset-path "js/compiled/out"
                             :output-to "resources/public/js/compiled/app.js"
                             :output-dir "resources/public/js/compiled/out"
-                            :source-map true
                             :source-map-timestamp true}}]})
 
 (defrecord Figwheel []

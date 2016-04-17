@@ -1,14 +1,13 @@
-(ns cleebo.backend.db
-  (:require-macros [cleebo.env :refer [cljs-env]]))
+(ns cleebo.backend.db)
 
 (def default-db
   "defines app default state"
   {:settings {:notifications {:delay 7500}
               :snippets {:snippet-size 25
                          :snippet-delta 10}}
-   :session {:active-panel :query-panel
+   :session {:active-panel :front-panel
              :notifications {}
-             :query-opts {:corpus (first (cljs-env :blacklab-corpora))
+             :query-opts {:corpus ""
                           :context 5
                           :size 10
                           :criterion "match"

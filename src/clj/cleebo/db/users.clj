@@ -52,13 +52,13 @@
    {:username username}
    {:password false :_id false}))
 
+(defn filter-user-public [user]
+  (dissoc user :password :_id :updates))
+
 (defn users-public-info [{db-conn :db}]
   (->> (mc/find-maps
         db-conn "users"
-        {}
-        {:password false :_id false})))
+        {})
+       (map filter-user-public)))
 
 ;; (def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
-
-
-

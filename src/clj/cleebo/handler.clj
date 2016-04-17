@@ -28,7 +28,7 @@
             [cleebo.components.blacklab :refer [remove-hits!]]
             [cleebo.routes.auth :refer
              [is-logged? safe auth-backend token-backend login-route signup-route]]
-            [cleebo.components.ws :refer [ws-handler-http-kit]]
+            [cleebo.components.ws :refer [ws-handler-http-kit notify-clients]]
             [cleebo.routes.cqp :refer [cqp-router]]            
             [cleebo.routes.blacklab :refer [blacklab-router]]
             [cleebo.routes.sessions :refer [session-route]]
@@ -47,8 +47,11 @@
 
 (defn logout-route
   [{{{username :username} :identity} :session
-    {bl-component :blacklab} :components}]
-  (remove-hits! bl-component username)
+    {blacklab :blacklab ws :ws} :components}]
+  (remove-hits! blacklab username)
+  (notify-clients ws {:type :notify
+                      :data {:username username}
+                      :status :logout})
   (-> (redirect "/") (assoc :session {})))
 
 (defroutes app-routes

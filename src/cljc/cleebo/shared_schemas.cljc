@@ -25,7 +25,7 @@
 (def annotation-schema
   {:ann {:key s/Str
          :value s/Str}
-   :username s/Str
+   (s/optional-key :username) s/Str
    :timestamp s/Int
    :span (s/conditional #(= (:type %) "token") token-span-schema
                         #(= (:type %) "IOB")   iob-span-schema)
@@ -61,7 +61,7 @@
                           :type s/Keyword
                           :data {:message s/Str
                                  :by s/Str}
-                          :payload-id s/Any}))
+                          (s/optional-key :payload-id) s/Any}))
 
 (defn ws-from-client
   [{:keys [type data] :as payload}]
@@ -72,4 +72,4 @@
                  :payload-id s/Any}
     :notify     {:type s/Keyword
                  :data {}
-                 :payload-id s/Any}))
+                 (s/optional-key :payload-id) s/Any}))

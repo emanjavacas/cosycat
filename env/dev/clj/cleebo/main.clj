@@ -1,12 +1,14 @@
 (ns cleebo.main
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer [refresh refresh-all]]
+            [cleebo.figwheel :refer [new-figwheel]]
             [cleebo.components.http-server :refer [new-http-server]]
             [cleebo.components.db :refer [new-db]]
             [cleebo.components.cqp :refer [new-cqi-client]]
             [cleebo.components.blacklab :refer [new-bl]]
-            [cleebo.components.figwheel :refer [new-figwheel]]
             [cleebo.components.ws :refer [new-ws]]
+            [cleebo.routes.annotations :refer [annotation-route]]
+            [cleebo.routes.notifications :refer [notify-route]]
             [environ.core :refer [env]]))
 
 (defonce system nil)
@@ -23,7 +25,7 @@
          :cqi-client (new-cqi-client {:init-file cqp-init-file})
          :blacklab (new-bl blacklab-paths-map)
          :db (new-db {:url database-url})
-         :ws (new-ws)
+         :ws (new-ws {:annotation annotation-route :notify notify-route})
          :figwheel (new-figwheel)
          :http-server (new-http-server {:port port
                                         :components [:cqi-client :db :ws :blacklab]}))

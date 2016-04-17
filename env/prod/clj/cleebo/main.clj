@@ -4,10 +4,13 @@
             [cleebo.components.http-server :refer [new-http-server]]
             [cleebo.components.db :refer [new-db]]
             [cleebo.components.blacklab :refer [new-bl]]
-            [cleebo.components.figwheel :refer [new-figwheel]]
             [cleebo.components.ws :refer [new-ws]]
+            [cleebo.routes.annotations :refer [annotation-route]]
+            [cleebo.routes.notifications :refer [notify-route]]
             [environ.core :refer [env]])
   (:gen-class))
+
+(set! *warn-on-reflection* true)
 
 ;;; production system
 (def prod-config-map
@@ -16,12 +19,12 @@
    :cqp-init-file (env :cqp-init-file)
    :blacklab-paths-map (env :blacklab-paths-map)})
 
-(defn create-dev-system [config-map]
+(defn create-prod-system [config-map]
   (let [{:keys [handler port database-url blacklab-paths-map]} config-map]
     (-> (component/system-map
          :blacklab (new-bl blacklab-paths-map)
          :db (new-db {:url database-url})
-         :ws (new-ws)
+         :ws (new-ws {:annotation annotation-route :notify notify-route})
          :http-server (new-http-server {:port port :components [:db :ws :blacklab]}))
         (component/system-using
          {:http-server [:db :ws :blacklab]
@@ -29,7 +32,7 @@
           :ws          [:db]}))))
 
 (defn -main [& args]
-  (let [system (create-system prod-config-map)]
+  (let [system (create-prod-system prod-config-map)]
     (.addShutdownHook 
      (Runtime/getRuntime) 
      (Thread. (fn [] (.stop system))))
