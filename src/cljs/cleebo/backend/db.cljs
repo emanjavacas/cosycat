@@ -6,7 +6,6 @@
               :snippets {:snippet-size 25
                          :snippet-delta 10}}
    :session {:active-panel :front-panel
-             :notifications {}
              :query-opts {:corpus ""
                           :context 5
                           :size 10
@@ -17,5 +16,6 @@
                              :status {:status :ok :status-content ""}
                              :from 0
                              :to 0}
+             :notifications {}
              :results-by-id {}
              :results []}})

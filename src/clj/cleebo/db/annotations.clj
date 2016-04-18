@@ -5,7 +5,7 @@
             [schema.core :as s]
             [cleebo.utils :refer [get-token-id ->int]]
             [cleebo.components.db :refer [new-db]]
-            [cleebo.shared-schemas :refer [annotation-schema cpos-ann-schema]]
+            [cleebo.schemas.annotation-schemas :refer [annotation-schema cpos-ann-schema]]
             [schema.coerce :as coerce]))
 
 (defn check-span-overlap
@@ -44,7 +44,6 @@
 (defmethod find-ann-id
   "IOB"
   [{db :db} {{{new-B :B new-O :O :as new-scope} :scope} :span {k :key} :ann :as ann-map}]
-  (timbre/debug "span overlap" ann-map)
   (when-let [{{{old-B :B old-O :O :as old-scope} :scope} :span ann-id :_id}
              (mc/find-one-as-map
               db "anns"
@@ -140,13 +139,15 @@
 (defmulti new-token-annotation
   "dispatch based on type (either a particular value or 
   a vector of that value for bulk annotations)"
-  (fn [db ann] (type ann)))
+  (fn [db username ann] (type ann)))
 
 (s/defmethod ^:always-validate new-token-annotation
   clojure.lang.PersistentArrayMap
-  [db {{scope :scope :as span} :span {k :key} :ann :as ann-map} :- annotation-schema]
+  [db username {{scope :scope :as span} :span
+                {k :key} :ann :as ann-map} :- annotation-schema]
   (try
-    (let [new-ann (if-let [{:keys [ann-id]} (find-ann-id db ann-map)]
+    (let [ann-map (assoc ann-map :username username)
+          new-ann (if-let [{:keys [ann-id]} (find-ann-id db ann-map)]
                     (update-annotation db ann-map ann-id)
                     (insert-annotation db ann-map))]
       {:data {:ann-map (dissoc new-ann :_id)}
@@ -161,8 +162,8 @@
 
 (s/defmethod ^:always-validate new-token-annotation
   clojure.lang.PersistentVector
-  [db anns :- [annotation-schema]]
-  (mapv (fn [ann] (new-token-annotation db ann)) anns))
+  [db username anns :- [annotation-schema]]
+  (mapv (fn [ann] (new-token-annotation db username ann)) anns))
 
 (s/defn ^:always-validate fetch-anns :- (s/maybe {s/Int {s/Str annotation-schema}})
   "{token-id {ann-key1 ann ann-key2 ann} token-id2 ...}.
@@ -208,7 +209,6 @@
     (assoc hit-map :hit new-hit)))
 
 ;; (def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
-
 
 ;; (mc/find-and-modify
 ;;  (:db db) coll

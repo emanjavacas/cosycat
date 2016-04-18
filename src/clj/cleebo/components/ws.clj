@@ -6,7 +6,7 @@
             [clojure.core.async :refer
              [chan go >! <! >!! <!! alts! put! take! timeout close! go-loop]]
             [clojure.core.match :refer [match]]
-            [cleebo.shared-schemas :refer [ws-from-server]]
+            [cleebo.schemas.route-schemas :refer [ws-from-server ws-from-client]]
             [cleebo.db.users :refer [user-logout]]
             [cleebo.utils :refer [write-str read-str ->int]]))
 
@@ -55,16 +55,14 @@
   (let [{{ws-out :ws-out} :chans clients :clients} ws
         payload (update-in (messages :hello) [:data] assoc :by ws-name)]
     (timbre/info ws-name "opened ws-channel connection")
-    (swap! clients assoc ws-name ws-ch)
-    (notify-clients ws payload :ws-from ws-name)))
+    (swap! clients assoc ws-name ws-ch)))
 
 (defn disconnect-client [ws ws-name status]
   (let [{{ws-out :ws-out} :chans clients :clients db :db} ws
         payload (update-in (messages :goodbye) [:data] assoc :by ws-name)]
     (timbre/info ws-name "closed ws-channel connection with status: " status)
     (user-logout db ws-name)
-    (swap! clients dissoc ws-name)
-    (notify-clients ws payload :ws-from ws-name)))
+    (swap! clients dissoc ws-name)))
 
 (defn ws-handler-http-kit [req]
   (let [{{ws :ws} :components
@@ -84,23 +82,29 @@
        ws-ch
        (fn [payload] ;apply route-handler?
          (let [parsed-payload (read-str payload :json)]
-           (timbre/debug "got payload" parsed-payload)
            (put! ws-in {:ws-from username :payload parsed-payload})))))))
 
 (defn out-chan [c payload payload-id]
   (if (map? payload)
-    (put! c (assoc-in payload [:payload :payload-id] payload-id))
-    (doseq [p payload] (put! c (assoc-in p [:payload :payload-id] payload-id)))))
+    (let [{p :payload :as payload} (assoc-in payload [:payload :payload-id] payload-id)]
+      (s/validate (ws-from-server p) p)
+      (put! c payload))
+    (doseq [p payload
+            :let [p (assoc-in p [:payload :payload-id] payload-id)]]
+      (s/validate (ws-from-server (:payload p)) (:payload p))
+      (put! c p))))
 
 (defn ws-routes [ws routes]
   (let [{{ws-in :ws-in ws-out :ws-out} :chans} ws]
-    (go-loop []
-      (if-let [{{type :type p-id :payload-id :as p} :payload
-                :as client-payload} (<! ws-in)]
-        (let [client-payload (assoc client-payload :payload (dissoc p :payload-id))
-              route (get routes type)
-              server-payload (route ws client-payload)]
-          (out-chan ws-out server-payload p-id)))
+    (go-loop []                         ;exceptions should be handled within each route
+      (if-let [{{:keys [type payload-id] :as client-payload} :payload :as payload} (<! ws-in)]
+        (do (timbre/debug "CLIENT-PAYLOAD" client-payload)
+            (s/validate (ws-from-client client-payload) client-payload)
+            (let [route (get routes type)
+                  client-load (assoc payload :payload (dissoc client-payload :payload-id))
+                  {:keys [ws-from ws-target payload] :as server-payload} (route ws payload)]
+              (timbre/debug "SERVER-PAYLOAD" server-payload)      
+              (out-chan ws-out server-payload payload-id))))
       (recur))))
 
 (defn notify-client

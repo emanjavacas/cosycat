@@ -3,7 +3,7 @@
             [re-frame.core :as re-frame]
             [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]
-            [cleebo.schemas.schemas :refer [db-schema]]
+            [cleebo.schemas.app-state-schemas :refer [db-schema]]
             [cleebo.localstorage :as ls]))
 
 (defn kv-pairs [s]

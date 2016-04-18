@@ -2,7 +2,7 @@
   (:require [schema.core :as s]
             [cleebo.db.annotations :refer [new-token-annotation]]
             [cleebo.components.ws :refer [notify-clients]]
-            [cleebo.shared-schemas :refer [ws-from-client ws-from-server]]
+            [cleebo.schemas.route-schemas :refer [ws-from-client ws-from-server]]
             [taoensso.timbre :as timbre]))
 
 (defn map-vals
@@ -44,7 +44,7 @@
   (let [{ws-from :ws-from {:keys [type status data]} :payload} client-payload
         {hit-id :hit-id ann-map :ann-map} data
         {db :db} ws
-        db-payload (new-token-annotation db (assoc ann-map :username ws-from))
+        db-payload (new-token-annotation db ws-from ann-map)
         server-payload (response-payload db-payload hit-id)]
     (if (map? server-payload)
       (do (notify-clients ws server-payload :ws-from ws-from)
@@ -54,7 +54,7 @@
                  {:ws-target ws-from :ws-from ws-from :payload p}))))))
 
 ;; (require '[schema-generators.generators :as g]
-;;          '[cleebo.shared-schemas :refer [annotation-schema]]
+;;          '[cleebo.schemas.annotation-schemas :refer [annotation-schema]]
 ;;          '[cleebo.components.db :refer [new-db]]
 ;;          '[clojure.test.check.generators :as check-generators])
 

@@ -83,3 +83,9 @@
                               (map #(assoc % :hit-id id))))
                        @results-by-id)))))
 
+(re-frame/register-sub
+ :get-active-project
+ (fn [db _]
+   (let [active-project-name (reaction (get-in @db [:session :active-project]))]
+     (reaction (first (filter #(= @active-project-name (:name %))
+                              (get-in @db [:session :user-info :projects])))))))

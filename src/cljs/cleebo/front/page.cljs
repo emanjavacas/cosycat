@@ -4,21 +4,24 @@
             [react-bootstrap.components :as bs]
             [cleebo.routes :refer [nav!]]
             [cleebo.utils :refer [by-id nbsp css-transition-group]]
+            [cleebo.app-utils :refer [default-project-name invalid-project-name]]
             [cleebo.components :refer [user-thumb throbbing-panel]]
             [goog.string :as gstr]
             [taoensso.timbre :as timbre]))
 
 (defn validate-project-input
   [{:keys [name description users] :as project}]
-  true)
+  (and (not (gstr/endsWith name "Playground"))
+       (not (invalid-project-name name))))
 
 (defn submit-project [name desc users]
   (let [project {:name name :description desc :users users}]
-    (validate-project-input project)
-    (re-frame/dispatch [:new-project project])))
+    (if-not (validate-project-input project)
+      (timbre/debug "invalid project name:" name)
+      (re-frame/dispatch [:new-project project]))))
 
-(defn user-selection-component [child-data]
-  (fn [{:keys [username avatar last-active]}]
+(defn user-selection-component [{:keys [username]}]
+  (fn [{:keys [username]}]
     [:div username
      [:span
       {:style {:padding-left "10px"}}
@@ -155,10 +158,32 @@
             :bsStyle "success"}
            "Close"])]])))
 
-(defn no-projects []
+(defn no-projects [username]
   [:div
    [:p "You don't have current projects. Start one right now."]
+   [:p.text-mute
+    {:style {:font-size "15px"}}
+    "... or just "
+    [:a {:style {:cursor "pointer"}
+         :on-click #(nav! (str "/project/" (default-project-name @username)))}
+     "try it"]]
    [new-project-btn]])
+
+(defn project-row [{:keys [name description creator]}]
+  (fn [{:keys [name description creator]}]
+    [bs/list-group-item
+     {:onClick #(nav! (str "/project/" name))}
+     (reagent/as-component
+      [:div.container-fluid
+       [:div.row
+        [:div.col-lg-8 [:p name]]]
+       [:div.row
+        [:div.col-lg-3 [:span.text-muted "Created by: "]]
+        [:div.col-lg-9 [user-selection-component {:username creator}]]]
+       [:div.row {:style {:height "5px"}}]
+       [:div.row
+        [:div.col-lg-3 [:span.text-muted "Project description: "]]
+        [:div.col-lg-9 description]]])]))
 
 (defn projects-panel [projects]
   (let [db-users (re-frame/subscribe [:session :users])
@@ -167,24 +192,10 @@
       [:div.container-fluid
        (when-not @new?
          [:div.row
-          [:div
-           [bs/list-group
-            (doall
-             (for [{:keys [name creator description users updates]} @projects
-                   :let [user (first (filter #(= creator (:username %)) @db-users))]]
-               ^{:key (str name)}
-               [bs/list-group-item
-                {:onClick #(nav! (str "/project/" name))}
-                (reagent/as-component
-                 [:div.container-fluid
-                  [:div.row
-                   [:div.col-lg-8 [:p (gstr/capitalize name)]]]
-                  [:div.row
-                   [:div.col-lg-3 [:span.text-muted "Created by: "]]
-                   [:div.col-lg-9 [user-selection-component (first @db-users)]]]
-                  [:div.row
-                   [:div.col-lg-3 [:span.text-muted "Project description: "]]
-                   [:div.col-lg-9 description]]])]))]]])
+          [bs/list-group
+           (doall
+            (for [{:keys [name] :as project} @projects]
+              ^{:key (str name)} [project-row project]))]])
        [:div.row [new-project-btn
                   :on-open #(reset! new? true)
                   :on-hide #(reset! new? false)]]])))
@@ -211,7 +222,7 @@
             [:h2
              {:style {:padding-bottom "50px"}}
              "Projects"]
-            (if (empty? @projects)
-              [no-projects]
+            (if (= 1 (count @projects))
+              [no-projects ]
               [projects-panel projects])])]]
        [:div.col-lg-1]])))

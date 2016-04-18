@@ -3,6 +3,7 @@
             [reagent.core :as reagent]
             [ajax.core :refer [GET]]
             [cleebo.backend.middleware :refer [standard-middleware]]
+            [cleebo.app-utils :refer [default-project-name]]
             [taoensso.timbre :as timbre]))
 
 (re-frame/register-handler
@@ -25,10 +26,11 @@
  :add-user
  standard-middleware
  (fn [db [_ user]]
-   (update-in db [:session :users] conj (preprocess-user user))))
+   (let [user (assoc user :active true)]
+     (update-in db [:session :users] conj (preprocess-user user)))))
 
 (re-frame/register-handler
- :user-status
+ :user-active
  standard-middleware
  (fn [db [_ target-username status]]
    (assert (some #(= target-username (:username %)) (get-in db [:session :users])))

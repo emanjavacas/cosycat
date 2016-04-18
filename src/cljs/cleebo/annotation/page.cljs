@@ -7,10 +7,12 @@
              :refer [annotation-component]]))
 
 (defn back-to-query-button []
-  [bs/button {:href "#/query"}
-   [:span {:style {:padding-right "10px"}}
-    [:i.zmdi.zmdi-city-alt]]
-   "Back to query"])
+  (let [active-project (re-frame/subscribe [:session :active-project])]
+    (fn []
+      [bs/button {:href (if @active-project (str "#/project/" @active-project) "#/")}
+       [:span {:style {:padding-right "10px"}}
+        [:i.zmdi.zmdi-city-alt]]
+       "Back to query"])))
 
 (defn annotation-panel []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]

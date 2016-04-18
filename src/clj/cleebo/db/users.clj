@@ -3,17 +3,15 @@
             [monger.operators :refer :all]
             [buddy.hashers :as hashers]
             [taoensso.timbre :as timbre]
+            [schema.core :as s]
+            [cleebo.schemas.app-state-schemas :refer [public-user-schema user-schema]]
             [cleebo.components.db :refer [new-db]]
             [cleebo.db.roles :refer [app-roles]]
             [cleebo.avatar :refer [new-avatar]]))
 
-(defn ->keyword
-  "hack namespaced keywords"
-  [s]
-  (keyword (str "cleebo.db.roles/" s)))
-
-(defn new-user [{db-conn :db :as db} {:keys [username password]} &
-                {:keys [roles] :or {roles ["user"]}}]
+(defn new-user
+  [{db-conn :db :as db} {:keys [username password]} &
+   {:keys [roles] :or {roles ["user"]}}]
   (if (not (mc/find-one-as-map db-conn "users" {:username username}))
     (let [user {:username username
                 :password (hashers/encrypt password {:alg :bcrypt+blake2b-512})
@@ -21,18 +19,16 @@
                 :created (System/currentTimeMillis)
                 :avatar (new-avatar username)}]
       (-> (mc/insert-and-return db-conn "users" user)
-          (dissoc :password)
-          (dissoc :_id)))))
+          (dissoc :password :_id)))))
 
 (defn is-user? [{db-conn :db :as db} {:keys [username password]}]
   (boolean (mc/find-one-as-map db-conn "users" {:username username})))
 
-(defn lookup-user [{db-conn :db :as db} username password]
+(s/defn lookup-user
+  [{db-conn :db :as db} username password] :- (s/maybe user-schema)
   (if-let [user (mc/find-one-as-map db-conn "users" {:username username})]
     (if (hashers/check password (:password user))
-      (-> user
-          (dissoc :password)
-          (dissoc :_id)))))
+      (dissoc user :password :_id))))
 
 (defn remove-user [{db-conn :db :as db} username]
   (if (is-user? db {:username username})
@@ -52,8 +48,8 @@
    {:username username}
    {:password false :_id false}))
 
-(defn filter-user-public [user]
-  (dissoc user :password :_id :updates))
+(s/defn filter-user-public [user] :- public-user-schema
+  (dissoc user :password :_id :projects))
 
 (defn users-public-info [{db-conn :db}]
   (->> (mc/find-maps

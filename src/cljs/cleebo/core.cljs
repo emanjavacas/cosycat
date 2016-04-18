@@ -16,8 +16,7 @@
             [cleebo.backend.subs]
             [cleebo.routes :as routes]
             [cleebo.localstorage :as ls]
-            [cleebo.components :refer
-             [notification-container load-from-ls-modal user-thumb]]
+            [cleebo.components :refer [notification-container load-from-ls-modal user-thumb]]
             [cleebo.query.page :refer [query-panel]]
             [cleebo.annotation.page :refer [annotation-panel]]
             [cleebo.settings.page :refer [settings-panel]]
@@ -53,27 +52,35 @@
         :href href}
        [icon-label icon label]])))
 
-(defn navdropdown [target href label icon & children]
+(defn navdropdown [target label icon & {:keys [children]}]
   (let [active (re-frame/subscribe [:active-panel])]
-    (fn []
+    (fn [target label icon & {:keys [children]}]
       [bs/nav-dropdown
        {:eventKey target
         :id "dropdown"
         :class (if (= @active target) "active")
-        :href href
         :title (reagent/as-component [icon-label icon label])}
-       (for [[idx {:keys [label href on-select]}] (map-indexed vector children)
+       (for [[idx {:keys [label href on-select style] :as args}] (map-indexed vector children)
              :let [k (str label idx)]]
          ^{:key k} [bs/menu-item
-                    {:eventKey k
-                     :href href
-                     :onSelect on-select}
+                    (merge {:eventKey k
+                            :style style
+                            :href href
+                            :onSelect on-select}
+                           args)
                     label])])))
 
-(defn user-brand []
-  (let [username (re-frame/subscribe [:session :user-info :username])
-        active-project (re-frame/subscribe [:session :active-project])]
-    (fn []
+(defn user-brand-span [username active-project]
+  (let [projects (re-frame/subscribe [:session :user-info :projects])]
+    (fn [username active-project]
+      [:div (str/capitalize @username)
+       [:span
+        (if-let [{project-name :name} @active-project]
+          (str "@" project-name))]])))
+
+(defn user-brand [active-project]
+  (let [username (re-frame/subscribe [:session :user-info :username])]
+    (fn [active-project]
       [bs/navbar-brand
        [:div.container-fluid
         {:style {:margin-top "-9.5px"}}
@@ -81,38 +88,49 @@
          {:style {:line-height "40px" :text-align "right"}}
          [:div.col-sm-8
           ;; wait until user-info is fetched in main
-          (when @username
-            (str (str/capitalize @username)
-                 (when @active-project (str "@" @active-project))))]
+          (when @username [user-brand-span username active-project])]
          [:div.col-sm-4
           ;; wait until user-info is fetched in main
           (when @username
             [user-thumb @username {:height "30px" :width "30px"}])]]]])))
 
 (defn navbar [active-panel]
-  (fn [active-panel]
-    [bs/navbar
-     {:inverse false
-      :fixedTop true
-      :fluid true}
-     [bs/navbar-header
-      [user-brand]]
-     [bs/nav {:pullRight true}
-      (when-not (= @active-panel :front-panel)
-        [navlink :query-panel "#/query" "Query" "zmdi-search"])
-      (when-not (= @active-panel :front-panel)
-        [navlink :annotation-panel "#/annotation" "Annotation" "zmdi-edit"])
-      (when-not (= @active-panel :front-panel)
-        [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"])
-      (when-not (= @active-panel :front-panel)
-        [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"])
-      [navdropdown :debug-panel "#/debug" "Debug" "zmdi-bug" ;debug mode
-       {:label "Debug page" :href "#/debug"}
-       {:label "App snapshots"
-        :on-select #(re-frame/dispatch [:open-modal :localstorage])}
-       {:label "New backup"
-        :on-select ls/dump-db}]
-      [navlink :exit "#/exit" "Exit" "zmdi-power"]]]))
+  (let [active-project (re-frame/subscribe [:get-active-project])
+        projects (re-frame/subscribe [:session :user-info :projects])]
+    (fn [active-panel]
+      [bs/navbar
+       {:inverse false
+        :fixedTop true
+        :fluid true}
+       [bs/navbar-header [user-brand active-project]]
+       [bs/nav {:pullRight true}
+        (when-not (= @active-panel :front-panel)
+          [navlink :annotation-panel "#/annotation" "Annotation" "zmdi-edit"])
+        (when-not (= @active-panel :front-panel)
+          [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"])
+        (when-not (= @active-panel :front-panel)
+          [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"])
+        (when-not (or (= @active-panel :front-panel) (empty? @projects))
+          [navdropdown :query-panel "Projects" "zmdi-bug"
+           :children
+           (concat
+            [{:label "Projects page" :href "#/"}
+             {:divider true}
+             {:label "Projects" :header true}]
+            (doall
+             (for [{project-name :name} @projects]
+               {:label project-name
+                :href (str "#/project/" project-name)
+                :style (when (= project-name (:name @active-project))
+                         {:background-color "#e7e7e7" :color "black"})})))])
+        [navdropdown :debug-panel "Debug" "zmdi-bug" ;debug mode
+         :children
+         [{:label "Debug page" :href "#/debug"}
+          {:label "App snapshots"
+           :on-select #(re-frame/dispatch [:open-modal :localstorage])}
+          {:label "New backup"
+           :on-select ls/dump-db}]]
+        [navlink :exit "#/exit" "Exit" "zmdi-power"]]])))
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])

@@ -6,7 +6,7 @@
             [cleebo.localstorage :as ls]
             [cleebo.backend.middleware
              :refer [standard-middleware no-debug-middleware]]
-            [cleebo.schemas.schemas :refer [db-schema]]))
+            [cleebo.schemas.app-state-schemas :refer [db-schema]]))
 
 (re-frame/register-handler
  :initialize-db

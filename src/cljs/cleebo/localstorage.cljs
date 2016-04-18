@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [cleebo.utils :refer [keywordify]]
             [taoensso.timbre :as timbre]
-            [cleebo.schemas.schemas :refer [db-schema]]
+            [cleebo.schemas.app-state-schemas :refer [db-schema]]
             [schema.core :as s]
             [schema.coerce :as coerce]))
 

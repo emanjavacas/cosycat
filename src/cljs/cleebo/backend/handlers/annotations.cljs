@@ -1,7 +1,7 @@
 (ns cleebo.backend.handlers.annotations
   (:require [re-frame.core :as re-frame]
             [schema.core :as s]
-            [cleebo.shared-schemas :refer [annotation-schema]]
+            [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
             [cleebo.utils :refer [update-token ->int]]
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))

@@ -5,8 +5,8 @@
             [ring.util.response :refer [redirect response]]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
             [cleebo.components.ws :refer [notify-clients]]
-            [cleebo.db.users :refer
-             [lookup-user is-user? new-user filter-user-public]]
+            [cleebo.db.users :refer [lookup-user is-user? new-user filter-user-public]]
+            [cleebo.db.projects :refer [new-project]]
             [cleebo.views.error :refer [error-page]]
             [cleebo.views.login :refer [login-page]]
             [buddy.auth.backends.session :refer [session-backend]]
@@ -40,6 +40,7 @@
       (not password-match?) (on-signup-failure req "Password mismatch")
       is-user               (on-signup-failure req "User already exists")
       :else (let [user (new-user db user)]
+              (new-project db username) ;create default project
               (notify-clients ws {:type :notify
                                   :data (filter-user-public user)
                                   :status :signup})
@@ -54,7 +55,6 @@
   (let [username (or username username-form)
         password (or password password-form)]
     (if-let [user (lookup-user db username password)]
-      ;; [TODO: update online]
       (do (notify-clients ws {:type :notify
                               :data (filter-user-public user)
                               :status :login})

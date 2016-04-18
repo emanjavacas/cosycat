@@ -1,10 +1,11 @@
-(ns cleebo.schemas.schemas
+(ns cleebo.schemas.app-state-schemas
   (:require [schema.core :as s]
             [schema.spec.core :as spec]
             [schema.spec.collection :as coll]
             #?(:clj [clojure.core.match :refer [match]]
                :cljs [cljs.core.match :refer-macros [match]])
-            [cleebo.shared-schemas :refer [annotation-schema]]))
+            [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
+            [cleebo.schemas.project-schemas :refer [project-schema]]))
 
 (def hit-tokens-schema
   {;; required keys
@@ -61,26 +62,22 @@
    :snippets {:snippet-delta s/Int
               :snippet-size s/Int}})
 
-(def project-schema
-  {:description s/Str
-   :updates [s/Any]
-   :created s/Int
-   :creator s/Str
-   :users [s/Str]
-   :name s/Str})
-
 (def user-schema
   {:username s/Str
    :avatar s/Str
    :roles #{s/Str}
    :created s/Int
-   (s/optional-key :active) s/Bool
-   (s/optional-key :last-active) s/Int})
+   :last-active s/Int
+   :projects [project-schema]})
 
-(def user-info-schema
-  (merge
-   user-schema
-   {(s/optional-key :projects) [project-schema]}))
+(def public-user-schema
+  {:username s/Str
+   :avatar s/Str
+   :roles #{s/Str}
+   :created s/Int
+   :last-active s/Int
+   (s/optional-key :active) s/Bool
+   (s/optional-key :projects) [project-schema]})
 
 (def db-schema
   {:settings settings-schema
@@ -90,9 +87,9 @@
              :results (s/conditional empty? [] :else results-schema)
              :notifications {s/Any notification-schema}
              :active-panel s/Keyword
-             (s/optional-key :active-project) (s/if string? s/Str s/Bool)
+             (s/optional-key :active-project) s/Str
              (s/optional-key :corpora) [s/Str]
              (s/optional-key :throbbing?) {s/Any s/Bool}
              (s/optional-key :modals)     {s/Keyword s/Any}
-             (s/optional-key :user-info)   user-info-schema  
-             (s/optional-key :users) [user-schema]}})
+             (s/optional-key :user-info)  user-schema  
+             (s/optional-key :users) [public-user-schema]}})

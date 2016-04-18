@@ -11,7 +11,7 @@
 
 (defn snippet-result-handler [& [context]]
   (fn [{:keys [snippet status hit-idx] :as data}]
-    (if (string? data)
+    (if (string? data)                  ;crsf page
       (.assign js/location "/logout")
       (let [data (case context
                    nil data
@@ -20,7 +20,7 @@
         (re-frame/dispatch [:open-modal :snippet data])))))
 
 (defn fetch-snippet [hit-idx snippet-size & {:keys [context]}]
-  (GET "blacklab"
+  (GET "/blacklab"
        {:handler (snippet-result-handler context)
         :error-handler snippet-error-handler 
         :params {:hit-idx hit-idx
@@ -33,6 +33,3 @@
    (let [snippet-size (or snippet-size (get-in db [:settings :snippets :snippet-size]))]
      (fetch-snippet hit-idx snippet-size :context context)
      db)))
-
-
-
