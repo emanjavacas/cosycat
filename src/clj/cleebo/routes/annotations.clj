@@ -31,14 +31,13 @@
   clojure.lang.PersistentVector
   [db-payload hit-id]
   (let [hit-ids (if (vector? hit-id) hit-id (repeat hit-id))
-        data-keys [:ann-map :scope :reason :e :hit-id]]
-    (->> db-payload
-         (map (fn [hit-id payload] (assoc-in payload [:data :hit-id] hit-id)) hit-ids)
-         (group-by :status)
-         (map-vals (partial map (fn [{:keys [data]}] (select-keys data data-keys))))
-         (map-vals (partial apply transpose vector))
-         (map (fn [[status data]] {:data data :type :annotation :status status}))
-         vec)))
+        data-keys [:ann-map :span :reason :e :hit-id]]
+    (vec (->> db-payload
+              (map (fn [hit-id payload] (assoc-in payload [:data :hit-id] hit-id)) hit-ids)
+              (group-by :status)
+              (map-vals (partial map (fn [{:keys [data]}] (select-keys data data-keys))))
+              (map-vals (partial apply transpose vector))
+              (map (fn [[status data]] {:data data :type :annotation :status status}))))))
 
 (defn annotation-route [ws client-payload]
   (let [{ws-from :ws-from {:keys [type status data]} :payload} client-payload

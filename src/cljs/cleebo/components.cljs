@@ -58,6 +58,13 @@
            :circle true}
           props)])
 
+(defn user-selection-component [{:keys [username]}]
+  (fn [{:keys [username]}]
+    [:div username
+     [:span
+      {:style {:padding-left "10px"}}
+      [user-thumb username {:height "25px" :width "25px"}]]]))
+
 (defn notification-child
   [message date status & {:keys [by]}]
   (let [by (or by "server")]

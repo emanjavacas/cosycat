@@ -6,13 +6,7 @@
             [cleebo.schemas.project-schemas :refer [project-schema update-schema]]
             [taoensso.timbre :as timbre]))
 
-(defn new-project-handler [project]
-  (re-frame/dispatch [:add-project project]))
 
-(defn new-project-error-handler [data]
-  (timbre/debug data)
-  (re-frame/dispatch
-   [:notify {:message "Couldn't create project" :status :error}]))
 
 (re-frame/register-handler
  :add-project
@@ -46,17 +40,29 @@
                                                (first projects)
                                                (next next-projects))))))
 
+(defn new-project-handler [project]
+  (re-frame/dispatch [:add-project project]))
+
+(defn new-project-error-handler [data]
+  (timbre/debug data)
+  (re-frame/dispatch
+   [:notify {:message "Couldn't create project" :status :error}]))
+
+(defn users-by-name [db & usernames]
+  (filter #(some #{(:username %)} usernames) (get-in db [:session :users])))
+
 (re-frame/register-handler
  :new-project
  standard-middleware
- (fn [db [_ {:keys [name description users] :as project}]]
-   (POST "/project"
-         {:params {:route :new-project
-                   :name name
-                   :description description
-                   :users (or users [])
-                   :csrf js/csrf}
-          :handler new-project-handler
-          :error-handler new-project-error-handler})
+ (fn [db [_ {:keys [name description usernames] :as project}]]
+   (let [users (if usernames (users-by-name db usernames) [])]
+     (POST "/project"
+           {:params {:route :new-project
+                     :name name
+                     :description description
+                     :users users
+                     :csrf js/csrf}
+            :handler new-project-handler
+            :error-handler new-project-error-handler}))
    db))
 

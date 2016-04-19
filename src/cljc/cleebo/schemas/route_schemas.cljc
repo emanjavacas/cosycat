@@ -1,7 +1,7 @@
 (ns cleebo.schemas.route-schemas
   (:require [schema.core :as s]
             [schema.coerce :as coerce]
-            [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
+            [cleebo.schemas.annotation-schemas :refer [annotation-schema span-schema]]
             [taoensso.timbre :as timbre]
             #?(:clj [clojure.core.match :refer [match]]
                :cljs [cljs.core.match :refer-macros [match]])))
@@ -17,10 +17,11 @@
 (def ann-error-from-server-schema
   {:status s/Keyword                    ;todo
    :type s/Keyword
-   :data {:scope (s/if vector? [s/Int] s/Int) ;todo
+   :data {:span (s/if vector? [span-schema] span-schema) ;todo
+          :hit-id (s/if vector? [s/Int] s/Int)
           :reason   s/Keyword
           (s/optional-key :e) s/Str
-          (s/optional-key :username) s/Str}
+          (s/optional-key :username) s/Str} ;?
    :payload-id s/Any})
 
 (defn ws-from-server

@@ -1,7 +1,7 @@
 * TO DO list:
 ** Backend
 *** TODO Systematic logging
-*** TODO Refactoring for production
+*** DONE Refactoring for production
 *** DONE Route notifications
 Depending on whether the notification requires user response or not 
 and whether the user is online or not: store notification in user
@@ -23,6 +23,13 @@ profile for later use (eventually emailing)
 #+END_SRC
 
 ** DB
+
+*** DONE Project routes
+Projects will help organizing annotations:
+
+- assigning roles to users
+- sort annotations, queries, history by project
+- switch on/off annotations based on project
 
 *** DONE Split annotation db in two collections
 + From corpus position to annotations (alias "cpos-ann")
@@ -146,7 +153,6 @@ Different notification profiles:
   but don't show them on top; store them in Updates)
 
 *** TODO Annotation categories database
-
 **** Schemes
 
 - Simple
@@ -194,10 +200,10 @@ Different notification profiles:
 
 *** Front page
 
-**** TODO Create/select project
+**** DONE Create/select project
 - projects are needed in order to structure roles
 
-**** TODO Rename query page to project/project-name
+**** DONE Rename query page to project/project-name
 restrict access to project page depending on role
 
 *** Annotation page
@@ -210,9 +216,10 @@ restrict access to project page depending on role
 *** Home page
 **** TODO Show connection status
 *** WS
-**** TODO Reconnect on error
+**** DONE Reconnect on error
 *** DB
 **** TODO Store user profile settings
-**** TODO Force Update of marked hits after new query? Or just remove marked hits after new query
-**** TODO Store user query history? or working with different queries simultaneously
+**** DONE Force Update of marked hits after new query? Or just remove marked hits after new query
+**** Store user query history? or working with different queries simultaneously
+*** 
 

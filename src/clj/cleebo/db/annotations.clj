@@ -44,6 +44,12 @@
 (defmethod find-ann-id
   "IOB"
   [{db :db} {{{new-B :B new-O :O :as new-scope} :scope} :span {k :key} :ann :as ann-map}]
+  (when-let [{{scope :scope} :span}
+             (mc/find-one-as-map
+              db "anns"
+              {"ann.key" k
+               "span.scope" {$in (range new-B (inc new-O))}})]
+    (throw (ex-info "Attempt to overwrite token annotation with span annotation" {:scope scope})))
   (when-let [{{{old-B :B old-O :O :as old-scope} :scope} :span ann-id :_id}
              (mc/find-one-as-map
               db "anns"
@@ -143,8 +149,7 @@
 
 (s/defmethod ^:always-validate new-token-annotation
   clojure.lang.PersistentArrayMap
-  [db username {{scope :scope :as span} :span
-                {k :key} :ann :as ann-map} :- annotation-schema]
+  [db username {span :span :as ann-map} :- annotation-schema]
   (try
     (let [ann-map (assoc ann-map :username username)
           new-ann (if-let [{:keys [ann-id]} (find-ann-id db ann-map)]
@@ -154,7 +159,7 @@
        :status :ok
        :type :annotation})
     (catch Exception e
-      {:data {:scope scope
+      {:data {:span span
               :reason :internal-error
               :e (str e)}
        :status :error
@@ -167,7 +172,7 @@
 
 (s/defn ^:always-validate fetch-anns :- (s/maybe {s/Int {s/Str annotation-schema}})
   "{token-id {ann-key1 ann ann-key2 ann} token-id2 ...}.
-   [enhace] a single span annotation will be fetched as many times as tokens it spans"
+   [enhance] a single span annotation will be fetched as many times as tokens it spans"
   [db ann-ids]
   (apply merge-with conj
          (for [{token-id :_id anns :anns} ann-ids

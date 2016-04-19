@@ -11,9 +11,9 @@
             [cleebo.backend.handlers.notifications]
             [cleebo.backend.handlers.session]
             [cleebo.backend.handlers.projects]
-            [cleebo.backend.ws :refer [make-ws-channels!]]
             [cleebo.backend.ws-routes]
             [cleebo.backend.subs]
+            [cleebo.backend.ws :refer [open-ws-channel]]
             [cleebo.routes :as routes]
             [cleebo.localstorage :as ls]
             [cleebo.components :refer [notification-container load-from-ls-modal user-thumb]]
@@ -122,7 +122,8 @@
                {:label project-name
                 :href (str "#/project/" project-name)
                 :style (when (= project-name (:name @active-project))
-                         {:background-color "#e7e7e7" :color "black"})})))])
+                         {:background-color "#e7e7e7"
+                          :color "black"})})))])
         [navdropdown :debug-panel "Debug" "zmdi-bug" ;debug mode
          :children
          [{:label "Debug page" :href "#/debug"}
@@ -147,6 +148,9 @@
 (defn mount-root []
   (reagent/render [main-panel] (.getElementById js/document "app")))
 
+(defn host-url []
+  (str "ws://" (.-host js/location) "/ws"))
+
 (defn init! []
   ;; init devtools
   (devtools/enable-feature! :sanity-hints :dirac)
@@ -154,7 +158,7 @@
   ;; declare app routes
   (routes/app-routes)
   ;; web-sockets
-  (make-ws-channels!)
+  (open-ws-channel {:url (host-url)})
   ;; start db
   (re-frame/dispatch-sync
    [:initialize-db

@@ -23,13 +23,16 @@
    :scope {:B cpos-schema
            :O cpos-schema}})
 
+(def span-schema
+  (s/conditional #(= (:type %) "token") token-span-schema
+                 #(= (:type %) "IOB")   iob-span-schema))
+
 (def annotation-schema
   {:ann {:key s/Str
          :value s/Str}
    (s/optional-key :username) s/Str     ;anns are sent without username to the server
    :timestamp s/Int
-   :span (s/conditional #(= (:type %) "token") token-span-schema
-                        #(= (:type %) "IOB")   iob-span-schema)
+   :span span-schema
    (s/optional-key :history) history-schema})
 
 (def cpos-ann-schema

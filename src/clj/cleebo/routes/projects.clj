@@ -7,30 +7,30 @@
 
 (defmulti project-router (fn [{{route :route} :params}] route))
 
-(defmethod new-project-route
+(defmethod project-router
   :new-project
   [{{route :route project-name :name desc :description users :users} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (if-let [(new-project db username name desc users)]
-;    (notify-clients ws )
-    ))
+  (let [project (new-project db username project-name desc users)]
+    (notify-clients ws project :ws-from username :target-clients users)
+    project))
 
-(defn new-project-route
+(defmethod project-router
   :update-project
   [{{route :route name :name desc :description users :users} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-   (throw (ex-info "not implemented yet")))
+  (throw (ex-info "not implemented yet")))
 
 (def project-route
   (safe (fn [req]
-          (try {:status 200 :body (new-project-route req)}
+          (try {:status 200 :body (project-router req)}
                (catch Exception e
-                 (let [{:keys [message class]} (bean e)]
+                 (let [{message :message ex-class :class} (bean e)]
                    {:status 500
                     :body {:message message
-                           :data {:exception class :type :internal-error}}}))
+                           :data {:exception (str ex-class) :type :internal-error}}}))
                (catch clojure.lang.ExceptionInfo e
                  (let [{:keys [message data]} (bean e)]
                    {:status 500

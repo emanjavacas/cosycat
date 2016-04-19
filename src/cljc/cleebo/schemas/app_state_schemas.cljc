@@ -31,8 +31,8 @@
           :meta hit-meta-schema}})
 
 (def results-schema
-  "current results being displayed are represented as an ordered list
-  of hits ids. Each id map to an entry in the :results-by-id map"
+  "Current results being displayed are represented as an ordered list
+  of hits ids. Each `id` map to an entry in the :results-by-id map"
   [s/Int])
 
 (def query-opts-schema

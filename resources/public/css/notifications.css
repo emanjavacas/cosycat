@@ -24,7 +24,7 @@ ul#notifications {
 .notification {
     color: black;
     width: 360px;
-    height: 90px;
+    min-height: 90px;
     z-index: 9000;
     cursor: pointer;
     box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);

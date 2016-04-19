@@ -5,25 +5,6 @@
             [ajax.core :refer [GET]]
             [taoensso.timbre :as timbre]))
 
-(defn keywordify-results [results]
-  (into {} (map (juxt :id identity) results)))
-
-(defn merge-fn [results has-marked?]
-  (fn [old-results]
-    (merge (keywordify-results results)
-           (filter-marked-hits old-results :has-marked? has-marked?))))
-
-(re-frame/register-handler
- :set-query-results
- standard-middleware
- (fn [db [_ & [{:keys [results from to] :as data}]]]
-   (let [query-results (dissoc data :results)
-         merge-old-results (merge-fn results true)]
-     (-> db
-         (update-in [:session :query-results] merge query-results)
-         (assoc-in [:session :results] (map :id results))
-         (update-in [:session :results-by-id] merge-old-results)))))
-
 (defn pager-next
   ([size page-size] (pager-next size page-size 0))
   ([size page-size from]
@@ -51,12 +32,45 @@
       [:query-results :status]
       {:status status :status-content status-content}])))
 
-(defn results-handler [source-component]
+(defn keywordify-results [results]
+  (into {} (map (juxt :id identity) results)))
+
+(defn merge-fn
+  "on new results, update current results leaving untouched those that are marked"
+  [results & {:keys [has-marked?]}]
+  (fn [old-results]
+    (merge (keywordify-results results)
+           (filter-marked-hits old-results :has-marked? has-marked?))))
+
+(defn results-handler
+  "general success handler for query routes
+  (:query, :query-range :query-sort :query-refresh).
+  Accepts additional callbacks `extra-work` that are passed the incoming data."
+  [source-component & extra-work]
   (fn [data]
     (if (string? data)
       (.assign js/location "/logout")
-      (do (re-frame/dispatch [:set-query-results data])
+      (do (doall (map #(% data) extra-work))
+          (re-frame/dispatch [:set-query-results data])
           (re-frame/dispatch [:stop-throbbing source-component])))))
+
+(re-frame/register-handler
+ :set-query-results
+ standard-middleware
+ (fn [db [_ & [{:keys [results from to] :as data}]]]
+   (let [query-results (dissoc data :results)
+         merge-old-results (merge-fn results :has-marked? true)]
+     (-> db
+         (update-in [:session :query-results] merge query-results)
+         (assoc-in [:session :results] (map :id results))
+         (update-in [:session :results-by-id] merge-old-results)))))
+
+(re-frame/register-handler
+ :reset-query-results
+ standard-middleware
+ (fn [db _]
+   (timbre/debug "RESULTs-BY-ID")
+   (assoc-in db [:session :results-by-id] {})))
 
 (re-frame/register-handler
  :query
@@ -66,7 +80,9 @@
           {:keys [from]}                :query-results} (:session db)]
      (re-frame/dispatch [:start-throbbing source-component])
      (GET "/blacklab"
-          {:handler (results-handler source-component)
+          {:handler (results-handler
+                     source-component
+                     #(re-frame/dispatch [:reset-query-results]))
            :error-handler (error-handler source-component)
            :params {:query-str query-str
                     :corpus corpus

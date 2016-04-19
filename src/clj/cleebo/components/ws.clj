@@ -115,8 +115,9 @@
 
 (defn notify-clients
   "function wrapper over multiplexed puts to out-chan"
-  [ws payload & {:keys [ws-from] :or {ws-from "server"}}]
+  [ws payload & {:keys [ws-from target-clients] :or {ws-from "server"}}]
   (let [{{ws-out :ws-out} :chans clients :clients} ws]
-    (doseq [[ws-name _] (seq @clients)
-            :when (not= ws-from ws-name)]
-      (put! ws-out {:ws-target ws-name :ws-from ws-from :payload payload}))))
+    (doseq [[client _] (seq @clients)
+            :when (or (and target-clients (some #{client} target-clients))
+                      (not= ws-from client))]
+      (put! ws-out {:ws-target client :ws-from ws-from :payload payload}))))

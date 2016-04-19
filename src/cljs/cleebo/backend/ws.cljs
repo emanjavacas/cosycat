@@ -6,40 +6,38 @@
             [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-(defonce app-channels (atom {:ws-in nil :ws-out nil}))
-
-(defn host-url []
-  (str "ws://" (.-host js/location) "/ws"))
+(defonce socket-atom (atom nil))
+(def json-reader (t/reader :json-verbose))
+(def json-writer (t/writer :json-verbose))
 
 ;;; TODO: automatic reconnect in case of WS-error
-(defn make-ws-channels! [& {:keys [url] :or {url (host-url)}}]
-  (let [json-reader (t/reader :json-verbose)
-        json-writer (t/writer :json-verbose)
-        ws-in (chan) ws-out (chan)]
-    (if-let [ws-chan (js/WebSocket. url)]
-      (do
-        (set! (.-onopen ws-chan) #(timbre/info "Opened WS connection"))
-        (set! (.-onclose ws-chan) #(map close! [ws-in ws-out]))
-        (set! (.-onerror ws-chan) #(timbre/info "WS error"))
-        (set! (.-onmessage ws-chan)
-              (fn [payload]
-                (->> payload
-                     .-data
-                     (t/read json-reader)
-                     (put! ws-in))))
-        (go (loop []
-              (let [[payload sc] (alts! [ws-in ws-out])]
-                (timbre/debug "routing:" payload)
-                (condp = sc
-                  ws-in  (re-frame/dispatch [:ws :in payload])
-                  ws-out (->> (assoc payload :payload-id (time-id))
-                              (t/write json-writer)
-                              (.send ws-chan))))
-              (recur)))
-        (swap! app-channels assoc :ws-in ws-in :ws-out ws-out))
-      (throw (js/Error. "Websocket is not available!")))))
+(defn open-ws-channel
+  [{:keys [url retry-count retried-count] :or {retry-count 10} :as opts}]
+  (if-let [socket (js/WebSocket. url)]
+    (let [retried-count (or retried-count 0)]
+      (set! (.-onopen socket) (fn [x]
+                                (reset! socket-atom socket)
+                                (timbre/info "Opened WS connection")))
+      (set! (.-onclose socket) (fn [x]
+                                 (reset! socket-atom nil)
+                                 (when (< retried-count retry-count)
+                                   (js/setTimeout
+                                    (fn []
+                                      (open-ws-channel
+                                       (assoc opts :retried-count (inc retried-count))))
+                                    (min 10000 (+ 2000 (* 500 retried-count)))))
+                                 (timbre/info "WS closed!")))
+      (set! (.-onerror socket) (fn [x] (timbre/info "WS error")))
+      (set! (.-onmessage socket)
+            ;; record message history?
+            (fn [payload]
+              (let [parsed-payload (->> payload .-data (t/read json-reader))]
+                (re-frame/dispatch [:ws :in parsed-payload])))))
+    (throw (js/Error "Websocket is not available!"))))
 
 (defn send-ws [payload]
-  (if-let [ws-out (:ws-out @app-channels)]
-    (put! ws-out payload)
+  (if-let [socket @socket-atom]
+    (->> (assoc payload :payload-id (time-id))
+         (t/write json-writer)
+         (.send socket))
     (js/Error. "Websocket is not available!")))
