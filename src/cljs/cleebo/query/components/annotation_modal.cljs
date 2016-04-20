@@ -2,7 +2,6 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cleebo.utils :refer [by-id ->int parse-annotation]]
-            [cleebo.backend.handlers.annotations :refer [dispatch-annotation]]
             [cleebo.autocomplete :refer [autocomplete-jq]]
             [schema.core :as s]
             [react-bootstrap.components :as bs]))
@@ -13,7 +12,11 @@
     (let [filtered-tokens (remove #(-> (:id %) js/parseInt js/isNaN) @marked-tokens)
           token-ids (map :id filtered-tokens)
           hit-ids (map :hit-id filtered-tokens)]
-      (dispatch-annotation {:key k :value v} (mapv ->int hit-ids) (mapv ->int token-ids)))))
+      (re-frame/dispatch
+       [:dispatch-annotation
+        {:key k :value v}               ;ann-map
+        (mapv ->int hit-ids)            ;hit-ids
+        (mapv ->int token-ids)]))))     ;token-ids
 
 (defn inner-thead [k1 k2]
   [:thead
@@ -112,5 +115,5 @@
           {:bsStyle "primary"
            :style (when (disabled? marked-tokens) {:opacity 0.65 :cursor "auto"})
            :onClick (on-click-annotation-btn #(disabled? marked-tokens) show?)}
-          [:div "Annotate Tokens"
+          [:div "Annotate Marked Tokens"
            [annotation-modal show? marked-tokens]]]]))))

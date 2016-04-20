@@ -18,7 +18,6 @@
      (fn [event]
        (let [token (.-token event)]
          (.log js/console "Navigating to " token)
-         (.scrollTo js/window 0 0)
          (secretary/dispatch! token))))
     (.setEnabled true)))
 
@@ -28,8 +27,8 @@
     (re-frame/dispatch [:set-session [:active-project] false])
     (re-frame/dispatch [:reset-active-project])
     (re-frame/dispatch [:set-active-panel :front-panel]))
-  (defroute "/project/:project-name" {project-name :project-name}
-    (re-frame/dispatch [:set-session [:active-project] project-name])
+  (defroute "/project/:project-name" {project-name :project-name} 
+    (re-frame/dispatch [:set-active-project project-name])
     (re-frame/dispatch [:set-active-panel :query-panel]))
   (defroute "/settings" []
     (re-frame/dispatch [:set-active-panel :settings-panel]))

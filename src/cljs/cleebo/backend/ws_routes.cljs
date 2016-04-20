@@ -2,13 +2,10 @@
   (:require [re-frame.core :as re-frame]
             [cleebo.backend.ws :refer [send-ws]]
             [cleebo.backend.middleware :refer [standard-middleware]]
+            [cleebo.utils :refer [format]]
             [schema.core :as s]
-            [goog.string :as gstring]
             [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.match :refer [match]]))
-
-(defn format [fmt & args]
-  (apply gstring/format fmt args))
 
 (def notification-msgs
   {:annotation

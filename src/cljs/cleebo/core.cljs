@@ -85,7 +85,7 @@
        [:div.container-fluid
         {:style {:margin-top "-9.5px"}}
         [:div.row
-         {:style {:line-height "40px" :text-align "right"}}
+         {:style {:line-height "40px" :text-align "right" :max-width "232px"}}
          [:div.col-sm-8
           ;; wait until user-info is fetched in main
           (when @username [user-brand-span username active-project])]
@@ -95,7 +95,7 @@
             [user-thumb @username {:height "30px" :width "30px"}])]]]])))
 
 (defn navbar [active-panel]
-  (let [active-project (re-frame/subscribe [:get-active-project])
+  (let [active-project (re-frame/subscribe [:active-project])
         projects (re-frame/subscribe [:session :user-info :projects])]
     (fn [active-panel]
       [bs/navbar

@@ -2,7 +2,6 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cleebo.utils :refer [parse-annotation ->int]]
-            [cleebo.backend.handlers.annotations :refer [dispatch-annotation]]
             [cleebo.autocomplete :refer [autocomplete-jq]]))
 
 (defn valid-span-range [to from span-selection]
@@ -13,7 +12,7 @@
         to (apply max @span-selection)]
     (if (valid-span-range to from span-selection)
       (re-frame/dispatch [:notify {:message "Invalid span annotation" :status :error}])
-      (dispatch-annotation ann hit-id from to))))
+      (re-frame/dispatch [:dispatch-annotation ann hit-id from to]))))
 
 (defn on-key-down
   "[TODO: clean code please]"
@@ -26,7 +25,7 @@
               token-id (->int token-id)]
           (do (if (contains? @span-selection token-id)
                 (handle-span-dispatch ann hit-id span-selection)
-                (dispatch-annotation ann hit-id token-id))
+                (re-frame/dispatch [:dispatch-annotation ann hit-id token-id]))
               (set! (.-value (.-target pressed)) "")
               (reset! span-selection #{})))))))
 

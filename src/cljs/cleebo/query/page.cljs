@@ -16,7 +16,7 @@
         throbbing? (re-frame/subscribe [:throbbing? :results-frame])
         has-error (fn [status] (= status :error))
         query-error (fn [status] (= status :query-str-error))
-        empty-results (fn [q-str q-size] (and (not (= "" q-str)) (zero? q-size)))
+        no-results (fn [q-str q-size] (and (not (= "" q-str)) (zero? q-size)))
         has-results (fn [query-size] (not (zero? query-size)))]
     (fn []
       (let [{:keys [status status-content]} @status]
@@ -29,14 +29,14 @@
                                 :status (str "Query misquoted starting at position "
                                              (inc (:at status-content)))
                                 :status-content (highlight-error status-content)]
-          (empty-results
+          (no-results
            @query-str
            @query-size)        [error-panel
-                                :status "The query returned no matching results"]
+                                :status "The query returned no matching hits"]
           (has-results
            @query-size)        [results-table]
           :else                [error-panel
-                                :status "No results to be shown... Go do some research!"])))))
+                                :status "No hits to be shown... Go do some research!"])))))
 
 (defn query-panel []
   (let [query-str (re-frame/subscribe [:session :query-results :query-str])

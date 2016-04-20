@@ -6,7 +6,6 @@
             [schema.core :as s]
             [cleebo.schemas.app-state-schemas :refer [public-user-schema user-schema]]
             [cleebo.components.db :refer [new-db]]
-            [cleebo.db.roles :refer [app-roles]]
             [cleebo.avatar :refer [new-avatar]]))
 
 (defn new-user

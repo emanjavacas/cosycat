@@ -87,9 +87,9 @@
              :results (s/conditional empty? [] :else results-schema)
              :notifications {s/Any notification-schema}
              :active-panel s/Keyword
-             (s/optional-key :active-project) s/Str
+             (s/optional-key :active-project) {:name s/Str :filter-user-anns #{s/Str}}
              (s/optional-key :corpora) [s/Str]
              (s/optional-key :throbbing?) {s/Any s/Bool}
              (s/optional-key :modals)     {s/Keyword s/Any}
-             (s/optional-key :user-info)  user-schema  
+             (s/optional-key :user-info)  user-schema
              (s/optional-key :users) [public-user-schema]}})

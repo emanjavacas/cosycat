@@ -10,8 +10,8 @@
   "multiple anns implies multiple hit-ids"
   {:status s/Keyword
    :type   s/Keyword
-   :data   {:hit-id   (s/if vector? [s/Int] s/Int)
-            :ann-map  (s/if vector? [annotation-schema] annotation-schema)}
+   :data   {:hit-id  (s/if vector? [s/Int] s/Int)
+            :ann-map (s/if vector? [annotation-schema] annotation-schema)}
    :payload-id s/Any})
 
 (def ann-error-from-server-schema
@@ -43,5 +43,5 @@
                         :ann-map (s/if vector? [annotation-schema] annotation-schema)}
                  :payload-id s/Any}
     :notify     {:type s/Keyword
-                 :data {}
+                 :data {s/Any s/Any}
                  (s/optional-key :payload-id) s/Any}))

@@ -7,7 +7,7 @@
              :refer [annotation-component]]))
 
 (defn back-to-query-button []
-  (let [active-project (re-frame/subscribe [:session :active-project])]
+  (let [active-project (re-frame/subscribe [:session :active-project :name])]
     (fn []
       [bs/button {:href (if @active-project (str "#/project/" @active-project) "#/")}
        [:span {:style {:padding-right "10px"}}

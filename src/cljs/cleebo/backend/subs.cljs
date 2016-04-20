@@ -1,7 +1,7 @@
 (ns cleebo.backend.subs
     (:require-macros [reagent.ratom :refer [reaction]])
     (:require [re-frame.core :as re-frame]
-              [cleebo.utils :refer [filter-marked-hits select-values]]
+              [cleebo.utils :refer [filter-marked-hits select-values dominant-color]]
               [taoensso.timbre :as timbre]))
 
 (re-frame/register-sub
@@ -83,9 +83,30 @@
                               (map #(assoc % :hit-id id))))
                        @results-by-id)))))
 
+(defn get-active-project [db active-project-name]
+  (first (filter #(= @active-project-name (:name %))
+                 (get-in @db [:session :user-info :projects]))))
+
 (re-frame/register-sub
- :get-active-project
+ :active-project
  (fn [db _]
-   (let [active-project-name (reaction (get-in @db [:session :active-project]))]
-     (reaction (first (filter #(= @active-project-name (:name %))
-                              (get-in @db [:session :user-info :projects])))))))
+   (let [active-project-name (reaction (get-in @db [:session :active-project :name]))]
+     (reaction (get-active-project db active-project-name)))))
+
+(re-frame/register-sub
+ :active-project-users
+ (fn [db _]
+   (let [active-project-name (reaction (get-in @db [:session :active-project :name]))
+         active-project (reaction (get-active-project db active-project-name))
+         users (reaction (get-in @db [:session :users]))
+         users-map (reaction (zipmap (map :username @users) @users))]
+     (reaction (map #(get @users-map %) (map :username (:users @active-project)))))))
+
+(re-frame/register-sub
+ :filter-user-anns
+ (fn [db _]
+   (let [filter-user-anns (reaction (get-in @db [:session :active-project :filter-user-anns]))
+;         users (reaction (map :username (get-in @db [:session :users])))
+;         users-map (reaction (zipmap (map :username @users) (map :avatar @users)))
+         ]
+     (reaction (zipmap @filter-user-anns (map #(dominant-color (str "/img/avatars/" % ".png")) @filter-user-anns))))))

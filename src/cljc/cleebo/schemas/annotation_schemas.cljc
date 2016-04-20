@@ -33,6 +33,7 @@
    (s/optional-key :username) s/Str     ;anns are sent without username to the server
    :timestamp s/Int
    :span span-schema
+   :project s/Str
    (s/optional-key :history) history-schema})
 
 (def cpos-ann-schema

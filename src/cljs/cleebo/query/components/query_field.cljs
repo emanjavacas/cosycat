@@ -93,9 +93,9 @@
       [:div.row
        [:div.col-lg-12
         [:div.row
-         [:div.col-lg-5
+         [:div.col-lg-5.col-sm-7
           [query-opts-menu]]
-         [:div.col-lg-7
+         [:div.col-lg-7.col-sm-5
           [:div.input-group
            [:input#query-str.form-control.form-control-no-border
             {:style {:width "100%"}

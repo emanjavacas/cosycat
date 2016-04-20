@@ -18,27 +18,18 @@
  :set-active-project
  standard-middleware
  (fn [db [_ project-name]]
-   (let [projects (get-in db [:session :user-info :projects])]
-     (assert (some #(= project-name (:name %)) projects))
-     (assoc-in db [:session :active-project] project-name))))
+   (let [projects (get-in db [:session :user-info :projects])
+         project  (some #(= project-name (:name %)) projects)
+         active-project {:name project-name
+                         :filter-user-anns (into #{} (map :username (:users project)))}]
+     (assert project)
+     (assoc-in db [:session :active-project] active-project))))
 
 (re-frame/register-handler
  :reset-active-project
  standard-middleware
  (fn [db _]
    (update-in db [:session] dissoc :active-project)))
-
-(re-frame/register-handler
- :select-next-project
- standard-middleware
- (fn [db _]
-   (let [active-project (get-in db [:session :active-project])
-         projects (get-in db [:session :user-info :projects])
-         next-projects (drop-while #(not= (:name %) active-project))]
-     (assert (not (empty? projects)))
-     (assoc-in db [:session :active-project] (if (= (count next-projects) 1)
-                                               (first projects)
-                                               (next next-projects))))))
 
 (defn new-project-handler [project]
   (re-frame/dispatch [:add-project project]))
@@ -48,7 +39,7 @@
   (re-frame/dispatch
    [:notify {:message "Couldn't create project" :status :error}]))
 
-(defn users-by-name [db & usernames]
+(defn users-by-name [db & [usernames]]
   (filter #(some #{(:username %)} usernames) (get-in db [:session :users])))
 
 (re-frame/register-handler
@@ -60,9 +51,16 @@
            {:params {:route :new-project
                      :name name
                      :description description
-                     :users users
+                     :users (map #(select-keys % [:username :role]) users)
                      :csrf js/csrf}
             :handler new-project-handler
             :error-handler new-project-error-handler}))
    db))
+
+(re-frame/register-handler
+ :filter-anns-by-user
+ standard-middleware
+ (fn [db [_ username flag]]
+   (let [action (if flag conj disj)]
+     (update-in db [:session :active-project :filter-user-anns] action username))))
 

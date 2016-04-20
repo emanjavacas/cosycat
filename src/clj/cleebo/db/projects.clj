@@ -4,20 +4,10 @@
             [schema.core :as s]
             [cleebo.schemas.project-schemas :refer [project-schema update-schema]]
             [cleebo.app-utils :refer [default-project-name]]
-            [taoensso.timbre :as timbre]
+            [cleebo.roles :refer [check-project-role]]
             [cleebo.db.users :refer [is-user?]]
-            [cleebo.components.db :refer [new-db]]))
-
-(def project-roles
-  "a map from actions to required roles"
-  {:delete #{"creator"}                 ;remove project
-   :write  #{"creator" "project-lead"}  ;update metadata
-   :update #{"creator" "project-lead" "user"}  ;push update
-   :read   #{"creator" "project-lead" "user"} ;retrieve project
-   })
-
-(defn check-role [action user-role]
-  (boolean (some #{user-role} (get project-roles action))))
+            [cleebo.components.db :refer [new-db]]
+            [taoensso.timbre :as timbre]))
 
 (defn is-project? [{db-conn :db} project-name]
   (boolean (mc/find-one-as-map db-conn "projects" {:name project-name})))
@@ -28,7 +18,7 @@
 (defn is-authorized?
   ([{users :users :as project} username action]
    (if-let [{role :role} (first (filter #(= username (:username %)) users))]
-     (check-role action role)))
+     (check-project-role action role)))
   ([{db-conn :db :as db} project-name username action]
    (let [project (find-project db project-name)]
      (is-authorized? project username action))))
@@ -51,7 +41,7 @@
          :name project-name
          :description description
          :created (System/currentTimeMillis)
-         :users (or users [])
+         :users (or (map #(select-keys % [:username :role]) (map #(assoc % :role "user") users)) [])
          :updates []})
        (dissoc :_id))))
 
@@ -59,7 +49,7 @@
   [{db-conn :db} username]
   (->> (mc/find-maps
         db-conn "projects"
-        {$or [{:creator username} {:users username}]})
+        {$or [{:creator username} {"users.username" username}]})
        (map #(dissoc % :_id))))
 
 (s/defn update-project

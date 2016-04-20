@@ -4,8 +4,10 @@
             [taoensso.timbre :as timbre]
             [schema.core :as s]
             [cleebo.utils :refer [get-token-id ->int]]
-            [cleebo.components.db :refer [new-db]]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema cpos-ann-schema]]
+            [cleebo.components.db :refer [new-db]]
+            [cleebo.db.projects :refer [new-project find-project]]
+            [cleebo.roles :refer [check-annotation-update-role]]
             [schema.coerce :as coerce]))
 
 (defn check-span-overlap
@@ -49,7 +51,8 @@
               db "anns"
               {"ann.key" k
                "span.scope" {$in (range new-B (inc new-O))}})]
-    (throw (ex-info "Attempt to overwrite token annotation with span annotation" {:scope scope})))
+    (throw (ex-info "Attempt to overwrite token annotation with span annotation"
+                    {:scope scope})))
   (when-let [{{{old-B :B old-O :O :as old-scope} :scope} :span ann-id :_id}
              (mc/find-one-as-map
               db "anns"
@@ -74,7 +77,7 @@
     (conj (:history ann) record-ann)))
 
 (defmulti insert-annotation
-  "creates new ann in coll `anns` for given ann"
+  "creates new ann in coll `anns`+`cpos-ann` for given ann"
   (fn [db {{t :type} :span}] t))
 
 (s/defmethod insert-annotation
@@ -103,8 +106,8 @@
     ann))
 
 (defmulti update-annotation
-  "updates existing ann in coll `anns` for given key"
-  (fn [db {{t :type} :span} ann-id] t))
+  "updates existing ann in coll `anns` for given key."
+  (fn [db {{span-type :type} :span :as ann-map} ann-id] span-type))
 
 (s/defmethod update-annotation
   "token"
@@ -112,6 +115,7 @@
   [{db-conn :db :as db}
    {timestamp :timestamp
     username :username
+    project :project
     {scope :scope} :span
     {k :key v :value} :ann :as ann}
    ann-id]
@@ -142,10 +146,37 @@
           "history" (compute-history (find-ann-by-id db ann-id))}}
    {:return-new true}))
 
+(defn find-role
+  "helper function to extract a user's role from the :users project's field"
+  [project-users username]
+  {:post [(not (nil? %))]}
+  (:role (first (filter #(= username (:username %)) project-users))))
+
+(defn attempt-update-annotation
+  "update authorization middleware to prevent update attempts by non-authorized users"
+  [db {username :username project-name :project :as ann-map} ann-id]
+  (let [{project-creator :creator project-users :users} (find-project db project-name)
+        role (if (= username project-creator) "creator" (find-role project-users username))]
+    (if (check-annotation-update-role :update role)
+      (update-annotation db ann-map ann-id)
+      (throw (ex-info "Unauthorized update attempt" {:cause :unauthorized-update})))))
+
+(defn annotation-data [ann-map]
+  {:data {:ann-map (dissoc ann-map :_id)}
+   :status :ok
+   :type :annotation})
+
+(defn annotation-exception-data [span reason e]
+  {:data {:span span
+          :reason reason
+          :e (str e)}
+   :status :error
+   :type :annotation})
+
 (defmulti new-token-annotation
   "dispatch based on type (either a particular value or 
   a vector of that value for bulk annotations)"
-  (fn [db username ann] (type ann)))
+  (fn [db username ann-map] (type ann-map)))
 
 (s/defmethod ^:always-validate new-token-annotation
   clojure.lang.PersistentArrayMap
@@ -153,22 +184,20 @@
   (try
     (let [ann-map (assoc ann-map :username username)
           new-ann (if-let [{:keys [ann-id]} (find-ann-id db ann-map)]
-                    (update-annotation db ann-map ann-id)
+                    (attempt-update-annotation db ann-map ann-id)
                     (insert-annotation db ann-map))]
-      {:data {:ann-map (dissoc new-ann :_id)}
-       :status :ok
-       :type :annotation})
+      (annotation-data new-ann))
+    (catch clojure.lang.ExceptionInfo e
+      (case (-> e ex-data :cause)
+        :unauthorized-update (annotation-exception-data span :unauthorized-update e)
+        :default (annotation-exception-data span :internal-error e)))
     (catch Exception e
-      {:data {:span span
-              :reason :internal-error
-              :e (str e)}
-       :status :error
-       :type :annotation})))
+      (annotation-exception-data span :internal-error e))))
 
 (s/defmethod ^:always-validate new-token-annotation
   clojure.lang.PersistentVector
-  [db username anns :- [annotation-schema]]
-  (mapv (fn [ann] (new-token-annotation db username ann)) anns))
+  [db username ann-maps :- [annotation-schema]]
+  (mapv (fn [ann-map] (new-token-annotation db username ann-map)) ann-maps))
 
 (s/defn ^:always-validate fetch-anns :- (s/maybe {s/Int {s/Str annotation-schema}})
   "{token-id {ann-key1 ann ann-key2 ann} token-id2 ...}.
@@ -223,3 +252,4 @@
 ;; (mc/find-and-modify (:db db) coll {:_id 52} {} {:remove true})
 
 ;; (find-ann-by-id db coll 417 "noun")
+
