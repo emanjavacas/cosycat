@@ -6,17 +6,19 @@
             [schema.core :as s]
             [cleebo.schemas.app-state-schemas :refer [public-user-schema user-schema]]
             [cleebo.components.db :refer [new-db]]
-            [cleebo.avatar :refer [new-avatar]]))
+            [cleebo.avatar :refer [user-avatar]]))
 
 (defn new-user
   [{db-conn :db :as db} {:keys [username password]} &
    {:keys [roles] :or {roles ["user"]}}]
   (if (not (mc/find-one-as-map db-conn "users" {:username username}))
-    (let [user {:username username
+    (let [now (System/currentTimeMillis)
+          user {:username username
                 :password (hashers/encrypt password {:alg :bcrypt+blake2b-512})
                 :roles roles
-                :created (System/currentTimeMillis)
-                :avatar (new-avatar username)}]
+                :created now
+                :last-active now
+                :avatar (user-avatar username)}]
       (-> (mc/insert-and-return db-conn "users" user)
           (dissoc :password :_id)))))
 

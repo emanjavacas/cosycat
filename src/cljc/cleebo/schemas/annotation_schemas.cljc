@@ -12,6 +12,7 @@
   [{:ann {:key s/Str
           :value s/Str}
     :username s/Str
+    :project s/Str
     :timestamp s/Int}])
 
 (def token-span-schema

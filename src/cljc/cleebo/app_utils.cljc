@@ -2,7 +2,7 @@
   #?(:cljs (:require [goog.dom.pattern :as gpattern])))
 
 (defn default-project-name [username]
-  (str username "Playground"))
+  (str username "-playground"))
 
 (defn invalid-project-name [s]
   #?(:clj  (re-find #"[ ^\W+]" s)

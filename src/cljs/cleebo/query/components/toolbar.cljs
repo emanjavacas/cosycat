@@ -89,45 +89,42 @@
    [demark-all-hits-btn]
    [annotation-modal-button]])
 
-(defn get-all-usernames [project]
-  (cons (:creator project) (map :username (:users project))))
-
 (defn filter-annotations-btn []
   (let [active-project (re-frame/subscribe [:active-project])]
     (fn []
       [dropdown-select
        {:label "show annotations by: "
         :header "Pick a user"
-        :options (->default-map (cons "all" (get-all-usernames @active-project)))
+        :options (->default-map (cons "all" (map :username (:users @active-project))))
         :model "a"
         :select-fn (fn [k] "")}])))
 
 (defn filter-user-anns-btn [user filtered & [opts]]
-  (fn [{username :username avatar :avatar} filtered]
+  (fn [{username :username {href :href} :avatar} filtered]
     [bs/overlay-trigger
-     {:overlay (reagent/as-component [bs/tooltip username])
+     {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} username])
       :placement "bottom"}
      [bs/button
       (merge
        {:active (boolean filtered)
-        :onClick #(re-frame/dispatch [:filter-anns-by-user username (not filtered)])}
+        :onClick #(re-frame/dispatch [:update-filtered-users username (not filtered)])}
        opts)
       (reagent/as-component [user-thumb username {:height "25px" :width "25px"}])]]))
 
 (defn display-annotation-buttons []
-  (let [filter-user-anns (re-frame/subscribe [:filter-user-anns])
+  (let [filtered-users (re-frame/subscribe [:session :active-project :filtered-users])
         active-project-users (re-frame/subscribe [:active-project-users])]
+    (timbre/info (map :username @active-project-users))
     (fn []
       [bs/button-toolbar
-       (doall (for [{username :username :as user} @active-project-users
-                    :let [filtered (contains? @filter-user-anns username)
-                          [r g b] (get @filter-user-anns username)]]
-                ^{:key username} [filter-user-anns-btn user filtered
-                                  {:style {:background-color (str "rgb(" r "," g "," b ")")}}
-                                  ]))])))
+       (doall (for [{:keys [username avatar] :as user} @active-project-users
+                    :let [filtered (contains? @filtered-users username)]]
+                ^{:key username}
+                [filter-user-anns-btn user filtered]))])))
 
 (defn toolbar []
-  (let [query-size (re-frame/subscribe [:query-results :query-size])]
+  (let [query-size (re-frame/subscribe [:query-results :query-size])
+        filtered-users (re-frame/subscribe [:session :active-project :filtered-users])]
     (fn []
       [:div.container-fluid
        {:style {:visibility (when (zero? @query-size) "hidden" "visible")}}

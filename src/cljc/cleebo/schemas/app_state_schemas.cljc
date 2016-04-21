@@ -62,9 +62,13 @@
    :snippets {:snippet-delta s/Int
               :snippet-size s/Int}})
 
+(def avatar-schema
+  {:href s/Str
+   :dominant-color s/Str})
+
 (def user-schema
   {:username s/Str
-   :avatar s/Str
+   :avatar avatar-schema
    :roles #{s/Str}
    :created s/Int
    :last-active s/Int
@@ -72,7 +76,7 @@
 
 (def public-user-schema
   {:username s/Str
-   :avatar s/Str
+   :avatar avatar-schema
    :roles #{s/Str}
    :created s/Int
    :last-active s/Int
@@ -87,7 +91,7 @@
              :results (s/conditional empty? [] :else results-schema)
              :notifications {s/Any notification-schema}
              :active-panel s/Keyword
-             (s/optional-key :active-project) {:name s/Str :filter-user-anns #{s/Str}}
+             (s/optional-key :active-project) {:name s/Str :filtered-users #{s/Str}}
              (s/optional-key :corpora) [s/Str]
              (s/optional-key :throbbing?) {s/Any s/Bool}
              (s/optional-key :modals)     {s/Keyword s/Any}

@@ -23,6 +23,12 @@
    (let [project (find-project db project-name)]
      (is-authorized? project username action))))
 
+(defn process-users [creator users]
+  (map #(select-keys % [:username :role])
+       (cons {:username creator :role "creator"} ;add creator to users
+             (map #(assoc % :role "user") users)) ;assign default role to users
+       ))
+
 (s/defn new-project :- project-schema
   ([db creator]
    (new-project
@@ -37,11 +43,11 @@
                     (.endsWith project-name "Playground")))]}
    (-> (mc/insert-and-return
         db-conn "projects"
-        {:creator creator
-         :name project-name
+        {:name project-name
+         :creator creator
          :description description
          :created (System/currentTimeMillis)
-         :users (or (map #(select-keys % [:username :role]) (map #(assoc % :role "user") users)) [])
+         :users (process-users creator users)
          :updates []})
        (dissoc :_id))))
 

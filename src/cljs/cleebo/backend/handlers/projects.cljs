@@ -6,23 +6,24 @@
             [cleebo.schemas.project-schemas :refer [project-schema update-schema]]
             [taoensso.timbre :as timbre]))
 
-
-
 (re-frame/register-handler
  :add-project
  standard-middleware
  (fn [db [_ project]]
    (update-in db [:session :user-info :projects] conj project)))
 
+(defn get-project-info [db project-name]
+  {:post [true?]}
+  (first (filter #(= project-name (:name %))
+                 (get-in db [:session :user-info :projects]))))
+
 (re-frame/register-handler
  :set-active-project
  standard-middleware
  (fn [db [_ project-name]]
-   (let [projects (get-in db [:session :user-info :projects])
-         project  (some #(= project-name (:name %)) projects)
+   (let [project (get-project-info db project-name)
          active-project {:name project-name
-                         :filter-user-anns (into #{} (map :username (:users project)))}]
-     (assert project)
+                         :filtered-users (into #{} (map :username (:users project)))}]
      (assoc-in db [:session :active-project] active-project))))
 
 (re-frame/register-handler
@@ -35,7 +36,6 @@
   (re-frame/dispatch [:add-project project]))
 
 (defn new-project-error-handler [data]
-  (timbre/debug data)
   (re-frame/dispatch
    [:notify {:message "Couldn't create project" :status :error}]))
 
@@ -58,9 +58,9 @@
    db))
 
 (re-frame/register-handler
- :filter-anns-by-user
+ :update-filtered-users
  standard-middleware
  (fn [db [_ username flag]]
    (let [action (if flag conj disj)]
-     (update-in db [:session :active-project :filter-user-anns] action username))))
+     (update-in db [:session :active-project :filtered-users] action username))))
 

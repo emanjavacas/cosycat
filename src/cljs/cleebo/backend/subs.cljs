@@ -83,30 +83,36 @@
                               (map #(assoc % :hit-id id))))
                        @results-by-id)))))
 
-(defn get-active-project [db active-project-name]
-  (first (filter #(= @active-project-name (:name %))
-                 (get-in @db [:session :user-info :projects]))))
+(defn get-project-info [db project-name]
+  (first (filter #(= project-name (:name %))
+                 (get-in db [:session :user-info :projects]))))
+
+(defn get-all-users-info
+  ([db] (cons (get-in db [:session :user-info]) (get-in db [:session :users])))
+  ([db by-name]
+   (filter #(contains? by-name (:username %)) (get-all-users-info db))))
 
 (re-frame/register-sub
  :active-project
  (fn [db _]
    (let [active-project-name (reaction (get-in @db [:session :active-project :name]))]
-     (reaction (get-active-project db active-project-name)))))
+     (reaction (get-project-info @db @active-project-name)))))
 
 (re-frame/register-sub
  :active-project-users
  (fn [db _]
    (let [active-project-name (reaction (get-in @db [:session :active-project :name]))
-         active-project (reaction (get-active-project db active-project-name))
-         users (reaction (get-in @db [:session :users]))
+         active-project (reaction (get-project-info @db @active-project-name))
+         users (reaction (get-all-users-info @db))
          users-map (reaction (zipmap (map :username @users) @users))]
      (reaction (map #(get @users-map %) (map :username (:users @active-project)))))))
 
 (re-frame/register-sub
- :filter-user-anns
+ :filtered-users-colors
  (fn [db _]
-   (let [filter-user-anns (reaction (get-in @db [:session :active-project :filter-user-anns]))
-;         users (reaction (map :username (get-in @db [:session :users])))
-;         users-map (reaction (zipmap (map :username @users) (map :avatar @users)))
-         ]
-     (reaction (zipmap @filter-user-anns (map #(dominant-color (str "/img/avatars/" % ".png")) @filter-user-anns))))))
+   (let [filtered-users (reaction (get-in @db [:session :active-project :filtered-users]))
+         active-project-name (reaction (get-in @db [:session :active-project :name]))
+         active-project (reaction (get-project-info @db active-project-name))
+         filtered-users-info (reaction (get-all-users-info @db @filtered-users))]
+     (reaction (zipmap (map :username @filtered-users-info)
+                       (map #(get-in % [:avatar :dominant-color]) @filtered-users-info))))))

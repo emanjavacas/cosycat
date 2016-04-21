@@ -24,7 +24,6 @@
 (defn app-routes []
   (secretary/set-config! :prefix "#")
   (defroute "/" []
-    (re-frame/dispatch [:set-session [:active-project] false])
     (re-frame/dispatch [:reset-active-project])
     (re-frame/dispatch [:set-active-panel :front-panel]))
   (defroute "/project/:project-name" {project-name :project-name} 

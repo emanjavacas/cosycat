@@ -30,6 +30,10 @@
               (or (:marked meta) (and has-marked? (:has-marked meta))))
             results-by-id)))
 
+(defn filter-dummy-tokens
+  [hit]
+  (filter #(not (.startsWith (:id %) "dummy")) hit))
+
 (defn nbsp [& {:keys [n] :or {n 1}}]
   (apply str (repeat n (gstr/unescapeEntities "&nbsp;"))))
 
@@ -67,6 +71,10 @@
       (.toLocaleDateString js-date "en-GB" (clj->js opts))
       (.toDateString js-date))))
 
+(defn human-time
+  [time]
+  (parse-time time {"hour" "2-digit" "minute" "2-digit"}))
+
 (defn parse-annotation [s]
   (let [[k v] (gstr/splitLimit s "=" 2)]
     (if (and k v)
@@ -102,10 +110,10 @@
   (apply gstr/format fmt args))
 
 (defn highlight-annotation
-  ([token]
-   (highlight-annotation token {}))
+  ([token])
   ([{anns :anns :as token} users-map]
-   (let [[username _] (first (sort-by second > (frequencies (map :username anns))))]
+   (let [filtered-anns (filter #(contains? users-map (:username %)) (vals anns))
+         [username _] (first (sort-by second > (frequencies (map :username filtered-anns))))]
      (if-let [color (get users-map username)]
        (str "0 -3px " color " inset")))))
 

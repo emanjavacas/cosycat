@@ -1,7 +1,7 @@
 (ns cleebo.annotation.components.input-row
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [parse-annotation ->int]]
+            [cleebo.utils :refer [parse-annotation ->int filter-dummy-tokens]]
             [cleebo.autocomplete :refer [autocomplete-jq]]))
 
 (defn valid-span-range [to from span-selection]
@@ -35,7 +35,7 @@
   (fn [{hit :hit id :id meta :meta} & {:keys [span-selection]}]
     (into
      [:tr]
-     (for [[idx token] (map-indexed vector hit)
+     (for [[idx token] (map-indexed vector (filter-dummy-tokens hit))
            :let [token-id (:id token)]]
        ^{:key (str "input-" id "-" token-id)}
        [:td.row-shadow

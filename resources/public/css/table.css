@@ -34,7 +34,8 @@ table#table-annotation tr.queue-row:hover td:last-child {
 /* } */
 
 table td.has-annotation {
-    box-shadow: 0 -3px #d5bfb7 inset;
+    /* box-shadow: 0 -3px #d5bfb7 inset; */
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 table#table-annotation td.is-span {

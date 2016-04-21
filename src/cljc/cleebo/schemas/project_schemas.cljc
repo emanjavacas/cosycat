@@ -9,10 +9,10 @@
   [{s/Any s/Any}])
 
 (def project-schema
-  {:creator s/Str
-   :name s/Str
+  {:name s/Str
    :description s/Str
    :created s/Int
+   :creator s/Str
    (s/optional-key :users)   [{:username s/Str :role s/Str}]
    (s/optional-key :updates) [update-schema]})
 

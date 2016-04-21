@@ -74,7 +74,7 @@
   (let [projects (re-frame/subscribe [:session :user-info :projects])]
     (fn [username active-project]
       [:div (str/capitalize @username)
-       [:span
+       [:span {:style {:white-space "nowrap"}}
         (if-let [{project-name :name} @active-project]
           (str "@" project-name))]])))
 
@@ -85,7 +85,7 @@
        [:div.container-fluid
         {:style {:margin-top "-9.5px"}}
         [:div.row
-         {:style {:line-height "40px" :text-align "right" :max-width "232px"}}
+         {:style {:line-height "40px" :text-align "right"}}
          [:div.col-sm-8
           ;; wait until user-info is fetched in main
           (when @username [user-brand-span username active-project])]
@@ -155,8 +155,6 @@
   ;; init devtools
   (devtools/enable-feature! :sanity-hints :dirac)
   (devtools/install!)
-  ;; declare app routes
-  (routes/app-routes)
   ;; web-sockets
   (open-ws-channel {:url (host-url)})
   ;; start db
@@ -165,6 +163,10 @@
     {:session {:throbbing? {:front-panel true}}}])
   ;; fetch user data and projects
   (re-frame/dispatch [:fetch-user-info])
+  ;; declare app routes
+  (routes/app-routes)
+  ;; ensure we start on home page (so that db can be loaded)
+  (routes/nav! "/")
   ;; handle refreshes
   (.addEventListener js/window "beforeunload" ls/dump-db)
   ;; render root

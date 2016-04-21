@@ -6,7 +6,7 @@
             [goog.dom.classes :as gclass]
             [cleebo.annotation.components.annotation-row :refer [annotation-rows]]
             [cleebo.annotation.components.input-row :refer [input-row]]
-            [cleebo.utils :refer [->int]]
+            [cleebo.utils :refer [->int filter-dummy-tokens]]
             [taoensso.timbre :as timbre]))
 
 (defn on-mouse-down [mouse-down? highlighted? selection id]
@@ -90,7 +90,7 @@
         (into
          [:tr
           {:style {:background-color "#cedede"}}]
-         (for [{token-id :id word :word match :match anns :anns :as token} hit
+         (for [{token-id :id word :word match :match anns :anns} (filter-dummy-tokens hit)
                :let [token-id (->int token-id)]]
            ^{:key (str id "-" token-id)}
            [:td.unselectable            ;avoid text-selection
@@ -111,7 +111,7 @@
       {:style {:background-color "#f5f5f5" :cursor "pointer"}
        :class "queue-row"
        :on-click #(reset! current-hit-id id)}]
-     (for [{:keys [id] :as token} hit]
+     (for [{:keys [id] :as token} (filter-dummy-tokens hit)]
        ^{:key id} [token-cell token]))))
 
 (defn spacer

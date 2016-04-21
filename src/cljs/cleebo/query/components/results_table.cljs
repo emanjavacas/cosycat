@@ -5,7 +5,8 @@
             [goog.dom :as gdom]
             [goog.dom.classes :as gclass]
             [goog.dom.dataset :as gdataset]
-            [react-bootstrap.components :as bs]))
+            [react-bootstrap.components :as bs]
+            [cleebo.utils :refer [highlight-annotation]]))
 
 (defn on-mouse-down [mouse-down? highlighted?]
   (fn [event]
@@ -41,23 +42,25 @@
       (when (and (zero? btn) (not (gclass/has e "ignore-mark")))
         (swap! mouse-down? not)))))
 
-(defn hit-token [{:keys [id word match marked anns]} filter-user-anns]
-  (fn [{:keys [id word match marked anns]} filter-user-anns]
-    (let [highlighted (if marked "highlighted " "")
-          has-annotation (if anns "has-annotation " "")
-          is-match (if match "info" "")]
-      [:td
-       {:class (str highlighted has-annotation is-match)
-        :data-id id}
-       word])))
+(defn hit-token [{:keys [id word match marked anns]}]
+  (let [filtered-users-colors (re-frame/subscribe [:filtered-users-colors])]
+    (fn [{:keys [id word match marked anns] :as token}]
+      (let [highlighted (if marked "highlighted " "")
+            color (when anns (highlight-annotation token @filtered-users-colors))
+            is-match (if match "info" "")]
+        [:td
+         {:class (str highlighted is-match)
+          :style {:box-shadow color}
+          :data-id id}
+         word]))))
 
 (defn on-double-click [hit-idx]
   (fn [event]
     (aset event "cancelBubble" true)
     (re-frame/dispatch [:fetch-snippet hit-idx])))
 
-(defn results-row [hit-num tabindex filter-user-anns {:keys [hit id meta]}]
-  (fn [hit-num tabindex filter-user-anns {:keys [hit id meta]}]
+(defn results-row [hit-num tabindex  {:keys [hit id meta]}]
+  (fn [hit-num tabindex {:keys [hit id meta]}]
     [:tr {:data-hit id}
      (concat
       ;; checkbox
@@ -81,12 +84,11 @@
          (inc hit-num)]]]
       ;; hit
       (for [token hit]
-        ^{:key (str hit-num "-" (:id token))} [hit-token token filter-user-anns]))]))
+        ^{:key (str hit-num "-" (:id token))} [hit-token token]))]))
 
 (defn results-table []
   (let [results (re-frame/subscribe [:results])
         from (re-frame/subscribe [:session :query-results :from])
-        filter-user-anns (re-frame/subscribe [:filter-user-anns])
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]
     (fn []
@@ -104,4 +106,4 @@
         (doall
          (for [[idx {:keys [hit meta id] :as hit-map}] (map-indexed vector @results)
                :let [hit-num (+ idx @from)]]
-           ^{:key hit-num} [results-row hit-num idx filter-user-anns hit-map]))]])))
+           ^{:key hit-num} [results-row hit-num idx hit-map]))]])))

@@ -106,7 +106,7 @@
          
      ;; project updates
      [:in :notify :new-project] (let [{creator :creator project-name :name :as project} data
-                                      message (get-msg [:new-project] creator project-name)]
+                                      message (get-msg [:new-project] project-name creator)]
                                   (re-frame/dispatch [:add-project project])
                                   (re-frame/dispatch [:notify {:message message}])
                                   db)

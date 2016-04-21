@@ -13,7 +13,10 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [project (new-project db username project-name desc users)]
-    (notify-clients ws project :ws-from username :target-clients users)
+    (notify-clients ws {:status :new-project
+                        :type :notify
+                        :data project}
+                    :ws-from username :target-clients users)
     project))
 
 (defmethod project-router

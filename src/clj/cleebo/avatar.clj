@@ -1,6 +1,8 @@
 (ns cleebo.avatar
   (:require [clojure.java.io :as io])
-  (:import [org.hackrslab.avatar RandomAvatarBuilder RandomAvatar RandomAvatar$Extra]))
+  (:import [org.hackrslab.avatar RandomAvatarBuilder RandomAvatar RandomAvatar$Extra]
+           [javax.imageio ImageIO ImageReader]
+           [javax.imageio.stream ImageInputStream]))
 
 (defn build-generator ^RandomAvatar []
   (-> (RandomAvatarBuilder.)
@@ -30,9 +32,10 @@
 (defn new-avatar
   "Creates a new avatar for a user using the `username` as `seed`"
   [username]
-  (let [fname (str "resources/" (new-filename username))]
-    (random-avatar fname username)
-    fname))
+  (let [fname (new-filename username)
+        full-fname (str "resources/" fname)]
+    (do (random-avatar full-fname username)
+        fname)))
 
 (defn get-avatar
   "Tries to read an existing avatar, if it doesn't succeed it creates a new one"
@@ -43,6 +46,36 @@
       (new-avatar username))
     fname))
 
+(defn slurp-pixels [f]
+  (ImageIO/read f))
 
+(defn get-rgb-array [pxl]
+  (let [alpha (bit-and 0xff (bit-shift-right pxl 24))
+        red   (bit-and 0xff (bit-shift-right pxl 16))
+        green (bit-and 0xff (bit-shift-right pxl 8))
+        blue  (bit-and 0xff pxl)]
+    {:red red :green green :blue blue}))
 
+(defn get-colors [img]
+  (into #{} (for [i (range 0 (.getHeight img) 50)
+                  j (range 0 (.getWidth img) 50)
+                  :let [pxl (.getRGB img i j)]]
+              (get-rgb-array pxl))))
 
+(defn get-brightest [colors]
+  (first (sort-by #(apply + (vals %)) > colors)))
+
+(defn ->hex [{:keys [red green blue]}]
+  (str "#" (Integer/toHexString red) (Integer/toHexString green) (Integer/toHexString blue)))
+
+(defn get-hex-color [f]
+  (-> (io/resource f)
+      slurp-pixels
+      get-colors
+      get-brightest
+      ->hex))
+
+(defn user-avatar [username]
+  (let [f (new-avatar username)
+        c (get-hex-color f)]
+    {:href f :dominant-color c}))
