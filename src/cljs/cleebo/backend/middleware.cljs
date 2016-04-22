@@ -1,5 +1,6 @@
 (ns cleebo.backend.middleware
   (:require [re-frame.core :as re-frame]
+            [re-frame.utils :refer [warn]]
             [reagent.core :as reagent]
             [taoensso.timbre :as timbre]
             [cleebo.schemas.app-state-schemas :refer [db-schema]]
@@ -8,7 +9,7 @@
 (enable-console-print!)
 
 (defn log-ex
-  "print whole stacktrace before being sucked by asyn channel"
+  "print whole stacktrace before being sucked by async channel"
   [handler]
   (fn [db v]
     (try
@@ -22,6 +23,20 @@
   (if-let [res (s/check db-schema db)]
     (do (timbre/debug "validation error:" res)
         (.log js/console "validation error: " res))))
+
+(defn check-project-exists
+  [handler]
+  (fn [db [_ {:keys [project-name]} :as args]]
+    (if-not project-name
+      (do (warn "Project middleware requires named :project-name but got" args) db)
+      (let [projects (get-in db [:session :user-info :projects])]
+        (if-not (some #{project-name} (map :name projects))
+          (do (re-frame/dispatch
+               [:session-error
+                {:error "Project not found!"
+                 :message "These are not the projects you are looking for."}])
+              db)
+          (handler db args))))))
 
 (def standard-middleware
   [(when ^boolean goog.DEBUG log-ex)

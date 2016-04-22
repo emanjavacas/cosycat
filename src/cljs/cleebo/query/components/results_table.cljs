@@ -43,7 +43,8 @@
         (swap! mouse-down? not)))))
 
 (defn hit-token [{:keys [id word match marked anns]}]
-  (let [filtered-users-colors (re-frame/subscribe [:filtered-users-colors])]
+  (let [filtered-users-colors (re-frame/subscribe [:filtered-users-colors])
+        active-project (re-frame/subscribe [:session :active-project :name])]
     (fn [{:keys [id word match marked anns] :as token}]
       (let [highlighted (if marked "highlighted " "")
             color (when anns (highlight-annotation token @filtered-users-colors))

@@ -1,7 +1,7 @@
 (ns cleebo.backend.subs
     (:require-macros [reagent.ratom :refer [reaction]])
     (:require [re-frame.core :as re-frame]
-              [cleebo.utils :refer [filter-marked-hits select-values dominant-color]]
+              [cleebo.utils :refer [filter-marked-hits select-values]]
               [taoensso.timbre :as timbre]))
 
 (re-frame/register-sub
@@ -111,8 +111,6 @@
  :filtered-users-colors
  (fn [db _]
    (let [filtered-users (reaction (get-in @db [:session :active-project :filtered-users]))
-         active-project-name (reaction (get-in @db [:session :active-project :name]))
-         active-project (reaction (get-project-info @db active-project-name))
          filtered-users-info (reaction (get-all-users-info @db @filtered-users))]
      (reaction (zipmap (map :username @filtered-users-info)
                        (map #(get-in % [:avatar :dominant-color]) @filtered-users-info))))))

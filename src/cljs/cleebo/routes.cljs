@@ -26,9 +26,9 @@
   (defroute "/" []
     (re-frame/dispatch [:reset-active-project])
     (re-frame/dispatch [:set-active-panel :front-panel]))
-  (defroute "/project/:project-name" {project-name :project-name} 
-    (re-frame/dispatch [:set-active-project project-name])
-    (re-frame/dispatch [:set-active-panel :query-panel]))
+  (defroute "/project/:project-name" {project-name :project-name}
+    (re-frame/dispatch [:set-active-panel :query-panel])
+    (re-frame/dispatch [:set-active-project {:project-name project-name}]))
   (defroute "/settings" []
     (re-frame/dispatch [:set-active-panel :settings-panel]))
   (defroute "/debug" []

@@ -83,9 +83,16 @@
    (s/optional-key :active) s/Bool
    (s/optional-key :projects) [project-schema]})
 
+(def app-error-schema
+  {:error s/Str
+   :message s/Str
+   (s/optional-key s/Any) s/Any})
+
 (def db-schema
   {:settings settings-schema
-   :session {:query-opts query-opts-schema
+   :session {:init-session s/Bool
+             (s/optional-key :session-error) app-error-schema
+             :query-opts query-opts-schema
              :query-results query-results-schema
              :results-by-id (s/conditional empty? {} :else results-by-id-schema)
              :results (s/conditional empty? [] :else results-schema)

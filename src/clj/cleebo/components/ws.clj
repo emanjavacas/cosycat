@@ -70,8 +70,8 @@
         {{ws-in :ws-in ws-out :ws-out} :chans clients :clients} ws]
     (kit/with-channel req ws-ch
       (connect-client ws ws-ch username)
-      (go (loop []
-            (if-let [p (<! ws-out)]
+      (go (loop []                      ;this code must never throw an exception
+            (if-let [p (<! ws-out)]     ;if falsy, the channel closes
               (let [{:keys [ws-target ws-from payload]} p
                     ws-target-ch (get @clients ws-target)]
                 (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)

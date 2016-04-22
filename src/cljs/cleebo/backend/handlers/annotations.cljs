@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [schema.core :as s]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
-            [cleebo.utils :refer [update-token ->int format]]
+            [cleebo.utils :refer [->int format]]
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))
 
@@ -46,6 +46,15 @@
         1 (do (assert (= token-id (:id (first marked-tokens)))) false)
         (some #(= token-id %) (map :id marked-tokens))))))
 
+(defn update-token
+  "apply token-fn where due"
+  [{:keys [hit meta] :as hit-map} check-token-fn token-fn]
+  (assoc hit-map :hit (map (fn [{:keys [id] :as token}]
+                             (if (check-token-fn id)
+                               (token-fn token)
+                               token))
+                           hit)))
+
 (re-frame/register-handler
  :mark-token
  standard-middleware
@@ -60,33 +69,48 @@
       [:session :results-by-id hit-id]
       (update-token hit-map check-token-fn token-fn)))))
 
-(defmulti update-annotation
+(defmulti update-token-anns
   "inserts incoming annotation into the corresponding hit map"
   (fn [hit-map {{scope :scope t :type} :span}] t))
-(defmethod update-annotation
-  "token"
+(defmethod update-token-anns "token"
   [hit-map {{scope :scope} :span {k :key} :ann :as ann-map}]
   (let [token-fn (fn [token] (assoc-in token [:anns k] ann-map))
         check-token-fn (fn [id] (= (str scope) id))]
     (update-token hit-map check-token-fn token-fn)))
-(defmethod update-annotation
-  "IOB"
+(defmethod update-token-anns "IOB"
   [hit-map {{scope :scope} :span {k :key} :ann :as ann-map}]
   (let [{B :B O :O} scope
         token-fn (fn [token] (assoc-in token [:anns k] ann-map))
         check-token-fn (fn [id] (contains? (apply hash-set (range B (inc O))) (->int id)))]
     (update-token hit-map check-token-fn token-fn)))
 
-(re-frame/register-handler              ;todo iob annotations
+(defn- find-ann-hit-id*
+  ([pred hit-maps]
+   (some (fn [{:keys [hit meta id]}]
+           (when (some pred (map :id hit))
+             id))
+         hit-maps)))
+
+(defmulti find-ann-hit-id (fn [{{type :type} :span} hit-id] type))
+(defmethod find-ann-hit-id "token"
+  [{{scope :scope} :span} hit-maps]
+  (find-ann-hit-id* #{(str scope)} hit-maps))
+(defmethod find-ann-hit-id "IOB"
+  [{{{B :B O :O} :scope} :span} hit-maps]
+  (find-ann-hit-id* (into #{} (map str (range B (inc O)))) hit-maps))
+
+(re-frame/register-handler
  :add-annotation
  standard-middleware
  (fn [db [_ {:keys [hit-id ann-map]}]]
-   (if-let [hit-map (get-in db [:session :results-by-id hit-id])]
-     (assoc-in
-      db
-      [:session :results-by-id hit-id]
-      (update-annotation hit-map ann-map))
-     db)))
+   (let [results-by-id (get-in db [:session :results-by-id])
+         hit-id (or hit-id (find-ann-hit-id ann-map (vals results-by-id)))]
+     (if-let [hit-map (get results-by-id hit-id)]
+       (assoc-in
+        db
+        [:session :results-by-id hit-id]
+        (update-token-anns hit-map ann-map))
+       db))))
 
 (s/defn ^:always-validate make-annotation :- annotation-schema
   ([project ann token-id]

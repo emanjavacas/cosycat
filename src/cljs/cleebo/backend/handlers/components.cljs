@@ -13,11 +13,13 @@
 
 (re-frame/register-handler
  :close-modal
+ standard-middleware
  (fn [db [_ modal]]
    (assoc-in db [:session :modals modal] false)))
 
 (re-frame/register-handler
  :set-active-panel
+ standard-middleware
  (fn [db [_ active-panel]]
    (assoc-in db [:session :active-panel] active-panel)))
 

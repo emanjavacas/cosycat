@@ -5,7 +5,8 @@
   {:settings {:notifications {:delay 7500}
               :snippets {:snippet-size 25
                          :snippet-delta 10}}
-   :session {:active-panel :front-panel
+   :session {:init-session false
+             :active-panel :front-panel
              :query-opts {:corpus ""
                           :context 5
                           :size 10

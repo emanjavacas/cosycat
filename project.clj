@@ -29,7 +29,7 @@
                  [ring "1.4.0" :exclusions [ring/ring-jetty-adapter]]                 
                  [http-kit "2.1.18"]
                  [compojure "1.4.0"]
-                 [cljs-ajax "0.5.2"]
+                 [cljs-ajax "0.5.4"]
                  [buddy/buddy-auth "0.8.1"]
                  [buddy/buddy-hashers "0.9.1"]
                  [com.stuartsierra/component "0.3.1"]

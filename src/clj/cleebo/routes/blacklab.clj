@@ -67,7 +67,6 @@
 
 (defmulti blacklab-routes
   (fn [{{route :route} :params :as req}]
-    (timbre/debug req)
     (->keyword route)))
 
 (defmethod blacklab-routes :query [{{db :db} :components :as req}]

@@ -20,7 +20,8 @@
 (defn users-row [creator users]
   (fn [creator users]
     [:table [:tbody [:tr (doall (for [{username :username :as user} users
-                                      :when (not= username creator)]
+;                                      :when (not= username creator)
+                                      ]
                                   ^{:key username} [user-cell user]))]]]))
 
 (defn project-row [{:keys [name description creator users]}]

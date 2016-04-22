@@ -4,6 +4,7 @@
             [ajax.core :refer [GET]]
             [cleebo.backend.middleware :refer [standard-middleware]]
             [cleebo.app-utils :refer [default-project-name]]
+            [cleebo.utils :refer [format]]
             [taoensso.timbre :as timbre]))
 
 (re-frame/register-handler
@@ -52,14 +53,19 @@
     (re-frame/dispatch [:set-session [:corpora] corpora])
     (re-frame/dispatch [:set-session [:query-opts :corpus] (first corpora)])
     (re-frame/dispatch [:set-session [:users] users])
+    (re-frame/dispatch [:set-session [:init-session] true])
     (js/setTimeout #(re-frame/dispatch [:stop-throbbing :front-panel]) 2000)))
 
 (defn session-error-handler [data]
   (re-frame/dispatch [:stop-throbbing :front-panel])
+  (re-frame/dispatch
+   [:session-error
+    {:error "initialisation error"
+     :message "Couldn't load user session. Try refreshing the browser :-S"}])
   (timbre/debug data))
 
 (re-frame/register-handler
- :fetch-user-info
+ :init-session
  standard-middleware
  (fn [db _]
    (re-frame/dispatch [:start-throbbing :front-panel])
@@ -67,3 +73,14 @@
         {:handler session-handler
          :error-handler session-error-handler})
    db))
+
+(re-frame/register-handler
+ :session-error
+ standard-middleware
+ (fn [db [_ {:keys [error message] :as args}]]
+   (timbre/info (format "[APP Error: %s] with message: %s" error message))
+   (-> db
+       (assoc-in [:session :active-panel] :error-panel)
+       (assoc-in [:session :session-error] args))))
+
+

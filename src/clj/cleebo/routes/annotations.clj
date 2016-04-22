@@ -39,7 +39,7 @@
               (map-vals (partial apply transpose vector))
               (map (fn [[status data]] {:data data :type :annotation :status status}))))))
 
-(defn annotation-route [ws client-payload]
+(defn annotation-route [ws client-payload] ;eventually selectively send to clients in project
   (let [{ws-from :ws-from {:keys [type status data]} :payload} client-payload
         {hit-id :hit-id ann-map :ann-map} data
         {db :db} ws

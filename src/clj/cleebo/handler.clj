@@ -1,8 +1,8 @@
 (ns cleebo.handler
   (:require [com.stuartsierra.component :as component]
             [taoensso.timbre :as timbre]
-            [compojure.core
-             :refer [GET POST ANY HEAD defroutes wrap-routes]]
+            [environ.core :refer [env]]
+            [compojure.core :refer [GET POST ANY HEAD defroutes wrap-routes]]
             [compojure.route :refer [not-found resources]]
             [prone.middleware :refer [wrap-exceptions]]
             [cleebo.views.error :refer [error-page]]
@@ -12,10 +12,8 @@
             [cleebo.views.login :refer [login-page]]
             [ring.util.response :refer [redirect]]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
-            [ring.middleware.anti-forgery
-             :refer [wrap-anti-forgery *anti-forgery-token*]]
-            [ring.middleware.transit
-             :refer [wrap-transit-response wrap-transit-params]]
+            [ring.middleware.anti-forgery :refer [wrap-anti-forgery *anti-forgery-token*]]
+            [ring.middleware.transit :refer [wrap-transit-response wrap-transit-params]]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.nested-params :refer [wrap-nested-params]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
@@ -23,8 +21,7 @@
             [ring.middleware.reload :refer [wrap-reload]]
             [ring-ttl-session.core :refer [ttl-memory-store]]
             [buddy.auth :refer [authenticated?]]
-            [buddy.auth.middleware
-             :refer [wrap-authentication wrap-authorization]]
+            [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
             [cleebo.components.blacklab :refer [remove-hits!]]
             [cleebo.routes.auth :refer
              [is-logged? safe auth-backend token-backend login-route signup-route]]
@@ -70,34 +67,36 @@
   (resources "/")
   (not-found (error-page :status 404 :title "Page not found!!")))
 
+(defn is-ajax
+  "not sure how robust this is"
+  [{headers :headers :as req}]
+  (timbre/debug headers)
+  (boolean (= "XMLHttpRequest" (get headers "X-Requested-With"))))
+
 ;;; middleware
 (defn wrap-internal-error [handler]
   (fn [req]
     (try
       (handler req)
       (catch Throwable t
-        (error-page
-         {:status 500
-          :title "Something very bad happened!"
-          :message (str t)})))))
-
-(defn wrap-debug [handler]
-  (fn [req]
-    (when-not (get-in req [:params :*])
-      (when-not (empty? (:params req))
-        (timbre/info req)))
-    (handler req)))
+        (if (is-ajax req)
+          {:status 500
+           :body {:message "Oops! Something bad happened!"
+                  :data {:exception (str (class t)) :type :internal-error}}}
+          (error-page
+           {:status 500
+            :title "Something very bad happened!"
+            :message (str t)}))))))
 
 (defn wrap-base [handler]
   (-> handler   
-      wrap-debug
       wrap-reload
       (wrap-authorization auth-backend)
       (wrap-authentication auth-backend)
 ;      (wrap-authorization token-backend)
 ;      (wrap-authentication token-backend)
       (wrap-anti-forgery {:read-token (fn [req] (get-in req [:params :csrf]))})
-      (wrap-session {:store (ttl-memory-store (* 30 60))})
+      (wrap-session {:store (ttl-memory-store (* (env :session-expires) 60))})
       (wrap-transit-params {:encoding :json-verbose})
       wrap-keyword-params
       wrap-nested-params

@@ -6,7 +6,8 @@
             [cleebo.localstorage :as ls]
             [cleebo.backend.middleware
              :refer [standard-middleware no-debug-middleware]]
-            [cleebo.schemas.app-state-schemas :refer [db-schema]]))
+            [cleebo.schemas.app-state-schemas :refer [db-schema]]
+            [taoensso.timbre :as timbre]))
 
 (re-frame/register-handler
  :initialize-db
@@ -45,3 +46,11 @@
        {:message "State succesfully backed-up"
         :status :ok}]))
    db))
+
+(re-frame/register-handler
+ :print-db
+ standard-middleware
+ (fn [db [_ & [path]]]
+   (timbre/info (if path (get-in db path) db))
+   db))
+

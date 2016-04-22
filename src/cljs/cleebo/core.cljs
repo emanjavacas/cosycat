@@ -23,9 +23,10 @@
             [cleebo.updates.page :refer [updates-panel]]
             [cleebo.debug.page :refer [debug-panel]]
             [cleebo.front.page :refer [front-panel]]
+            [cleebo.error.page :refer [error-panel]]            
             [cleebo.utils :refer [nbsp]]
+            [cleebo.ajax-interceptors :refer [add-interceptor csrf-interceptor]]
             [taoensso.timbre :as timbre]
-            [devtools.core :as devtools]
             [clojure.string :as str]))
 
 (defmulti panels identity)
@@ -35,6 +36,7 @@
 (defmethod panels :debug-panel [] [#'debug-panel])
 (defmethod panels :updates-panel [] [#'updates-panel])
 (defmethod panels :annotation-panel [] [#'annotation-panel])
+(defmethod panels :error-panel [] [#'error-panel])
 
 (defn icon-label [icon label]
   [:span [:i {:class (str "zmdi " icon)      
@@ -42,6 +44,29 @@
                       :font-size "15px"
                       :margin-right "5px"}}]
    label])
+
+(defn user-brand-span [username active-project]
+  (let [projects (re-frame/subscribe [:session :user-info :projects])]
+    (fn [username active-project]
+      [:div (str/capitalize @username)
+       [:span {:style {:white-space "nowrap"}}
+        (if-let [{project-name :name} @active-project]
+          (str "@" project-name))]])))
+
+(defn user-brand [active-project]
+  (let [username (re-frame/subscribe [:session :user-info :username])]
+    (fn [active-project]
+      [bs/navbar-brand
+       [:div.container-fluid
+        {:style {:margin-top "-9.5px"}}
+        [:div.row
+         {:style {:line-height "40px" :text-align "right"}}
+         [:div.col-sm-8
+          ;; wait until user-info is fetched in main
+          (when @username [user-brand-span username active-project])]
+         [:div.col-sm-4
+          ;; wait until user-info is fetched in main
+          (when @username [user-thumb @username {:height "30px" :width "30px"}])]]]])))
 
 (defn navlink [target href label icon]
   (let [active (re-frame/subscribe [:active-panel])]
@@ -70,29 +95,30 @@
                            args)
                     label])])))
 
-(defn user-brand-span [username active-project]
-  (let [projects (re-frame/subscribe [:session :user-info :projects])]
-    (fn [username active-project]
-      [:div (str/capitalize @username)
-       [:span {:style {:white-space "nowrap"}}
-        (if-let [{project-name :name} @active-project]
-          (str "@" project-name))]])))
+(defn projects-dropdown [projects active-project]
+  (fn [projects active-project]
+    [navdropdown :no-panel "Projects" "zmdi-toys"
+     :children
+     (concat
+      [{:label "Projects page" :href "#/"}
+       {:divider true}
+       {:label "Projects" :header true}]
+      (doall
+       (for [{project-name :name} @projects]
+         {:label project-name
+          :href (str "#/project/" project-name)
+          :style (when (= project-name (:name @active-project))
+                   {:background-color "#e7e7e7"
+                    :color "black"})})))]))
 
-(defn user-brand [active-project]
-  (let [username (re-frame/subscribe [:session :user-info :username])]
-    (fn [active-project]
-      [bs/navbar-brand
-       [:div.container-fluid
-        {:style {:margin-top "-9.5px"}}
-        [:div.row
-         {:style {:line-height "40px" :text-align "right"}}
-         [:div.col-sm-8
-          ;; wait until user-info is fetched in main
-          (when @username [user-brand-span username active-project])]
-         [:div.col-sm-4
-          ;; wait until user-info is fetched in main
-          (when @username
-            [user-thumb @username {:height "30px" :width "30px"}])]]]])))
+(defn debug-dropdown []
+  [navdropdown :debug-panel "Debug" "zmdi-bug" ;debug mode
+   :children
+   [{:label "Debug page" :href "#/debug"}
+    {:label "App snapshots"
+     :on-select #(re-frame/dispatch [:open-modal :localstorage])}
+    {:label "New backup"
+     :on-select ls/dump-db}]])
 
 (defn navbar [active-panel]
   (let [active-project (re-frame/subscribe [:active-project])
@@ -105,38 +131,24 @@
        [bs/navbar-header [user-brand active-project]]
        [bs/nav {:pullRight true}
         (when-not (= @active-panel :front-panel)
+          [navlink :query-panel (str "#/project/" (:name @active-project))
+           "Query" "zmdi-search"])
+        (when-not (= @active-panel :front-panel)
           [navlink :annotation-panel "#/annotation" "Annotation" "zmdi-edit"])
         (when-not (= @active-panel :front-panel)
           [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"])
         (when-not (= @active-panel :front-panel)
           [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"])
         (when-not (or (= @active-panel :front-panel) (empty? @projects))
-          [navdropdown :query-panel "Projects" "zmdi-bug"
-           :children
-           (concat
-            [{:label "Projects page" :href "#/"}
-             {:divider true}
-             {:label "Projects" :header true}]
-            (doall
-             (for [{project-name :name} @projects]
-               {:label project-name
-                :href (str "#/project/" project-name)
-                :style (when (= project-name (:name @active-project))
-                         {:background-color "#e7e7e7"
-                          :color "black"})})))])
-        [navdropdown :debug-panel "Debug" "zmdi-bug" ;debug mode
-         :children
-         [{:label "Debug page" :href "#/debug"}
-          {:label "App snapshots"
-           :on-select #(re-frame/dispatch [:open-modal :localstorage])}
-          {:label "New backup"
-           :on-select ls/dump-db}]]
+          [projects-dropdown projects active-project])
+        [debug-dropdown]
         [navlink :exit "#/exit" "Exit" "zmdi-power"]]])))
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])
         ls-modal? (re-frame/subscribe [:modals :localstorage])]
     (fn []
+      (timbre/debug @active-panel)
       [:div
        [navbar active-panel]
        [notification-container]
@@ -152,9 +164,8 @@
   (str "ws://" (.-host js/location) "/ws"))
 
 (defn init! []
-  ;; init devtools
-  (devtools/enable-feature! :sanity-hints :dirac)
-  (devtools/install!)
+  ;; install csrf-token
+  (add-interceptor csrf-interceptor {:csrf-token js/csrf})
   ;; web-sockets
   (open-ws-channel {:url (host-url)})
   ;; start db
@@ -162,7 +173,7 @@
    [:initialize-db
     {:session {:throbbing? {:front-panel true}}}])
   ;; fetch user data and projects
-  (re-frame/dispatch [:fetch-user-info])
+  (re-frame/dispatch [:init-session])
   ;; declare app routes
   (routes/app-routes)
   ;; ensure we start on home page (so that db can be loaded)

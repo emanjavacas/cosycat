@@ -72,13 +72,9 @@
   [{db :db} ann-id]
   (mc/find-one-as-map db "anns" {:_id ann-id} {:_id false}))
 
-(defn compute-history [ann]
-  (let [record-ann (select-keys ann [:ann :username :timestamp])]
-    (conj (:history ann) record-ann)))
-
 (defmulti insert-annotation
   "creates new ann in coll `anns`+`cpos-ann` for given ann"
-  (fn [db {{t :type} :span}] t))
+  (fn [db {{type :type} :span}] type))
 
 (s/defmethod insert-annotation
   "token"
@@ -104,6 +100,10 @@
        {$push {:anns {:key k :ann-id _id}}}
        {:upsert true}))
     ann))
+
+(defn compute-history [ann]
+  (let [record-ann (select-keys ann [:ann :username :timestamp :project])]
+    (conj (:history ann) record-ann)))
 
 (defmulti update-annotation
   "updates existing ann in coll `anns` for given key."

@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [ajax.core :refer [POST]]
-            [cleebo.backend.middleware :refer [standard-middleware]]
+            [cleebo.backend.middleware :refer [standard-middleware check-project-exists]]
             [cleebo.schemas.project-schemas :refer [project-schema update-schema]]
             [taoensso.timbre :as timbre]))
 
@@ -19,8 +19,8 @@
 
 (re-frame/register-handler
  :set-active-project
- standard-middleware
- (fn [db [_ project-name]]
+ (conj standard-middleware check-project-exists)
+ (fn [db [_ {:keys [project-name]}]]
    (let [project (get-project-info db project-name)
          active-project {:name project-name
                          :filtered-users (into #{} (map :username (:users project)))}]
@@ -51,8 +51,7 @@
            {:params {:route :new-project
                      :name name
                      :description description
-                     :users (map #(select-keys % [:username :role]) users)
-                     :csrf js/csrf}
+                     :users (map #(select-keys % [:username :role]) users)}
             :handler new-project-handler
             :error-handler new-project-error-handler}))
    db))
