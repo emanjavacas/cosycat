@@ -1,5 +1,7 @@
 (ns cleebo.avatar
-  (:require [clojure.java.io :as io])
+  (:require [clojure.java.io :as io]
+            [schema.core :as s]
+            [cleebo.schemas.app-state-schemas :refer [avatar-schema]])
   (:import [org.hackrslab.avatar RandomAvatarBuilder RandomAvatar RandomAvatar$Extra]
            [javax.imageio ImageIO ImageReader]
            [javax.imageio.stream ImageInputStream]))
@@ -17,7 +19,7 @@
       (.addColor 189 54 47)
       (.build)))
 
-(defn- random-avatar
+(defn random-avatar
   "Saves a random or seeded png image into filename"
   ([filename] (random-avatar filename "default"))
   ([filename seed]
@@ -75,7 +77,7 @@
       get-brightest
       ->hex))
 
-(defn user-avatar [username]
+(s/defn ^:always-validate user-avatar [username] :- avatar-schema
   (let [f (new-avatar username)
         c (get-hex-color f)]
     {:href f :dominant-color c}))

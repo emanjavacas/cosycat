@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [schema.core :as s]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
-            [cleebo.utils :refer [->int format]]
+            [cleebo.utils :refer [->int format get-msg]]
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))
 
@@ -99,17 +99,40 @@
   [{{{B :B O :O} :scope} :span} hit-maps]
   (find-ann-hit-id* (into #{} (map str (range B (inc O)))) hit-maps))
 
+(defmulti compute-notification-data     ;TODO: shortcut if not in project
+  (fn [{:keys [ann-map hit-id]} me] (type ann-map)))
+(defmethod compute-notification-data cljs.core/PersistentArrayMap
+  [{{{{B :B O :B :as scope} :scope type :type} :span
+     project :project username :username} :ann-map} me]
+  (let [by (if (= me username) :me :other)]
+    {:message (case [type username]
+                ["token" me] (get-msg [:annotation :ok by :token] scope)
+                ["IOB" me] (get-msg [:annotation :ok by :IOB] B O)
+                ["token" username] (get-msg [:annotation :ok by :token] username scope)
+                ["IOB" username] (get-msg [:annotation :ok by :IOB] username B O))
+     :by username}))
+(defmethod compute-notification-data cljs.core/PersistentVector
+  [{:keys [ann-map]} me]
+  (let [username (:username (first ann-map))] ;assumes all anns were made by same user
+    {:message (if (= me username)
+                (get-msg [:annotation :ok :me :mult] (count ann-map))
+                (get-msg [:annotation :ok :other :mult] username (count ann-map)))
+     :by username}))
+
 (re-frame/register-handler
  :add-annotation
  standard-middleware
- (fn [db [_ {:keys [hit-id ann-map]}]]
+ (fn [db [_ {:keys [hit-id ann-map] :as data}]]
    (let [results-by-id (get-in db [:session :results-by-id])
-         hit-id (or hit-id (find-ann-hit-id ann-map (vals results-by-id)))]
+         hit-id (or hit-id (find-ann-hit-id ann-map (vals results-by-id)))
+         me (get-in db [:session :user-info :username])]
      (if-let [hit-map (get results-by-id hit-id)]
-       (assoc-in
-        db
-        [:session :results-by-id hit-id]
-        (update-token-anns hit-map ann-map))
+       (let [{:keys [message by]} (compute-notification-data data me)]
+         (re-frame/dispatch [:notify {:message message :by by}])
+         (assoc-in
+          db
+          [:session :results-by-id hit-id]
+          (update-token-anns hit-map ann-map)))
        db))))
 
 (s/defn ^:always-validate make-annotation :- annotation-schema

@@ -109,7 +109,7 @@
        {:active (boolean filtered)
         :onClick #(re-frame/dispatch [:update-filtered-users username (not filtered)])}
        opts)
-      (reagent/as-component [user-thumb username {:height "25px" :width "25px"}])]]))
+      (reagent/as-component [user-thumb href {:height "25px" :width "25px"}])]]))
 
 (defn display-annotation-buttons []
   (let [filtered-users (re-frame/subscribe [:session :active-project :filtered-users])

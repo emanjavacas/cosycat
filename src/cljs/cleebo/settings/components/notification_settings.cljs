@@ -11,22 +11,13 @@
 (def help-map
   {:delay "Set a time (in msec) to wait until notifications fade out"})
 
-(defn on-mouse-over [target text-atom]
-  (fn [e] (reset! text-atom (get help-map target))))
+(defn on-mouse-over [target text-atom] (fn [e] (reset! text-atom (get help-map target))))
 
-(defn on-mouse-out [text-atom]
-  (fn [e] (reset! text-atom "")))
+(defn on-mouse-out [text-atom] (fn [e] (reset! text-atom "")))
 
-(defn on-click [f]
-  (fn []
-    (re-frame/dispatch
-     [:update-notification
-      [:delay]
-      f])))
+(defn on-click [v] (fn [] (re-frame/dispatch [:update-notification [:delay] v])))
 
-(defn get-default [path]
-  (fn []
-    (get-in default-db path)))
+(defn get-default [path] (fn [] (get-in default-db path)))
 
 (defn notification-controller []
   (let [notification-help (reagent/atom "")

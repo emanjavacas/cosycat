@@ -12,6 +12,7 @@
    :type   s/Keyword
    :data   {:hit-id  (s/if vector? [s/Int] s/Int)
             :ann-map (s/if vector? [annotation-schema] annotation-schema)}
+   :source s/Str
    :payload-id s/Any})
 
 (def ann-error-from-server-schema
@@ -22,6 +23,7 @@
           :reason   s/Keyword
           (s/optional-key :e) s/Str
           (s/optional-key :username) s/Str} ;?
+   :source s/Str
    :payload-id s/Any})
 
 (defn ws-from-server
@@ -31,8 +33,8 @@
     [:annotation :error] ann-error-from-server-schema
     [:notify     _]      {:status s/Keyword
                           :type s/Keyword
-                          :data {:message s/Str
-                                 :by s/Str}
+                          :data {:message s/Str}
+                          :source s/Str
                           (s/optional-key :payload-id) s/Any}))
 
 (defn ws-from-client

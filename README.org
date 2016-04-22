@@ -198,14 +198,14 @@ Different notification profiles:
 
 ** Front end
 
-*** TODO Edit panel
+*** Edit panel
 
 **** TODO On edit attempt display notification suggesting init edit process
 
 **** TODO Init edit process directly by clicking on the annotation
 
 *** Navbar
-**** TODO Add Back to query button
+**** DONE Add Back to query button
 
 *** Front page
 
@@ -219,13 +219,13 @@ restrict access to project page depending on role
 
 *** Annotation page
 
-**** TODO Add filters (switcher for users) and sorters (for annotations)
+**** DONE Add filters (switcher for users) and sorters (for annotations)
 **** DONE Retrieve textual context
 **** TODO? Group annotation by colors
 *** Query page
 **** TODO Warn/skip greedy quantifiers
 **** DONE Query on button click
-**** TODO update incoming annotation for a token not in the target hit (in case it also appears)
+**** DONE update incoming annotation for a token not in the target hit (in case it also appears)
 *** Home page
 **** TODO Show connection status
 *** WS

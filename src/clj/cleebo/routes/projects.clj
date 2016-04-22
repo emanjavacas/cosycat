@@ -6,9 +6,7 @@
             [taoensso.timbre :as timbre]))
 
 (defmulti project-router (fn [{{route :route} :params}] route))
-
-(defmethod project-router
-  :new-project
+(defmethod project-router :new-project
   [{{route :route project-name :name desc :description users :users} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
@@ -18,9 +16,7 @@
                         :data project}
                     :ws-from username :target-clients users)
     project))
-
-(defmethod project-router
-  :update-project
+(defmethod project-router :update-project
   [{{route :route name :name desc :description users :users} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]

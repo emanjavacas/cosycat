@@ -7,48 +7,47 @@
             [cleebo.front.components.new-project-panel :refer [new-project-btn]]
             [taoensso.timbre :as timbre]))
 
-(defn user-cell [user]
-  (fn [{username :username}]
-    [:td
-     {:style {:padding-right "10px"}}
-     [bs/overlay-trigger
-      {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} username])
-       :placement "bottom"
-       :class "pull-right"}
-      [user-selection-component {:username username}]]]))
+(defn user-cell [{username :username}]
+  (let [user-info (re-frame/subscribe [:user username])]
+    (fn [user]
+      [:td
+       {:style {:padding-right "10px"}}
+       [bs/overlay-trigger
+        {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} username])
+         :placement "bottom"
+         :class "pull-right"}
+        [user-selection-component @user-info]]])))
 
 (defn users-row [creator users]
   (fn [creator users]
-    [:table [:tbody [:tr (doall (for [{username :username :as user} users
-;                                      :when (not= username creator)
-                                      ]
+    [:table [:tbody [:tr (doall (for [{username :username :as user} users]
                                   ^{:key username} [user-cell user]))]]]))
 
 (defn project-row [{:keys [name description creator users]}]
-  (fn [{:keys [name description creator users]}]
-    [bs/list-group-item
-     {:onClick #(nav! (str "/project/" name))}
-     (reagent/as-component
-      [:div.container-fluid
-       [:div.row
-        [:div.col-lg-8 [:p name]]]
-       [:div.row
-        [:div.col-lg-3 [:span.text-muted "Created by: "]]
-        [:div.col-lg-9 [user-selection-component {:username creator}]]]
-       [:div.row {:style {:height "5px"}}]
-       [:div.row
-        [:div.col-lg-3 [:span.text-muted "Users in project: "]]
-        [:div.col-lg-9 [users-row creator users]]]
-       [:div.row {:style {:height "5px"}}]
-       [:div.row
-        [:div.col-lg-3 [:span.text-muted "Project description: "]]
-        [:div.col-lg-9 description]]])]))
+  (let [creator-info (re-frame/subscribe [:user creator])]
+    (fn [{:keys [name description creator users]}]
+      [bs/list-group-item
+       {:onClick #(nav! (str "/project/" name))}
+       (reagent/as-component
+        [:div.container-fluid
+         [:div.row
+          [:div.col-lg-8 [:p name]]]
+         [:div.row
+          [:div.col-lg-3 [:span.text-muted "Created by: "]]
+          [:div.col-lg-9 [user-selection-component @creator-info]]]
+         [:div.row {:style {:height "5px"}}]
+         [:div.row
+          [:div.col-lg-3 [:span.text-muted "Users in project: "]]
+          [:div.col-lg-9 [users-row creator users]]]
+         [:div.row {:style {:height "5px"}}]
+         [:div.row
+          [:div.col-lg-3 [:span.text-muted "Project description: "]]
+          [:div.col-lg-9 description]]])])))
 
 (defn projects-panel [projects]
-  (let [db-users (re-frame/subscribe [:session :users])]
-    (fn [projects]
-      [:div.container-fluid
-       [:div.row
-        [bs/list-group
-         (doall (for [{:keys [name] :as project} @projects]
-                  ^{:key (str name)} [project-row project]))]]])))
+  (fn [projects]
+    [:div.container-fluid
+     [:div.row
+      [bs/list-group
+       (doall (for [{:keys [name] :as project} @projects]
+                ^{:key (str name)} [project-row project]))]]]))

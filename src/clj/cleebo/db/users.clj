@@ -49,6 +49,14 @@
    {:username username}
    {:password false :_id false}))
 
+(defn update-user-info
+  [{db-conn :db :as db} username update-map]
+  (mc/find-and-modify
+   db-conn "users"
+   {:username username}
+   {$set update-map}
+   {}))
+
 (s/defn filter-user-public [user] :- public-user-schema
   (dissoc user :password :_id :projects))
 
@@ -58,4 +66,6 @@
         {})
        (map filter-user-public)))
 
-;; (def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
+;;(def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
+;;(update-user-info db "user" {:avatar (cleebo.avatar/user-avatar (str "user" (rand-int 100000)))})
+

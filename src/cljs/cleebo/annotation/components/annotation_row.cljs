@@ -43,24 +43,26 @@
           [:td "No annotation history"])]])))
 
 (defn user-popover
-  [{time :timestamp user :username {k :key v :value} :ann history :history}]
-  (reagent/as-component
-   [bs/popover
-    {:id "popover"
-     :title (reagent/as-component
-             [:div.container-fluid
-              [:div.row
-               [:div.col-sm-4
-                [user-thumb user]]
-               [:div.col-sm-8
-                [:div.row.pull-right [:div.text-muted user]]
-                [:br] [:br]
-                [:div.row.pull-right (human-time time)]]]])
-     :style {:max-width "100%"}}
-    [:table
-     (if-not (empty? history)
-       [history-body history]
-       [no-history-body])]]))
+  [{time :timestamp username :username {k :key v :value} :ann history :history}]
+  (let [user (re-frame/subscribe [:user username])]
+    (fn [{time :timestamp username :username {k :key v :value} :ann history :history}]
+      (reagent/as-component
+       [bs/popover
+        {:id "popover"
+         :title (reagent/as-component
+                 [:div.container-fluid
+                  [:div.row
+                   [:div.col-sm-4
+                    [user-thumb (get-in @user [:avatar :href])]]
+                   [:div.col-sm-8
+                    [:div.row.pull-right [:div.text-muted user]]
+                    [:br] [:br]
+                    [:div.row.pull-right (human-time time)]]]])
+         :style {:max-width "100%"}}
+        [:table
+         (if-not (empty? history)
+           [history-body history]
+           [no-history-body])]]))))
 
 (defn annotation-overlay [& {:keys [overlay child]}]
   [bs/overlay-trigger

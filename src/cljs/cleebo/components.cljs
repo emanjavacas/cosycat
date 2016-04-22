@@ -1,10 +1,14 @@
 (ns cleebo.components
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [css-transition-group color-codes date-str->locale]]
+            [cleebo.utils :refer [color-codes date-str->locale]]
             [cleebo.localstorage :as ls]
             [taoensso.timbre :as timbre]
+            [goog.string :as gstr]
             [react-bootstrap.components :as bs]))
+
+(def css-transition-group
+  (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
 
 (defn throbbing-panel [& {:keys [css-class] :or {css-class "loader"}}]
   [:div.text-center [:div {:class css-class}]])
@@ -51,19 +55,25 @@
               :ok    "zmdi-storage"
               :error "zmdi-alert-circle")}]])
 
-(defn user-thumb [user & [props]]
+(defn right-href [href]
+  (if (.startsWith href "public")
+    (second (gstr/splitLimit href "/" 1))
+    href))
+
+(defn user-thumb [avatar-href & [props]]
   [bs/image
-   (merge {:src (str "img/avatars/" user ".png")
+   (merge {:src (right-href avatar-href)
            :height "42" :width "42"
            :circle true}
           props)])
 
-(defn user-selection-component [{:keys [username]}]
-  (fn [{:keys [username]}]
+(defn user-selection-component [{username :username {href :href} :avatar :as user}]
+  (timbre/debug "USER" user)
+  (fn [{username :username {href :href} :avatar}]
     [:div username
      [:span
       {:style {:padding-left "10px"}}
-      [user-thumb username {:height "25px" :width "25px"}]]]))
+      [user-thumb href {:height "25px" :width "25px"}]]]))
 
 (defn notification-child
   [message date status & {:keys [by]}]

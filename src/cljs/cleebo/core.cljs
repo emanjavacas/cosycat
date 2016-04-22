@@ -48,25 +48,26 @@
 (defn user-brand-span [username active-project]
   (let [projects (re-frame/subscribe [:session :user-info :projects])]
     (fn [username active-project]
-      [:div (str/capitalize @username)
+      [:div (str/capitalize username)
        [:span {:style {:white-space "nowrap"}}
         (if-let [{project-name :name} @active-project]
           (str "@" project-name))]])))
 
 (defn user-brand [active-project]
-  (let [username (re-frame/subscribe [:session :user-info :username])]
+  (let [user (re-frame/subscribe [:session :user-info])]
     (fn [active-project]
-      [bs/navbar-brand
-       [:div.container-fluid
-        {:style {:margin-top "-9.5px"}}
-        [:div.row
-         {:style {:line-height "40px" :text-align "right"}}
-         [:div.col-sm-8
-          ;; wait until user-info is fetched in main
-          (when @username [user-brand-span username active-project])]
-         [:div.col-sm-4
-          ;; wait until user-info is fetched in main
-          (when @username [user-thumb @username {:height "30px" :width "30px"}])]]]])))
+      (let [{username :username {href :href} :avatar} @user]
+        [bs/navbar-brand
+         [:div.container-fluid
+          {:style {:margin-top "-9.5px"}}
+          [:div.row
+           {:style {:line-height "40px" :text-align "right"}}
+           [:div.col-sm-8
+            ;; wait until user-info is fetched in main
+            (when username [user-brand-span username active-project])]
+           [:div.col-sm-4
+            ;; wait until user-info is fetched in main
+            (when username [user-thumb href {:height "30px" :width "30px"}])]]]]))))
 
 (defn navlink [target href label icon]
   (let [active (re-frame/subscribe [:active-panel])]

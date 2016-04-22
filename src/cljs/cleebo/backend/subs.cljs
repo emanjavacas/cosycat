@@ -92,6 +92,19 @@
   ([db by-name]
    (filter #(contains? by-name (:username %)) (get-all-users-info db))))
 
+(defn find-user [db username]
+  (first (get-all-users-info db #{username})))
+
+(re-frame/register-sub
+ :users
+ (fn [db _]
+   (reaction (get-all-users-info @db))))
+
+(re-frame/register-sub
+ :user
+ (fn [db [_ username]]
+   (reaction (find-user @db username))))
+
 (re-frame/register-sub
  :active-project
  (fn [db _]

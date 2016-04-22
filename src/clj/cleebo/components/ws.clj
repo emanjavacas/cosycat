@@ -70,17 +70,18 @@
         {{ws-in :ws-in ws-out :ws-out} :chans clients :clients} ws]
     (kit/with-channel req ws-ch
       (connect-client ws ws-ch username)
-      (go (loop []                      ;this code must never throw an exception
-            (if-let [p (<! ws-out)]     ;if falsy, the channel closes
-              (let [{:keys [ws-target ws-from payload]} p
-                    ws-target-ch (get @clients ws-target)]
-                (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
-                (kit/send! ws-target-ch (write-str payload :json))
-                (recur)))))
+      (go-loop []             ;this code must never throw an exception
+        (if-let [p (<! ws-out)]         ;if falsy, the channel closes
+          (let [{:keys [ws-target ws-from payload]} p
+                payload (assoc payload :source ws-from)
+                ws-target-ch (get @clients ws-target)]
+            (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
+            (kit/send! ws-target-ch (write-str payload :json))
+            (recur))))
       (kit/on-close ws-ch (fn [status] (disconnect-client ws username status)))
       (kit/on-receive
        ws-ch
-       (fn [payload] ;apply route-handler?
+       (fn [payload]
          (let [parsed-payload (read-str payload :json)]
            (put! ws-in {:ws-from username :payload parsed-payload})))))))
 
