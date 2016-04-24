@@ -87,11 +87,11 @@
     [:div.text (.toLocaleString date "en-US")]]])
 
 (defn notification
-  [{id :id {message :message date :date by :by status :status} :data}]
+  [{id :id {message :message date :date {href :href} :by status :status} :data}]
   (fn [{id :id {message :message date :date by :by status :status} :data}]
     [:li#notification
      {:on-click #(re-frame/dispatch [:drop-notification id])}
-     [notification-child message date (or status :info) (:href by)]]))
+     [notification-child message date (or status :info) href]]))
 
 (defn notification-container []
   (let [notifications (re-frame/subscribe [:notifications])]
