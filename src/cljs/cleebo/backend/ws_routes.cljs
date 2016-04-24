@@ -24,7 +24,7 @@
   span is a vector (bulk annotation payload) or a map (sinlge annotation payload)"
   (fn [{span :span :as data}] (type span)))
 (defmethod ann-error-handler cljs.core/PersistentArrayMap
-  [{{type :type {B :B O :O :as scope} :scope} :span reason :reason e :e username :username}]
+  [{{type :type {B :B O :O :as scope} :scope} :span reason :reason e :e}]
   (re-frame/dispatch
    [:notify {:message (case type
                         "token" (get-msg [:annotation :error :token] scope e) 
@@ -34,62 +34,69 @@
   (re-frame/dispatch
    [:notify {:message (get-msg [:annotation :error :mult] (count span) e)}]))
 
-(defn ws-handler
+(defmulti ws-handler
   "Main ws handler. dispatches on different routes depending on `dir` (:in :out),
   `type` (:annotation :notify & other-routes) and `status` (:ok :error)"
-  [db [_ dir {:keys [type status data payload-id] :as payload}]]
-  (match [dir type status]
-    [:in :annotation :ok] (do (ann-ok-handler data)
-                              (update-in db [:session :throbbing?] dissoc payload-id))
-         
-    [:in :annotation :error] (do (ann-error-handler data)
-                                 (update-in db [:session :throbbing?] dissoc payload-id))
-         
-    [:out :annotation _] (do (send-ws payload)
-                             (assoc-in db [:session :throbbing? payload-id] true))
-    ;; info updates
-    [:in :notify :info] (let [{:keys [by message]} data]
-                          (re-frame/dispatch
-                           [:notify
-                            {:message (get-msg [:info] by message)
-                             :by by
-                             :status status}])
-                          db)
-    
-    ;; login updates
-    [:in :notify :signup] (let [{username :username} data
-                                message (get-msg [:signup] username)]
-                            (re-frame/dispatch [:add-user data])
-                            (re-frame/dispatch [:notify {:message message}])
-                            db)
+  (fn [db dir {:keys [type status]}] [dir type status]))
 
-    [:in :notify :login] (let [{username :username} data
-                               message (get-msg [:login] username)]
-                           (re-frame/dispatch  [:user-active username true])
-                           (re-frame/dispatch [:notify {:message message}])
-                           db)
+(defmethod ws-handler [:in :annotation :ok]
+  [db _ {:keys [data payload-id]}]
+  (ann-ok-handler data)
+  (update-in db [:session :throbbing?] dissoc payload-id))
 
-    [:in :notify :logout] (let [{username :username} data
-                                message (get-msg [:logout] username)]
-                            (re-frame/dispatch [:user-active username false])
-                            (re-frame/dispatch [:notify {:message message}])
-                            db)     
+(defmethod ws-handler [:in :annotation :error]
+  [db _ {:keys [data payload-id]}]
+  (ann-error-handler data)
+  (update-in db [:session :throbbing?] dissoc payload-id))
 
-    ;; project updates
-    [:in :notify :new-project] (let [{creator :creator project-name :name :as project} data
-                                     message (get-msg [:new-project] project-name creator)]
-                                 (re-frame/dispatch [:add-project project])
-                                 (re-frame/dispatch [:notify {:message message}])
-                                 db)
-    [:in :notify :new-user-avatar] (let [{source :source avatar :avatar} data
-                                         msg (format "%s has changed the avatar" source)]
-                                     (re-frame/dispatch
-                                      [:new-user-avatar {:username source :avatar avatar}])
-                                     (re-frame/dispatch [:notify {:message msg}]))))
+(defmethod ws-handler [:out :annotation :ok]
+  [db _ {:keys [payload-id] :as payload}]
+  (send-ws payload)
+  (assoc-in db [:session :throbbing? payload-id] true))
 
+(defmethod ws-handler [:in :notify :info]
+  [db _ {{:keys [by message]} :data status :status}]
+  (re-frame/dispatch
+   [:notify
+    {:message (get-msg [:info] by message)
+     :by by
+     :status status}])
+  db)
 
+(defmethod ws-handler [:in :notify :signup]
+  [db _ {{username :username :as data} :data}]
+  (re-frame/dispatch [:add-user data])
+  (re-frame/dispatch [:notify {:message (get-msg [:signup] username) :by username}])
+  db)
+
+(defmethod ws-handler [:in :notify :login]
+  [db _ {{username :username :as data} :data}]
+  (re-frame/dispatch  [:user-active username true])
+  (re-frame/dispatch [:notify {:message (get-msg [:login] username) :by username}])
+  db)
+
+(defmethod ws-handler [:in :notify :logout]
+  [db _ {{username :username :as data} :data}]
+  (re-frame/dispatch [:user-active username false])
+  (re-frame/dispatch [:notify {:message (get-msg [:logout] username) :by username}])
+  db)
+
+(defmethod ws-handler [:in :notify :new-project]
+  [db _ {{creator :creator project-name :name :as project} :data}]
+  (let [message (get-msg [:new-project] project-name creator)]
+    (re-frame/dispatch [:add-project project])
+    (re-frame/dispatch [:notify {:message message}])
+    db))
+
+(defmethod ws-handler [:in :notify :new-user-avatar]
+  [db _ {{username :username avatar :avatar} :data}]
+  (let [message (format "%s has changed the avatar" username)]
+    (re-frame/dispatch [:new-user-avatar {:username username :avatar avatar}])
+    (re-frame/dispatch [:notify {:message message :by username}])
+    db))
 
 (re-frame/register-handler
  :ws
  standard-middleware
- ws-handler)
+ (fn [db [_ dir payload]]
+   (ws-handler db dir payload)))

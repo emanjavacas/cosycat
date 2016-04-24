@@ -11,10 +11,12 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [project (new-project db username project-name desc users)]
-    (notify-clients ws {:status :new-project
-                        :type :notify
-                        :data project}
-                    :ws-from username :target-clients users)
+    (notify-clients
+     ws
+     {:status :new-project
+      :type :notify
+      :data project}
+     :ws-from username :target-clients (map :username users))
     project))
 (defmethod project-router :update-project
   [{{route :route name :name desc :description users :users} :params

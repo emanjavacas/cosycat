@@ -62,7 +62,9 @@
 
 (defn notification-button []
   [bs/button
-   {:on-click #(re-frame/dispatch [:notify {:message "Hello World! How are you doing?"}])}
+   {:on-click
+    #(re-frame/dispatch
+      [:notify {:message "Hello World! How are you doing?"}])}
    "Notify"])
 
 (defn debug-panel []

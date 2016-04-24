@@ -9,6 +9,7 @@ profile for later use (eventually emailing)
 
 *** Blacklab
 **** TODO kill current query on incoming query (possible?)
+**** TODO Lock searcher while loading index
 *** Sessions
 **** TODO on-memory? on-db? sessions with up-to-date user settings
 #+BEGIN_SRC clojure

@@ -14,7 +14,7 @@
   {:shutting-down {:status :info
                    :type :notify
                    :data {:message "Server is going to sleep!"
-                          :by "Server"}}
+                          :by "server"}}
    :goodbye       {:status :info
                    :type :notify
                    :data {:message "Goodbye world!"}}
@@ -40,11 +40,11 @@
         component)))
   (stop [component]
     (timbre/info "Shutting down WS component")
-    (if (not (and clients chans))
+    (if-not (and clients chans)
       component
       (do (notify-clients component (messages :shutting-down))
-          (timbre/info "Waiting 5 seconds to notify clients")
-          (Thread/sleep 50)
+          (timbre/info "Waiting 2 seconds to notify clients" @clients)
+          (Thread/sleep 2000)
           (close-chans component)
           (assoc component :clients nil :chans nil)))))
 
@@ -76,6 +76,7 @@
                 payload (assoc payload :source ws-from)
                 ws-target-ch (get @clients ws-target)]
             (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
+            (s/validate (ws-from-server payload) payload)
             (kit/send! ws-target-ch (write-str payload :json))
             (recur))))
       (kit/on-close ws-ch (fn [status] (disconnect-client ws username status)))
@@ -88,24 +89,20 @@
 (defn out-chan [c payload payload-id]
   (if (map? payload)
     (let [{p :payload :as payload} (assoc-in payload [:payload :payload-id] payload-id)]
-      (s/validate (ws-from-server p) p)
       (put! c payload))
     (doseq [p payload
             :let [p (assoc-in p [:payload :payload-id] payload-id)]]
-      (s/validate (ws-from-server (:payload p)) (:payload p))
       (put! c p))))
 
 (defn ws-routes [ws routes]
   (let [{{ws-in :ws-in ws-out :ws-out} :chans} ws]
-    (go-loop []                         ;exceptions should be handled within each route
-      (if-let [{{:keys [type payload-id] :as client-payload} :payload :as payload} (<! ws-in)]
-        (do (timbre/debug "CLIENT-PAYLOAD" client-payload)
-            (s/validate (ws-from-client client-payload) client-payload)
+    (go-loop []
+      (if-let [{{:keys [type payload-id] :as client-load} :payload :as payload} (<! ws-in)]
+        (do (s/validate (ws-from-client client-load) client-load)
             (let [route (get routes type)
-                  client-load (assoc payload :payload (dissoc client-payload :payload-id))
-                  {:keys [ws-from ws-target payload] :as server-payload} (route ws payload)]
-              (timbre/debug "SERVER-PAYLOAD" server-payload)      
-              (out-chan ws-out server-payload payload-id))))
+                  client-load (assoc payload :payload (dissoc client-load :payload-id))
+                  {:keys [ws-from ws-target payload] :as server-load} (route ws payload)]
+              (out-chan ws-out server-load payload-id))))
       (recur))))
 
 (defn notify-client

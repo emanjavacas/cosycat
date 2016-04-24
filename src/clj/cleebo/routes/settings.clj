@@ -3,17 +3,21 @@
             [cleebo.routes.auth :refer [safe]]
             [cleebo.db.users :refer [update-user-info]]
             [cleebo.avatar :refer [user-avatar]]
+            [cleebo.components.ws :refer [notify-clients]]
             [environ.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
 (defmulti settings-router (fn [{{route :route} :params}] route))
 (defmethod settings-router :new-avatar
-  [{{route :route name :name desc :description users :users} :params
-    {{username :username} :identity} :session
+  [{{{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [seed (rand-int 1000000)
         avatar (user-avatar (str username seed))]
     (update-user-info db username {:avatar avatar})
+    (notify-clients
+     ws
+     {:type :notify :status :new-user-avatar
+      :data {:avatar avatar :username username}})
     avatar))
 
 (def settings-route 

@@ -12,7 +12,8 @@
             [cleebo.views.login :refer [login-page]]
             [ring.util.response :refer [redirect]]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
-            [ring.middleware.anti-forgery :refer [wrap-anti-forgery *anti-forgery-token*]]
+            [ring.middleware.anti-forgery
+             :refer [wrap-anti-forgery *anti-forgery-token*]]
             [ring.middleware.transit :refer [wrap-transit-response wrap-transit-params]]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.nested-params :refer [wrap-nested-params]]
@@ -47,9 +48,12 @@
   [{{{username :username} :identity} :session
     {blacklab :blacklab ws :ws} :components}]
   (remove-hits! blacklab username)
-  (notify-clients ws {:type :notify
-                      :data {:username username}
-                      :status :logout})
+  (when username
+    (notify-clients
+     ws
+     {:type :notify
+      :data {:username username}
+      :status :logout}))
   (-> (redirect "/") (assoc :session {})))
 
 (defroutes app-routes

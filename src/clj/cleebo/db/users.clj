@@ -43,11 +43,13 @@
      {$set {:last-active (System/currentTimeMillis)}}
      {})))
 
-(defn user-info [{db-conn :db :as db} username]
-  (mc/find-one-as-map
-   db-conn "users"
-   {:username username}
-   {:password false :_id false}))
+(defn user-info
+  [{db-conn :db :as db} username]
+  (-> (mc/find-one-as-map
+       db-conn "users"
+       {:username username}
+       {:password false :_id false})
+      (update-in [:roles] (partial apply hash-set))))
 
 (defn update-user-info
   [{db-conn :db :as db} username update-map]
@@ -57,8 +59,10 @@
    {$set update-map}
    {}))
 
-(s/defn filter-user-public [user] :- public-user-schema
-  (dissoc user :password :_id :projects))
+(s/defn ^:always-validate filter-user-public
+  [user] :- public-user-schema
+  (-> (dissoc user :password :_id :projects)
+      (update-in [:roles] (partial apply hash-set))))
 
 (defn users-public-info [{db-conn :db}]
   (->> (mc/find-maps

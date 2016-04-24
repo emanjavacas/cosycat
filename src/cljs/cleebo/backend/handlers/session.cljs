@@ -45,10 +45,10 @@
       users))))
 
 (defn session-handler
-  [{{username :username [roles] :roles projects :projects :as user-info} :user-info
+  [{{username :username roles :roles projects :projects :as user-info} :user-info
     corpora :corpora users :users :as payload}]
-  (let [user-info (assoc user-info :roles (hash-set roles))
-        users (map preprocess-user users)]
+  (let [user-info (assoc user-info :roles roles)
+        users (doall (map preprocess-user users))]
     (re-frame/dispatch [:set-session [:user-info] user-info])
     (re-frame/dispatch [:set-session [:corpora] corpora])
     (re-frame/dispatch [:set-session [:query-opts :corpus] (first corpora)])

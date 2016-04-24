@@ -38,7 +38,8 @@
  (fn [db [_ {:keys [username avatar]}]]
    (update-in
     db [:session :users]
-    (partial (map (fn [user]
-                    (if (= username (:username user))
-                      (assoc user :avatar avatar)
-                      user)))))))
+    (fn [users] (map (fn [user]
+                  (if (= username (:username user))
+                    (assoc user :avatar avatar)
+                    user)))
+      users))))

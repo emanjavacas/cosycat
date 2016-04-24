@@ -39,17 +39,38 @@
   (let [parsed-str (apply str (replace {\' \"} s))]
     (CorpusQueryLanguageParser/parse parsed-str)))
 
-(defn make-searcher 
-  "Creates a searcher given index path. It does not close the searcher"
-  ^Searcher  [^String path]
-  (Searcher/open (java.io.File. path)))
+(defn load-index
+  [{path :path status :status :as searcher-state}]
+  (if (= :ready status)
+    (do (timbre/info "Index" path "already loaded") searcher-state)
+    (do (timbre/info "Loading index" path)
+        (assoc searcher-state
+               :conn (Searcher/open (java.io.File. ^String (:path searcher-state)))
+               :status :ready))))
 
-(defn destroy-searcher
-  [^Searcher searcher]
-  (.close searcher))
+(defn has-loaded? [searcher]
+  (= :ready (:status @searcher)))
 
-(defn run-query 
-  "Runs the query and returns the general Hits object"
+(defn init-searcher! [searcher]
+  (let [path (:path @searcher)]
+    (timbre/info "Initialising searcher:" path)
+    (send-off searcher load-index)))
+
+(defn new-searcher [path]
+  (let [searcher (agent {:status :closed :path path})]
+    (add-watch searcher :searcher
+               (fn [k r os ns]
+                 (timbre/info "Searcher transition from" os "to" ns)))))
+
+(defn close-searcher [searcher]
+  (send-off searcher
+            (fn [searcher-status]
+              (when-let [^Searcher conn (:conn searcher-status)]
+                (.close conn))
+              (assoc searcher-status :status :closed :conn nil))))
+
+(defn- run-query
+  "Runs the query and returns the non-windowed Hits object"
   ^Hits 
   ([^Searcher searcher ^String s]
    (run-query searcher s unmod-query))
@@ -74,12 +95,12 @@
     (.window -hits from size)))
 
 ;;; middleware
-(defn wrap-clean
+(defn- wrap-clean
   "Basic handler that removes the -hit key from hit-map"
 ;  [handler]
   [hit-map] (dissoc hit-map :-hit :-hits))
 
-(defn wrap-doc
+(defn- wrap-doc
   "Extract all doc fields"
   [handler ^Searcher searcher]
   (fn [hit-map]
@@ -93,7 +114,7 @@
                              (map second field-tokens))]
       (handler (apply update-in hit-map [:meta] assoc fields)))))
 
-(defn wrap-match
+(defn- wrap-match
   "Add match annotation to match tokens"
   [handler]
   (fn [hit-map]
@@ -107,14 +128,14 @@
           new-map (assoc hit-map :hit hit-match)]
       (handler new-map))))
 
-(defn wrap-hit-id
-  "Add hit id"
+(defn- wrap-hit-id
+  "Add hit id. See .hashCode docs for how this is implemented"
   [handler]
   (fn [{:keys [-hit hit] :as hit-map}]
     (let [new-map (assoc hit-map :id (.hashCode -hit))]
       (handler new-map))))
 
-(defn hits-handler [hits searcher]
+(defn- hits-handler [^Hits hits ^Searcher searcher]
   (let [middleware (-> wrap-clean wrap-match wrap-hit-id (wrap-doc searcher))
         handler (fn [hit] (middleware hit))]
     (for [^Hit hit hits
@@ -138,35 +159,39 @@
   "runs a query and returns a window of hits specified by `from` `to` and `context`.
   Accepts an optional function that will be called for side effects with optional args
   and the resulting hits"
-  ([searcher hits-handler query-str from to context]
-   (query searcher hits-handler query-str from to context identity))
-  ([searcher hits-handler query-str from to context f & args]
-   (let [-hits (run-query searcher query-str)]
+  ([searcher-agent query-str from to context]
+   (query searcher-agent query-str from to context identity))
+  ([searcher-agent query-str from to context f & args]
+   (let [{searcher :conn status :status} @searcher-agent
+         -hits (run-query searcher query-str)]
      (apply f (concat args [-hits]))
      (hits-handler (-hits->window -hits from to context) searcher))))
 
 (defn query-range
   "returns a window of hits specified by `from` `to` and `context` from the result of
   a previous query."
-  [searcher -hits hits-handler from to context]
-  (hits-handler (-hits->window -hits from to context) searcher))
+  [searcher-agent -hits from to context]
+  (let [{searcher :conn} @searcher-agent]
+    (hits-handler (-hits->window -hits from to context) searcher)))
 
 (defn sort-query
   "returns a specified hits window after sorting the entire query results."
-  [searcher -hits hits-handler from to context criterion prop-name]
-  (let [hit-property (make-property -hits criterion prop-name)]
+  [searcher-agent -hits from to context criterion prop-name]
+  (let [{searcher :conn} @searcher-agent
+        hit-property (make-property -hits criterion prop-name)]
     (.sort ^Hits -hits hit-property)
     (hits-handler (-hits->window -hits from to context) searcher)))
 
 (defn sort-range
   "sorts a specified hits window."
-  [searcher -hits hits-handler from to context criterion prop-name]
-  (let [-hits-window (-hits->window -hits from to context)
+  [searcher-agent -hits from to context criterion prop-name]
+  (let [{searcher :conn} @searcher-agent
+        -hits-window (-hits->window -hits from to context)
         hit-property (make-property -hits-window criterion prop-name)]
     (.sort ^Hits -hits-window hit-property)
     (hits-handler -hits-window searcher)))
 
-(defn snippet ;todo home-made function to handle xml-conc; add anns to it?
+(defn snippet ;todo home-made function to handle xml-conc adding anns to it?
   [^Hits -hits hit-idx snippet-size]
   (let [^Hit -hit (.get -hits hit-idx)
         ^Concordance conc (.getConcordance -hits -hit snippet-size)]
@@ -195,7 +220,8 @@
 ;;   (clojure.set/difference (into (hash-set) s1) (into (hash-set) s2)))
 
 ;; (def paths-map {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"})
-
+;; (def shc-searcher (new-searcher "/home/enrique/code/BlackLab/brown-index-id/"))
+;; (init-searcher! shc-searcher)
 ;; (def searcher (make-searcher (get paths-map "brown-id")))
 
 ;; (def -hits (run-query searcher "\"a\""))

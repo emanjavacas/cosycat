@@ -88,7 +88,11 @@
                  (get-in db [:session :user-info :projects]))))
 
 (defn get-all-users-info
-  ([db] (cons (get-in db [:session :user-info]) (get-in db [:session :users])))
+  ([db]
+   (let [me (get-in db [:session :user-info])
+         users (get-in db [:session :users])]
+     (timbre/debug me users)
+     (cons me users)))
   ([db by-name]
    (filter #(contains? by-name (:username %)) (get-all-users-info db))))
 
@@ -102,8 +106,11 @@
 
 (re-frame/register-sub
  :user
- (fn [db [_ username]]
-   (reaction (find-user @db username))))
+ (fn [db [_ username & [path]]]
+   (let [user (reaction (find-user @db username))]
+     (if path
+       (reaction (get-in user path))
+       user))))
 
 (re-frame/register-sub
  :active-project

@@ -51,7 +51,7 @@
 
   :main cleebo.main
   
-  :jvm-opts ["-Xmx4000M"]
+  :jvm-opts ["-Xmx4000M" "-Djava.awt.headless=true"]
   
   :plugins [[lein-cljsbuild "1.1.1"]
             [lein-environ "1.0.1"]

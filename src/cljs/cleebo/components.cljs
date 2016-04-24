@@ -60,15 +60,16 @@
     (second (gstr/splitLimit href "/" 1))
     href))
 
-(defn user-thumb [avatar-href & [props]]
+(defn user-thumb
+  [avatar-href & [props]]
   [bs/image
    (merge {:src (right-href avatar-href)
            :height "42" :width "42"
            :circle true}
           props)])
 
-(defn user-selection-component [{username :username {href :href} :avatar :as user}]
-  (timbre/debug "USER" user)
+(defn user-selection-component
+  [{username :username {href :href} :avatar}]
   (fn [{username :username {href :href} :avatar}]
     [:div username
      [:span
@@ -76,22 +77,21 @@
       [user-thumb href {:height "25px" :width "25px"}]]]))
 
 (defn notification-child
-  [message date status & {:keys [by]}]
-  (let [by (or by "server")]
-    [:div.notification
-     {:class "success"}
-     [:div.illustration
-      [user-thumb by]]
-     [:div.text
-      [:div.title message]
-      [:div.text (.toLocaleString date "en-US")]]]))
+  [message date status href]
+  [:div.notification
+   {:class "success"}
+   [:div.illustration
+    [user-thumb href]]
+   [:div.text
+    [:div.title message]
+    [:div.text (.toLocaleString date "en-US")]]])
 
 (defn notification
   [{id :id {message :message date :date by :by status :status} :data}]
   (fn [{id :id {message :message date :date by :by status :status} :data}]
     [:li#notification
      {:on-click #(re-frame/dispatch [:drop-notification id])}
-     [notification-child message date (or status :info) :by by]]))
+     [notification-child message date (or status :info) (:href by)]]))
 
 (defn notification-container []
   (let [notifications (re-frame/subscribe [:notifications])]
