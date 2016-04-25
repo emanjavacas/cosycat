@@ -45,32 +45,23 @@
 (defn user-popover
   [{time :timestamp username :username {k :key v :value} :ann history :history}]
   (let [user (re-frame/subscribe [:user username])]
-    (fn [{time :timestamp username :username {k :key v :value} :ann history :history}]
-      (reagent/as-component
-       [bs/popover
-        {:id "popover"
-         :title (reagent/as-component
-                 [:div.container-fluid
-                  [:div.row
-                   [:div.col-sm-4
-                    [user-thumb (get-in @user [:avatar :href])]]
-                   [:div.col-sm-8
-                    [:div.row.pull-right [:div.text-muted user]]
-                    [:br] [:br]
-                    [:div.row.pull-right (human-time time)]]]])
-         :style {:max-width "100%"}}
-        [:table
-         (if-not (empty? history)
-           [history-body history]
-           [no-history-body])]]))))
-
-(defn annotation-overlay [& {:keys [overlay child]}]
-  [bs/overlay-trigger
-   {:overlay overlay
-    :trigger "click"
-    :rootClose true
-    :placement "bottom"}
-   child])
+    (reagent/as-component
+     [bs/popover
+      {:id "popover"
+       :title (reagent/as-component
+               [:div.container-fluid
+                [:div.row
+                 [:div.col-sm-4
+                  [user-thumb (get-in @user [:avatar :href])]]
+                 [:div.col-sm-8
+                  [:div.row.pull-right [:div.text-muted username]]
+                  [:br] [:br]
+                  [:div.row.pull-right (human-time time)]]]])
+       :style {:max-width "100%"}}
+      [:table
+       (if-not (empty? history)
+         [history-body history]
+         [no-history-body])]])))
 
 (defmulti annotation-cell
   "variadic annotation cell dispatching on span type"
@@ -78,35 +69,35 @@
     (let [{{span-type :type} :span} ann-map]
       span-type)))
 
-(defmethod annotation-cell
-  "token"
+(defmethod annotation-cell "token"
   [{:keys [ann-map]}]
   (fn [{{username :username :as ann-map} :ann-map
         filtered-users-colors :filtered-users-colors}]
-    [annotation-overlay
-     :overlay (user-popover ann-map)
-     :child (reagent/as-component
-             [:td.ann-cell       
-              {:style {:box-shadow (->box (get @filtered-users-colors username))}}
-              [key-val ann-map]])]))
+    [bs/overlay-trigger
+     {:overlay (user-popover ann-map)
+      :trigger "click"
+      :rootClose true
+      :placement "bottom"}
+     [:td.ann-cell       
+      {:style {:box-shadow (->box (get @filtered-users-colors username))}}
+      [key-val ann-map]]]))
 
-(defmethod annotation-cell
-  "IOB"
+(defmethod annotation-cell "IOB"
   [{:keys [ann-map token-id filtered-users-colors]}]
   (fn [{{{{B :B O :O} :scope} :span username :username :as ann-map} :ann-map
         filtered-users-colors :filtered-users-colors
         token-id :token-id}]
-    [annotation-overlay
-     :overlay (user-popover ann-map)
-     :child (reagent/as-component
-             [:td.ann-cell
-              {:style {:border-right (if (= O token-id) "")
-                       :box-shadow (->box (get @filtered-users-colors username))}}
-              [:span (when (= B token-id) [key-val ann-map])]])]))
+    [bs/overlay-trigger
+     {:overlay (user-popover ann-map)
+      :trigger "click"
+      :rootClose true
+      :placement "bottom"}
+     [:td.ann-cell
+      {:style {:box-shadow (->box (get @filtered-users-colors username))}}
+      [:span (when (= B token-id) [key-val ann-map])]]]))
 
-(defmethod annotation-cell
-  :default
-  [args-map]
+(defmethod annotation-cell :default
+  [args]
   [:td ""])
 
 (defn parse-ann-type

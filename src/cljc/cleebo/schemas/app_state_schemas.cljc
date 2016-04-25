@@ -2,8 +2,6 @@
   (:require [schema.core :as s]
             [schema.spec.core :as spec]
             [schema.spec.collection :as coll]
-            #?(:clj [clojure.core.match :refer [match]]
-               :cljs [cljs.core.match :refer-macros [match]])
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
             [cleebo.schemas.project-schemas :refer [project-schema]]))
 

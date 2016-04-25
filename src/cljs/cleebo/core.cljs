@@ -175,10 +175,10 @@
     {:session {:throbbing? {:front-panel true}}}])
   ;; fetch user data and projects
   (re-frame/dispatch [:init-session])
-  ;; declare app routes
-  (routes/app-routes)
   ;; ensure we start on home page (so that db can be loaded)
   (routes/nav! "/")
+  ;; declare app routes
+  (routes/app-routes)
   ;; handle refreshes
   (.addEventListener js/window "beforeunload" ls/dump-db)
   ;; render root

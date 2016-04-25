@@ -1,7 +1,7 @@
 (ns cleebo.backend.handlers.db
   (:require [re-frame.core :as re-frame]
             [schema.core :as s]
-            [cleebo.utils :refer [deep-merge]]
+            [cleebo.app-utils :refer [deep-merge]]
             [cleebo.backend.db :refer [default-db]]
             [cleebo.localstorage :as ls]
             [cleebo.backend.middleware

@@ -90,10 +90,11 @@
 
 (defmethod ws-handler [:in :notify :new-user-avatar]
   [db _ {{username :username avatar :avatar} :data}]
-  (let [message (format "%s has changed the avatar" username)]
-    (re-frame/dispatch [:new-user-avatar {:username username :avatar avatar}])
-    (re-frame/dispatch [:notify {:message message :by username}])
-    db))
+  (re-frame/dispatch [:new-user-avatar {:username username :avatar avatar}])
+  (when-not (= username (get-in db [:session :user-info :username]))
+    (let [message (format "%s has changed the avatar" username)]
+      (re-frame/dispatch [:notify {:message message :by username}])))
+  db)
 
 (re-frame/register-handler
  :ws

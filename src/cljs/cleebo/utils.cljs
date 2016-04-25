@@ -6,17 +6,6 @@
             [goog.string :as gstr]
             [taoensso.timbre :as timbre]))
 
-;;; SYNTAX
-(defn deep-merge
-   "Recursively merges maps. If keys are not maps, the last value wins."
-   [& vals]
-   (if (every? map? vals)
-     (apply merge-with deep-merge vals)
-     (last vals)))
-
-(defn select-values [m ks]
-  (reduce #(conj %1 (m %2)) [] ks))
-
 ;;; JS-interop
 (defn format [fmt & args]
   (apply gstr/format fmt args))

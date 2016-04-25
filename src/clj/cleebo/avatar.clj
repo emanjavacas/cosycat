@@ -67,8 +67,12 @@
 (defn get-brightest [colors]
   (first (sort-by #(apply + (vals %)) > colors)))
 
+(defn int->hex [n]
+  {:post [(= 2 (count %))]}
+  (format "%02X" n))
+
 (defn ->hex [{:keys [red green blue]}]
-  (str "#" (Integer/toHexString red) (Integer/toHexString green) (Integer/toHexString blue)))
+  (str "#" (int->hex red) (int->hex green) (int->hex blue)))
 
 (defn get-hex-color [f]
   (-> (io/resource f)
@@ -81,3 +85,4 @@
   (let [f (new-avatar username)
         c (get-hex-color f)]
     {:href f :dominant-color c}))
+

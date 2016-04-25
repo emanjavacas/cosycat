@@ -123,17 +123,19 @@
  :add-annotation
  standard-middleware
  (fn [db [_ {:keys [hit-id ann-map] :as data}]]
-   (let [results-by-id (get-in db [:session :results-by-id])
-         hit-id (or hit-id (find-ann-hit-id ann-map (vals results-by-id)))
-         me (get-in db [:session :user-info :username])]
-     (if-let [hit-map (get results-by-id hit-id)]
-       (let [{:keys [message by]} (compute-notification-data data me)]
-         (re-frame/dispatch [:notify {:message message :by by}])
-         (assoc-in
-          db
-          [:session :results-by-id hit-id]
-          (update-token-anns hit-map ann-map)))
-       db))))
+   (let [me (get-in db [:session :user-info :username])
+         {:keys [message by]} (compute-notification-data data me)
+         results-by-id (get-in db [:session :results-by-id])]
+     (let [hit-id (if (contains? results-by-id hit-id) hit-id
+                      (find-ann-hit-id ann-map (vals results-by-id)))]
+       (if-let [hit-map (get results-by-id hit-id)]
+         (do (re-frame/dispatch [:notify {:message message :by by}])
+             (assoc-in
+              db
+              [:session :results-by-id hit-id]
+              (update-token-anns hit-map ann-map)))
+         (do (re-frame/dispatch [:notify {:message "couldn't find hit"}])
+             db))))))
 
 (s/defn ^:always-validate make-annotation :- annotation-schema
   ([project ann token-id]

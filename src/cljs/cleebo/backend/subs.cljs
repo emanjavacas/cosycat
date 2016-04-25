@@ -1,7 +1,8 @@
 (ns cleebo.backend.subs
     (:require-macros [reagent.ratom :refer [reaction]])
     (:require [re-frame.core :as re-frame]
-              [cleebo.utils :refer [filter-marked-hits select-values]]
+              [cleebo.utils :refer [filter-marked-hits]]
+              [cleebo.app-utils :refer [select-values]]
               [taoensso.timbre :as timbre]))
 
 (re-frame/register-sub
@@ -88,13 +89,8 @@
                  (get-in db [:session :user-info :projects]))))
 
 (defn get-all-users-info
-  ([db]
-   (let [me (get-in db [:session :user-info])
-         users (get-in db [:session :users])]
-     (timbre/debug me users)
-     (cons me users)))
-  ([db by-name]
-   (filter #(contains? by-name (:username %)) (get-all-users-info db))))
+  ([db] (cons (get-in db [:session :user-info]) (get-in db [:session :users])))
+  ([db by-name] (filter #(contains? by-name (:username %)) (get-all-users-info db))))
 
 (defn find-user [db username]
   (first (get-all-users-info db #{username})))

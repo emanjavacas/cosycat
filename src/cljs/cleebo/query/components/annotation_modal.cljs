@@ -110,7 +110,7 @@
       (let [disabled? (fn [marked-tokens] (zero? (count @marked-tokens)))]
         [bs/overlay-trigger
          {:overlay (disabled-button-tooltip #(disabled? marked-tokens))
-          :placement "right"}
+          :placement "bottom"}
          [bs/button
           {:bsStyle "primary"
            :style (when (disabled? marked-tokens) {:opacity 0.65 :cursor "auto"})

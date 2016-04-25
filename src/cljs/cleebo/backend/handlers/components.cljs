@@ -1,7 +1,8 @@
 (ns cleebo.backend.handlers.components
   (:require [re-frame.core :as re-frame]
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
-            [cleebo.utils :refer [deep-merge time-id]]))
+            [cleebo.utils :refer [time-id]]
+            [cleebo.app-utils :refer [deep-merge]]))
 
 (re-frame/register-handler
  :open-modal

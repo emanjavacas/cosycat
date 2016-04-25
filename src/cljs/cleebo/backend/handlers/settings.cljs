@@ -39,7 +39,8 @@
    (update-in
     db [:session :users]
     (fn [users] (map (fn [user]
-                  (if (= username (:username user))
-                    (assoc user :avatar avatar)
-                    user)))
-      users))))
+                       (timbre/debug user)
+                       (if (= username (:username user))
+                         (assoc user :avatar avatar)
+                         user))
+                     users)))))
