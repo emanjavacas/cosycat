@@ -11,111 +11,68 @@
             [cleebo.utils :refer [write-str read-str ->int]]))
 
 (def messages
-  {:shutting-down {:status :info
-                   :type :notify
-                   :data {:message "Server is going to sleep!"
-                          :by "server"}}
-   :goodbye       {:status :info
-                   :type :notify
-                   :data {:message "Goodbye world!"}}
-   :hello         {:status :info
-                   :type :notify
-                   :data {:message "Hello world!"}}})
+  {:shutting-down {:type :info :data {:message "Server is going to sleep!" :by "server"}}
+   :goodbye       {:type :info :data {:message "Goodbye world!"}}
+   :hello         {:type :info :data {:message "Hello world!"}}})
 
-(declare notify-client notify-clients ws-routes)
+(declare send-clients)
 
-(defn close-chans [ws]
-  (let [{:keys [chans]} ws]
-    (dorun (map close! (vals chans)))))
-
-(defrecord WS [clients chans db ws-route-map]
+(defrecord WS [clients db router]
   component/Lifecycle
   (start [component]
     (timbre/info "Starting WS component")
-    (if (and clients chans)
+    (if clients
       component
-      (let [chans {:ws-in (chan) :ws-out (chan)}
-            component (assoc component :clients (atom {}) :chans chans)]
-        (ws-routes component ws-route-map)
-        component)))
+      (assoc component :clients (atom {}) :router router)))
   (stop [component]
     (timbre/info "Shutting down WS component")
-    (if-not (and clients chans)
+    (if-not clients
       component
-      (do (notify-clients component (messages :shutting-down))
+      (do (send-clients component (messages :shutting-down))
           (timbre/info "Waiting 2 seconds to notify clients" @clients)
           (Thread/sleep 2000)
-          (close-chans component)
-          (assoc component :clients nil :chans nil)))))
+          (assoc component :clients nil)))))
 
-(defn new-ws [ws-route-map]
-  (map->WS {:ws-route-map ws-route-map}))
+(defn ping-router [ws {:keys [ws-from payload]}]
+  (send ws ws-from payload))
+
+(defn new-ws [& {:keys [router] :or {router ping-router}}]
+  (map->WS {:router router}))
 
 (defn connect-client [ws ws-ch ws-name]
-  (let [{{ws-out :ws-out} :chans clients :clients} ws
-        payload (update-in (messages :hello) [:data] assoc :by ws-name)]
+  (let [{clients :clients} ws]
     (timbre/info ws-name "opened ws-channel connection")
     (swap! clients assoc ws-name ws-ch)))
 
 (defn disconnect-client [ws ws-name status]
-  (let [{{ws-out :ws-out} :chans clients :clients db :db} ws
-        payload (update-in (messages :goodbye) [:data] assoc :by ws-name)]
+  (let [{clients :clients db :db} ws]
     (timbre/info ws-name "closed ws-channel connection with status: " status)
     (user-logout db ws-name)
     (swap! clients dissoc ws-name)))
 
-(defn ws-handler-http-kit [req]
-  (let [{{ws :ws} :components
-         {{username :username} :identity} :session} req
-        {{ws-in :ws-in ws-out :ws-out} :chans clients :clients} ws]
-    (kit/with-channel req ws-ch
-      (connect-client ws ws-ch username)
-      (go-loop []             ;this code must never throw an exception
-        (if-let [p (<! ws-out)]         ;if falsy, the channel closes
-          (let [{:keys [ws-target ws-from payload]} p
-                payload (assoc payload :source ws-from)
-                ws-target-ch (get @clients ws-target)]
-            (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
-            (s/validate (ws-from-server payload) payload)
-            (kit/send! ws-target-ch (write-str payload :json))
-            (recur))))
-      (kit/on-close ws-ch (fn [status] (disconnect-client ws username status)))
-      (kit/on-receive
-       ws-ch
-       (fn [payload]
-         (let [parsed-payload (read-str payload :json)]
-           (put! ws-in {:ws-from username :payload parsed-payload})))))))
+(defn ws-handler-http-kit 
+  [{{{clients :clients router :router :as ws} :ws} :components
+    {{username :username} :identity} :session :as req}]
+  (kit/with-channel req ws-ch
+    (connect-client ws ws-ch username)
+    (kit/on-close ws-ch (fn [status] (disconnect-client ws username status)))
+    (kit/on-receive ws-ch
+                    (fn [payload]
+                      (let [parsed-payload (read-str payload :json)]
+                        (router ws {:ws-from username :payload parsed-payload}))))))
 
-(defn out-chan [c payload payload-id]
-  (if (map? payload)
-    (let [{p :payload :as payload} (assoc-in payload [:payload :payload-id] payload-id)]
-      (put! c payload))
-    (doseq [p payload
-            :let [p (assoc-in p [:payload :payload-id] payload-id)]]
-      (put! c p))))
+(defn send-client [{clients :clients :as ws} ws-target payload]
+  (let [str-payload (write-str payload :json)
+        ws-target-ch (get @clients ws-target)]
+    (s/validate (ws-from-server payload) payload)
+    (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
+    (kit/send! ws-target-ch str-payload)))
 
-(defn ws-routes [ws routes]
-  (let [{{ws-in :ws-in ws-out :ws-out} :chans} ws]
-    (go-loop []
-      (if-let [{{:keys [type payload-id] :as client-load} :payload :as payload} (<! ws-in)]
-        (do (s/validate (ws-from-client client-load) client-load)
-            (let [route (get routes type)
-                  client-load (assoc payload :payload (dissoc client-load :payload-id))
-                  {:keys [ws-from ws-target payload] :as server-load} (route ws payload)]
-              (out-chan ws-out server-load payload-id))))
-      (recur))))
-
-(defn notify-client
-  "function wrapper over puts to out-chan"
-  [ws ws-target payload & {:keys [ws-from] :or {ws-from "server"}}]
-  (let [{{ws-out :ws-out} :chans clients :clients} ws]
-    (put! ws-out {:ws-target ws-target :ws-from ws-from :payload payload})))
-
-(defn notify-clients
+(defn send-clients
   "function wrapper over multiplexed puts to out-chan"
-  [ws payload & {:keys [ws-from target-clients] :or {ws-from "server"}}]
-  (let [{{ws-out :ws-out} :chans clients :clients} ws]
-    (doseq [[client _] (seq @clients)
-            :when (or (and target-clients (some #{client} target-clients))
-                      (not= ws-from client))]
-      (put! ws-out {:ws-target client :ws-from ws-from :payload payload}))))
+  [{clients :clients :as ws} payload &
+   {:keys [source-client target-clients] :or {source-client "server"}}]
+  (doseq [[target-client _] (seq @clients)
+          :when (or (and target-clients (some #{target-client} target-clients))
+                    (not= source-client target-client))]
+    (send-client ws target-client payload)))

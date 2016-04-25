@@ -152,52 +152,21 @@
   {:post [(not (nil? %))]}
   (:role (first (filter #(= username (:username %)) project-users))))
 
-(defn attempt-update-annotation
+(defn attempt-annotation-update
   "update authorization middleware to prevent update attempts by non-authorized users"
   [db {username :username project-name :project :as ann-map} ann-id]
   (let [{project-creator :creator project-users :users} (find-project db project-name)
         role (if (= username project-creator) "creator" (find-role project-users username))]
     (if (check-annotation-update-role :update role)
       (update-annotation db ann-map ann-id)
-      (throw (ex-info "Unauthorized update attempt" {:cause :unauthorized-update})))))
+      (throw (ex-info "Unauthorized update attempt" {:cause :wrong-update})))))
 
-(defn annotation-data [ann-map]
-  {:data {:ann-map (dissoc ann-map :_id)}
-   :status :ok
-   :type :annotation})
-
-(defn annotation-exception-data [span reason e]
-  {:data {:span span
-          :reason reason
-          :e (str e)}
-   :status :error
-   :type :annotation})
-
-(defmulti new-token-annotation
-  "dispatch based on type (either a particular value or 
-  a vector of that value for bulk annotations)"
-  (fn [db username ann-map] (type ann-map)))
-
-(s/defmethod ^:always-validate new-token-annotation
-  clojure.lang.PersistentArrayMap
-  [db username {span :span :as ann-map} :- annotation-schema]
-  (try
-    (let [ann-map (assoc ann-map :username username)
-          new-ann (if-let [{:keys [ann-id]} (find-ann-id db ann-map)]
-                    (attempt-update-annotation db ann-map ann-id)
-                    (insert-annotation db ann-map))]
-      (annotation-data new-ann))
-    (catch clojure.lang.ExceptionInfo e
-      (case (-> e ex-data :cause)
-        :unauthorized-update (annotation-exception-data span :unauthorized-update e)
-        :default (annotation-exception-data span :internal-error e)))
-    (catch Exception e
-      (annotation-exception-data span :internal-error e))))
-
-(s/defmethod ^:always-validate new-token-annotation
-  clojure.lang.PersistentVector
-  [db username ann-maps :- [annotation-schema]]
-  (mapv (fn [ann-map] (new-token-annotation db username ann-map)) ann-maps))
+(s/defn ^:always-validate new-token-annotation
+  [db {span :span :as ann-map} :- annotation-schema]
+  (-> (if-let [{:keys [ann-id]} (find-ann-id db ann-map)]
+        (attempt-annotation-update db ann-map ann-id)
+        (insert-annotation db ann-map))
+      (dissoc :_id)))
 
 (s/defn ^:always-validate fetch-anns :- (s/maybe {s/Int {s/Str annotation-schema}})
   "{token-id {ann-key1 ann ann-key2 ann} token-id2 ...}.

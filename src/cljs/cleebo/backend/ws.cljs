@@ -32,7 +32,7 @@
             ;; record message history?
             (fn [payload]
               (let [parsed-payload (->> payload .-data (t/read json-reader))]
-                (re-frame/dispatch [:ws :in parsed-payload])))))
+                (re-frame/dispatch [:ws parsed-payload])))))
     (throw (js/Error "Websocket is not available!"))))
 
 (defn send-ws [payload]

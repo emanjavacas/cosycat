@@ -26,14 +26,13 @@
             [cleebo.components.blacklab :refer [remove-hits!]]
             [cleebo.routes.auth :refer
              [is-logged? safe auth-backend token-backend login-route signup-route]]
-            [cleebo.components.ws :refer [ws-handler-http-kit notify-clients]]
+            [cleebo.components.ws :refer [ws-handler-http-kit send-clients]]
             [cleebo.routes.cqp :refer [cqp-router]]            
             [cleebo.routes.blacklab :refer [blacklab-router]]
             [cleebo.routes.sessions :refer [session-route]]
             [cleebo.routes.projects :refer [project-route]]
             [cleebo.routes.settings :refer [settings-route]]
-;            [cleebo.routes.annotation :refer [annotation-route]]
-            ))
+            [cleebo.routes.annotations :refer [annotation-route]]))
 
 (def about-route
   (safe
@@ -50,12 +49,7 @@
   [{{{username :username} :identity} :session
     {blacklab :blacklab ws :ws} :components}]
   (remove-hits! blacklab username)
-  (when username
-    (notify-clients
-     ws
-     {:type :notify
-      :data {:username username}
-      :status :logout}))
+  (when username (send-clients ws {:type :logout :data {:username username}}))
   (-> (redirect "/") (assoc :session {})))
 
 (defroutes app-routes
@@ -67,7 +61,7 @@
   (GET "/cleebo" [] cleebo-route)
   (GET "/session" [] session-route)
   (POST "/settings" [] settings-route)
-;  (GET "/annotation" [] annotation-route)
+  (POST "/annotation" [] annotation-route)
   (POST "/project" [] project-route)
   (ANY "/logout" [] logout-route)
   (GET "/blacklab" [] blacklab-router)

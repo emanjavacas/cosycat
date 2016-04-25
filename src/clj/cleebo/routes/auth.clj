@@ -4,7 +4,7 @@
             [compojure.response :refer [render]]
             [ring.util.response :refer [redirect response]]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
-            [cleebo.components.ws :refer [notify-clients]]
+            [cleebo.components.ws :refer [send-clients]]
             [cleebo.db.users :refer [lookup-user is-user? new-user filter-user-public]]
             [cleebo.db.projects :refer [new-project]]
             [cleebo.views.error :refer [error-page]]
@@ -41,9 +41,7 @@
       is-user               (on-signup-failure req "User already exists")
       :else (let [user (new-user db user)]
               (new-project db username) ;create default project
-              (notify-clients ws {:type :notify
-                                  :data (filter-user-public user)
-                                  :status :signup})
+              (send-clients ws {:type :signup :data (filter-user-public user)})
               (-> (redirect (or next-url "/"))
                   (assoc-in [:session :identity] user))))))
 
@@ -55,9 +53,7 @@
   (let [username (or username username-form)
         password (or password password-form)]
     (if-let [user (lookup-user db username password)]
-      (do (notify-clients ws {:type :notify
-                              :data (filter-user-public user)
-                              :status :login})
+      (do (send-clients ws {:type :login :data (filter-user-public user)})
           (-> (redirect (or next-url "/"))
               (assoc-in [:session :identity] user)))
       (on-login-failure req))))

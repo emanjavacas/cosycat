@@ -1,6 +1,7 @@
 (ns cleebo.backend.handlers.annotations
   (:require [re-frame.core :as re-frame]
             [schema.core :as s]
+            [ajax.core :refer [POST]]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
             [cleebo.utils :refer [->int format get-msg]]
             [cleebo.backend.middleware
@@ -125,28 +126,30 @@
  (fn [db [_ {:keys [hit-id ann-map] :as data}]]
    (let [me (get-in db [:session :user-info :username])
          {:keys [message by]} (compute-notification-data data me)
-         results-by-id (get-in db [:session :results-by-id])]
-     (let [hit-id (if (contains? results-by-id hit-id) hit-id
-                      (find-ann-hit-id ann-map (vals results-by-id)))]
-       (if-let [hit-map (get results-by-id hit-id)]
-         (do (re-frame/dispatch [:notify {:message message :by by}])
-             (assoc-in
-              db
-              [:session :results-by-id hit-id]
-              (update-token-anns hit-map ann-map)))
-         (do (re-frame/dispatch [:notify {:message "couldn't find hit"}])
-             db))))))
+         results-by-id (get-in db [:session :results-by-id])
+         hit-id (if (contains? results-by-id hit-id) hit-id
+                    (find-ann-hit-id ann-map (vals results-by-id)))]
+     (if-let [hit-map (get results-by-id hit-id)]
+       (do (re-frame/dispatch [:notify {:message message :by by}])
+           (assoc-in
+            db
+            [:session :results-by-id hit-id]
+            (update-token-anns hit-map ann-map)))
+       (do (re-frame/dispatch [:notify {:message "couldn't find hit"}])
+           db)))))
 
 (s/defn ^:always-validate make-annotation :- annotation-schema
-  ([project ann token-id]
+  ([username project ann token-id]
    {:ann ann
+    :username username
     :project project
     :span {:type "token"
            :scope token-id}
     :timestamp (.now js/Date)})
-  ([project ann token-from :- s/Int token-to :- s/Int]
+  ([username project ann token-from :- s/Int token-to :- s/Int]
    {:pre [(> token-to token-from)]}
    {:ann ann
+    :username username
     :project project
     :span {:type "IOB"
            :scope {:B token-from
@@ -155,48 +158,73 @@
 
 (defmulti package-annotation
   "packages annotation data for sending it to server. It only supports bulk payloads
-  for token annotations [TODO: bulk payloads of span annotations]"
-  (fn [project ann hit-id token-id & [token-to]]
+  for token annotations"
+  (fn [username project ann hit-id token-id & [token-to]]
     [(type ann) (type token-id)]))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentArrayMap js/Number]
-  ([project ann hit-id :- s/Int token-id :- s/Int]
-   (let [ann-map (make-annotation project ann token-id)]
+  ([username project ann hit-id :- s/Int token-id :- s/Int]
+   (let [ann-map (make-annotation username project ann token-id)]
      {:hit-id hit-id
       :ann-map ann-map}))
-  ([project ann hit-id :- s/Int token-from :- s/Int token-to :- s/Int]
-   (let [ann-map (make-annotation project ann token-from token-to)]
+  ([username project ann hit-id :- s/Int token-from :- s/Int token-to :- s/Int]
+   (let [ann-map (make-annotation username project ann token-from token-to)]
      {:hit-id hit-id
       :ann-map ann-map})))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentArrayMap cljs.core/PersistentVector]
-  [project ann hit-ids :- [s/Int] token-ids :- [s/Int]]
-  (let [ann-maps (mapv (fn [tk-id] (make-annotation project ann tk-id)) token-ids)]
+  [username project ann hit-ids :- [s/Int] token-ids :- [s/Int]]
+  (let [ann-maps (mapv (fn [token-id]
+                         (make-annotation username project ann token-id))
+                       token-ids)]
     {:hit-id hit-ids
      :ann-map ann-maps}))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentVector cljs.core/PersistentVector]
-  [project anns hit-ids :- [s/Int] token-ids :- [s/Int]]
+  [username project anns hit-ids :- [s/Int] token-ids :- [s/Int]]
   {:pre [(apply = (map count [anns hit-ids]))]}
-  (let [ann-maps (mapv (fn [a t-id] (make-annotation project a t-id)) anns token-ids)]
+  (let [ann-maps (mapv (fn [ann token-id]
+                         (make-annotation username project ann token-id))
+                       anns
+                       token-ids)]
     {:hit-id hit-ids
      :ann-map ann-maps}))
+
+(defmulti handler
+  "Variadic handler for successfull annotations. Dispatches are based on whether
+  ann-map is a vector (bulk annotation payload) or a map (single annotation payload)"
+  type)
+(defmethod handler cljs.core/PersistentArrayMap
+  [{status :status {hit-id :hit-id ann-map :ann-map :as data} :data
+    {{{B :B O :O :as scope} :scope} :scope type :type} :span reason :reason e :e}]
+  (case status
+    :ok (re-frame/dispatch [:add-annotation {:hit-id hit-id :ann-map ann-map}])
+    :error (re-frame/dispatch
+            [:notify {:message (case type
+                                 "token" (get-msg [:annotation :error :token] scope e) 
+                                 "IOB" (get-msg [:annotation :error :IOB] B O e))}])))
+(defmethod handler cljs.core/PersistentVector
+  [payloads]
+  (doseq [payload payloads]
+    (handler payload)))
+
+(defn error-handler [& args]
+  (re-frame/dispatch [:notify {:message "Unrecognized internal error"}]))
 
 (re-frame/register-handler
  :dispatch-annotation
  (fn [db [_ & args]]
-   (let [{project :name} (get-in db [:session :active-project])]
-     (try (re-frame/dispatch
-           [:ws :out {:type :annotation
-                      :data (apply package-annotation (cons project args))
-                      :status :ok}])
-          db
+   (let [{project-name :name} (get-in db [:session :active-project])
+         username (get-in db [:session :user-info :username])]
+     (try (POST "/annotation"
+                {:params (apply package-annotation username project-name args)
+                 :handler handler
+                 :error-handler error-handler})
           (catch :default e
             (re-frame/dispatch
-             [:notify {:message (format "Couldn't dispatch annotation: %s" (str e))
-                       :type :error}]))
-          (finally db)))))
+             [:notify {:message (format "Couldn't dispatch annotation: %s" (str e))}])))
+     db)))
 

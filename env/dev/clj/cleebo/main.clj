@@ -7,8 +7,6 @@
             [cleebo.components.cqp :refer [new-cqi-client]]
             [cleebo.components.blacklab :refer [new-bl]]
             [cleebo.components.ws :refer [new-ws]]
-            [cleebo.routes.annotations :refer [annotation-route]]
-            [cleebo.routes.notifications :refer [notify-route]]
             [environ.core :refer [env]]))
 
 (defonce system nil)
@@ -25,7 +23,7 @@
          :cqi-client (new-cqi-client {:init-file cqp-init-file})
          :blacklab (new-bl blacklab-paths-map)
          :db (new-db {:url database-url})
-         :ws (new-ws {:annotation annotation-route :notify notify-route})
+         :ws (new-ws)
          :figwheel (new-figwheel)
          :http-server (new-http-server {:port port
                                         :components [:cqi-client :db :ws :blacklab]}))

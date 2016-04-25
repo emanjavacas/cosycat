@@ -24,13 +24,17 @@
  (fn [db [_ snippet-delta]]
    (assoc-in db [:settings :snippets :snippet-delta] snippet-delta)))
 
+(defn error-handler [& args]
+  (re-frame/dispatch [:notify {:message "Couldn't update avatar"}])
+  (timbre/debug args))
+
 (re-frame/register-handler
  :regenerate-avatar
  (fn [db _]
    (POST "settings"
          {:params {:route :new-avatar}
           :handler #(re-frame/dispatch [:set-session [:user-info :avatar] %])
-          :error-handler #(re-frame/dispatch [:notify {:message "Couldn't update avatar"}])})
+          :error-handler error-handler})
    db))
 
 (re-frame/register-handler

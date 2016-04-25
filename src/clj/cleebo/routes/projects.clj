@@ -2,7 +2,7 @@
   (:require [buddy.auth :refer [authenticated?]]
             [cleebo.routes.auth :refer [safe]]
             [cleebo.db.projects :refer [user-projects new-project]]
-            [cleebo.components.ws :refer [notify-clients]]
+            [cleebo.components.ws :refer [send-clients]]
             [taoensso.timbre :as timbre]))
 
 (defmulti project-router (fn [{{route :route} :params}] route))
@@ -11,12 +11,10 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [project (new-project db username project-name desc users)]
-    (notify-clients
+    (send-clients
      ws
-     {:status :new-project
-      :type :notify
-      :data project}
-     :ws-from username :target-clients (map :username users))
+     {:type :new-project :data project}
+     :source-client username :target-clients (map :username users))
     project))
 (defmethod project-router :update-project
   [{{route :route name :name desc :description users :users} :params
