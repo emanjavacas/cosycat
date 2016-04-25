@@ -32,7 +32,8 @@
             [cleebo.routes.sessions :refer [session-route]]
             [cleebo.routes.projects :refer [project-route]]
             [cleebo.routes.settings :refer [settings-route]]
-            [cleebo.routes.annotation :refer [annotation-route]]))
+;            [cleebo.routes.annotation :refer [annotation-route]]
+            ))
 
 (def about-route
   (safe
@@ -66,7 +67,7 @@
   (GET "/cleebo" [] cleebo-route)
   (GET "/session" [] session-route)
   (POST "/settings" [] settings-route)
-  (GET "/annotation" [] annotation-route)
+;  (GET "/annotation" [] annotation-route)
   (POST "/project" [] project-route)
   (ANY "/logout" [] logout-route)
   (GET "/blacklab" [] blacklab-router)
