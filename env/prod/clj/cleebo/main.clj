@@ -5,8 +5,6 @@
             [cleebo.components.db :refer [new-db]]
             [cleebo.components.blacklab :refer [new-bl]]
             [cleebo.components.ws :refer [new-ws]]
-            [cleebo.routes.annotations :refer [annotation-route]]
-            [cleebo.routes.notifications :refer [notify-route]]
             [environ.core :refer [env]])
   (:gen-class))
 
@@ -24,7 +22,7 @@
     (-> (component/system-map
          :blacklab (new-bl blacklab-paths-map)
          :db (new-db {:url database-url})
-         :ws (new-ws {:annotation annotation-route :notify notify-route})
+         :ws (new-ws)
          :http-server (new-http-server {:port port :components [:db :ws :blacklab]}))
         (component/system-using
          {:http-server [:db :ws :blacklab]

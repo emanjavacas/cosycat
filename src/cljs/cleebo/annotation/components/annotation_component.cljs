@@ -1,63 +1,35 @@
 (ns cleebo.annotation.components.annotation-component
-  (:require [reagent.core :as reagent]
+  (:require-macros [cljs.core.async.macros :refer [go-loop]])
+  (:require [cljs.core.async :refer [chan <! >! put!]]
+            [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
             [goog.dom.dataset :as gdataset]
             [goog.dom.classes :as gclass]
+            [cleebo.components :refer [prepend-cell dummy-cell number-cell]]
             [cleebo.annotation.components.annotation-row :refer [annotation-rows]]
             [cleebo.annotation.components.input-row :refer [input-row]]
             [cleebo.utils :refer [->int filter-dummy-tokens]]
+            [cleebo.app-utils :refer [disjconj flip]]
             [taoensso.timbre :as timbre]))
 
-(defn on-mouse-down [mouse-down? highlighted? selection id]
-  (fn [event]
-    (let [e (aget event "target")]
-      (.preventDefault event)
-      (gclass/toggle e "highlighted")
-      (swap! mouse-down? not)
-      (reset! highlighted? (gclass/has e "highlighted"))
-      (if @highlighted?
-        (swap! selection conj id)
-        (swap! selection disj id)))))
-
-(defn on-mouse-over [mouse-down? highlighted? selection id]
-  (fn [event]
-    (let [e (aget event "target")]
-      (.preventDefault event)
-      (when @mouse-down?
-        (gclass/enable e "highlighted" @highlighted?)
-        (if @highlighted?
-          (swap! selection conj id)
-          (swap! selection disj id))))))
-
-(defn on-mouse-up [mouse-down?]
-  (fn [event]
-    (.preventDefault event)
-    (swap! mouse-down? not)))
-
-(defn flip
-  "removes the interesection of S1S2 from the union S1S2"
-  [set1 set2]
-  (-> set1
-      (clojure.set/union set2)
-      (clojure.set/difference (clojure.set/intersection set1 set2))))
-
 (defn on-click
-  [token-id selection shift?]
+  [token-id hit-id selection shift?]
   (fn [event]
-    (let [e (aget event "target")]
+    (let [e (aget event "target")
+          my-selection (get @selection hit-id)]
       (.preventDefault event)
       (gclass/toggle e "selected")
       (if @shift?
-        (let [max (apply max @selection)
-              min (apply min @selection)
+        (let [max (apply max my-selection)
+              min (apply min my-selection)
               [from to] (cond (> token-id max) [(inc max) token-id]
                               (< token-id min) [token-id (dec min)]
                               :else            [token-id max])]
-          (swap! selection flip (apply hash-set (range from (inc to)))))
+          (swap! selection update-in [hit-id] flip (apply hash-set (range from (inc to)))))
         (if (gclass/has e "selected")
-          (swap! selection disj token-id)
-          (swap! selection conj token-id))))))
+          (swap! selection update-in [hit-id] disj token-id)
+          (swap! selection update-in [hit-id] conj token-id))))))
 
 (defn on-key-shift [shift?]
   (fn [event]
@@ -65,100 +37,103 @@
     (when (= 16 (.-keyCode event))
       (swap! shift? not))))
 
-(defn token-cell
-  "help component-fn for a standard token cell"
-  [token & [props]]
-  (fn [token & [props]]
-    (let [{:keys [word match anns]} token]
-      [:td
-       (merge props {:class (str (when anns "has-annotation ") (when match "info"))})
-       word])))
+(defn cell-class [has-anns? is-match? is-selected?]
+  (str; (when has-anns? "has-annotation ")
+       (when is-match? "info ")
+       (when is-selected? "highlighted")))
+
+(defn hit-number-cell [n hit-id open-hits]
+  (fn [n hit-id open-hits]
+    [:td {:style {:background-color "#f5f5f5"}
+          :on-click #(swap! open-hits disjconj hit-id)} n]))
 
 (defn hit-row
   "component for a (currently being annotated) hit row"
-  [{hit :hit id :id meta :meta} & {:keys [span-selection]}]
-  (let [mouse-down? (reagent/atom false)
-        highlighted? (reagent/atom false)
-        shift? (reagent/atom false)]
-    (reagent/create-class
-     {:component-will-receive-props
-      #(do (reset! mouse-down? false)
-           (reset! highlighted? false)
-           (reset! span-selection #{}))    
-      :reagent-render
-      (fn [{hit :hit id :id meta :meta} & {:keys [span-selection]}]
-        (into
-         [:tr
-          {:style {:background-color "#cedede"}}]
-         (for [{token-id :id word :word match :match anns :anns} (filter-dummy-tokens hit)
-               :let [token-id (->int token-id)]]
-           ^{:key (str id "-" token-id)}
-           [:td.unselectable            ;avoid text-selection
-            {:tab-index 0               ;enable key- events
-             :on-key-down (on-key-shift shift?)
-             :on-key-up (on-key-shift shift?)
-             :on-click (on-click token-id span-selection shift?)             
-             :class (str (when anns "has-annotation ") (when match "info ")
-                         (when (contains? @span-selection (->int token-id)) "highlighted"))}
-            word])))})))
+  [{hit :hit hit-id :id meta :meta} open-hits & args]
+  (let [shift? (reagent/atom false)]
+    (fn hit-row
+      [{hit :hit hit-id :id meta :meta} open-hits
+       & {:keys [row-number selection]}]
+      (into
+       [:tr
+        {:style {:background-color "#cedede" :cursor "pointer"}}]
+       (-> (for [{id :id word :word match :match anns :anns} (filter-dummy-tokens hit)
+                 :let [id (->int id)]]
+             ^{:key (str hit-id "-" id)}
+             [:td.unselectable        ;avoid text-selection
+              {:tab-index 0
+               :on-key-down (on-key-shift shift?)
+               :on-key-up (on-key-shift shift?)
+               ;; :on-double-click #(swap! open-hits disjconj hit-id)
+               :on-click (on-click id hit-id selection shift?)
+               :class (cell-class anns match (contains? (get @selection hit-id) id))}
+              word])
+           (prepend-cell
+            {:key (str "number" hit-id)
+             :child hit-number-cell
+             :opts [row-number hit-id open-hits]}))))))
 
-(defn queue-row-fn
-  "component-fn for a queue row"
-  [current-hit-id]
-  (fn [{hit :hit id :id}]
+(defn spacer-row
+  "empty row for spacing purposes"
+  [& {:keys [space] :or {space 8}}]
+  (fn spacer-row [_ _] [:tr {:style {:height (str space "px")}}]))
+
+(defmulti annotation-panel-hit
+  (fn [{id :id :as hit-map} open-hits] (contains? @open-hits id)))
+
+(defmethod annotation-panel-hit true
+  [{hit-id :id hit :hit hit-meta :meta :as hit-map} open-hits & {:keys [project-name]}]
+  (concat
+   [{:key (str "hit" hit-id)   :component hit-row}
+    {:key (str "input" hit-id) :component input-row}
+    {:key (str "input-spacer" hit-id) :component (spacer-row :space 16)}]
+   (for [{:keys [key component]} (annotation-rows hit-map project-name)]
+     {:key key :component component})
+   [{:key (str "ann-spacer" hit-id) :component (spacer-row :space 16)}]))
+
+(defn token-cell
+  "help component-fn for a standard token cell"
+  [token]
+  (fn token-cell [token]
+    (let [{:keys [word match anns]} token]
+      [:td {:class (str (when anns "has-annotation ") (when match "info"))}
+       word])))
+
+(defn queue-row
+  "component-fn for a hit row"
+  [{hit-id :id hit-map :hit hit-meta :meta} open-hits & {:keys [row-number]}]
+  (fn queue-row [{hit-id :id hit-map :hit hit-meta :meta} open-hits & {:keys [row-number]}]
     (into
      [:tr
       {:style {:background-color "#f5f5f5" :cursor "pointer"}
        :class "queue-row"
-       :on-click #(reset! current-hit-id id)}]
-     (for [{:keys [id] :as token} (filter-dummy-tokens hit)]
-       ^{:key id} [token-cell token]))))
+       :on-click #(swap! open-hits disjconj hit-id)}]
+     (-> (for [{:keys [id] :as token} (filter-dummy-tokens hit-map)]
+           ^{:key id} [token-cell token])
+         (prepend-cell
+          {:key (str "dummy" hit-id)
+           :child number-cell
+           :opts [row-number]})))))
 
-(defn spacer
-  "empty row for spacing purposes"
-  [& [space]]
-  (fn []
-    [:tr {:style {:height (str (or space 8) "px")}}]))
+(defmethod annotation-panel-hit false
+  [{hit-id :id hit-map :hit hit-meta :meta} open-hits]
+  [{:key (str "row-" hit-id) :component queue-row}
+   {:key (str "spacer-" hit-id) :component (spacer-row)}])
 
-(defn get-target-hit-id
-  "returns the id of the hit that is currently selected for annotation"
-  [marked-hits current-ann-hit-id]
-  (if-not current-ann-hit-id
-    (:id (first marked-hits))
-    current-ann-hit-id))
-
-(defn table-row-components
-  "Transforms hits into a vector of vectors [id component-fn].
-  Each component-fn is passed a hit-map as argument and may
-  return one or multiple rows"
-  [{:keys [id] :as hit-map} & {:keys [marked-hits current-hit-id]}]
-  (let [target-hit-id (get-target-hit-id @marked-hits @current-hit-id)]
-    (if-not (= id target-hit-id)
-      ;; queue-row
-      [[(str "row-" id) (queue-row-fn current-hit-id)]
-       [(str "spacer-" id) (spacer)]]
-      ;; annotation-row
-      (concat
-       [["hit"   hit-row]
-        ["input" input-row]
-        ["input-spacer" (spacer 16)]]
-       (annotation-rows hit-map)
-       [["ann-spacer" (spacer 16)]]))))
-
-(defn annotation-component [marked-hits]
-  (let [current-hit-id (reagent/atom nil)
-        span-selection (reagent/atom #{})]
-    (fn [marked-hits]
+(defn annotation-component [marked-hits open-hits]
+  (let [selection (reagent/atom (zipmap (map :id @marked-hits) (repeatedly hash-set)))
+        active-project (re-frame/subscribe [:session :active-project :active-project-name])]
+    (fn annotation-component [marked-hits open-hits]
       [bs/table
-       {;:responsive true
-        :id "table-annotation"
+       {:id "table-annotation"
+        :responsive true
         :style {:text-align "center"}}
        [:thead]
        [:tbody
         (doall
-         (for [hit-map @marked-hits
-               [id row-fn] (table-row-components hit-map
-                                                 :marked-hits marked-hits
-                                                 :current-hit-id current-hit-id)]
-           ^{:key id} [row-fn hit-map :span-selection span-selection]))]])))
-
+         (for [[idx hit-map] (map-indexed vector @marked-hits)
+               {:keys [key component]} (annotation-panel-hit hit-map open-hits)]
+           ^{:key key} [component hit-map open-hits
+                        :project-name @active-project
+                        :row-number (inc idx)
+                        :selection selection]))]])))

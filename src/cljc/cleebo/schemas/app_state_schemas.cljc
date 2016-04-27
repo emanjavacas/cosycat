@@ -5,13 +5,15 @@
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
             [cleebo.schemas.project-schemas :refer [project-schema]]))
 
-(def hit-tokens-schema
+(def project-name-schema s/Str)
+(def ann-key-schema s/Str)
+(def hit-token-schema
   {;; required keys
    (s/required-key :word)   s/Str
    (s/required-key :id)     s/Any
    ;; optional keys
    (s/optional-key :marked) s/Bool
-   (s/optional-key :anns)   {s/Str annotation-schema}
+   (s/optional-key :anns)   {project-name-schema {ann-key-schema annotation-schema}}
    ;; any other additional keys
    s/Keyword                s/Any})
 
@@ -24,7 +26,7 @@
 
 (def results-by-id-schema
   "Internal representation of results. A map from ids to hit-maps"
-  {s/Int {:hit  [hit-tokens-schema]
+  {s/Int {:hit  [hit-token-schema]
           :id   s/Int
           :meta hit-meta-schema}})
 
@@ -88,6 +90,11 @@
 
 (def db-schema
   {:settings settings-schema
+   :history {:ws [{:timestamp s/Int
+                   :type s/Keyword
+                   :data {s/Any s/Any}}]
+             :query [{:query-str s/Str
+                      :timestamp s/Int}]}
    :session {:init-session s/Bool
              (s/optional-key :session-error) app-error-schema
              :query-opts query-opts-schema

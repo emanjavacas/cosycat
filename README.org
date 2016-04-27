@@ -25,6 +25,9 @@ profile for later use (eventually emailing)
 
 ** DB
 
+*** Annotations
+- Restrict overlapping annotations exceptions to annotations in same project
+
 *** DONE Project routes
 Projects will help organizing annotations:
 

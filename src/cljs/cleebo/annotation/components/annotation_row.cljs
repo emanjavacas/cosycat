@@ -2,23 +2,21 @@
   (:require [react-bootstrap.components :as bs]
             [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [human-time ->int filter-dummy-tokens]]
-            [cleebo.components :refer [user-thumb]]
+            [cleebo.utils :refer [human-time ->int filter-dummy-tokens ->box]]
+            [cleebo.components :refer [user-thumb prepend-cell dummy-cell]]
             [schema.core :as s]
             [taoensso.timbre :as timbre]))
 
 (defn key-val
   [{{k :key v :value} :ann user :username time :timestamp}]
-  [:div k
+  [:div [bs/label k]
    [:span {:style {:text-align "right" :margin-left "7px"}}
-    [bs/label v]]])
+    v]])
 
 (defn spacer-row [] [:tr {:style {:height "10px"}}])
 
-(defn ->box [color] (str "0 -3px " color " inset"))
-
 (defn history-body [history]
-  (fn [history]
+  (fn history-body [history]
     [:tbody
      (doall
       (for [{{v :value} :ann user :username time :timestamp} (sort-by :timestamp > history)]
@@ -34,7 +32,7 @@
 
 (defn no-history-body []
   (let [editing? (reagent/atom false)]
-    (fn []
+    (fn no-history-body []
       [:tbody
        [:tr
         {:on-click #(swap! editing? not)}
@@ -63,37 +61,42 @@
          [history-body history]
          [no-history-body])]])))
 
+(defn cell-style
+  [color-map username]
+  (if-let [color (get color-map username)]
+    {:box-shadow (->box (get color-map username))}
+    {:opacity "0.25"}))
+
 (defmulti annotation-cell
-  "variadic annotation cell dispatching on span type"
-  (fn [{:keys [ann-map token-id]}]
-    (let [{{span-type :type} :span} ann-map]
-      span-type)))
+  "Variadic annotation cell dispatching on span type"
+  (fn [{{{span-type :type} :span} :ann-map token-id :token-id color-map :color-map}]
+    span-type))
 
 (defmethod annotation-cell "token"
   [{:keys [ann-map]}]
-  (fn [{{username :username :as ann-map} :ann-map
-        filtered-users-colors :filtered-users-colors}]
+  (fn annotation-cell [{{username :username :as ann-map} :ann-map
+        color-map :color-map}]
     [bs/overlay-trigger
      {:overlay (user-popover ann-map)
       :trigger "click"
       :rootClose true
       :placement "bottom"}
      [:td.ann-cell       
-      {:style {:box-shadow (->box (get @filtered-users-colors username))}}
+      {:style (cell-style @color-map username)}
       [key-val ann-map]]]))
 
 (defmethod annotation-cell "IOB"
   [{:keys [ann-map token-id filtered-users-colors]}]
-  (fn [{{{{B :B O :O} :scope} :span username :username :as ann-map} :ann-map
-        filtered-users-colors :filtered-users-colors
-        token-id :token-id}]
+  (fn annotation-cell
+    [{{{{B :B O :O} :scope} :span username :username :as ann-map} :ann-map
+        color-map :color-map token-id :token-id}]
     [bs/overlay-trigger
      {:overlay (user-popover ann-map)
       :trigger "click"
       :rootClose true
       :placement "bottom"}
      [:td.ann-cell
-      {:style {:box-shadow (->box (get @filtered-users-colors username))}}
+      {:style (cell-style @color-map username)}
       [:span (when (= B token-id) [key-val ann-map])]]]))
 
 (defmethod annotation-cell :default
@@ -105,27 +108,32 @@
   [{{key :key} :ann {type :type} :span}]
   {:key key :type type})
 
+(defn get-anns-in-project [anns project-name]
+  (vals (get anns project-name)))
+
 (defn ann-types
   "extracts the unique annotation keys in a given hit"
-  [hit-map]
-  (->> (mapcat (fn [hit] (vals (:anns hit))) (:hit hit-map))
+  [{hit :hit} project-name]
+  (->> (mapcat (fn [{anns :anns :as token}] (get-anns-in-project anns project-name)) hit)
        (map parse-ann-type)
        (into (hash-set))))
 
 (defn annotation-rows
-  "build component-fns [:tr] for each annotation in a given hit"
-  [hit-map]
-  (for [{key :key} (sort-by (juxt :type :key) > (ann-types hit-map))]
-    [key
-     (fn annotation-row-component [{hit :hit}]
-       (let [filtered-users-colors (re-frame/subscribe [:filtered-users-colors])]
-         (into
-          [:tr.ann-row]
-          (for [{token-id :id anns :anns} (filter-dummy-tokens hit)
-                :let [ann-map (get anns key)
-                      token-id (->int token-id)]]
-            ^{:key (str key token-id)}
-            [annotation-cell
-             {:ann-map ann-map
-              :token-id token-id
-              :filtered-users-colors filtered-users-colors}]))))]))
+  "build component-fns [:tr] for each annotation type in a given hit"
+  [{hit-id :id :as hit-map} project-name]
+  (for [{key :key} (sort-by (juxt :type :key) > (ann-types hit-map project-name))]
+    {:key (str key hit-id)
+     :component
+     (fn annotation-row-component [hit open-hits & args]
+       (let [users-colors (re-frame/subscribe [:filtered-users-colors])]
+         (fn [{hit :hit hit-id :id} open-hits & {:keys [project-name]}]
+           (into
+            [:tr.ann-row]
+            (-> (doall (for [{token-id :id anns :anns} (filter-dummy-tokens hit)]
+                         ^{:key (str key hit-id token-id)}
+                         [annotation-cell {:ann-map  (get-in anns [project-name key])
+                                           :token-id (->int token-id)
+                                           :color-map users-colors}]))
+                (prepend-cell
+                 {:key (str "dummy" hit-id)
+                  :child dummy-cell}))))))}))

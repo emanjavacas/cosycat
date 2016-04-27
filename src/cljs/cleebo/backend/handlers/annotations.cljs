@@ -74,14 +74,14 @@
   "inserts incoming annotation into the corresponding hit map"
   (fn [hit-map {{scope :scope t :type} :span}] t))
 (defmethod update-token-anns "token"
-  [hit-map {{scope :scope} :span {k :key} :ann :as ann-map}]
-  (let [token-fn (fn [token] (assoc-in token [:anns k] ann-map))
+  [hit-map {{scope :scope} :span project-name :project {k :key} :ann :as ann-map}]
+  (let [token-fn (fn [token] (assoc-in token [:anns project-name k] ann-map))
         check-token-fn (fn [id] (= (str scope) id))]
     (update-token hit-map check-token-fn token-fn)))
 (defmethod update-token-anns "IOB"
-  [hit-map {{scope :scope} :span {k :key} :ann :as ann-map}]
+  [hit-map {{scope :scope} :span project-name :project {k :key} :ann :as ann-map}]
   (let [{B :B O :O} scope
-        token-fn (fn [token] (assoc-in token [:anns k] ann-map))
+        token-fn (fn [token] (assoc-in token [:anns project-name k] ann-map))
         check-fn (fn [id] (contains? (apply hash-set (range B (inc O))) (->int id)))]
     (update-token hit-map check-fn token-fn)))
 
@@ -135,8 +135,7 @@
             db
             [:session :results-by-id hit-id]
             (update-token-anns hit-map ann-map)))
-       (do (re-frame/dispatch [:notify {:message "couldn't find hit"}])
-           db)))))
+       (do (timbre/debug "couldn't find hit") db)))))
 
 (s/defn ^:always-validate make-annotation :- annotation-schema
   ([username project ann token-id]
@@ -147,7 +146,7 @@
            :scope token-id}
     :timestamp (.now js/Date)})
   ([username project ann token-from :- s/Int token-to :- s/Int]
-   {:pre [(> token-to token-from)]}
+   {:pre [(>= token-to token-from)]}
    {:ann ann
     :username username
     :project project

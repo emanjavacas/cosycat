@@ -5,7 +5,7 @@
             [react-bootstrap.components :as bs]
             [goog.string :as gstr]
             [cleebo.utils :refer [->default-map by-id]]
-            [cleebo.components :refer [dropdown-select user-thumb]]
+            [cleebo.components :refer [dropdown-select user-thumb filter-annotation-buttons]]
             [cleebo.query.components.annotation-modal
              :refer [annotation-modal-button]]))
 
@@ -64,19 +64,10 @@
          (let [from (inc from) to (min to query-size)]
            (gstr/format "%d-%d of %d hits" from to query-size))]))))
 
-(defn annotation-hit-button []
-  (let [marked-hits (re-frame/subscribe [:marked-hits])]
-    (fn []
-      [bs/button
-       {:bsStyle "primary"
-        :style {:visibility (if (zero? (count @marked-hits)) "hidden" "visible")}
-        :href "#/annotation"}
-       "Annotate"])))
-
 (defn mark-all-hits-btn []
   [bs/button
    {:onClick #(re-frame/dispatch [:mark-all-hits])}
-   "Mark all hits"])
+   "Mark hits in page"])
 
 (defn demark-all-hits-btn []
   [bs/button
@@ -88,30 +79,6 @@
    [mark-all-hits-btn]
    [demark-all-hits-btn]
    [annotation-modal-button]])
-
-(defn filter-annotations-btn [username filtered & [opts]]
-  (let [user (re-frame/subscribe [:user username])]
-    (fn [username filtered]
-      (let [{{href :href} :avatar} @user]
-        [bs/overlay-trigger
-         {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} username])
-          :placement "bottom"}
-         [bs/button
-          (merge
-           {:active (boolean filtered)
-            :onClick #(re-frame/dispatch [:update-filtered-users username (not filtered)])}
-           opts)
-          (reagent/as-component [user-thumb href {:height "25px" :width "25px"}])]]))))
-
-(defn filter-annotations-buttons []
-  (let [filtered-users (re-frame/subscribe [:session :active-project :filtered-users])
-        active-project-users (re-frame/subscribe [:active-project-users])]
-    (fn []
-      [bs/button-toolbar
-       (doall (for [{:keys [username]} @active-project-users
-                    :let [filtered (contains? @filtered-users username)]]
-                ^{:key username}
-                [filter-annotations-btn username filtered]))])))
 
 (defn toolbar []
   (let [query-size (re-frame/subscribe [:query-results :query-size])
@@ -129,4 +96,4 @@
        [:div.row {:style {:margin-top "10px"}}
         [:div.col-lg-8.col-sm-8.pad [mark-buttons]]
         [:div.col-lg-4.col-sm-4.pad
-         [:div.pull-right [filter-annotations-buttons]]]]])))
+         [:div.pull-right [filter-annotation-buttons]]]]])))

@@ -13,20 +13,29 @@ table#table-annotation {
     box-sizing: border-box;
 }
 
+table#table-annotation tr.queue-row:hover {
+    opacity: 0.8;
+    color: black !important;
+    /* box-shadow: inset 0 0 100px 100px rgba(255, 255, 255, 0.9); */
+    /* background-color: #fcfdfd; */
+    /* border-bottom: 0.5px solid #dcdcdc; */
+    /* border-top: 0.5px solid #dcdcdc; */
+}
+
 table#table-annotation tr.queue-row:hover td {
     /* background-color: #fcfdfd; */
-    border-bottom: 0.5px solid #dcdcdc;
-    border-top: 0.5px solid #dcdcdc;
+    /* border-bottom: 0.5px solid #dcdcdc; */
+    /* border-top: 0.5px solid #dcdcdc; */
 }
 
 table#table-annotation tr.queue-row:hover td:first-child {
     /* background-color: #fcfdfd; */
-    border-left: 0.5px solid #dcdcdc;
+    /* border-left: 0.5px solid #dcdcdc; */
 }
 
 table#table-annotation tr.queue-row:hover td:last-child {
     /* background-color: #fcfdfd; */
-    border-right: 0.5px solid #dcdcdc;
+    /* border-right: 0.5px solid #dcdcdc; */
 }
 
 /* tr.queue-row > td { */
@@ -35,7 +44,8 @@ table#table-annotation tr.queue-row:hover td:last-child {
 
 table td.has-annotation {
     /* box-shadow: 0 -3px #d5bfb7 inset; */
-    background-color: rgba(0, 0, 0, 0.05);
+    /* background-color: rgba(0, 0, 0, 0.05); */
+    background-color: #E7E7E7;
 }
 
 table#table-annotation td.is-span {

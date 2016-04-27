@@ -24,9 +24,24 @@
                   [k (apply f (map val v))])
                 (group-by key (apply concat mlist)))))
 
+(defn flip
+  "removes the interesection of S1S2 from the union S1S2"
+  [set1 set2]
+  (-> set1
+      (clojure.set/union set2)
+      (clojure.set/difference (clojure.set/intersection set1 set2))))
+
+(defn disjconj
+  "applies `disj` or `conj` on a set an given `args` depending on
+  whether the elments are already contained or not"
+  [s1 & args]
+  (reduce #(if (%1 %2) (disj %1 %2) (conj %1 %2)) s1 args))
+
+;;; LOGIC
 (defn default-project-name [username]
   (str username "-playground"))
 
 (defn invalid-project-name [s]
   #?(:clj  (re-find #"[ ^\W+]" s)
      :cljs (gpattern/matchStringOrRegex (js/RegExp "[ ^\\W+]") s)))
+

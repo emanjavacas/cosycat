@@ -11,6 +11,7 @@
             [cleebo.backend.handlers.notifications]
             [cleebo.backend.handlers.session]
             [cleebo.backend.handlers.projects]
+            [cleebo.backend.history]            
             [cleebo.backend.ws-routes]
             [cleebo.backend.subs]
             [cleebo.backend.ws :refer [open-ws-channel]]
@@ -25,7 +26,8 @@
             [cleebo.front.page :refer [front-panel]]
             [cleebo.error.page :refer [error-panel]]            
             [cleebo.utils :refer [nbsp]]
-            [cleebo.ajax-interceptors :refer [add-interceptor csrf-interceptor]]
+            [cleebo.ajax-interceptors
+             :refer [add-interceptor csrf-interceptor ajax-header-interceptor]]
             [taoensso.timbre :as timbre]
             [clojure.string :as str]))
 
@@ -127,6 +129,7 @@
     (fn [active-panel]
       [bs/navbar
        {:inverse false
+        :responsive true
         :fixedTop true
         :fluid true}
        [bs/navbar-header [user-brand active-project]]
@@ -142,7 +145,7 @@
           [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"])
         (when-not (or (= @active-panel :front-panel) (empty? @projects))
           [projects-dropdown projects active-project])
-        [debug-dropdown]
+;        [debug-dropdown]
         [navlink :exit "#/exit" "Exit" "zmdi-power"]]])))
 
 (defn main-panel []
@@ -167,6 +170,7 @@
 (defn init! []
   ;; install csrf-token
   (add-interceptor csrf-interceptor {:csrf-token js/csrf})
+  (add-interceptor ajax-header-interceptor)
   ;; web-sockets
   (open-ws-channel {:url (host-url)})
   ;; start db

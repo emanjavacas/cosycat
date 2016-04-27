@@ -70,6 +70,8 @@
         {})
        (map filter-user-public)))
 
+
+
 ;;(def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
 ;;(update-user-info db "user" {:avatar (cleebo.avatar/user-avatar (str "user" (rand-int 100000)))})
 

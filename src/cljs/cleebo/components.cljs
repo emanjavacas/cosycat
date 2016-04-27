@@ -76,6 +76,18 @@
       {:style {:padding-left "10px"}}
       [user-thumb href {:height "25px" :width "25px"}]]]))
 
+(defn number-cell [n]
+  (fn [n]
+    [:td n]))
+
+(defn dummy-cell []
+  (fn []
+    [:td ""]))
+
+(defn prepend-cell [siblings {:keys [key child opts]}]
+  {:pre ([(vector? opts)])}
+  (vec (cons ^{:key k} (apply merge [child] opts) siblings)))
+
 (defn notification-child
   [message date status href]
   [:div.notification
@@ -104,6 +116,30 @@
         (map (fn [{:keys [id data]}]
                ^{:key id} [notification {:id id :data data}])
              @notifications)]])))
+
+(defn filter-annotation-btn [username filtered & [opts]]
+  (let [user (re-frame/subscribe [:user username])]
+    (fn [username filtered]
+      (let [{{href :href} :avatar} @user]
+        [bs/overlay-trigger
+         {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} username])
+          :placement "bottom"}
+         [bs/button
+          (merge
+           {:active (boolean filtered)
+            :onClick #(re-frame/dispatch [:update-filtered-users username (not filtered)])}
+           opts)
+          (reagent/as-component [user-thumb href {:height "25px" :width "25px"}])]]))))
+
+(defn filter-annotation-buttons []
+  (let [filtered-users (re-frame/subscribe [:session :active-project :filtered-users])
+        active-project-users (re-frame/subscribe [:active-project-users])]
+    (fn []
+      [bs/button-toolbar
+       (doall (for [{:keys [username]} @active-project-users
+                    :let [filtered (contains? @filtered-users username)]]
+                ^{:key username}
+                [filter-annotation-btn username filtered]))])))
 
 (defn load-from-ls-row [backup]
   [:tr

@@ -59,6 +59,7 @@
     (kit/on-receive ws-ch
                     (fn [payload]
                       (let [parsed-payload (read-str payload :json)]
+                        (s/validate (ws-from-client parsed-payload) parsed-payload)
                         (router ws {:ws-from username :payload parsed-payload}))))))
 
 (defn send-client [{clients :clients :as ws} ws-target payload]

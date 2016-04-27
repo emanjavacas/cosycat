@@ -69,7 +69,6 @@
  :reset-query-results
  standard-middleware
  (fn [db _]
-   (timbre/debug "RESULTs-BY-ID")
    (assoc-in db [:session :results-by-id] {})))
 
 (re-frame/register-handler

@@ -1,7 +1,9 @@
 (ns cleebo.avatar
   (:require [clojure.java.io :as io]
             [schema.core :as s]
-            [cleebo.schemas.app-state-schemas :refer [avatar-schema]])
+            [cleebo.schemas.app-state-schemas :refer [avatar-schema]]
+            [environ.core :refer [env]]
+            [taoensso.timbre :as timbre])
   (:import [org.hackrslab.avatar RandomAvatarBuilder RandomAvatar RandomAvatar$Extra]
            [javax.imageio ImageIO ImageReader]
            [javax.imageio.stream ImageInputStream]))
@@ -17,36 +19,39 @@
       (.addColor 81 163 81)
       (.addColor 248 148 6)
       (.addColor 189 54 47)
+      (.addColor 127 127 220)
+      (.addColor 100 207 172)
+      (.addColor 198 87 181)
+      (.addColor 134 166 220)
       (.build)))
 
 (defn random-avatar
   "Saves a random or seeded png image into filename"
-  ([filename] (random-avatar filename "default"))
+  ([filename] (random-avatar filename (str (rand-int 100000))))
   ([filename seed]
    (let [generator (build-generator)]
      (.generate generator (io/file filename) (RandomAvatar$Extra/seed seed)))))
 
 (defn new-filename
-  [username]
-  (let [lcased (.toLowerCase username)]
-    (str "public/img/avatars/" lcased ".png")))
+  [username & {:keys [rel-path] :or {rel-path "public/img/avatars/"}}]
+  (str rel-path username (str (rand-int 100000)) ".png"))
 
 (defn new-avatar
-  "Creates a new avatar for a user using the `username` as `seed`"
+  "Creates a new avatar for a user"
   [username]
-  (let [fname (new-filename username)
-        full-fname (str "resources/" fname)]
-    (do (random-avatar full-fname username)
-        fname)))
+  (let [rel-path (new-filename username)
+        abs-path (str (:resource-path env) rel-path)]
+    (do (random-avatar abs-path)
+        rel-path)))
 
 (defn get-avatar
   "Tries to read an existing avatar, if it doesn't succeed it creates a new one"
   [username]
-  (let [fname (new-filename username)
-        resource (io/resource fname)]
+  (let [rel-path (new-filename username)
+        resource (io/resource rel-path)]
     (when-not resource
       (new-avatar username))
-    fname))
+    rel-path))
 
 (defn slurp-pixels [f]
   (ImageIO/read f))
@@ -68,10 +73,9 @@
   (first (sort-by #(apply + (vals %)) > colors)))
 
 (defn int->hex [n]
-  {:post [(= 2 (count %))]}
   (format "%02X" n))
 
-(defn ->hex [{:keys [red green blue]}]
+(defn color->hex [{:keys [red green blue]}]
   (str "#" (int->hex red) (int->hex green) (int->hex blue)))
 
 (defn get-hex-color [f]
@@ -79,10 +83,19 @@
       slurp-pixels
       get-colors
       get-brightest
-      ->hex))
+      color->hex))
 
-(s/defn ^:always-validate user-avatar [username] :- avatar-schema
-  (let [f (new-avatar username)
-        c (get-hex-color f)]
-    {:href f :dominant-color c}))
+(defn find-avatars
+  [username & {:keys [rel-path] :or {rel-path "public/img/avatars/"}}]
+  (->> (io/resource rel-path)
+       io/file
+       file-seq
+       (filter #(.startsWith (.getName %) username))))
+
+(defn user-avatar [username]
+  (when-let [fnames (seq (find-avatars username))]
+    (dorun (map io/delete-file fnames)))
+  (let [rel-path (new-avatar username)
+        color (get-hex-color rel-path)]
+    {:href rel-path :dominant-color color}))
 

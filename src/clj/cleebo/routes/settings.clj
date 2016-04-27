@@ -11,8 +11,7 @@
 (defmethod settings-router :new-avatar
   [{{{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [seed (rand-int 1000000)
-        avatar (user-avatar (str username seed))]
+  (let [avatar (user-avatar username)]
     (update-user-info db username {:avatar avatar})
     (send-clients ws {:type :new-user-avatar :data {:avatar avatar :username username}})
     avatar))

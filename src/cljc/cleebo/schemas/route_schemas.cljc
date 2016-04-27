@@ -11,7 +11,7 @@
 
 (def blueprint-from-server
   {:type   s/Keyword
-   (s/optional-key :source-client) s/Str})
+   :data {(s/optional-key :by) s/Str}})
 
 (def ann-from-server-schema
   "multiple anns implies multiple hit-ids"

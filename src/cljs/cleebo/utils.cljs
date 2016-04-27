@@ -27,9 +27,12 @@
       :else m)))
 
 ;;; TIME
-(defn time-id []
+(defn timestamp []
   (-> (js/Date.)
-      (.getTime)
+      (.getTime)))
+
+(defn time-id []
+  (-> (timestamp)
       (.toString 36)))
 
 (defn parse-time [i & [opts]]
@@ -99,18 +102,22 @@
   (filter #(not (.startsWith (:id %) "dummy")) hit))
 
 ;;; ANNOTATIONS
+(defn ->box [color] (str "0 -1.5px " color " inset"))
+
 (defn parse-annotation [s]
   (let [[k v] (gstr/splitLimit s "=" 2)]
     (if (and k v)
       [k v])))
 
 (defn highlight-annotation
+  "if a given token has annotations it computes a color for the user with the most
+  annotations in that token"
   ([token])
-  ([{anns :anns :as token} users-map]
-   (let [filtered-anns (filter #(contains? users-map (:username %)) (vals anns))
-         [username _] (first (sort-by second > (frequencies (map :username filtered-anns))))]
-     (if-let [color (get users-map username)]
-       (str "0 -3px " color " inset")))))
+  ([{anns :anns :as token} project-name users-map]
+   (let [filt-anns (filter #(contains? users-map (:username %)) (vals anns))
+         [user _] (first (sort-by second > (frequencies (map :username filt-anns))))]
+     (if-let [color (get users-map user)]
+       (->box color)))))
 
 ;;; ELSE
 (defn dominant-color

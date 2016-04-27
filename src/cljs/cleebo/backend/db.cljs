@@ -5,6 +5,8 @@
   {:settings {:notifications {:delay 7500}
               :snippets {:snippet-size 25
                          :snippet-delta 10}}
+   :history {:ws []
+             :query []}
    :session {:init-session false
              :active-panel :front-panel
              :query-opts {:corpus ""

@@ -63,4 +63,7 @@ div.pad {
     opacity: 1;
 }
 
- 
+li.toolbar {
+    margin-right: 15px;
+}
+

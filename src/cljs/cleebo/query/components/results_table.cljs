@@ -44,10 +44,10 @@
 
 (defn hit-token [{:keys [id word match marked anns]}]
   (let [filtered-users-colors (re-frame/subscribe [:filtered-users-colors])
-        active-project (re-frame/subscribe [:session :active-project :name])]
+        project (re-frame/subscribe [:session :active-project :name])]
     (fn [{:keys [id word match marked anns] :as token}]
       (let [highlighted (if marked "highlighted " "")
-            color (when anns (highlight-annotation token @filtered-users-colors))
+            color (when anns (highlight-annotation token @project @filtered-users-colors))
             is-match (if match "info" "")]
         [:td
          {:class (str highlighted is-match)

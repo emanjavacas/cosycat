@@ -29,13 +29,12 @@
              (map #(assoc % :role "user") users)) ;assign default role to users
        ))
 
+(def default-project-desc
+  "A default project to explore the app, get started, try queries etc.")
+
 (s/defn new-project :- project-schema
   ([db creator]
-   (new-project
-    db
-    creator
-    (default-project-name creator)
-    "A default project to explore the app, get started, try queries etc."))
+   (new-project db creator (default-project-name creator) default-project-desc))
   ([{db-conn :db :as db} creator project-name description & [users]]
    {:pre [(every? #(is-user? db {:username %}) (map :username users))
           (not (is-project? db project-name))
@@ -67,3 +66,12 @@
          {$push {:updates update-payload}}
          {:return-new true})]
     (dissoc payload :_id)))
+
+;; (defonce db (.start (cleebo.components.db/new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
+
+;; (mc/find-maps
+;;  (:db db)
+;;  "projects"
+;;  {"users.username" {$in ["user" "foo"]}})
+
+

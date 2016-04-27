@@ -24,49 +24,46 @@
   span annotations are fetched according to B-cpos"
   (fn [db {{type :type} :span}] type))
 
-(defmethod find-ann-id
-  "token"
-  [{db :db} {{scope :scope} :span {k :key} :ann}]
+(defmethod find-ann-id "token"
+  [{db :db} {{scope :scope} :span project :project {k :key} :ann}]
   (if-let [{{old-scope :scope} :span}
            (mc/find-one-as-map
             db "anns"
             {"ann.key" k
-             "span.type" "IOB"          ;superflous
+             "project" project
              $and [{"span.scope.B" {$lte scope}}
                    {"span.scope.O" {$gte scope}}]})]
     (throw (ex-info "Attempt to overwrite span annotation with token annotation"
                     {:scope old-scope}))
     (-> (mc/find-one-as-map
          db "cpos_ann"
-         {:_id scope "anns.key" k}
+         {:_id scope
+          "anns.key" k
+          "project" project}
          {"anns.$.key" true "_id" false})
         :anns
         first)))
 
-(defmethod find-ann-id
-  "IOB"
-  [{db :db} {{{new-B :B new-O :O :as new-scope} :scope} :span {k :key} :ann :as ann-map}]
+(defmethod find-ann-id "IOB"
+  [{db :db} {{{new-B :B new-O :O :as new-scope} :scope} :span
+             project :project {k :key} :ann :as ann-map}]
   (when-let [{{scope :scope} :span}
              (mc/find-one-as-map
               db "anns"
               {"ann.key" k
+               "project" project
                "span.scope" {$in (range new-B (inc new-O))}})]
-    (throw (ex-info "Attempt to overwrite token annotation with span annotation"
-                    {:scope scope})))
+    (throw (ex-info "Attempt to overwrite token ann with span ann" {:scope scope})))
   (when-let [{{{old-B :B old-O :O :as old-scope} :scope} :span ann-id :_id}
              (mc/find-one-as-map
               db "anns"
               {"ann.key" k
+               "project" project
                $and [{"span.scope.B" {$lte new-O}}
                      {"span.scope.O" {$gte new-B}}]})]
     (if-not (and (= old-B new-B) (= old-O new-O))
       (throw (ex-info "Overlapping span" {:old-scope old-scope :new-scope new-scope}))
       {:ann-id ann-id})))
-
-(s/defn find-ann-ids-in-range [{db :db} id-from id-to] :- [cpos-ann-schema]
-  (mc/find-maps
-   db "cpos_ann"
-   {$and [{:_id {$gte id-from}} {:_id {$lt id-to}}]}))
 
 (s/defn find-ann-by-id :- annotation-schema
   [{db :db} ann-id]
@@ -76,29 +73,27 @@
   "creates new ann in coll `anns`+`cpos-ann` for given ann"
   (fn [db {{type :type} :span}] type))
 
-(s/defmethod insert-annotation
-  "token"
+(defn insert-cpos-ann
+  [{db :db} token-id {:keys [key ann-id project] :as ann}]
+  (mc/find-and-modify
+   db "cpos_ann"
+   {:_id token-id}
+   {$push {:anns ann}}
+   {:upsert true}))
+
+(s/defmethod insert-annotation "token"
   :- annotation-schema
-  [{db :db} {{scope :scope} :span {k :key} :ann :as ann}]
-  (let [{:keys [_id] :as ann} (mc/insert-and-return db "anns" ann)]
-    (mc/find-and-modify
-     db "cpos_ann"
-     {:_id scope}
-     {$push {:anns {:key k :ann-id _id}}}
-     {:upsert true})
+  [{db-conn :db :as db} {{scope :scope} :span project-name :project {k :key} :ann :as ann}]
+  (let [{:keys [_id] :as ann} (mc/insert-and-return db-conn "anns" ann)]
+    (do (insert-cpos-ann db scope {:key k :ann-id _id :project project-name}))
     ann))
 
-(s/defmethod insert-annotation
-  "IOB"
+(s/defmethod insert-annotation "IOB"
   :- annotation-schema
-  [{db :db} {{{B :B O :O} :scope} :span {k :key} :ann :as ann}]
-  (let [{:keys [_id] :as ann} (mc/insert-and-return db "anns" ann)]
+  [{db-conn :db :as db} {{{B :B O :O} :scope} :span project :project {k :key} :ann :as ann}]
+  (let [{:keys [_id] :as ann} (mc/insert-and-return db-conn "anns" ann)]
     (doseq [token-id (range B (inc O))]
-      (mc/find-and-modify
-       db "cpos_ann"
-       {:_id token-id}
-       {$push {:anns {:key k :ann-id _id}}}
-       {:upsert true}))
+      (insert-cpos-ann db token-id {:key k :ann-id _id :project project}))
     ann))
 
 (defn compute-history [ann]
@@ -109,16 +104,14 @@
   "updates existing ann in coll `anns` for given key."
   (fn [db {{span-type :type} :span :as ann-map} ann-id] span-type))
 
-(s/defmethod update-annotation
-  "token"
+(s/defmethod update-annotation "token"
   :- annotation-schema
   [{db-conn :db :as db}
    {timestamp :timestamp
     username :username
     project :project
     {scope :scope} :span
-    {k :key v :value} :ann :as ann}
-   ann-id]
+    {k :key v :value} :ann :as ann} ann-id]
   (mc/find-and-modify
    db-conn "anns"
    {:_id ann-id}
@@ -128,8 +121,7 @@
           "history" (compute-history (find-ann-by-id db ann-id))}}
    {:return-new true}))
 
-(s/defmethod update-annotation
-  "IOB"
+(s/defmethod update-annotation "IOB"
   :- annotation-schema
   [{db-conn :db :as db}
    {timestamp :timestamp
@@ -168,22 +160,37 @@
         (insert-annotation db ann-map))
       (dissoc :_id)))
 
-(s/defn ^:always-validate fetch-anns :- (s/maybe {s/Int {s/Str annotation-schema}})
+(s/defn ^:always-validate fetch-anns :- (s/maybe {s/Int {s/Str {s/Str annotation-schema}}})
   "{token-id {ann-key1 ann ann-key2 ann} token-id2 ...}.
    [enhance] a single span annotation will be fetched as many times as tokens it spans"
   [db ann-ids]
   (apply merge-with conj
          (for [{token-id :_id anns :anns} ann-ids
                {k :key ann-id :ann-id} anns
-               :let [ann (find-ann-by-id db ann-id)]]
-           {token-id {k ann}})))
+               :let [{project :project :as ann} (find-ann-by-id db ann-id)]]
+           {token-id {project {k ann}}})))
+
+(s/defn find-ann-ids-in-range
+  "Given a token range and user projects returns the ann-ids of all annotations
+   in that range for that user"
+  [{db :db} user-projects id-from id-to] :- [cpos-ann-schema]
+  (mc/find-maps
+   db "cpos_ann"
+   {"anns.project" {$in user-projects}
+    $and [{:_id {$gte id-from}} {:_id {$lt id-to}}]}))
 
 (s/defn ^:always-validate fetch-anns-in-range
-  ([db token-id :- s/Int] (fetch-anns-in-range db token-id (inc token-id)))
-  ([db id-from :- s/Int id-to :- s/Int]
-   (let [ann-ids (find-ann-ids-in-range db id-from id-to)
-         anns-in-range (fetch-anns db ann-ids)]
-     anns-in-range)))
+  "Given a token range and user projects returns all annotations in that range for that user"
+  ([db user-projects token-id :- s/Int]
+   (fetch-anns-in-range db user-projects token-id (inc token-id)))
+  ([db user-projects  id-from :- s/Int id-to :- s/Int]
+   (let [ann-ids (find-ann-ids-in-range db user-projects id-from id-to)]
+     (fetch-anns db ann-ids))))
+
+(defn find-first-id
+  "finds first non-dummy token (token with non negative id)"
+  [hit]
+  (first (drop-while #(neg? %) (map get-token-id hit))))
 
 (defn merge-annotations-hit
   [hit anns-in-range]
@@ -194,24 +201,19 @@
              token)))
        hit))
 
-(defn find-first-id
-  "finds first non-dummy token (token with non negative id)"
-  [hit]
-  (first (drop-while #(neg? %) (map get-token-id hit))))
-
 (defn merge-annotations
   "collect stored annotations for a given span of hits. Annotations are 
   collected at one for a given hit, since we know the token-id range of its
   tokens `from`: `to`"
-  [db results]
+  [db results project-names]
   (for [{:keys [hit] :as hit-map} results
         :let [from (find-first-id hit) ;todo, find first real id (avoid dummies)
               to   (find-first-id (reverse hit))
-              anns-in-range (fetch-anns-in-range db from to)
+              anns-in-range (fetch-anns-in-range db project-names from to)
               new-hit (merge-annotations-hit hit anns-in-range)]]
     (assoc hit-map :hit new-hit)))
 
-;; (def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
+;; (defonce db (.start (cleebo.components.db/new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
 
 ;; (mc/find-and-modify
 ;;  (:db db) coll
@@ -220,5 +222,7 @@
 ;;  {:return-new true})
 ;; (mc/find-and-modify (:db db) coll {:_id 52} {} {:remove true})
 
-;; (find-ann-by-id db coll 417 "noun")
+;; (fetch-anns-in-range
+;;  db ["sample" "user-playground"]
+;;  0 1000000)
 

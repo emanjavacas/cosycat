@@ -61,12 +61,35 @@
  (fn [db _]
    (reaction (not (zero? (get-in @db [:session :query-results :query-size]))))))
 
+;; (defn filter-hit-anns [{hit :hit :as hit-map} project-name]
+;;   (let [new-hit (reduce-kv (fn []))
+;;         (map (fn [{anns :anns :as token}]
+;;                        (assoc-in token [:anns]
+;;                                      (vec (filter #(= project-name (:project %)) anns))))
+;;                             hit)]
+;;     (assoc hit-map :hit new-hit)))
+
+(defn filter-project-results [hits project-name]
+  (map (fn [{hit :hit :as hit-map}]
+         (let [new-hit "a"]
+           (assoc hit-map :hit new-hit)))
+       hits))
+
+(defn get-project-info [db project-name]
+  (first (filter #(= project-name (:name %))
+                 (get-in db [:session :user-info :projects]))))
+
 (re-frame/register-sub
  :results
  (fn [db _]
-   (let [results (reaction (get-in @db [:session :results]))
-         results-by-id (reaction (get-in @db [:session :results-by-id]))]
-     (reaction (select-values @results-by-id @results)))))
+   (let [results-ids (reaction (get-in @db [:session :results]))
+         results-by-id (reaction (get-in @db [:session :results-by-id]))
+         results (reaction (select-values @results-by-id @results-ids))
+         project-name (reaction (get-in @db [:session :active-project :name]))]
+                                        ;     (reaction (filter-project-results @results @project-name))
+     results
+     )))
+
 
 (re-frame/register-sub ;all marked hits, also if currently not in table-results
  :marked-hits
@@ -83,10 +106,6 @@
                               (filter :marked)
                               (map #(assoc % :hit-id id))))
                        @results-by-id)))))
-
-(defn get-project-info [db project-name]
-  (first (filter #(= project-name (:name %))
-                 (get-in db [:session :user-info :projects]))))
 
 (defn get-all-users-info
   ([db] (cons (get-in db [:session :user-info]) (get-in db [:session :users])))
@@ -130,3 +149,9 @@
          filtered-users-info (reaction (get-all-users-info @db @filtered-users))]
      (reaction (zipmap (map :username @filtered-users-info)
                        (map #(get-in % [:avatar :dominant-color]) @filtered-users-info))))))
+
+(re-frame/register-sub
+ :read-history
+ (fn [db [_ path & {:keys [filter-fn] :or {filter-fn identity}}]]
+   (let [ws-history (reaction (get-in @db (concat [:history] path)))]
+     (reaction (filter filter-fn @ws-history)))))

@@ -25,8 +25,7 @@
            :hooks [leiningen.cljsbuild]
            :prep-tasks ["compile" ["cljsbuild" "once"]]
            :env {:prod? true
-                 :host "localhost"
-                 :database-url "mongodb://127.0.0.1:27017/cleeboTest"
+                 :database-url "mongodb://127.0.0.1:27017/cleebo"
                  :port 3000
                  :session-expires 90        ;in minutes
                  :corpora ["brown-id" "shc"]

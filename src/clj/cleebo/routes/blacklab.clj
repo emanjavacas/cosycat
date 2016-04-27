@@ -2,7 +2,8 @@
   (:require [cleebo.utils :refer [->int ->keyword]]
             [cleebo.routes.auth :refer [safe]]
             [buddy.auth :refer [authenticated?]]
-            [cleebo.db.annotations :refer [merge-annotations]]
+            [cleebo.db.annotations :as ann-db]
+            [cleebo.db.projects :as proj-db]
             [cleebo.components.blacklab :refer
              [bl-query bl-query-range bl-sort-query bl-sort-range bl-snippet remove-hits!]]
             [taoensso.timbre :as timbre]))
@@ -61,25 +62,30 @@
         snippet-size (->int snippet-size)]
     (bl-snippet blacklab hit-idx snippet-size query-id)))
 
-(defn with-results-annotations [body db]
-  (let [{:keys [results] :as out} body]
-    (assoc body :results (merge-annotations db results))))
+(defn with-results-annotations [body db username]
+  (let [{:keys [results] :as out} body
+        project-names (map :name (proj-db/user-projects db username))]
+    (assoc body :results (ann-db/merge-annotations db results project-names))))
 
 (defmulti blacklab-routes
   (fn [{{route :route} :params :as req}]
     (->keyword route)))
 
-(defmethod blacklab-routes :query [{{db :db} :components :as req}]
-  (with-results-annotations (bl-query-route req) db))
+(defmethod blacklab-routes :query
+  [{{db :db} :components {{username :username} :identity} :session :as req}]
+  (with-results-annotations (bl-query-route req) db username))
 
-(defmethod blacklab-routes :query-range [{{db :db} :components :as req}]
-  (with-results-annotations (bl-query-range-route req) db))
+(defmethod blacklab-routes :query-range
+  [{{db :db} :components {{username :username} :identity} :session :as req}]
+  (with-results-annotations (bl-query-range-route req) db username))
 
-(defmethod blacklab-routes :sort-query [{{db :db} :components :as req}]
-  (with-results-annotations (bl-sort-query-route req) db))
+(defmethod blacklab-routes :sort-query
+  [{{db :db} :components {{username :username} :identity} :session :as req}]  
+  (with-results-annotations (bl-sort-query-route req) db username))
 
-(defmethod blacklab-routes :sort-range [{{db :db} :components :as req}]
-  (with-results-annotations (bl-sort-range-route req) db))
+(defmethod blacklab-routes :sort-range 
+  [{{db :db} :components {{username :username} :identity} :session :as req}]
+  (with-results-annotations (bl-sort-range-route req) db username))
 
 (defmethod blacklab-routes :snippet [req]
   (bl-snippet-route req))
