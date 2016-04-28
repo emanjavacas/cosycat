@@ -90,11 +90,11 @@
 
 (def db-schema
   {:settings settings-schema
-   :history {:ws [{:timestamp s/Int
+   :history {:ws [{:received s/Int
                    :type s/Keyword
                    :data {s/Any s/Any}}]
              :query [{:query-str s/Str
-                      :timestamp s/Int}]}
+                      :received s/Int}]}
    :session {:init-session s/Bool
              (s/optional-key :session-error) app-error-schema
              :query-opts query-opts-schema

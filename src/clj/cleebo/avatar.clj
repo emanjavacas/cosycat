@@ -33,25 +33,26 @@
      (.generate generator (io/file filename) (RandomAvatar$Extra/seed seed)))))
 
 (defn new-filename
-  [username & {:keys [rel-path] :or {rel-path "public/img/avatars/"}}]
-  (str rel-path username (str (rand-int 100000)) ".png"))
+  [username & {:keys [relpath] :or {relpath "public/img/avatars/"}}]
+  (str relpath username (rand-int 100000) ".png"))
+
+(defn ->abspath [relpath]
+  (str (:dynamic-resource-path env) relpath))
 
 (defn new-avatar
   "Creates a new avatar for a user"
   [username]
-  (let [rel-path (new-filename username)
-        abs-path (str (:resource-path env) rel-path)]
-    (do (random-avatar abs-path)
-        rel-path)))
+  (let [relpath (new-filename username)]
+    (do (-> relpath ->abspath random-avatar)
+        relpath)))
 
 (defn get-avatar
   "Tries to read an existing avatar, if it doesn't succeed it creates a new one"
   [username]
-  (let [rel-path (new-filename username)
-        resource (io/resource rel-path)]
-    (when-not resource
+  (let [relpath (new-filename username)]
+    (when-not (.exists (io/file (->abspath relpath)))
       (new-avatar username))
-    rel-path))
+    relpath))
 
 (defn slurp-pixels [f]
   (ImageIO/read f))
@@ -79,7 +80,7 @@
   (str "#" (int->hex red) (int->hex green) (int->hex blue)))
 
 (defn get-hex-color [f]
-  (-> (io/resource f)
+  (-> (io/file f)
       slurp-pixels
       get-colors
       get-brightest
@@ -87,8 +88,9 @@
 
 (defn find-avatars
   [username & {:keys [rel-path] :or {rel-path "public/img/avatars/"}}]
-  (->> (io/resource rel-path)
-       io/file
+  (->> rel-path
+       ->abspath
+       io/file 
        file-seq
        (filter #(.startsWith (.getName %) username))))
 
@@ -96,6 +98,6 @@
   (when-let [fnames (seq (find-avatars username))]
     (dorun (map io/delete-file fnames)))
   (let [rel-path (new-avatar username)
-        color (get-hex-color rel-path)]
+        color (get-hex-color (->abspath rel-path))]
     {:href rel-path :dominant-color color}))
 

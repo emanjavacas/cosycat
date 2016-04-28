@@ -74,8 +74,7 @@
 
 (defmethod annotation-cell "token"
   [{:keys [ann-map]}]
-  (fn annotation-cell [{{username :username :as ann-map} :ann-map
-        color-map :color-map}]
+  (fn annotation-cell [{{username :username :as ann-map} :ann-map color-map :color-map}]
     [bs/overlay-trigger
      {:overlay (user-popover ann-map)
       :trigger "click"
@@ -88,8 +87,9 @@
 (defmethod annotation-cell "IOB"
   [{:keys [ann-map token-id filtered-users-colors]}]
   (fn annotation-cell
-    [{{{{B :B O :O} :scope} :span username :username :as ann-map} :ann-map
-        color-map :color-map token-id :token-id}]
+    [{{{{B :B O :O} :scope} :span username :username anns :anns :as ann-map} :ann-map
+      color-map :color-map token-id :token-id}]
+    (timbre/debug ann-map)
     [bs/overlay-trigger
      {:overlay (user-popover ann-map)
       :trigger "click"

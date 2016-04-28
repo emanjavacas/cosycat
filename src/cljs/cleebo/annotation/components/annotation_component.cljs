@@ -79,10 +79,10 @@
   (fn spacer-row [_ _] [:tr {:style {:height (str space "px")}}]))
 
 (defmulti annotation-panel-hit
-  (fn [{id :id :as hit-map} open-hits] (contains? @open-hits id)))
+  (fn [{id :id :as hit-map} open-hits project-name] (contains? @open-hits id)))
 
 (defmethod annotation-panel-hit true
-  [{hit-id :id hit :hit hit-meta :meta :as hit-map} open-hits & {:keys [project-name]}]
+  [{hit-id :id hit :hit hit-meta :meta :as hit-map} open-hits project-name]
   (concat
    [{:key (str "hit" hit-id)   :component hit-row}
     {:key (str "input" hit-id) :component input-row}
@@ -116,13 +116,13 @@
            :opts [row-number]})))))
 
 (defmethod annotation-panel-hit false
-  [{hit-id :id hit-map :hit hit-meta :meta} open-hits]
+  [{hit-id :id hit-map :hit hit-meta :meta} open-hits project-name]
   [{:key (str "row-" hit-id) :component queue-row}
    {:key (str "spacer-" hit-id) :component (spacer-row)}])
 
 (defn annotation-component [marked-hits open-hits]
   (let [selection (reagent/atom (zipmap (map :id @marked-hits) (repeatedly hash-set)))
-        active-project (re-frame/subscribe [:session :active-project :active-project-name])]
+        project (re-frame/subscribe [:session :active-project :name])]
     (fn annotation-component [marked-hits open-hits]
       [bs/table
        {:id "table-annotation"
@@ -132,8 +132,8 @@
        [:tbody
         (doall
          (for [[idx hit-map] (map-indexed vector @marked-hits)
-               {:keys [key component]} (annotation-panel-hit hit-map open-hits)]
+               {:keys [key component]} (annotation-panel-hit hit-map open-hits @project)]
            ^{:key key} [component hit-map open-hits
-                        :project-name @active-project
+                        :project-name @project
                         :row-number (inc idx)
                         :selection selection]))]])))

@@ -114,7 +114,7 @@
   annotations in that token"
   ([token])
   ([{anns :anns :as token} project-name users-map]
-   (let [filt-anns (filter #(contains? users-map (:username %)) (vals anns))
+   (let [filt-anns (filter #(contains? users-map (:username %)) (vals (anns project-name)))
          [user _] (first (sort-by second > (frequencies (map :username filt-anns))))]
      (if-let [color (get users-map user)]
        (->box color)))))

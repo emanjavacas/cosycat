@@ -58,7 +58,7 @@
             [lein-asset-minifier "0.2.2"]
             [lein-figwheel "0.5.0-2"]]
 
-  :env {:resource-path "resources/"}
+  :env {:dynamic-resource-path "resources/"}
   :resource-path "resources/"
   
   :source-paths ["src/clj" "src/cljc" "src/cljs"]

@@ -3,7 +3,7 @@
             [taoensso.timbre :as timbre]
             [environ.core :refer [env]]
             [compojure.core :refer [GET POST ANY HEAD defroutes wrap-routes]]
-            [compojure.route :refer [not-found resources]]
+            [compojure.route :as route]
             [prone.middleware :refer [wrap-exceptions]]
             [cleebo.views.error :refer [error-page]]
             [cleebo.views.cleebo :refer [cleebo-page]]
@@ -67,8 +67,9 @@
   (GET "/blacklab" [] blacklab-router)
   (GET "/cqp" [] cqp-router)
   (GET "/ws" [] ws-handler-http-kit)
-  (resources "/")
-  (not-found (error-page :status 404 :title "Page not found!!")))
+  (route/resources "/")
+  (route/files "/" {:root (:dynamic-resource-path env)})
+  (route/not-found (error-page :status 404 :title "Page not found!!")))
 
 (defn is-ajax
   "not sure how robust this is"
