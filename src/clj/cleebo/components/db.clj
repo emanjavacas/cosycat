@@ -1,5 +1,6 @@
 (ns cleebo.components.db
   (:require [monger.core :as mg]
+            [monger.collection :as mc]
             [com.stuartsierra.component :as component]
             [environ.core :refer [env]]
             [taoensso.timbre :as timbre]))
@@ -22,3 +23,16 @@
 
 (defn new-db [{:keys [url]}]
   (map->DB {:url url}))
+
+(def colls
+  {:anns "anns"
+   :cpos-anns "cpos_anns"
+   :projects "projects"
+   :users "users"})
+
+(defn clear-dbs
+  [{db :db} & {:keys [collections] :or {colls (keys collections)}}]
+  (doseq [k-coll collections
+          :let [v-coll (get colls k-coll)]]
+    (timbre/info "Clearing collection:" v-coll)
+    (mc/drop db v-coll)))

@@ -5,13 +5,13 @@
             [taoensso.timbre :as timbre]
             [schema.core :as s]
             [cleebo.schemas.app-state-schemas :refer [public-user-schema user-schema]]
-            [cleebo.components.db :refer [new-db]]
+            [cleebo.components.db :refer [new-db colls]]
             [cleebo.avatar :refer [user-avatar]]))
 
 (defn new-user
   [{db-conn :db :as db} {:keys [username password]} &
    {:keys [roles] :or {roles ["user"]}}]
-  (if (not (mc/find-one-as-map db-conn "users" {:username username}))
+  (if (not (mc/find-one-as-map db-conn (:users colls) {:username username}))
     (let [now (System/currentTimeMillis)
           user {:username username
                 :password (hashers/encrypt password {:alg :bcrypt+blake2b-512})
@@ -19,26 +19,26 @@
                 :created now
                 :last-active now
                 :avatar (user-avatar username)}]
-      (-> (mc/insert-and-return db-conn "users" user)
+      (-> (mc/insert-and-return db-conn (:users colls) user)
           (dissoc :password :_id)))))
 
 (defn is-user? [{db-conn :db :as db} {:keys [username password]}]
-  (boolean (mc/find-one-as-map db-conn "users" {:username username})))
+  (boolean (mc/find-one-as-map db-conn (:users colls) {:username username})))
 
 (s/defn lookup-user
   [{db-conn :db :as db} username password] :- (s/maybe user-schema)
-  (if-let [user (mc/find-one-as-map db-conn "users" {:username username})]
+  (if-let [user (mc/find-one-as-map db-conn (:users colls) {:username username})]
     (if (hashers/check password (:password user))
       (dissoc user :password :_id))))
 
 (defn remove-user [{db-conn :db :as db} username]
   (if (is-user? db {:username username})
-    (mc/remove db-conn "users" {:username username})))
+    (mc/remove db-conn (:users colls) {:username username})))
 
 (defn user-logout [{db-conn :db :as db} username]
   (if (is-user? db {:username username})
     (mc/find-and-modify
-     db-conn "users"
+     db-conn (:users colls)
      {:username username}
      {$set {:last-active (System/currentTimeMillis)}}
      {})))
@@ -46,7 +46,7 @@
 (defn user-info
   [{db-conn :db :as db} username]
   (-> (mc/find-one-as-map
-       db-conn "users"
+       db-conn (:users colls)
        {:username username}
        {:password false :_id false})
       (update-in [:roles] (partial apply hash-set))))
@@ -54,7 +54,7 @@
 (defn update-user-info
   [{db-conn :db :as db} username update-map]
   (mc/find-and-modify
-   db-conn "users"
+   db-conn (:users colls)
    {:username username}
    {$set update-map}
    {}))
@@ -66,11 +66,9 @@
 
 (defn users-public-info [{db-conn :db}]
   (->> (mc/find-maps
-        db-conn "users"
+        db-conn (:users colls)
         {})
        (map filter-user-public)))
-
-
 
 ;;(def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
 ;;(update-user-info db "user" {:avatar (cleebo.avatar/user-avatar (str "user" (rand-int 100000)))})

@@ -5,7 +5,7 @@
             [schema.core :as s]
             [cleebo.utils :refer [get-token-id ->int]]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema cpos-ann-schema]]
-            [cleebo.components.db :refer [new-db]]
+            [cleebo.components.db :refer [new-db colls]]
             [cleebo.db.projects :refer [new-project find-project]]
             [cleebo.roles :refer [check-annotation-update-role]]
             [schema.coerce :as coerce]))
@@ -28,7 +28,7 @@
   [{db :db} {{scope :scope} :span project :project {k :key} :ann}]
   (if-let [{{old-scope :scope} :span}
            (mc/find-one-as-map
-            db "anns"
+            db (:anns colls)
             {"ann.key" k
              "project" project
              $and [{"span.scope.B" {$lte scope}}
@@ -36,7 +36,7 @@
     (throw (ex-info "Attempt to overwrite span annotation with token annotation"
                     {:scope old-scope}))
     (-> (mc/find-one-as-map
-         db "cpos_ann"
+         db (:cpos-ann colls)
          {:_id scope
           "anns.key" k
           "project" project}
@@ -49,14 +49,14 @@
              project :project {k :key} :ann :as ann-map}]
   (when-let [{{scope :scope} :span}
              (mc/find-one-as-map
-              db "anns"
+              db (:anns colls)
               {"ann.key" k
                "project" project
                "span.scope" {$in (range new-B (inc new-O))}})]
     (throw (ex-info "Attempt to overwrite token ann with span ann" {:scope scope})))
   (when-let [{{{old-B :B old-O :O :as old-scope} :scope} :span ann-id :_id}
              (mc/find-one-as-map
-              db "anns"
+              db (:anns colls)
               {"ann.key" k
                "project" project
                $and [{"span.scope.B" {$lte new-O}}
@@ -67,7 +67,7 @@
 
 (s/defn find-ann-by-id :- annotation-schema
   [{db :db} ann-id]
-  (mc/find-one-as-map db "anns" {:_id ann-id} {:_id false}))
+  (mc/find-one-as-map db (:anns colls) {:_id ann-id} {:_id false}))
 
 (defmulti insert-annotation
   "creates new ann in coll `anns`+`cpos-ann` for given ann"
@@ -76,7 +76,7 @@
 (defn insert-cpos-ann
   [{db :db} token-id {:keys [key ann-id project] :as ann}]
   (mc/find-and-modify
-   db "cpos_ann"
+   db (:cpos-ann colls)
    {:_id token-id}
    {$push {:anns ann}}
    {:upsert true}))
@@ -84,14 +84,14 @@
 (s/defmethod insert-annotation "token"
   :- annotation-schema
   [{db-conn :db :as db} {{scope :scope} :span project-name :project {k :key} :ann :as ann}]
-  (let [{:keys [_id] :as ann} (mc/insert-and-return db-conn "anns" ann)]
+  (let [{:keys [_id] :as ann} (mc/insert-and-return db-conn (:anns colls) ann)]
     (do (insert-cpos-ann db scope {:key k :ann-id _id :project project-name}))
     ann))
 
 (s/defmethod insert-annotation "IOB"
   :- annotation-schema
   [{db-conn :db :as db} {{{B :B O :O} :scope} :span project :project {k :key} :ann :as ann}]
-  (let [{:keys [_id] :as ann} (mc/insert-and-return db-conn "anns" ann)]
+  (let [{:keys [_id] :as ann} (mc/insert-and-return db-conn (:anns colls) ann)]
     (doseq [token-id (range B (inc O))]
       (insert-cpos-ann db token-id {:key k :ann-id _id :project project}))
     ann))
@@ -113,7 +113,7 @@
     {scope :scope} :span
     {k :key v :value} :ann :as ann} ann-id]
   (mc/find-and-modify
-   db-conn "anns"
+   db-conn (:anns colls)
    {:_id ann-id}
    {$set {"ann.value" v "ann.key" k
           "span.type" "token" "span.scope" scope
@@ -130,7 +130,7 @@
     {k :key v :value} :ann :as ann}
    ann-id]
   (mc/find-and-modify
-   db-conn "anns"
+   db-conn (:anns colls)
    {:_id ann-id}
    {$set {"ann.value" v "ann.key" k
           "span.type" "IOB" "span.scope" scope
@@ -175,7 +175,7 @@
    in that range for that user"
   [{db :db} user-projects id-from id-to] :- [cpos-ann-schema]
   (mc/find-maps
-   db "cpos_ann"
+   db (:cpos-anns colls)
    {"anns.project" {$in user-projects}
     $and [{:_id {$gte id-from}} {:_id {$lt id-to}}]}))
 

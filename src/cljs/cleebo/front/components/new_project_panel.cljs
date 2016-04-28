@@ -11,13 +11,13 @@
 
 (defn validate-project-input
   [{:keys [name description users] :as project}]
-  (and (not (gstr/endsWith name "Playground"))
+  (and (not (gstr/endsWith name "-playground"))
        (not (invalid-project-name name))))
 
-(defn submit-project [name desc usernames]
+(defn submit-project [has-error? {:keys [name desc usernames]}]
   (let [project {:name name :description desc :usernames usernames}]
     (if-not (validate-project-input project)
-      (timbre/debug "invalid project name:" name)
+      (do (timbre/debug "invalid project name:" name) (swap! has-error? conj :name-input))
       (re-frame/dispatch [:new-project project]))))
 
 (defn label-component [title]
@@ -29,15 +29,16 @@
 (defn spacer []
   [:div.row {:style {:height "35px"}}])
 
-(defn new-project-form [selected-users]
+(defn new-project-form [selected-users has-error?]
   (let [users (re-frame/subscribe [:session :users])]
-    (fn [selected-users]
+    (fn [selected-users has-error?]
       [bs/well
        [:div.container-fluid
         ;; project name
         [:div.row
          {:style {:padding  "0 15px 0 15px"}}
          [:div.input-group
+          {:class (when (contains? @has-error? :name-input) "has-error")}
           [:span.input-group-addon "@"]
           [:input.form-control
            {:type "text"
@@ -73,14 +74,15 @@
 
 (defn new-project-btn []
   (let [open? (reagent/atom false)
-        selected-users (reagent/atom #{})] 
+        selected-users (reagent/atom #{})
+        has-error? (reagent/atom #{})] 
     (fn []
       [:div
        [css-transition-group
         {:transition-name "notification"
          :transition-enter-timeout 0
          :transition-leave-timeout 0}
-        (when @open? [new-project-form selected-users])]
+        (when @open? [new-project-form selected-users has-error?])]
        [bs/button-toolbar
         {:class "pull-right"}
         [bs/button
@@ -88,7 +90,11 @@
                       (reset! open? true)
                       (let [name (by-id "name-input")
                             desc (by-id "desc-input")]
-                        (submit-project name desc (map :username @selected-users))))
+                        (submit-project
+                         has-error?
+                         {:name name
+                          :description desc
+                          :usernames (map :username @selected-users)})))
           :bsStyle (if-not @open? "info" "success")}
          (if-not @open? "New project" "Submit project")]
         (when @open?

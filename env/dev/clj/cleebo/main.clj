@@ -1,6 +1,7 @@
 (ns cleebo.main
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer [refresh refresh-all]]
+            [clojure.java.io :as io]
             [cleebo.figwheel :refer [new-figwheel]]
             [cleebo.components.http-server :refer [new-http-server]]
             [cleebo.components.db :refer [new-db]]
@@ -29,7 +30,12 @@
           :ws          [:db]}))))
 
 (defn init []
-  (alter-var-root #'system (constantly (create-dev-system dev-config-map))))
+  (let [resource-path (:dynamic-resource-path env)
+        avatar-path (:avatar-path env)]
+    (when-not (.exists (io/file resource-path))
+      (do (println "Creating `app-resources`")
+          (io/make-parents (str resource-path avatar-path "dummy"))))
+    (alter-var-root #'system (constantly (create-dev-system dev-config-map)))))
 
 (defn start []
   (alter-var-root #'system component/start))

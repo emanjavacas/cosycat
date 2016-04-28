@@ -6,14 +6,14 @@
             [cleebo.app-utils :refer [default-project-name]]
             [cleebo.roles :refer [check-project-role]]
             [cleebo.db.users :refer [is-user?]]
-            [cleebo.components.db :refer [new-db]]
+            [cleebo.components.db :refer [new-db colls]]
             [taoensso.timbre :as timbre]))
 
 (defn is-project? [{db-conn :db} project-name]
-  (boolean (mc/find-one-as-map db-conn "projects" {:name project-name})))
+  (boolean (mc/find-one-as-map db-conn (:projects colls) {:name project-name})))
 
 (defn find-project [{db-conn :db} project-name]
-  (mc/find-one-as-map db-conn "projects" {:name project-name}))
+  (mc/find-one-as-map db-conn (:projects colls) {:name project-name}))
 
 (defn is-authorized?
   ([{users :users :as project} username action]
@@ -41,7 +41,7 @@
           (not (and (not (.startsWith project-name creator))
                     (.endsWith project-name "Playground")))]}
    (-> (mc/insert-and-return
-        db-conn "projects"
+        db-conn (:projects colls)
         {:name project-name
          :creator creator
          :description description
@@ -53,7 +53,7 @@
 (defn user-projects
   [{db-conn :db} username]
   (->> (mc/find-maps
-        db-conn "projects"
+        db-conn (:projects colls)
         {$or [{:creator username} {"users.username" username}]})
        (map #(dissoc % :_id))))
 
@@ -61,7 +61,7 @@
   [{db-conn :db} username project-name update-payload :- update-schema]
   (let [{:keys [creator users updates] :as payload}
         (mc/find-and-modify
-         db-conn "projects"
+         db-conn (:projects colls)
          {:name project-name}
          {$push {:updates update-payload}}
          {:return-new true})]
