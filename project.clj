@@ -5,6 +5,8 @@
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
                  [org.clojure/core.match "0.3.0-alpha4"]
+                 [org.clojure/tools.namespace "0.2.11"]
+                 [org.clojure/tools.cli "0.3.3"]
                  [com.novemberain/monger "3.0.0-rc2"]
                  [com.taoensso/timbre "4.1.4"]
                  [binaryage/devtools "0.5.2"]
@@ -33,7 +35,6 @@
                  [buddy/buddy-auth "0.8.1"]
                  [buddy/buddy-hashers "0.9.1"]
                  [com.stuartsierra/component "0.3.1"]
-                 [org.clojure/tools.namespace "0.2.11"]
                  [cqp-clj "0.1.0-SNAPSHOT"]
                  [org.hackrslab/random-avatar "0.2.3"]
                  ; blacklab
@@ -58,7 +59,8 @@
             [lein-asset-minifier "0.2.2"]
             [lein-figwheel "0.5.0-2"]]
 
-  :env {:dynamic-resource-path "resources/"}
+  :env {:dynamic-resource-path "app-resources/"
+        :avatar-path "img/avatars/"}
   :resource-path "resources/"
   
   :source-paths ["src/clj" "src/cljc" "src/cljs"]

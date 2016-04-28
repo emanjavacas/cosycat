@@ -31,9 +31,10 @@ profile for later use (eventually emailing)
 *** DONE Project routes
 Projects will help organizing annotations:
 
-- assigning roles to users
-- sort annotations, queries, history by project
-- switch on/off annotations based on project
+1) being more selective with respect to feeds one wants to get notified about
+2) assigning roles to users
+3) sort annotations, queries, history by project
+4) switch on/off annotations based on project
 
 *** DONE Split annotation db in two collections
 + From corpus position to annotations (alias "cpos-ann")

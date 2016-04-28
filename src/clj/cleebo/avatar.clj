@@ -33,7 +33,7 @@
      (.generate generator (io/file filename) (RandomAvatar$Extra/seed seed)))))
 
 (defn new-filename
-  [username & {:keys [relpath] :or {relpath "public/img/avatars/"}}]
+  [username & {:keys [relpath] :or {relpath (:avatar-path env)}}]
   (str relpath username (rand-int 100000) ".png"))
 
 (defn ->abspath [relpath]
@@ -87,8 +87,8 @@
       color->hex))
 
 (defn find-avatars
-  [username & {:keys [rel-path] :or {rel-path "public/img/avatars/"}}]
-  (->> rel-path
+  [username & {:keys [relpath] :or {relpath (:avatar-path env)}}]
+  (->> relpath
        ->abspath
        io/file 
        file-seq
@@ -97,7 +97,7 @@
 (defn user-avatar [username]
   (when-let [fnames (seq (find-avatars username))]
     (dorun (map io/delete-file fnames)))
-  (let [rel-path (new-avatar username)
-        color (get-hex-color (->abspath rel-path))]
-    {:href rel-path :dominant-color color}))
+  (let [relpath (new-avatar username)
+        color (get-hex-color (->abspath relpath))]
+    {:href relpath :dominant-color color}))
 
