@@ -35,3 +35,15 @@
  standard-middleware
  (fn [db [_ panel]]
    (assoc-in db [:session :throbbing? panel] false)))
+
+(re-frame/register-handler
+ :register-error
+ standard-middleware
+ (fn [db [_ component-id data]]
+   (assoc-in db [:session :has-error? component-id] data)))
+
+(re-frame/register-handler
+ :drop-error
+ standard-middleware
+ (fn [db [_ component-id]]
+   (update-in db [:session :has-error?] dissoc component-id)))

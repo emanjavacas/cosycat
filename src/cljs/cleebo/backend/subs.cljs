@@ -16,6 +16,11 @@
    (reaction (get-in @db [:session :modals modal]))))
 
 (re-frame/register-sub
+ :has-error?
+ (fn [db [_ component-id]]
+   (reaction (get-in @db [:session :has-error? component-id]))))
+
+(re-frame/register-sub
  :active-panel
  (fn [db _]
    (reaction (get-in @db [:session :active-panel]))))

@@ -5,7 +5,8 @@
             [ring.util.response :refer [redirect response]]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
             [cleebo.components.ws :refer [send-clients]]
-            [cleebo.db.users :refer [lookup-user is-user? new-user filter-user-public]]
+            [cleebo.components.blacklab :refer [remove-hits!]]
+            [cleebo.db.users :refer [lookup-user is-user? new-user postprocess-user-load]]
             [cleebo.db.projects :refer [new-project]]
             [cleebo.views.error :refer [error-page]]
             [cleebo.views.login :refer [login-page]]
@@ -39,9 +40,9 @@
     (cond
       (not password-match?) (on-signup-failure req "Password mismatch")
       is-user               (on-signup-failure req "User already exists")
-      :else (let [user (new-user db user)]
+      :else (let [user (-> (new-user db user) (assoc :active true))]
               (new-project db username) ;create default project
-              (send-clients ws {:type :signup :data (filter-user-public user)})
+              (send-clients ws {:type :signup :data (postprocess-user-load user :projects)})
               (-> (redirect (or next-url "/"))
                   (assoc-in [:session :identity] user))))))
 
@@ -52,11 +53,18 @@
    {next-url :next} :session :as req}]
   (let [username (or username username-form)
         password (or password password-form)]
-    (if-let [user (lookup-user db username password)]
-      (do (send-clients ws {:type :login :data (filter-user-public user)})
+    (if-let [user (-> (lookup-user db username password) (assoc :active true))]
+      (do (send-clients ws {:type :login :data (postprocess-user-load user :project)})
           (-> (redirect (or next-url "/"))
               (assoc-in [:session :identity] user)))
       (on-login-failure req))))
+
+(defn logout-route
+  [{{{username :username} :identity} :session
+    {blacklab :blacklab ws :ws} :components}]
+  (remove-hits! blacklab username)
+  (send-clients ws {:type :logout :data {:username username}})
+  (-> (redirect "/") (assoc :session {})))
 
 (defn jws-login-route
   [{{username :username password :password} :params

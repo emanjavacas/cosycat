@@ -7,12 +7,18 @@
 
 (derive ::admin ::user)
 
+(def project-user-roles
+  {;; "creator" "Almighty creator of the project. Nothing lies beneath his/her power."
+   "project-lead" "Person in charge of the global research goals. Can edit but is not allowed to delete annotations."
+   "guest" "Can read the annotations but nothing more."
+   "user" "Can read the annotation and suggests changes, but not edit them."})
+
 (def project-roles
   "a map from project-related actions to required roles"
   {:delete #{"creator"}                 ;remove project
    :write  #{"creator" "project-lead"}  ;update metadata
    :update #{"creator" "project-lead" "user"}  ;push update
-   :read   #{"creator" "project-lead" "user"} ;retrieve project
+   :read   #{"creator" "project-lead" "user" "guest"} ;retrieve project
    })
 
 (def annotation-roles

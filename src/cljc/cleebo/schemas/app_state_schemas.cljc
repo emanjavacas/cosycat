@@ -80,8 +80,9 @@
    :roles #{s/Str}
    :created s/Int
    :last-active s/Int
-   (s/optional-key :active) s/Bool
-   (s/optional-key :projects) [project-schema]})
+   :active s/Bool
+   ;; (s/optional-key :projects) [project-schema]
+   })
 
 (def app-error-schema
   {:error s/Str
@@ -101,11 +102,14 @@
              :query-results query-results-schema
              :results-by-id (s/conditional empty? {} :else results-by-id-schema)
              :results (s/conditional empty? [] :else results-schema)
-             :notifications {s/Any notification-schema}
-             :active-panel s/Keyword
-             (s/optional-key :active-project) {:name s/Str :filtered-users #{s/Str}}
-             (s/optional-key :corpora) [s/Str]
-             (s/optional-key :throbbing?) {s/Any s/Bool}
-             (s/optional-key :modals)     {s/Keyword s/Any}
+             ;; user-related
              (s/optional-key :user-info)  user-schema
-             (s/optional-key :users) [public-user-schema]}})
+             (s/optional-key :users) [public-user-schema]
+             (s/optional-key :corpora) [s/Str]
+             (s/optional-key :active-project) {:name s/Str :filtered-users #{s/Str}}
+             ;; component-related
+             :active-panel s/Keyword
+             :notifications {s/Any notification-schema}
+             (s/optional-key :modals)     {s/Keyword s/Any}
+             (s/optional-key :throbbing?) {s/Any s/Bool}
+             (s/optional-key :has-error?) {s/Keyword s/Any}}})

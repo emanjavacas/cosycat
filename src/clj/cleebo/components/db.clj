@@ -31,8 +31,8 @@
    :users "users"})
 
 (defn clear-dbs
-  [{db :db} & {:keys [collections] :or {colls (keys collections)}}]
+  [{db :db} & {:keys [collections] :or {collections (keys colls)}}]
   (doseq [k-coll collections
           :let [v-coll (get colls k-coll)]]
-    (timbre/info "Clearing collection:" v-coll)
+    (timbre/info "Clearing collection:" v-coll "in db: " (:database-url env))
     (mc/drop db v-coll)))

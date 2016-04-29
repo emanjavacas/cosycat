@@ -23,9 +23,8 @@
             [ring-ttl-session.core :refer [ttl-memory-store]]
             [buddy.auth :refer [authenticated?]]
             [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
-            [cleebo.components.blacklab :refer [remove-hits!]]
-            [cleebo.routes.auth :refer
-             [is-logged? safe auth-backend token-backend login-route signup-route]]
+            [cleebo.routes.auth :refer [is-logged? safe auth-backend token-backend
+                                        login-route logout-route signup-route]]
             [cleebo.components.ws :refer [ws-handler-http-kit send-clients]]
             [cleebo.routes.cqp :refer [cqp-router]]            
             [cleebo.routes.blacklab :refer [blacklab-router]]
@@ -44,13 +43,6 @@
    (fn [req]
      (cleebo-page :csrf *anti-forgery-token*))
    {:login-uri "/login" :is-ok? authenticated?}))
-
-(defn logout-route
-  [{{{username :username} :identity} :session
-    {blacklab :blacklab ws :ws} :components}]
-  (remove-hits! blacklab username)
-  (when username (send-clients ws {:type :logout :data {:username username}}))
-  (-> (redirect "/") (assoc :session {})))
 
 (defroutes app-routes
   (GET "/" req (landing-page :logged? (is-logged? req)))
@@ -83,14 +75,14 @@
     (try
       (handler req)
       (catch Throwable t
+        (error-page
+         {:status 500
+          :title "Something very bad happened!"
+          :message (str (class t))})
         (if (is-ajax req)
           {:status 500
            :body {:message "Oops! Something bad happened!"
-                  :data {:exception (str (class t)) :type :internal-error}}}
-          (error-page
-           {:status 500
-            :title "Something very bad happened!"
-            :message (str t)}))))))
+                  :data {:exception (str (class t)) :type :internal-error}}})))))
 
 (defn wrap-base [handler]
   (-> handler   

@@ -36,6 +36,9 @@
 (defn ping-router [ws {:keys [ws-from payload]}]
   (send ws ws-from payload))
 
+(defn get-active-users [{clients :clients :as ws}]
+  (apply hash-set (keys @clients)))
+
 (defn new-ws [& {:keys [router] :or {router ping-router}}]
   (map->WS {:router router}))
 

@@ -8,6 +8,11 @@
             [cleebo.components.db :refer [new-db colls]]
             [cleebo.avatar :refer [user-avatar]]))
 
+(s/defn ^:always-validate postprocess-user-load
+  [user & ks] :- public-user-schema
+  (-> (apply dissoc user :password :_id ks)
+      (update-in [:roles] (partial apply hash-set))))
+
 (defn new-user
   [{db-conn :db :as db} {:keys [username password]} &
    {:keys [roles] :or {roles ["user"]}}]
@@ -20,7 +25,7 @@
                 :last-active now
                 :avatar (user-avatar username)}]
       (-> (mc/insert-and-return db-conn (:users colls) user)
-          (dissoc :password :_id)))))
+          postprocess-user-load))))
 
 (defn is-user? [{db-conn :db :as db} {:keys [username password]}]
   (boolean (mc/find-one-as-map db-conn (:users colls) {:username username})))
@@ -29,7 +34,7 @@
   [{db-conn :db :as db} username password] :- (s/maybe user-schema)
   (if-let [user (mc/find-one-as-map db-conn (:users colls) {:username username})]
     (if (hashers/check password (:password user))
-      (dissoc user :password :_id))))
+      (-> user postprocess-user-load))))
 
 (defn remove-user [{db-conn :db :as db} username]
   (if (is-user? db {:username username})
@@ -49,7 +54,7 @@
        db-conn (:users colls)
        {:username username}
        {:password false :_id false})
-      (update-in [:roles] (partial apply hash-set))))
+      postprocess-user-load))
 
 (defn update-user-info
   [{db-conn :db :as db} username update-map]
@@ -59,17 +64,8 @@
    {$set update-map}
    {}))
 
-(s/defn ^:always-validate filter-user-public
-  [user] :- public-user-schema
-  (-> (dissoc user :password :_id :projects)
-      (update-in [:roles] (partial apply hash-set))))
-
 (defn users-public-info [{db-conn :db}]
   (->> (mc/find-maps
         db-conn (:users colls)
         {})
-       (map filter-user-public)))
-
-;;(def db (.start (new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
-;;(update-user-info db "user" {:avatar (cleebo.avatar/user-avatar (str "user" (rand-int 100000)))})
-
+       (map #(postprocess-user-load % :projects))))

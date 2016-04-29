@@ -45,3 +45,7 @@
   #?(:clj  (re-find #"[ ^\W+]" s)
      :cljs (gpattern/matchStringOrRegex (js/RegExp "[ ^\\W+]") s)))
 
+
+
+
+

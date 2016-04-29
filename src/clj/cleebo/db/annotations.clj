@@ -4,7 +4,7 @@
             [taoensso.timbre :as timbre]
             [schema.core :as s]
             [cleebo.utils :refer [get-token-id ->int]]
-            [cleebo.schemas.annotation-schemas :refer [annotation-schema cpos-ann-schema]]
+            [cleebo.schemas.annotation-schemas :refer [annotation-schema cpos-anns-schema]]
             [cleebo.components.db :refer [new-db colls]]
             [cleebo.db.projects :refer [new-project find-project]]
             [cleebo.roles :refer [check-annotation-update-role]]
@@ -31,15 +31,13 @@
             db (:anns colls)
             {"ann.key" k
              "project" project
-             $and [{"span.scope.B" {$lte scope}}
-                   {"span.scope.O" {$gte scope}}]})]
-    (throw (ex-info "Attempt to overwrite span annotation with token annotation"
-                    {:scope old-scope}))
+             $and [{"span.scope.B" {$lte scope}} {"span.scope.O" {$gte scope}}]})]
+    (throw (ex-info "Attempt to overwrite span ann with token ann" {:scope old-scope}))
     (-> (mc/find-one-as-map
-         db (:cpos-ann colls)
+         db (:cpos-anns colls)
          {:_id scope
           "anns.key" k
-          "project" project}
+          "anns.project" project}
          {"anns.$.key" true "_id" false})
         :anns
         first)))
@@ -59,8 +57,7 @@
               db (:anns colls)
               {"ann.key" k
                "project" project
-               $and [{"span.scope.B" {$lte new-O}}
-                     {"span.scope.O" {$gte new-B}}]})]
+               $and [{"span.scope.B" {$lte new-O}} {"span.scope.O" {$gte new-B}}]})]
     (if-not (and (= old-B new-B) (= old-O new-O))
       (throw (ex-info "Overlapping span" {:old-scope old-scope :new-scope new-scope}))
       {:ann-id ann-id})))
@@ -70,13 +67,13 @@
   (mc/find-one-as-map db (:anns colls) {:_id ann-id} {:_id false}))
 
 (defmulti insert-annotation
-  "creates new ann in coll `anns`+`cpos-ann` for given ann"
+  "creates new ann in coll `anns`+`cpos-anns` for given ann"
   (fn [db {{type :type} :span}] type))
 
-(defn insert-cpos-ann
+(defn insert-cpos-anns
   [{db :db} token-id {:keys [key ann-id project] :as ann}]
   (mc/find-and-modify
-   db (:cpos-ann colls)
+   db (:cpos-anns colls)
    {:_id token-id}
    {$push {:anns ann}}
    {:upsert true}))
@@ -85,7 +82,7 @@
   :- annotation-schema
   [{db-conn :db :as db} {{scope :scope} :span project-name :project {k :key} :ann :as ann}]
   (let [{:keys [_id] :as ann} (mc/insert-and-return db-conn (:anns colls) ann)]
-    (do (insert-cpos-ann db scope {:key k :ann-id _id :project project-name}))
+    (do (insert-cpos-anns db scope {:key k :ann-id _id :project project-name}))
     ann))
 
 (s/defmethod insert-annotation "IOB"
@@ -93,7 +90,7 @@
   [{db-conn :db :as db} {{{B :B O :O} :scope} :span project :project {k :key} :ann :as ann}]
   (let [{:keys [_id] :as ann} (mc/insert-and-return db-conn (:anns colls) ann)]
     (doseq [token-id (range B (inc O))]
-      (insert-cpos-ann db token-id {:key k :ann-id _id :project project}))
+      (insert-cpos-anns db token-id {:key k :ann-id _id :project project}))
     ann))
 
 (defn compute-history [ann]
@@ -173,7 +170,7 @@
 (s/defn find-ann-ids-in-range
   "Given a token range and user projects returns the ann-ids of all annotations
    in that range for that user"
-  [{db :db} user-projects id-from id-to] :- [cpos-ann-schema]
+  [{db :db} user-projects id-from id-to] :- [cpos-anns-schema]
   (mc/find-maps
    db (:cpos-anns colls)
    {"anns.project" {$in user-projects}
@@ -212,17 +209,4 @@
               anns-in-range (fetch-anns-in-range db project-names from to)
               new-hit (merge-annotations-hit hit anns-in-range)]]
     (assoc hit-map :hit new-hit)))
-
-;; (defonce db (.start (cleebo.components.db/new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
-
-;; (mc/find-and-modify
-;;  (:db db) coll
-;;  {:_id 52}
-;;  {$set {:more-anns {(keyword "A") "b"}}}
-;;  {:return-new true})
-;; (mc/find-and-modify (:db db) coll {:_id 52} {} {:remove true})
-
-;; (fetch-anns-in-range
-;;  db ["sample" "user-playground"]
-;;  0 1000000)
 

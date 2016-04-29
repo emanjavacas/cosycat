@@ -93,23 +93,25 @@
 
 (defn token-cell
   "help component-fn for a standard token cell"
-  [token]
-  (fn token-cell [token]
-    (let [{:keys [word match anns]} token]
+  [token project-name]
+  (fn token-cell [token project-name]
+    (let [{:keys [word match anns]} token
+          anns (get anns project-name)]
       [:td {:class (str (when anns "has-annotation ") (when match "info"))}
        word])))
 
 (defn queue-row
   "component-fn for a hit row"
-  [{hit-id :id hit-map :hit hit-meta :meta} open-hits & {:keys [row-number]}]
-  (fn queue-row [{hit-id :id hit-map :hit hit-meta :meta} open-hits & {:keys [row-number]}]
+  [{hit-id :id hit-map :hit hit-meta :meta} open-hits & args]
+  (fn queue-row [{hit-id :id hit-map :hit hit-meta :meta} open-hits &
+                 {:keys [row-number project-name]}]
     (into
      [:tr
       {:style {:background-color "#f5f5f5" :cursor "pointer"}
        :class "queue-row"
        :on-click #(swap! open-hits disjconj hit-id)}]
      (-> (for [{:keys [id] :as token} (filter-dummy-tokens hit-map)]
-           ^{:key id} [token-cell token])
+           ^{:key id} [token-cell token project-name])
          (prepend-cell
           {:key (str "dummy" hit-id)
            :child number-cell

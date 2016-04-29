@@ -37,7 +37,7 @@
    :project s/Str
    (s/optional-key :history) history-schema})
 
-(def cpos-ann-schema
+(def cpos-anns-schema
   {:anns [{:key s/Str :ann-id s/Int}]
    (s/optional-key :_id) cpos-schema})
 
