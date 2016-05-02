@@ -45,6 +45,4 @@
             (if (= 1 (count @projects))
               [:div [no-projects username] [new-project-btn]]
               [:div [projects-panel projects] [new-project-btn]])])]]
-       [:div.col-lg-1]
-       ;; [bs/navbar {:fixedBottom true}]
-       ])))
+       [:div.col-lg-1]])))

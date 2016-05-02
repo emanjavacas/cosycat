@@ -35,14 +35,13 @@
  standard-middleware
  (fn [db [_ target-username status]]
    (assert (some #(= target-username (:username %)) (get-in db [:session :users])))
-   (update-in
-    db [:session :users]
-    (fn [users]
-      (map (fn [{:keys [username] :as user}]
-             (if (= username target-username)
-               (assoc user :active status)
-               user)))
-      users))))
+   (update-in db [:session :users]
+              (fn [users]
+                (map (fn [{:keys [username] :as user}]
+                       (if (= username target-username)
+                         (assoc user :active status)
+                         user))
+                     users)))))
 
 (defn session-handler
   [{{username :username roles :roles projects :projects :as user-info} :user-info

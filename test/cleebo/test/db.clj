@@ -12,7 +12,7 @@
             [cleebo.db.annotations :as anns]
             [environ.core :refer [env]]))
 
-(defonce db (component/start (new-db {:url (:database-url env)})))
+(defonce db (component/start (new-db (:database-url env))))
 (do (clear-dbs db))
 (def force-int ((g/fmap inc) check-generators/int))
 

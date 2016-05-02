@@ -67,11 +67,3 @@
          {:return-new true})]
     (dissoc payload :_id)))
 
-;; (defonce db (.start (cleebo.components.db/new-db {:url "mongodb://127.0.0.1:27017/cleeboTest"})))
-
-;; (mc/find-maps
-;;  (:db db)
-;;  "projects"
-;;  {"users.username" {$in ["user" "foo"]}})
-
-

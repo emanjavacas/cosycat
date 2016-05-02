@@ -20,7 +20,7 @@
   (let [{:keys [handler port cqp-init-file database-url blacklab-paths-map]} config-map]
     (-> (component/system-map
          :blacklab (new-bl blacklab-paths-map)
-         :db (new-db {:url database-url})
+         :db (new-db database-url)
          :ws (new-ws)
          :figwheel (new-figwheel)
          :http-server (new-http-server {:port port :components [:db :ws :blacklab]}))

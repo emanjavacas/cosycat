@@ -1,6 +1,7 @@
 (ns cleebo.components.blacklab
   (:require [taoensso.timbre :as timbre]
-            [cleebo.utils :refer [wrap-safe dummy-hit]]
+            [cleebo.utils :refer [dummy-hit]]
+            [cleebo.middleware :refer [wrap-safe]]
             [com.stuartsierra.component :as component]
             [cleebo.blacklab.core :as bl]))
 

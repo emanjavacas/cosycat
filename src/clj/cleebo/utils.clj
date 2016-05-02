@@ -1,9 +1,12 @@
 (ns cleebo.utils
   (:require [cognitect.transit :as transit]
+            [clojure.java.io :as io]
             [schema.core :as s]))
 
+;;; RESOURCES
 (def ^:dynamic *encoding* "UTF-8")
 
+;;; SYNTAX
 (defn read-str
   "Reads a value from a decoded string"
   [^String s type & opts]
@@ -24,15 +27,7 @@
 (defn ->keyword [s]
   (keyword (subs s 1)))
 
-(defn wrap-safe
-  "turns eventual exception into a proper response body"
-  [f]
-  (fn [& args]
-    (try (let [out (apply f args)]
-           (assoc out :status {:status :ok :status-content "OK"}))
-         (catch Exception e
-           {:status {:status :error :status-content (str e)}}))))
-
+;;; ANNS
 (defn new-token-id
   "returns new id for a dummy token"
   [idx]
@@ -51,3 +46,21 @@
       (catch NumberFormatException e
         -1))
     (ex-info "token missing id" token)))
+
+;;; IO
+(defn safe-delete [file-path]
+  (if (.exists (io/file file-path))
+    (try
+      (io/delete-file file-path)
+      (catch Exception e (str "exception: " (.getMessage e))))
+    false))
+
+(defn delete-directory [directory-path]
+  (let [directory-contents (file-seq (io/file directory-path))
+        files-to-delete (filter #(.isFile %) directory-contents)]
+    (doseq [file files-to-delete]
+      (safe-delete (.getPath file)))
+    (safe-delete directory-path)))
+
+(defn prn-format [s & args]
+  (println (apply format s args)))

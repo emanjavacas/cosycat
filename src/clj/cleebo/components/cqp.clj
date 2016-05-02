@@ -1,6 +1,6 @@
 (ns cleebo.components.cqp
   (:require [com.stuartsierra.component :as component]
-            [cleebo.utils :refer [wrap-safe]]
+            [cleebo.middleware :refer [wrap-safe]]
             [cqp-clj.core :refer [make-cqi-client connect! disconnect!] :as cqp]
             [cqp-clj.spec :refer [read-init]]
             [taoensso.timbre :as timbre]))

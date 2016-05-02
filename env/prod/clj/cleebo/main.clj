@@ -1,6 +1,7 @@
 (ns cleebo.main
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer [refresh refresh-all]]
+            [cleebo.utils :refer [prn-format delete-directory]]
             [cleebo.components.http-server :refer [new-http-server]]
             [cleebo.components.db :refer [new-db colls clear-dbs]]
             [cleebo.components.blacklab :refer [new-bl]]
@@ -93,20 +94,6 @@
      (Thread. (fn [] (.stop system) (shutdown-agents))))
     (.start system)))
 
-(defn safe-delete [file-path]
-  (if (.exists (io/file file-path))
-    (try
-      (io/delete-file file-path)
-      (catch Exception e (str "exception: " (.getMessage e))))
-    false))
-
-(defn delete-directory [directory-path]
-  (let [directory-contents (file-seq (io/file directory-path))
-        files-to-delete (filter #(.isFile %) directory-contents)]
-    (doseq [file files-to-delete]
-      (safe-delete (.getPath file)))
-    (safe-delete directory-path)))
-
 (defn prompt-user [{:keys [prompt-msg yes-msg action]}]
   (let [rdr (java.io.BufferedReader. *in*)]
     (loop [msg (str prompt-msg " (yes/no)")]
@@ -116,13 +103,12 @@
           "yes" (do (println yes-msg)
                     (try (action)
                          (catch Exception e
-                           (println (format "Operation failed. Reason: [%s]"
-                                            (.getMessage e))))))
+                           (prn-format "Operation failed. Reason: [%s]" (.getMessage e)))))
           "no"  (println "Skipping...")
           (recur "Please enter 'yes' or 'no'"))))))
 
 (defn clean-env []
-  (let [root (io/file (:dynamic-resource-path env))
+  (let [root (clojure.java.io/file (:dynamic-resource-path env))
         db (new-db (:database-url env))]
     (prompt-user
      {:prompt-msg "Do you want to clear the '/app-resources' directory."
@@ -132,16 +118,17 @@
       (prompt-user
        {:prompt-msg (format "Do you want to drop collection [%s]" v)
         :yes-msg (format "Dropping collection [%s]..." v)
-        :action #(clear-dbs db :collectionss [k])}))
+        :action #(clear-dbs db :collections [k])}))
     (exit 0 "Done. Goodbye!")))
 
 (defn -main [& args]
-  (let [{:keys [options arguments errors summary]} (parse-opts args cli-options)]
+  (let [{:keys [options [action & restargs] errors summary]} (parse-opts args cli-options)]
     (cond
       (:help options) (exit 0 (usage summary))
-      (not= (count arguments) 1) (exit 1 (usage summary))
-      errors (exit 1 (error-msg errors)))
-    (case (first arguments)
+      (nil? action)   (exit 1 (usage summary))
+      errors          (exit 1 (error-msg errors)))
+    (case action
       "start" (run-server)
       "clean" (clean-env)
       (exit 1 (usage summary)))))
+

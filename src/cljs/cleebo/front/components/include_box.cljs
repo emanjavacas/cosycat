@@ -32,12 +32,12 @@
 
 (defn include-box-component [{:keys [model on-select child-component]}]
   (let [model-left (reagent/atom #{})
-        model-right (reagent/atom (apply hash-set model))
         selection-left (reagent/atom #{})
         selection-right (reagent/atom #{})
         _ (add-watch model-left :sel (fn [_ _ _ new-state] (on-select new-state)))]
-    (fn [{:keys [model selection-atom]}]
-      (let [nchildren (max 1 (count @model-right))]
+    (fn [{:keys [model on-select child-component]}]
+      (let [model-right (reagent/atom (apply hash-set model))
+            nchildren (max 1 (count @model-right))]
         [:div.container-fluid
          [:div.row
           [:div.col-lg-5

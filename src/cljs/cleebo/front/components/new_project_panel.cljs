@@ -10,6 +10,9 @@
             [goog.string :as gstr]
             [taoensso.timbre :as timbre]))
 
+(def name-input-id :new-project-name-input)
+(def desc-input-id :new-project-desc-input)
+
 (defn label-component [title]
   [:div.text-muted.pull-right
    {:style {:padding-right "15px" :padding-top "5px"}}
@@ -17,9 +20,6 @@
 
 (defn spacer []
   [:div.row {:style {:height "35px"}}])
-
-(def name-input-id :new-project-name-input)
-(def desc-input-id :new-project-desc-input)
 
 (defn on-input-change [has-error-atom component-id]
   (fn []
@@ -63,72 +63,76 @@
      [error-label desc-input-error]
      [label-component "Add a Description"]]))
 
-(defn users-input-component [users selected-users]
-  (fn [users selected-users]
-    (when-not (empty? @users)
-      [:div
-       [:div.row
-        [include-box-component
-         {:model @users
-          :on-select #(reset! selected-users %)
-          :child-component user-selection-component}]
-        [label-component "Add Users"]]])))
+(defn users-input-component [selected-users]
+  (let [users (re-frame/subscribe [:session :users])]
+    (fn [selected-users]
+      (when-not (empty? @users)
+        [:div
+         [:div.row
+          [include-box-component
+           {:model @users
+            :on-select #(reset! selected-users %)
+            :child-component user-selection-component}]
+          [label-component "Add Users"]]]))))
 
 (defn move-cursor [dir els]
-  (fn [current-position]
+  (fn [idx]
     (let [[f top] (case dir
-                    :next [inc (dec (count els))]
-                    :prev [dec (inc (count els))])]
-      (mod (f current-position) top))))
+                    :next [inc (count els)]
+                    :prev [dec (count els)])]
+      (mod (f idx) top))))
 
-(defn select-role-btn [user]
+
+
+(defn select-role-btn []
   (let [current-role (reagent/atom 0)]
-    (fn [user]
+    (fn []
       (let [[role desc] (nth (seq project-user-roles) @current-role)]
         [:div
          [:div.input-group
           [:span.input-group-btn
            [:button.btn.btn-default
             {:type "button"
-             :on-click #(swap! current-role (move-cursor :next project-user-roles))}
+             :on-click #(swap! current-role (move-cursor :prev project-user-roles))}
             [bs/glyphicon {:glyph "chevron-left"}]]]
           [:span.form-control [:label role]]
           [:span.input-group-btn
            [:button.btn.btn-default
             {:type "button"
-             :on-click #(swap! current-role (move-cursor :prev project-user-roles))}
+             :on-click #(swap! current-role (move-cursor :next project-user-roles))}
             [bs/glyphicon {:glyph "chevron-right"}]]]]
-         [:span desc]]))))
+         [:span.text-muted
+          {:style {:margin-top "5px"}}
+          desc]]))))
 
-(defn roles-input-component [users selected-users]
-  (fn [users selected-users]
+(defn roles-input-component [selected-users]
+  (let [users (re-frame/subscribe [:session :users])]
     (when-not (empty? @selected-users)
-      [:div.row
-       [:div.container-fluid
-        [bs/list-group
-         (let [selected-users-names (apply hash-set (map :username @selected-users))]
-           (doall (for [{:keys [username active] :as user} @users
-                        :when (contains? selected-users-names username)]
-                    ^{:key username}
-                    [bs/list-group-item
-                     [:div.row
-                      [:div.col-lg-6.text-center [user-selection-component user]]
-                      [:div.col-lg-6.text-center [select-role-btn user]]]])))]]
-       (apply str @selected-users)
-       [label-component "Assign Project Roles"]])))
+      (fn [selected-users]
+        [:div.row
+         [:div.container-fluid
+          [bs/list-group
+           (let [selected-users-names (apply hash-set (map :username @selected-users))]
+             (doall (for [{:keys [username active] :as user} @users
+                          :when (contains? selected-users-names username)]
+                      ^{:key username}
+                      [bs/list-group-item
+                       [:div.row
+                        [:div.col-lg-7.text-center [user-selection-component user]]
+                        [:div.col-lg-5.text-center [select-role-btn]]]])))]]
+         [label-component "Assign Project Roles"]]))))
 
 (defn new-project-form [selected-users {:keys [name-input-error desc-input-error]}]
-  (let [users (re-frame/subscribe [:session :users])]
-    (fn [selected-users {:keys [name-input-error desc-input-error]}]
-      [bs/well
-       [:div.container-fluid
-        [name-input-component name-input-error]
-        [spacer]
-        [desc-input-component desc-input-error]
-        [spacer]
-        [users-input-component users selected-users]
-        [spacer]
-        [roles-input-component users selected-users]]])))
+  (fn [selected-users {:keys [name-input-error desc-input-error]}]
+    [bs/well
+     [:div.container-fluid
+      [name-input-component name-input-error]
+      [spacer]
+      [desc-input-component desc-input-error]
+      [spacer]
+      [users-input-component selected-users]
+      [spacer]
+      [roles-input-component selected-users]]]))
 
 (defn validate-project-input
   [{:keys [name description users] :as project} user-projects]
@@ -139,8 +143,9 @@
     [name-input-id "Project name cannot end with '-playground'"]
     (invalid-project-name name)
     [name-input-id "Project name cannot match [ ^\\W+]"]
-    (> 50 (count description))
+    (< (count description) 50)
     [desc-input-id "Type at least 50 characters... please!"]
+
     :else false))
 
 (defn submit-project [{:keys [name desc usernames user-projects]}]
@@ -160,8 +165,25 @@
           (submit-project
            {:name name
             :description desc
-            :usernames (map :username @selected-users)
+            :usernames (map #(select-keys % [:username :role]) @selected-users)
             :user-projects user-projects}))))))
+
+(defn project-btn [open? selected-users user-projects name-input-error desc-input-error]
+  (fn [open? selected-users user-projects name-input-error desc-input-error]
+    [bs/button-toolbar
+     {:class "pull-right"}
+     [bs/button
+      {:onClick
+       (on-new-project
+        open? selected-users user-projects
+        :input-error-atoms [name-input-error desc-input-error])
+       :bsStyle (if-not @open? "info" "success")}
+      (if-not @open? "New project" "Submit project")]
+     (when @open?
+       [bs/button
+        {:onClick #(reset! open? false)
+         :bsStyle "success"}
+        "Close"])]))
 
 (defn new-project-btn []
   (let [open? (reagent/atom false)
@@ -179,17 +201,4 @@
           [new-project-form selected-users
            {:name-input-error name-input-error
             :desc-input-error desc-input-error}])]
-       [bs/button-toolbar
-        {:class "pull-right"}
-        [bs/button
-         {:onClick
-          (on-new-project
-           open? selected-users user-projects
-           :input-error-atoms [name-input-error desc-input-error])
-          :bsStyle (if-not @open? "info" "success")}
-         (if-not @open? "New project" "Submit project")]
-        (when @open?
-          [bs/button
-           {:onClick #(reset! open? false)
-            :bsStyle "success"}
-           "Close"])]])))
+       [project-btn open? selected-users user-projects name-input-error desc-input-error]])))

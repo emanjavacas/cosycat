@@ -11,7 +11,7 @@
     (if (and conn db)
       component
       (let [{:keys [conn db]} (mg/connect-via-uri url)]
-        (timbre/info "starting DB")
+        (timbre/info "starting DB on" url)
         (assoc component :db db :conn conn))))
   (stop [component]
     (if-not conn
@@ -21,7 +21,7 @@
         (mg/disconnect conn)
         (assoc component :db nil :conn nil)))))
 
-(defn new-db [{:keys [url]}]
+(defn new-db [url]
   (map->DB {:url url}))
 
 (def colls
@@ -35,4 +35,7 @@
   (doseq [k-coll collections
           :let [v-coll (get colls k-coll)]]
     (timbre/info "Clearing collection:" v-coll "in db: " (:database-url env))
-    (mc/drop db v-coll)))
+    (try
+      (mc/drop db v-coll))))
+
+
