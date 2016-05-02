@@ -27,7 +27,7 @@
   (let [{:keys [handler port database-url blacklab-paths-map]} config-map]
     (-> (component/system-map
          :blacklab (new-bl blacklab-paths-map)
-         :db (new-db {:url database-url})
+         :db (new-db database-url)
          :ws (new-ws)
          :http-server (new-http-server {:port port :components [:db :ws :blacklab]}))
         (component/system-using
@@ -117,13 +117,14 @@
     (doseq [[k v] colls]
       (prompt-user
        {:prompt-msg (format "Do you want to drop collection [%s]" v)
-        :yes-msg (format "Dropping collection [%s]..." v)
+        ;; :yes-msg (format "Dropping collection [%s]..." v)
         :action #(clear-dbs db :collections [k])}))
     (.stop db)
     (exit 0 "Done. Goodbye!")))
 
 (defn -main [& args]
-  (let [{:keys [options [action & restargs] errors summary]} (parse-opts args cli-options)]
+  (let [{:keys [options arguments errors summary]} (parse-opts args cli-options)
+        [action & restargs] arguments]
     (cond
       (:help options) (exit 0 (usage summary))
       (nil? action)   (exit 1 (usage summary))
