@@ -45,15 +45,14 @@
 (re-frame/register-handler
  :new-project
  standard-middleware
- (fn [db [_ {:keys [name description usernames] :as project}]]
-   (let [users (if usernames (users-by-name db usernames) [])]
-     (POST "/project"
-           {:params {:route :new-project
-                     :name name
-                     :description description
-                     :users (map #(select-keys % [:username :role]) users)}
-            :handler new-project-handler
-            :error-handler new-project-error-handler}))
+ (fn [db [_ {:keys [name description users] :as project}]]
+   (POST "/project"
+         {:params {:route :new-project
+                   :name name
+                   :description description
+                   :users users}
+          :handler new-project-handler
+          :error-handler new-project-error-handler})
    db))
 
 (re-frame/register-handler

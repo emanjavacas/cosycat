@@ -105,13 +105,15 @@
                (select-keys [:span :scope]))
            {:scope (get-in token-ann [:span :scope])}))))
 
-(def sample-user {:username "foo-user" :password "pass"})
+(def sample-user
+  {:username "foo-user" :password "pass"
+   :firstname "FOO" :lastname "USER" :email "foo@bar.com"})
 
 (deftest users-db-test
   (let [new-user-out (new-user db sample-user)
         new-user-exisiting-out (new-user db sample-user)
         is-user?-out (is-user? db sample-user)
-        lookup-user-out (lookup-user db "foo-user" "pass")
+        lookup-user-out (lookup-user db {:username "foo@bar.com" :password "pass"})
         remove-user-existing-out (remove-user db "foo-user")
         remove-user-out (remove-user db "foo-user")
         new-user-roles-out (new-user db sample-user :roles ["admin"])

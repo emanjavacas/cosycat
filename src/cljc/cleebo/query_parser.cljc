@@ -29,7 +29,7 @@
 
 (defn missing-quotes
   "finds missing matching quotes in a FSA fashion"
-  [s & {:keys [qs] :or {qs "\"'"}}]
+  [s & {:keys [qs] :or {qs "\""}}]
   (letfn [(find-start [s idx]
             (if-let [{group :group start :start end :end :as match}
                      (re-pos (make-start-pattern qs) s)]

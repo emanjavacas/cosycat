@@ -31,10 +31,12 @@
    req))
 
 (defn signup-route
-   [{{username :username password :password repeatpassword :repeatpassword} :params
-   {db :db ws :ws} :components
-   {next-url :next} :session :as req}]
-  (let [user {:username username :password password}
+  [{{username :username firstname :firstname lastname :lastname email :email
+     password :password repeatpassword :repeatpassword} :params
+    {db :db ws :ws} :components
+    {next-url :next} :session :as req}]
+  (let [user {:username username :password password
+              :firstname firstname :lastname lastname :email email}
         is-user (is-user? db user)
         password-match? (= password repeatpassword)]
     (cond
@@ -52,11 +54,13 @@
    {db :db ws :ws} :components
    {next-url :next} :session :as req}]
   (let [username (or username username-form)
-        password (or password password-form)]
-    (if-let [user (-> (lookup-user db username password) (assoc :active true))]
-      (do (send-clients ws {:type :login :data (postprocess-user-load user :project)})
-          (-> (redirect (or next-url "/"))
-              (assoc-in [:session :identity] user)))
+        password (or password password-form)
+        user {:username username :password password}]
+    (if-let [user (lookup-user db user)]
+      (let [user (assoc user :active true)]
+        (send-clients ws {:type :login :data (postprocess-user-load user :project)})
+        (-> (redirect (or next-url "/"))
+            (assoc-in [:session :identity] user)))
       (on-login-failure req))))
 
 (defn logout-route
@@ -72,8 +76,9 @@
     {db :db} :components
     {next-url :next} :session :as req}]
   (let [username (or username username-form)
-        password (or password password-form)]
-    (if-let [user (lookup-user db username password)]
+        password (or password password-form)
+        user {:username username :password password}]
+    (if-let [user (lookup-user db user)]
       (let [claims {:user user
                     :exp (-> 3 time/hours time/from-now)}
             token (jws/sign claims secret)] ;check this

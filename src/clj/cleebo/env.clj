@@ -5,7 +5,8 @@
 
 (defn clean-env-no-prompt []
   (let [root (clojure.java.io/file (:dynamic-resource-path env))
-        db (new-db (:database-url env))]
+        db (.start (new-db (:database-url env)))]
     (do (println "Cleaning app-resources") (delete-directory root))
-    (clear-dbs db :collections (keys colls))))
+    (clear-dbs db)
+    (.stop db)))
 

@@ -4,7 +4,8 @@
             [buddy.hashers :as hashers]
             [taoensso.timbre :as timbre]
             [schema.core :as s]
-            [cleebo.schemas.app-state-schemas :refer [public-user-schema user-schema]]
+            [cleebo.schemas.app-state-schemas :refer [public-user-schema]]
+            [cleebo.schemas.user-schemas :refer [user-schema]]
             [cleebo.components.db :refer [new-db colls]]
             [cleebo.avatar :refer [user-avatar]]))
 
@@ -14,25 +15,30 @@
       (update-in [:roles] (partial apply hash-set))))
 
 (defn new-user
-  [{db-conn :db :as db} {:keys [username password]} &
+  [{db-conn :db :as db} {:keys [username password firstname lastname email] :as user} &
    {:keys [roles] :or {roles ["user"]}}]
   (if (not (mc/find-one-as-map db-conn (:users colls) {:username username}))
     (let [now (System/currentTimeMillis)
-          user {:username username
-                :password (hashers/encrypt password {:alg :bcrypt+blake2b-512})
-                :roles roles
-                :created now
-                :last-active now
-                :avatar (user-avatar username)}]
+          user (-> user
+                   (assoc :password (hashers/encrypt password {:alg :bcrypt+blake2b-512}))
+                   (assoc :roles roles :created now :last-active now)
+                   (assoc :avatar (user-avatar username)))]
       (-> (mc/insert-and-return db-conn (:users colls) user)
           postprocess-user-load))))
 
-(defn is-user? [{db-conn :db :as db} {:keys [username password]}]
-  (boolean (mc/find-one-as-map db-conn (:users colls) {:username username})))
+(defn is-user?
+  [{db-conn :db :as db} {:keys [username password firstname lastname email]}]
+  (boolean (mc/find-one-as-map
+            db-conn (:users colls)
+            {$or [{:username username}
+                  {$and [{:firstname firstname :lastname lastname}]}
+                  {:email email}]})))
 
 (s/defn lookup-user
-  [{db-conn :db :as db} username password] :- (s/maybe user-schema)
-  (if-let [user (mc/find-one-as-map db-conn (:users colls) {:username username})]
+  [{db-conn :db :as db} {:keys [username password]}] :- (s/maybe user-schema)
+  (if-let [user (mc/find-one-as-map
+                 db-conn (:users colls)
+                 {$or [{:username username} {:email username}]})]
     (if (hashers/check password (:password user))
       (-> user postprocess-user-load))))
 

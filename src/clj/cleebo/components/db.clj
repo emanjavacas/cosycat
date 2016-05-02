@@ -35,7 +35,9 @@
   (doseq [k-coll collections
           :let [v-coll (get colls k-coll)]]
     (timbre/info "Clearing collection:" v-coll "in db: " (:database-url env))
-    (try
-      (mc/drop db v-coll))))
+    (try (mc/drop db v-coll)
+         (catch Exception e
+           (timbre/info (format "Couldn't clear collection %s: [%s]"
+                                v-coll (str (class e))))))))
 
 

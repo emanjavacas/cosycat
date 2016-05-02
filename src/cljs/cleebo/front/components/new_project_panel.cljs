@@ -2,7 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
-            [cleebo.utils :refer [by-id]]
+            [cleebo.utils :refer [by-id parse-time human-time]]
             [cleebo.roles :refer [project-user-roles]]
             [cleebo.components :refer [user-selection-component css-transition-group]]
             [cleebo.front.components.include-box :refer [include-box-component]]
@@ -63,18 +63,6 @@
      [error-label desc-input-error]
      [label-component "Add a Description"]]))
 
-(defn users-input-component [selected-users]
-  (let [users (re-frame/subscribe [:session :users])]
-    (fn [selected-users]
-      (when-not (empty? @users)
-        [:div
-         [:div.row
-          [include-box-component
-           {:model @users
-            :on-select #(reset! selected-users %)
-            :child-component user-selection-component}]
-          [label-component "Add Users"]]]))))
-
 (defn move-cursor [dir els]
   (fn [idx]
     (let [[f top] (case dir
@@ -82,45 +70,85 @@
                     :prev [dec (count els)])]
       (mod (f idx) top))))
 
+(defn get-nth-role [idx]
+  (first (nth (seq project-user-roles) idx)))
 
+(defn on-click-fn [dir current-idx-atom on-change]
+  (fn [e]
+    (.stopPropagation e)
+    (let [new-idx (swap! current-idx-atom (move-cursor dir project-user-roles))]
+      (on-change (get-nth-role new-idx)))))
 
-(defn select-role-btn []
-  (let [current-role (reagent/atom 0)]
-    (fn []
-      (let [[role desc] (nth (seq project-user-roles) @current-role)]
+(defn select-role-btn [on-change]
+  (let [current-idx (reagent/atom 0)]
+    (fn [on-change]
+      (let [[role desc] (nth (seq project-user-roles) @current-idx)]
         [:div
          [:div.input-group
           [:span.input-group-btn
            [:button.btn.btn-default
             {:type "button"
-             :on-click #(swap! current-role (move-cursor :prev project-user-roles))}
+             :on-click (on-click-fn :prev current-idx on-change)}
             [bs/glyphicon {:glyph "chevron-left"}]]]
-          [:span.form-control [:label role]]
+          [bs/overlay-trigger
+           {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} desc])
+            :placement "bottom"}
+           [:span.form-control.text-center [bs/label role]]]
           [:span.input-group-btn
            [:button.btn.btn-default
             {:type "button"
-             :on-click #(swap! current-role (move-cursor :next project-user-roles))}
-            [bs/glyphicon {:glyph "chevron-right"}]]]]
-         [:span.text-muted
-          {:style {:margin-top "5px"}}
-          desc]]))))
+             :on-click (on-click-fn :next current-idx on-change)}
+            [bs/glyphicon {:glyph "chevron-right"}]]]]]))))
 
-(defn roles-input-component [selected-users]
-  (let [users (re-frame/subscribe [:session :users])]
-    (when-not (empty? @selected-users)
-      (fn [selected-users]
+(defn is-selected? [selected-users username]
+  (contains? selected-users username))
+
+(defn swap-selected [selected-users username]
+  (if (is-selected? selected-users username)
+    (dissoc selected-users username)
+    (assoc selected-users username {:username username :role (first project-user-roles)})))
+
+(def unselected-style
+  {:-webkit-filter "grayscale(100%)"  :filter "grayscale(100%)" :opacity "0.6"})
+
+(defn on-new-user-role [selected-users username]
+  (fn [role]
+    (timbre/debug
+     (swap! selected-users assoc-in [username :role] role))))
+
+(defn user-profile [user selected-users]
+  (fn [{:keys [avatar username firstname lastname email created last-active]} selected-users]
+    (let [selected? (is-selected? @selected-users username)]
+      [:div.well.well-sm
+       {:class (if-not selected? "selected")
+        :style (merge {:cursor "pointer"} (when-not selected? unselected-style))
+        :onClick #(swap! selected-users swap-selected username)}
+       [:div.container-fluid
         [:div.row
-         [:div.container-fluid
-          [bs/list-group
-           (let [selected-users-names (apply hash-set (map :username @selected-users))]
-             (doall (for [{:keys [username active] :as user} @users
-                          :when (contains? selected-users-names username)]
-                      ^{:key username}
-                      [bs/list-group-item
-                       [:div.row
-                        [:div.col-lg-7.text-center [user-selection-component user]]
-                        [:div.col-lg-5.text-center [select-role-btn]]]])))]]
-         [label-component "Assign Project Roles"]]))))
+         [:div.col-sm-6.col-md-4
+          [:h4 [:img.img-rounded.img-responsive {:src (:href avatar)}]]]
+         [:div.col-sm-6.col-md-8
+          [:h4 username [:br] [:span [:small [:cite (str firstname " " lastname)]]]]]]
+        [:div.row {:style {:padding "0 15px"}}
+         [bs/table
+          [:tbody
+           [:tr [:td [bs/glyphicon {:glyph "envelope"}]] [:td email]]
+           [:tr [:td [:span (str "Created:")]] [:td (parse-time created)]]
+           [:tr [:td [:span (str "Last active:") ]] [:td (human-time last-active)]]]]]
+        (when selected?
+          [:div.row {:style {:padding "0 15px"}}
+           [select-role-btn (on-new-user-role selected-users username)]])]])))
+
+(defn users-input-component [selected-users]
+  (let [users (re-frame/subscribe [:session :users])]
+    (fn [selected-users]
+      (timbre/debug @users)
+      (when-not (empty? @users)
+        [:div (doall (for [row (partition-all 3 @users)
+                           {:keys [username] :as user} row]
+                       (do (timbre/debug "USER" user)
+                           ^{:key username}
+                           [:div.col-lg-4 [user-profile user selected-users]])))]))))
 
 (defn new-project-form [selected-users {:keys [name-input-error desc-input-error]}]
   (fn [selected-users {:keys [name-input-error desc-input-error]}]
@@ -130,12 +158,11 @@
       [spacer]
       [desc-input-component desc-input-error]
       [spacer]
-      [users-input-component selected-users]
-      [spacer]
-      [roles-input-component selected-users]]]))
+      [users-input-component selected-users]]]))
 
 (defn validate-project-input
   [{:keys [name description users] :as project} user-projects]
+  (timbre/debug project)
   (cond
     (contains? (apply hash-set (map :name user-projects)) name)
     [name-input-id "Project already exists!"]
@@ -145,12 +172,10 @@
     [name-input-id "Project name cannot match [ ^\\W+]"]
     (< (count description) 50)
     [desc-input-id "Type at least 50 characters... please!"]
-
     :else false))
 
-(defn submit-project [{:keys [name desc usernames user-projects]}]
-  (let [project {:name name :description desc :usernames usernames}]
-    (timbre/debug @user-projects)
+(defn submit-project [{:keys [name description users user-projects]}]
+  (let [project {:name name :description description :users users}]
     (if-let [[component-id error-msg] (validate-project-input project @user-projects)]
       (re-frame/dispatch [:register-error component-id {:msg error-msg}])
       (re-frame/dispatch [:new-project project]))))
@@ -165,7 +190,7 @@
           (submit-project
            {:name name
             :description desc
-            :usernames (map #(select-keys % [:username :role]) @selected-users)
+            :users (vals @selected-users)
             :user-projects user-projects}))))))
 
 (defn project-btn [open? selected-users user-projects name-input-error desc-input-error]
@@ -187,10 +212,11 @@
 
 (defn new-project-btn []
   (let [open? (reagent/atom false)
+        users (re-frame/subscribe [:session :users])
+        selected-users (reagent/atom {})
         name-input-error (re-frame/subscribe [:has-error? name-input-id])
         desc-input-error (re-frame/subscribe [:has-error? desc-input-id])
-        user-projects (re-frame/subscribe [:session :user-info :projects])
-        selected-users (reagent/atom #{})]
+        user-projects (re-frame/subscribe [:session :user-info :projects])]
     (fn []
       [:div
        [css-transition-group

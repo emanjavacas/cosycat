@@ -48,6 +48,7 @@
         [:span.input-group-addon [:i.glyphicon.glyphicon-user]]
         [:input.form-control
          {:placeholder "username or email"
+          :required true
           :value ""
           :name "username"
           :type "text"}]]
@@ -56,6 +57,7 @@
         [:span.input-group-addon [:i.glyphicon.glyphicon-lock]]
         [:input.form-control
          {:placeholder "password"
+          :required true
           :value ""
           :name "password"
           :type "password"}]]
@@ -66,8 +68,7 @@
           [:div.row
            [:div.col-md-8 {:style "text-align: left;"}
             (if error-msg (alert-error error-msg)
-                (if success-msg (alert-success success-msg)
-                    ""))]
+                (if success-msg (alert-success success-msg) ""))]
            [:div.col-md-4
             [:button.btn-login.btn.btn-success {:type "submit"} "Login"]]]]
          [:br]
@@ -79,15 +80,41 @@
        [:div.input-group {:style "margin-bottom: 25px"}
         [:span.input-group-addon [:i.glyphicon.glyphicon-user]]
         [:input.form-control
-         {:placeholder "username or email"
+         {:placeholder "public username"
+          :required true
           :value ""
           :name "username"
           :type "text"}]]
+       [:div.input-group {:style "margin-bottom: 25px"}
+        [:span.input-group-addon [:i.glyphicon.glyphicon-user]]
+        [:input.form-control
+         {:placeholder "first name"
+          :required true
+          :value ""
+          :name "firstname"
+          :type "text"}]]
+       [:div.input-group {:style "margin-bottom: 25px"}
+        [:span.input-group-addon [:i.glyphicon.glyphicon-user]]
+        [:input.form-control
+         {:placeholder "last name"
+          :required true
+          :value ""
+          :name "lastname"
+          :type "text"}]]
+       [:div.input-group {:style "margin-bottom: 25px"}
+        [:span.input-group-addon [:i.glyphicon.glyphicon-envelope]]
+        [:input.form-control
+         {:placeholder "email"
+          :required true
+          :value ""
+          :name "email"
+          :type "email"}]]
        [:div.input-group
         {:style "margin-bottom: 25px"}
         [:span.input-group-addon [:i.glyphicon.glyphicon-lock]]
         [:input.form-control
          {:placeholder "password"
+          :required true
           :value ""
           :name "password"
           :type "password"}]]
@@ -96,6 +123,7 @@
         [:span.input-group-addon [:i.glyphicon.glyphicon-lock]]
         [:input.form-control
          {:placeholder "repeat password"
+          :required true
           :value ""
           :name "repeatpassword"
           :type "password"}]]

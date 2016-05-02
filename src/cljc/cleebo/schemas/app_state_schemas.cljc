@@ -3,7 +3,8 @@
             [schema.spec.core :as spec]
             [schema.spec.collection :as coll]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
-            [cleebo.schemas.project-schemas :refer [project-schema]]))
+            [cleebo.schemas.project-schemas :refer [project-schema]]
+            [cleebo.schemas.user-schemas :refer [user-schema]]))
 
 (def project-name-schema s/Str)
 (def ann-key-schema s/Str)
@@ -62,27 +63,10 @@
    :snippets {:snippet-delta s/Int
               :snippet-size s/Int}})
 
-(def avatar-schema
-  {:href s/Str
-   :dominant-color s/Str})
-
-(def user-schema
-  {:username s/Str
-   :avatar avatar-schema
-   :roles #{s/Str}
-   :created s/Int
-   :last-active s/Int
-   :projects [project-schema]})
-
 (def public-user-schema
-  {:username s/Str
-   :avatar avatar-schema
-   :roles #{s/Str}
-   :created s/Int
-   :last-active s/Int
-   :active s/Bool
-   ;; (s/optional-key :projects) [project-schema]
-   })
+  (-> user-schema
+      (dissoc :projects)
+      (assoc :active s/Bool)))
 
 (def app-error-schema
   {:error s/Str
@@ -103,7 +87,7 @@
              :results-by-id (s/conditional empty? {} :else results-by-id-schema)
              :results (s/conditional empty? [] :else results-schema)
              ;; user-related
-             (s/optional-key :user-info)  user-schema
+             (s/optional-key :user-info) user-schema
              (s/optional-key :users) [public-user-schema]
              (s/optional-key :corpora) [s/Str]
              (s/optional-key :active-project) {:name s/Str :filtered-users #{s/Str}}

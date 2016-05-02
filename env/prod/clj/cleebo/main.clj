@@ -1,18 +1,18 @@
-(ns cleebo.main
-  (:require [com.stuartsierra.component :as component]
-            [clojure.tools.namespace.repl :refer [refresh refresh-all]]
-            [cleebo.utils :refer [prn-format delete-directory]]
-            [cleebo.components.http-server :refer [new-http-server]]
-            [cleebo.components.db :refer [new-db colls clear-dbs]]
-            [cleebo.components.blacklab :refer [new-bl]]
-            [cleebo.components.ws :refer [new-ws]]
-            [clojure.tools.cli :refer [parse-opts]]
-            [clojure.java.io :as io]
-            [clojure.string :as string]
-            [taoensso.timbre :as timbre]
-            [environ.core :refer [env]]
-            [clojure.string :as str])
-  (:gen-class))
+[] (ns cleebo.main
+     (:require [com.stuartsierra.component :as component]
+               [clojure.tools.namespace.repl :refer [refresh refresh-all]]
+               [cleebo.utils :refer [prn-format delete-directory]]
+               [cleebo.components.http-server :refer [new-http-server]]
+               [cleebo.components.db :refer [new-db colls clear-dbs]]
+               [cleebo.components.blacklab :refer [new-bl]]
+               [cleebo.components.ws :refer [new-ws]]
+               [clojure.tools.cli :refer [parse-opts]]
+               [clojure.java.io :as io]
+               [clojure.string :as string]
+               [taoensso.timbre :as timbre]
+               [environ.core :refer [env]]
+               [clojure.string :as str])
+     (:gen-class))
 
 (set! *warn-on-reflection* true)
 
@@ -109,7 +109,7 @@
 
 (defn clean-env []
   (let [root (clojure.java.io/file (:dynamic-resource-path env))
-        db (new-db (:database-url env))]
+        db (.start (new-db (:database-url env)))]
     (prompt-user
      {:prompt-msg "Do you want to clear the '/app-resources' directory."
       :yes-msg "Clearing '/app-resources' directory..."
@@ -119,6 +119,7 @@
        {:prompt-msg (format "Do you want to drop collection [%s]" v)
         :yes-msg (format "Dropping collection [%s]..." v)
         :action #(clear-dbs db :collections [k])}))
+    (.stop db)
     (exit 0 "Done. Goodbye!")))
 
 (defn -main [& args]

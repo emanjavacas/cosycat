@@ -1,11 +1,10 @@
 (ns cleebo.schemas.route-schemas
   (:require [schema.core :as s]
             [schema.coerce :as coerce]
-            [cleebo.schemas.annotation-schemas
-             :refer [annotation-schema span-schema]]
+            [cleebo.schemas.annotation-schemas :refer [annotation-schema span-schema]]
             [cleebo.schemas.project-schemas :refer [project-schema]]
-            [cleebo.schemas.app-state-schemas
-             :refer [public-user-schema avatar-schema]]
+            [cleebo.schemas.user-schemas :refer [avatar-schema]]
+            [cleebo.schemas.app-state-schemas :refer [public-user-schema]]
             [cleebo.app-utils :refer [deep-merge]]
             [taoensso.timbre :as timbre]))
 

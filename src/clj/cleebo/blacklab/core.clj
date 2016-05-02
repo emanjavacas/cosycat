@@ -58,16 +58,18 @@
 
 (defn new-searcher [path]
   (let [searcher (agent {:status :closed :path path})]
-    (add-watch searcher :searcher
-               (fn [k r os ns]
-                 (timbre/info "Searcher transition from" os "to" ns)))))
+    (-> searcher
+        (add-watch :searcher (fn [k r os ns]
+                               (when (not= os ns)
+                                 (timbre/info "Searcher transition from" os "to" ns)))))))
 
 (defn close-searcher [searcher]
-  (send-off searcher
-            (fn [searcher-status]
-              (when-let [^Searcher conn (:conn searcher-status)]
-                (.close conn))
-              (assoc searcher-status :status :closed :conn nil))))
+  (send-off
+   searcher
+   (fn [searcher-status]
+     (when-let [^Searcher conn (:conn searcher-status)]
+       (.close conn))
+     (assoc searcher-status :status :closed :conn nil))))
 
 (defn- run-query
   "Runs the query and returns the non-windowed Hits object"
@@ -222,9 +224,13 @@
 ;; (def paths-map {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"})
 ;; (def shc-searcher (new-searcher "/home/enrique/code/BlackLab/brown-index-id/"))
 ;; (init-searcher! shc-searcher)
-;; (def searcher (make-searcher (get paths-map "brown-id")))
 
-;; (def -hits (run-query searcher "\"a\""))
+;; (def hits (query shc-searcher "\".*man\"" 0 10 5))
+;; (map (fn [hit]
+;;         (map (fn [token]
+;;                (:word token))
+;;              (filter :match (:hit hit))))
+;;      (query shc-searcher "[word=\"\\w\"]" 0 10 5))
 
 ;; (for [i (range 1 10)
 ;;       :let [from (* i 100)

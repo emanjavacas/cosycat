@@ -26,7 +26,7 @@
 (defn process-users [creator users]
   (map #(select-keys % [:username :role])
        (cons {:username creator :role "creator"} ;add creator to users
-             (map #(assoc % :role "user") users)) ;assign default role to users
+             users) ;assign default role to users
        ))
 
 (def default-project-desc

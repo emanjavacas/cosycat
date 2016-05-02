@@ -67,3 +67,6 @@ li.toolbar {
     margin-right: 15px;
 }
 
+div.well.selected:hover {
+    background-color: white !important;
+}

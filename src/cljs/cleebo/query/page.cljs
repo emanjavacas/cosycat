@@ -1,6 +1,7 @@
 (ns cleebo.query.page
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
+            [cleebo.utils :refer [format]]
             [cleebo.query.components.highlight-error :refer [highlight-error]]
             [cleebo.query.components.toolbar :refer [toolbar]]
             [cleebo.query.components.query-field :refer [query-field]]
@@ -32,7 +33,7 @@
           (no-results
            @query-str
            @query-size)        [error-panel
-                                :status "The query returned no matching hits"]
+                                :status (format "No matches found for query: %s" @query-str)]
           (has-results
            @query-size)        [results-table]
           :else                [error-panel
