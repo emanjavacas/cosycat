@@ -83,7 +83,7 @@
                      source-component
                      #(re-frame/dispatch [:reset-query-results]))
            :error-handler (error-handler source-component)
-           :params {:query-str query-str
+           :params {:query-str (js/encodeURIComponent query-str)
                     :corpus corpus
                     :context context
                     :from 0

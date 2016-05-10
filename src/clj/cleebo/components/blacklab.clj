@@ -81,6 +81,7 @@
   ([bl corpus query-str from to context]
    (bl-query* bl corpus query-str from to context "default"))
   ([bl corpus query-str from to context query-id]
+   (timbre/debug query-str)
    (let [s (ensure-searcher! bl corpus)
          hits-win (bl/query s query-str from to context update-hits! bl query-id)]
      {:results (format-hits hits-win context)
@@ -200,3 +201,9 @@
 ;;     (dothreads! #(apply steps "gamma" messages))))
 
 ;; (do-things)
+
+;; (def path-maps (:blacklab-paths-map environ.core/env))
+;; (def corpus (first (:corpora environ.core/env)))
+;; (def bl-component (-> (new-bl path-maps) (.start)))
+;; (bl-query bl-component corpus "[pos='NP.*']*" 0 10 5)
+
