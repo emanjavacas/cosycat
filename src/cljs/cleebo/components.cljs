@@ -138,8 +138,13 @@
       [bs/button-toolbar
        (doall (for [{:keys [username]} @active-project-users
                     :let [filtered (contains? @filtered-users username)]]
-                ^{:key username}
-                [filter-annotation-btn username filtered]))])))
+                ^{:key username} [filter-annotation-btn username filtered]))])))
+
+(defn disabled-button-tooltip [disabled?-fn msg]
+  (if (disabled?-fn)
+    (reagent/as-component
+     [bs/tooltip {:id "tooltip"} msg])
+    (reagent/as-component [:span])))
 
 (defn load-from-ls-row [backup]
   [:tr

@@ -5,9 +5,10 @@
             [react-bootstrap.components :as bs]
             [goog.string :as gstr]
             [cleebo.utils :refer [->default-map by-id]]
-            [cleebo.components :refer [dropdown-select user-thumb filter-annotation-buttons]]
-            [cleebo.query.components.annotation-modal
-             :refer [annotation-modal-button]]))
+            [cleebo.routes :refer [nav!]]
+            [cleebo.components :refer
+             [dropdown-select user-thumb filter-annotation-buttons disabled-button-tooltip]]
+            [cleebo.query.components.annotation-modal :refer [annotation-modal-button]]))
 
 (defn pager-button [& {:keys [direction label]}]
   [bs/button
@@ -67,17 +68,31 @@
 (defn mark-all-hits-btn []
   [bs/button
    {:onClick #(re-frame/dispatch [:mark-all-hits])}
-   "Mark hits in page"])
+   "Mark hits"])
 
-(defn demark-all-hits-btn []
+(defn unmark-all-hits-btn []
   [bs/button
-   {:onClick #(re-frame/dispatch [:demark-all-hits])}
-   "Demark all hits"])
+   {:onClick #(re-frame/dispatch [:unmark-all-hits])}
+   "Unmark hits"])
+
+(defn annotation-hit-button []
+  (let [marked-hits (re-frame/subscribe [:marked-hits])]
+    (fn []
+      (let [disabled? (fn [marked-hits] (zero? (count @marked-hits)))]
+        [bs/overlay-trigger
+         {:overlay (disabled-button-tooltip #(disabled? marked-hits) "No hits selected!")
+          :placement "bottom"}
+         [bs/button
+          {:bsStyle "primary"
+           :style (when (disabled? marked-hits) {:opacity 0.65 :cursor "auto"})
+           :onClick #(when-not (disabled? marked-hits) (nav! "#/annotation"))}
+          "Annotate hits"]]))))
 
 (defn mark-buttons []
   [bs/button-toolbar
    [mark-all-hits-btn]
-   [demark-all-hits-btn]
+   [unmark-all-hits-btn]
+   [annotation-hit-button]
    [annotation-modal-button]])
 
 (defn toolbar []

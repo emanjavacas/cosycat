@@ -25,7 +25,7 @@
     (get-in db [:session :results]))))
 
 (re-frame/register-handler
- :demark-all-hits
+ :unmark-all-hits
  standard-middleware
  (fn [db _]
    (reduce
@@ -43,7 +43,7 @@
     true
     (let [marked-tokens (filter :marked hit)]
       (case (count marked-tokens)
-        0 (throw (js/Error. "Trying to demark a token, but no marked tokens found"))
+        0 (throw (js/Error. "Trying to unmark a token, but no marked tokens found"))
         1 (do (assert (= token-id (:id (first marked-tokens)))) false)
         (some #(= token-id %) (map :id marked-tokens))))))
 
