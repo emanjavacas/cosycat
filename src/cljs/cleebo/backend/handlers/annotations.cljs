@@ -198,13 +198,13 @@
   type)
 (defmethod handler cljs.core/PersistentArrayMap
   [{status :status {hit-id :hit-id ann-map :ann-map :as data} :data
-    {{{B :B O :O :as scope} :scope} :scope type :type} :span reason :reason e :e}]
+    {{B :B O :O :as scope} :scope type :type} :span reason :reason e :e}]
   (case status
     :ok (re-frame/dispatch [:add-annotation {:hit-id hit-id :ann-map ann-map}])
     :error (re-frame/dispatch
             [:notify {:message (case type
-                                 "token" (get-msg [:annotation :error :token] scope e) 
-                                 "IOB" (get-msg [:annotation :error :IOB] B O e))}])))
+                                 "token" (get-msg [:annotation :error :token] scope reason)
+                                 "IOB" (get-msg [:annotation :error :IOB] B O reason))}])))
 (defmethod handler cljs.core/PersistentVector
   [payloads]
   (doseq [payload payloads]

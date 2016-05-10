@@ -7,13 +7,13 @@
              :database-url "mongodb://127.0.0.1:27017/cleeboDev"
              :port 3000
              :session-expires 900       ;in minutes
-             :corpora ["brown-id"]
+             :corpora ["brown"]
              :blacklab-paths-map
-             {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"}}}
+             {"brown" "/home/enrique/code/BlackLab/brown-tei/"}}}
  :test {:env {:database-url "mongodb://127.0.0.1:27017/cleeboTest"
-              :corpora ["brown-id"]
+              :corpora ["brown"]
               :blacklab-paths-map
-              {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"}}}
+              {"brown" "/home/enrique/code/BlackLab/brown-tei/"}}}
  :uberjar {:source-paths ["env/prod/clj"]
            :hooks [leiningen.cljsbuild]
            :prep-tasks ["compile" ["cljsbuild" "once"]]
@@ -21,8 +21,9 @@
                  :database-url "mongodb://127.0.0.1:27017/cleebo"
                  :port 3000
                  :session-expires 90    ;in minutes
-                 :corpora ["brown-id" "shc"]
-                 :blacklab-paths-map {"shc" "/home/enrique/code/BlackLab/shc/"}}
+                 :corpora ["brown"]
+                 :blacklab-paths-map
+                 {"brown" "/home/enrique/code/BlackLab/brown-tei/"}}
            :omit-source true
            :aot :all
            :cljsbuild {:jar true

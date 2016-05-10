@@ -27,6 +27,17 @@
 (defn ->keyword [s]
   (keyword (subs s 1)))
 
+(defn deep-merge-with
+  "Like merge-with, but merges maps recursively, applying the given fn
+  only when there's a non-map at a particular level."
+  [f & maps]
+  (apply
+    (fn m [& maps]
+      (if (every? map? maps)
+        (apply merge-with m maps)
+        (apply f maps)))
+    maps))
+
 ;;; ANNS
 (defn new-token-id
   "returns new id for a dummy token"

@@ -3,7 +3,7 @@
             [monger.operators :refer :all]
             [taoensso.timbre :as timbre]
             [schema.core :as s]
-            [cleebo.utils :refer [get-token-id ->int]]
+            [cleebo.utils :refer [get-token-id ->int deep-merge-with]]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema cpos-anns-schema]]
             [cleebo.components.db :refer [new-db colls]]
             [cleebo.db.projects :refer [new-project find-project]]
@@ -24,6 +24,9 @@
   span annotations are fetched according to B-cpos"
   (fn [db {{type :type} :span}] type))
 
+(defn overwrite-span-exception [scope]
+  (ex-info "Attempt to overwrite span ann with token ann" {:scope scope :reason :wrong-update}))
+
 (defmethod find-ann-id "token"
   [{db :db} {{scope :scope} :span project :project {k :key} :ann}]
   (if-let [{{old-scope :scope} :span}
@@ -32,7 +35,7 @@
             {"ann.key" k
              "project" project
              $and [{"span.scope.B" {$lte scope}} {"span.scope.O" {$gte scope}}]})]
-    (throw (ex-info "Attempt to overwrite span ann with token ann" {:scope old-scope}))
+    (throw (overwrite-span-exception old-scope))
     (-> (mc/find-one-as-map
          db (:cpos-anns colls)
          {:_id scope
@@ -41,6 +44,12 @@
          {"anns.$.key" true "_id" false})
         :anns
         first)))
+
+(defn overwrite-token-exception [scope]
+  (ex-info "Attempt to overwrite token ann with span ann" {:scope scope :reason :wrong-update}))
+
+(defn overlapping-span-exception [source-scope scope]
+  (ex-info "Overlapping span" {:source-scope source-scope :scope scope :reason :wrong-update}))
 
 (defmethod find-ann-id "IOB"
   [{db :db} {{{new-B :B new-O :O :as new-scope} :scope} :span
@@ -51,7 +60,7 @@
               {"ann.key" k
                "project" project
                "span.scope" {$in (range new-B (inc new-O))}})]
-    (throw (ex-info "Attempt to overwrite token ann with span ann" {:scope scope})))
+    (throw (overwrite-token-exception scope)))
   (when-let [{{{old-B :B old-O :O :as old-scope} :scope} :span ann-id :_id}
              (mc/find-one-as-map
               db (:anns colls)
@@ -59,7 +68,7 @@
                "project" project
                $and [{"span.scope.B" {$lte new-O}} {"span.scope.O" {$gte new-B}}]})]
     (if-not (and (= old-B new-B) (= old-O new-O))
-      (throw (ex-info "Overlapping span" {:old-scope old-scope :new-scope new-scope}))
+      (throw (overlapping-span-exception old-scope new-scope))
       {:ann-id ann-id})))
 
 (s/defn find-ann-by-id :- annotation-schema
@@ -148,7 +157,7 @@
         role (if (= username project-creator) "creator" (find-role project-users username))]
     (if (check-annotation-update-role :update role)
       (update-annotation db ann-map ann-id)
-      (throw (ex-info "Unauthorized update attempt" {:cause :wrong-update})))))
+      (throw (ex-info "Unauthorized update attempt" {:reason :not-authorized})))))
 
 (s/defn ^:always-validate new-token-annotation
   [db {span :span :as ann-map} :- annotation-schema]
@@ -161,7 +170,7 @@
   "{token-id {ann-key1 ann ann-key2 ann} token-id2 ...}.
    [enhance] a single span annotation will be fetched as many times as tokens it spans"
   [db ann-ids]
-  (apply merge-with conj
+  (apply deep-merge-with conj
          (for [{token-id :_id anns :anns} ann-ids
                {k :key ann-id :ann-id} anns
                :let [{project :project :as ann} (find-ann-by-id db ann-id)]]
@@ -200,13 +209,17 @@
 
 (defn merge-annotations
   "collect stored annotations for a given span of hits. Annotations are 
-  collected at one for a given hit, since we know the token-id range of its
+  collected at once for a given hit, since we know the token-id range of its
   tokens `from`: `to`"
   [db results project-names]
   (for [{:keys [hit] :as hit-map} results
-        :let [from (find-first-id hit) ;todo, find first real id (avoid dummies)
+        :let [from (find-first-id hit)
               to   (find-first-id (reverse hit))
               anns-in-range (fetch-anns-in-range db project-names from to)
               new-hit (merge-annotations-hit hit anns-in-range)]]
     (assoc hit-map :hit new-hit)))
+
+;; (defonce db (.start (new-db (:database-url environ.core/env))))
+;; (fetch-anns-in-range db ["user-playground"] 417 418) 417
+;; (first (find-ann-ids-in-range db ["user-playground"] 410 420))
 

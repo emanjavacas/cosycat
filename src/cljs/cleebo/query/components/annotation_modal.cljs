@@ -106,6 +106,6 @@
          [bs/button
           {:bsStyle "primary"
            :style (when (disabled? marked-tokens) {:opacity 0.65 :cursor "auto"})
-           :onClick (when-not (disabled? marked-tokens) (swap! show? not))}
+           :onClick #(when-not (disabled? marked-tokens) (swap! show? not))}
           [:div "Annotate Tokens"
            [annotation-modal show? marked-tokens]]]]))))

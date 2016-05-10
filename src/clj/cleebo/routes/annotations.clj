@@ -14,10 +14,7 @@
          (send-clients ws {:type :annotation :data server-payload} :source-client username)
          {:status :ok :data server-payload})
        (catch clojure.lang.ExceptionInfo e
-         (-> (case (-> e ex-data :cause)
-               :wrong-update   {:reason :wrong-update}
-               :not-authorized {:reason :not-authorized}
-               :default        {:reason :internal-error})
+         (-> {:reason (or (-> e ex-data :reason) :internal-error)}
              (merge
               {:status :error
                :span span
