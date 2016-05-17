@@ -3,8 +3,10 @@
             [re-frame.core :as re-frame]
             [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]
+            [cleebo.utils :refer [nbsp]]
             [cleebo.schemas.app-state-schemas :refer [db-schema]]
-            [cleebo.localstorage :as ls]))
+            [cleebo.localstorage :as ls]
+            [cleebo.debug.tree :as tree]))
 
 (defn kv-pairs [s]
   (into [:div]
@@ -67,6 +69,40 @@
       [:notify {:message "Hello World! How are you doing?"}])}
    "Notify"])
 
+(defn style [path] {:margin-left (str (* 10 (count path)) "px") :cursor "pointer"})
+
+(defn recursive* [data path]
+  (cond (map? data) (into [:div {:style (style path)}]
+                          (mapv (fn [[k v]]
+                                  [:div
+                                   {:style (style path)
+                                    :on-click #(do (.stopPropagation %) (timbre/info "k" k "v" v))}
+                                   (str "P<" k ">")
+                                   (recursive* v (conj path k))])
+                                data))
+        (sequential? data) (into [:ul {:style (style path)}]
+                                 (mapv (fn [[i v]]
+                                         [:li {:style (style path)}
+                                          (str "P<" i ">")
+                                          (recursive* v (conj path i))])
+                                       (map-indexed vector data)))
+        :else (str (nbsp (* 10 (count path))) "C<" data ">")))
+
+(def d {:a [{:d "a"} {:b {:d [1 2 3] :e [{:a "a" :b "b"}] :f "A!"}}]
+        :c {:e false}
+        :d {:f "A"}})
+
+(defn recursive [data]
+  [recursive* data []])
+
+(defn frisk []
+  (let [db (re-frame/subscribe [:db])
+        d {:a [{:d "a"} {:b {:d [1 2 3] :e [{:a "a" :b "b"}] :f "A!"}}]
+           :c {:e false}
+           :d {:f "A"}}]
+    (fn []
+      [recursive @db])))
+
 (defn debug-panel []
   (fn []
     [:div.container-fluid
@@ -79,4 +115,5 @@
        [ls-dump]
        [ls-print]
        [ls-reload]]]
+     [:div.row [frisk]]
      [:div.row [summary-session]]]))
