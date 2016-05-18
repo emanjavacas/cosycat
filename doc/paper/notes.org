@@ -1,0 +1,209 @@
+* ANNIS3
+** First pass
+*** Key ideas
+- Formalization of well-defined concept of multiple potentially conflicting segmentation layers
+  - Generalize an engine as to allow for indexing a widely variety of unseen corpora
+- Corpus search engines lagging behind XML representations.
+- Search software fails to establish itself (being project-dependent)
+
+* CQPWeb
+** Power vs Usability (and Flexibility)
+*** Power
+**** Speed
+**** Support for complex queries
+*** Usability (self-explaining)
+*** Flexibility (range of corpora that an interface can work with)
+** 4th generation concoordancers (web-based client/server)
+*** Pros
+ - conpyrights
+ - cross-system compatibilty
+
+* Survey on model versioning approaches
+- Versioning systems may be considered as asynchronous cooperative working systems
+ (Schuemmer&Haake 2001)
+** Parallel editing & merge
+*** Merge (entails)
+- phases comparison
+- conflict detection
+- conflict resolution
+- merge
+
+** VCS-related concepts
+*** Artifacts
+- Items subject to version control procedures
+- Examples: textual documentations, program source code, models (UML activity, UML class diagrams)
+*** Versions (revisions and variants)
+- Sequential versions on the time dimension are referred to as "revisions"
+- Parallel or alternative versions co-existing at a given time are denoted as "variants" (branches?)
+** VCS features
+*** Technical features
+- backp-up
+- restore
+- trace changes and responsability
+*** Collaborative features
+- branching
+- merging
+
+** Collaboration
+"Fundamental problem of allowing users to share artifacts but prevent them from accidentally
+ overwriting each other's changes".
+*** Pessimistic (concurrency/replication) mechanism
+- lock-modify-unlock paradigm (Collins-Sussman 2004)
+- prohibits parallel working on artifacts
+- "false sense of security": despite lock-safety, changes applied to different but mutally dependent artifacts may lead to inconsistencies.
+*** Optimistic mechanism
+- copy-modify-merge paradigm (Collins-Sussman 2004)
+- Procedure:
+  - User1 saves changes
+  - User2 attempts to commit changes but these are out of date
+  - User2 merges versions and saves the merged version
+** Merges
+*** Raw merge
+Applies a sequence of change operations
+CONS: not all conflicting parallel modifications can be detected
+*** Two-way merge
+Consider different versions regardless of their (single) root - no information about the 
+origin version is available
+*** Three-way merge
+Includes the ancestor version.
+** Three-way merging in depth
+Four phases
+- Comparison (on the basis of "state", "change")
+  - Match (UUID, hashe, etc...)
+  - Representation (line, tree, graph...)
+  - Granularity (level of modifications considered)
+- Conflict detection
+  - Conflict types (textual, syntactic, semantic)
+  - Visualisation
+- Conflict resolution
+  - Manually
+  - Automatically
+- Merge
+
+** Branching
+- Creation of parallel versions (as opposed to revisions)
+*** Implicit branching
+- No special mechanism to branching (e.g. SVN's copying)
+*** Explicit branching
+- Branches are explicitely created by means of extra-labelling (version management, 
+variant management etc.)
+
+** Repository architecture
+*** Centralized
+- client/server model
+- clients only hold a working copy/their changes must be commited first to the master repo
+*** Distributed
+- each user has their own repo and a working copy
+- commits, viewin history, etc.. are fast since they don't need network connection
+- version of different user may coexist -> history model is not linear but graphical
+
+* Git VCS model vs RTE
+** Git
+*** VCS (version control system), SCM (source code manager), RCS (revision control system)
+*** Goals/Issues addressed:
+  - mantain a repository of content
+  - provide access to historical editions of each datum
+  - record all changes in a log
+*** Features
+  - Distributed development. Allow parallel as well as independent and simultaneous dev.
+  - Scale to thousands of developers
+  - Quick and efficient (compression and delta techniques)
+  - Data integrity and trust (using SHA1)
+  - Enforce accountability (who did what?)
+  - Immutability
+  - Atomic transactions
+  - Branching/mergin capabilities
+  - Complete repos
+  - Clean internal design
+  - Free
+*** Development
+- 1970s: SCCS (lock-based)
+- 1980s: RCS (introduced forward and reverse delta concepts)
+- 1986:  CVS (distributed developement & new lock paradigm - based on private copies + merges)
+- 2001:  SVN (atomicity & branches)
+- 2000s: BitKeeper & Mercurial (distributed store, sharable copies -> p2p)
+- 2000s: Mercurial & Monotone (hash fingerprint to ensure trust and integrity)
+
+* Paper 
+** Paper Ideas
+*** Inconsistent annotations (interdependent analysis)
+**** Because of different theories
+**** Interpretational disagreements within the same theory.
+**** Project/research question-dependen?
+*** Argument against off-the-shelf spreadsheet-like collaborative Real Time software
+**** Based on user-friendly (but weak) collaborative principles -> data loss
+ - Trade-off between concurrency (users must be able to concurrently and freely modify any part
+ of the shared document) and consistency (the users must eventually be able to see a converged
+ view of all copies)
+ - No notion of working copy (changes are synchronously reflected in the document), which turns
+ history into a mess.
+**** Easy access to version history enable meta-analysis
+**** Doesn't interact well with underlying corpus indexing and querying software
+*** Adhere to a commit/merge model (vc)
+- Model Version Control also follows
+*** Limitations
+**** Decisions driven by time-constraints (short-term project development)
+***** Avoid decisions by incorporating pre-existing software
+***** Higher-level interface striving for modularity
+ - Currently implemented on top of BlackLab but easily extensible to other corpus formats
+**** Very simple annotation data-model
+ - While still compatible with the flat-tree non-recursive model of CQP, it lacks expressiveness (dependencies or non-continous spans are currently not supported)
+**** Decoupling of corpus model and annotation model
+ - Doesn't allow to incorporate the annotation layer into the query
+
+*** Description of the interface
+**** Data model
+**** Data access
+*** History of Concoordancers (see Hardie 2012)
+**** 4 Generations
+
+** Structure
+
+*** 1. Introduction
+- Increase of corpus-based research
+- Tools are needed (concoordancers, corpus processors - indexers etc...)
+- Single-researcher -> project-based
+- Project management dealing with a dynamic body of annotations in which
+ linguistic analysis by different researchers has to be coordinated.
+- While originating from needs related to project management, we expect 
+ improvements with respect to the quality of research in different aspects
+ (all related to enabling coordinated linguistic analysis)
+  - Monitoring of the linguistic interpretation process, enabled by easy incorporation of annotation metadata
+  - Allowing for further postprocessing/analysis of annotation metadata
+  - For free:
+    - normalized, merged & indexed annotations (easy to query for/analyse further)
+
+*** 2. Collaborative document editing
+
+**** 2.1 RTE
+
+**** 2.2 VCSs
+
+**** 2.3 Our solution (hybrid?)
+
+*** 3. Case study? Current implementation.
+Strive for modularity, good software developement discipline,
+as opposed to the current tendency to provide monolithic off-the-shelf solutions, which are
+typically hard to mantain and to adopt.
+
+**** 3.1 Architecture
+
+***** 3.1.1 Concoordancer
+ - modularity
+   - decoupling of front-end and back-end
+   - client/server architecture
+ - currently using a BlackLab backend, other backends eality adaptable
+
+***** 3.1.2 Annotation database
+ - In order to enforce *atomicity*, *transactions*, *scalability*, etc. we resort to a database (more concretely, a document-based or NoSQL DB)
+ - Data model (describe)
+
+***** 3.1.3 Web-based Frontend
+ - Using modern web technologies (HTML5, websockets, reactive GUI design)
+
+**** 3.2 Use cases?
+
+**** 3.3 Limitations
+ (see limitations in previous bullets)
+
+*** 4. Future research

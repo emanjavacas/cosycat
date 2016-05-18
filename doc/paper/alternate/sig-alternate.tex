@@ -1,0 +1,424 @@
+% This is "sig-alternate.tex" V2.0 May 2012
+% This file should be compiled with V2.5 of "sig-alternate.cls" May 2012
+%
+% This example file demonstrates the use of the 'sig-alternate.cls'
+% V2.5 LaTeX2e document class file. It is for those submitting
+% articles to ACM Conference Proceedings WHO DO NOT WISH TO
+% STRICTLY ADHERE TO THE SIGS (PUBS-BOARD-ENDORSED) STYLE.
+% The 'sig-alternate.cls' file will produce a similar-looking,
+% albeit, 'tighter' paper resulting in, invariably, fewer pages.
+%
+% ----------------------------------------------------------------------------------------------------------------
+% This .tex file (and associated .cls V2.5) produces:
+%       1) The Permission Statement
+%       2) The Conference (location) Info information
+%       3) The Copyright Line with ACM data
+%       4) NO page numbers
+%
+% as against the acm_proc_article-sp.cls file which
+% DOES NOT produce 1) thru' 3) above.
+%
+% Using 'sig-alternate.cls' you have control, however, from within
+% the source .tex file, over both the CopyrightYear
+% (defaulted to 200X) and the ACM Copyright Data
+% (defaulted to X-XXXXX-XX-X/XX/XX).
+% e.g.
+%% \CopyrightYear{2016} will cause 2007 to appear in the copyright line.
+% \crdata{0-12345-67-8/90/12} will cause 0-12345-67-8/90/12 to appear in the copyright line.
+%
+% ---------------------------------------------------------------------------------------------------------------
+% This .tex source is an example which *does* use
+% the .bib file (from which the .bbl file % is produced).
+% REMEMBER HOWEVER: After having produced the .bbl file,
+% and prior to final submission, you *NEED* to 'insert'
+% your .bbl file into your source .tex file so as to provide
+% ONE 'self-contained' source file.
+%
+% ================= IF YOU HAVE QUESTIONS =======================
+% Questions regarding the SIGS styles, SIGS policies and
+% procedures, Conferences etc. should be sent to
+% Adrienne Griscti (griscti@acm.org)
+%
+% Technical questions _only_ to
+% Gerald Murray (murray@hq.acm.org)
+% ===============================================================
+%
+% For tracking purposes - this is V2.0 - May 2012
+
+\documentclass{sig-alternate}
+
+\begin{document}
+%
+% --- Author Metadata here ---
+\conferenceinfo{DATECH}{2016 Pozna\'n, Poland}
+%\CopyrightYear{2007} % Allows default copyright year (20XX) to be over-ridden - IF NEED BE.
+%\crdata{0-12345-67-8/90/01}  % Allows default copyright data (0-89791-88-6/97/05) to be over-ridden - IF NEED BE.
+% --- End of Author Metadata ---
+
+\title{
+  Enabling Annotation of Historical Corpora in an Asynchronous Collaborative Environment
+}
+\subtitle{
+  [Extended Abstract]
+  \titlenote{
+    This research was supported by ...
+  }  
+}
+
+%
+% You need the command \numberofauthors to handle the 'placement
+% and alignment' of the authors beneath the title.
+%
+% For aesthetic reasons, we recommend 'three authors at a time'
+% i.e. three 'name/affiliation blocks' be placed beneath the title.
+%
+% NOTE: You are NOT restricted in how many 'rows' of
+% "name/affiliations" may appear. We just ask that you restrict
+% the number of 'columns' to three.
+%
+% Because of the available 'opening page real-estate'
+% we ask you to refrain from putting more than six authors
+% (two rows with three columns) beneath the article title.
+% More than six makes the first-page appear very cluttered indeed.
+%
+% Use the \alignauthor commands to handle the names
+% and affiliations for an 'aesthetic maximum' of six authors.
+% Add names, affiliations, addresses for
+% the seventh etc. author(s) as the argument for the
+% \additionalauthors command.
+% These 'additional authors' will be output/set for you
+% without further effort on your part as the last section in
+% the body of your article BEFORE References or any Appendices.
+
+\numberofauthors{2} %  in this sample file, there are a *total*
+% of EIGHT authors. SIX appear on the 'first-page' (for formatting
+% reasons) and the remaining two appear in the \additionalauthors section.
+%
+\author{
+% You can go ahead and credit any number of authors here,
+% e.g. one 'row of three' or two rows (consisting of one row of three
+% and a second row of one, two or three).
+%
+% The command \alignauthor (no curly braces needed) should
+% precede each author name, affiliation/snail-mail address and
+% e-mail address. Additionally, tag each line of
+% affiliation/address with \affaddr, and tag the
+% e-mail address with \email.
+%
+% 1st. author
+\alignauthor
+Enrique Manjavacas Ar\'evalo\\
+\affaddr{Universiteit Antwerpen}\\
+\affaddr{R.112, Rodestraat 14}\\
+\affaddr{Antwerp 2000, Belgium}\\
+\email{enrique.manjavacas@uantwerpen.be}
+% 2nd. author
+\alignauthor
+Peter Petr\'e\\
+\affaddr{Universiteit Antwerpen}\\
+\affaddr{R.229, Rodestraat 14}\\
+\affaddr{Antwerp 2000, Belgium}\\
+\email{peter.petre@uantwerpen.be}
+}
+
+\maketitle
+\begin{abstract}
+  Current research in Corpus Linguistics and other related disciplines within the
+  multi-disciplanary field of Digital Humanities, involves computer-aided manual processing
+  of large text corpora. Typically, corpus instances are retrieved with the help of
+  concoordancers or textual search engines and subsequently labeled by hand before being
+  submitted to quantitative analysis.
+  While well-established resources already cover the data retrieval aspect,
+  less attention has been paid to the annotation process in terms of both software
+  facilities and best practices. However, with the current increase in size and scope
+  of research projects we envisage new needs for coordinating and managing interdependent
+  analysis (meta-)data created being simultaneously created by different reasearchers.
+  Current ad-hoc solutions typically involve general-purpose RTE (Real-Time Editing)
+  software, whose functionality may be suboptimal for the present needs, as we shall argue.
+  In the present paper we will discuss potential problems related to coordinating
+  annotations in large-scale projects as well as the potential benefits that can be
+  derived from an application-based approach to annotation data management.
+  Furthermore, we discuss some of the design decisions that arise in the process of
+  developing a principled solution.
+  %% Furthermore, we sketch an application design as an attempt to provide a principled solution.
+  Finally, we showcase our current implementation of a collaborative asynchronous system
+  in the context of a Historical Linguistics research project involving several parallel
+  studies and multiple researchers.
+\end{abstract}
+
+%% A category with the (minimum) three required fields
+%% https://cran.r-project.org/web/classifications/ACM.html
+\category{J.5}{Computer Applications}{Arts and Humanities}
+\category{I.7.1}{Document and Text Processing}{Document and Text Editing}
+%% \category{I.6.5}{Simulation and Modelling}{Model Development}
+
+\keywords{corpus annotations, asynchronous collaboration, groupware}
+
+\section{Introduction}\label{sec:intro}
+Current corpus-based research practices entail interacting with a single ground-truth
+collection of documents \textemdash i.e. a corpus \textemdash, to which analysis metadata,
+such as annotations, are added.
+
+In a context in which the responsability for the design of the research is not shared
+amongst several researchers, decisions as to how to create, design and manage annotation metadata are rather
+unproblematic. However, with the current increase in size and scope of research projects in
+the Digital Humanities?, we expect new issues to arise from the need for synchronization of
+concurrent research activities which could otherwise lead to inconsistency in the annotation
+metadata. In general, inconsistency may arise for reasons that are both intrinsic and
+extrinsic to the proper research activity \textemdash i.e. having to do, respectively,
+with interpretational disagreements as to the content and scope of annotations, and
+problems related to concurrent modification of the annotation metadata by several researchers.
+In particular, we are confronted with problems such as the following:
+\begin{itemize}
+\item Unifying labeling conventions and tagging systems, which may not be available as closed
+  set tagging systems prior to research or may subject to revision renegotiation.
+\item In the presence of dynamic tag systems, not only procedures for introducing
+  new label types and removing or modifying old label types have to be devised but also
+  guarantees that these updates do not lead to a inconsistent tag system have to be provided.
+\item Researchers annotating independently but within a shared framework of interrelated
+  research questions need to be kept up to date of updates made by other researchers, since
+  these have the potential of influencing or interfering with their own analyses.
+\item Changes to existing annotations need to be back traceable and documented, providing
+  a means for resetting to previous versions of the metadata and for logging the motivations
+  that led to the change (in the form of change-logs, meta-discussions etc.).
+\end{itemize}
+
+Furthermore, a principled solution to collaborative corpus-based research is not only
+desirable for the sake of the aforementioned problems, but it also provides a number of
+associated advantages which have the potential to improve the quality of the research.
+For instance, managing annotation metadata through a specialized application implies
+having available these metadata in a unified and structured shape, which, without being
+exhaustive, allows for the following:
+
+\begin{itemize}
+\item Easy export and re-formatting functionality.
+\item Storage of metadata in a database or indexing through a search engine.
+\item Advance querying of the metadata.
+\item Visualizing the metadata both as time snapshot and evolution over time.
+\item Enable meta-research on research praticies thanks to the availability of structured
+  metadata derived from the researcher activities (annotation updates, user behaviour, etc.).
+\end{itemize}
+
+Although to our knowledge no prior studies have addressed these issues both in terms of
+established practices and available tools\footnote{
+  [TODO: look for (tentative) studies in this direction.]
+}, it can be assumed that a large part of current research requiring support for a
+collaborative environment typically resorts to general-purpose Real-Time document Editing
+(RTE) software\footnote{
+  See, for instance, \cite{Rowlands2011} and \cite{Wood2011}, for examples of reports on
+  using Google Docs for research.
+}.
+While these software solutions represent powerful and thoroughly tested tools, there are also
+a number of drawbacks associated with their use in research.
+For instance, their functionality may still be too general and overshoot the specific needs of
+researchers, more specialized than those of common end-users. In particular, it is usually
+cumbersome to cross-reference newly added annotations with the corpus positions and corpus
+context in their scope.
+Furthermore, the fact that data is managed in servers owned by the companies providing the
+service may not always be compatible with legal constraints around corpus data.
+Finally, RTE software solutions tend to prioritize user experience, which means that
+responsive and non-blocking Graphic User Interfaces (GUIs) are privileged in detriment of
+other features, such as support for document versioning, which stand in a direct trade-off
+with user experience.
+
+In the present paper we sketch an application-based approach addressing the aforemention
+issues in a way that fits better the concrete needs of the practicioner.
+More concretely, we propose to address the problem of managing concurrent annotation
+metadata by multiple researchers in the terms of collaborative working systems.
+Therefore, in sections \ref{subsec:rte} and \ref{subsec:vcs}, we will review two major and
+not necessarily competing approaches to concurrent multi-user document editing
+(Real-time document Editing systems and Version Control Systems).
+Next, in section \ref{subsec:hybrid}, we argue that a hybrid approach may be better suit for
+the issues established in the current section.
+In section \ref{sec:case}, we describe the research infrastructure that we have implemented
+following the design principles stated in section \ref{sec:cde}.
+Finally, in section \ref{sec:future} we shall highlight lines of further research before
+concluding in \ref{sec:conclusion}.
+
+\section{Collaborative Editing}\label{sec:cde}
+Collaborative editing refers to the practice by which dispersed
+users are able to concurrently modify shared artifacts with the guarantee that changes
+by different users will not overwrite each other \textemdash see also \cite{Altmanninger2009}.
+Currently, collaborative software has become ubiquitous thanks to Web 2.0 services, such as
+Google's web-based suite Google Docs \cite{Googlea} or
+Microsoft's Office Online \cite{Microsoft}.
+
+We note, however, that other approaches are available beyond the RTE framework. In
+particular, Version Control Systems (VCS) \textemdash also known as Revision Control
+Systems (RCS), or Source Code Manager (SCM) due to their popularity among software
+developers \textemdash, represent a solution to collaborative editing that is often
+overlooked due arguably to its less user-friendly nature and more complex document
+updates procedures.
+
+In general, RTE and VCS can be seen as alternative solutions to collaborative
+editing \cite{Altmanninger2009}, differring with respect to, respectively, whether edit
+operations are non-blocking synchronous operations, and immediatly reflected on the shared
+data, or asynchronous \textemdash i.e. updates are first piped
+through a working copy which is only sporadically merged with the source document.
+In the next two sections (\ref{subsec:rte} and \ref{subsec:vcs}) we summarily describe RTE
+and VCS systems.
+
+\subsection{Real-Time document Editing}\label{subsec:rte}
+RTE software system aim at solving the synchronous flavour of the collaborative editing
+problem, which involves the following two-step procedure \cite{Imine2009}: first, local
+changes are immeditaely reflected in the local copy of the document and, secondly,
+the changes are propagated to other users across the network.
+More concretely, RTE systems can be defined by the following characteristics \cite{Sun1998}:
+(i) the user responsible for a change is able to observe it \textit{real-time};
+(ii) collaboration is allowed to take place in a \textit{distributed} way across
+different networks \textemdash which involves a layer of non-deterministic communication
+latency; (iii) the system allows for \textit{unconstrained}, non-locking edit operations
+\textemdash i.e. any user can edit the shared data at any time.
+
+Thus, one major technical puzzle a RTE system has to solve consists of the fact that changes
+are propragated across networks with different communication latencies and therefore do not
+reach all end points in the same order. For example, given
+the string ``efecte'' and concurrent edit operations \textit{Ins(2, ``f'')} \textemdash i.e.
+insert character ``f'' at position 2 \textemdash and \textit{Del(5)} \textemdash i.e.
+delete character ``e'' at position 5 \textemdash, the spell-corrected string ``effect''
+can only be obtained if \textit{Del(5)} is executed before \textit{Ins(2, ``f'')}.
+
+A common solution to consistency maintenance is Operational Transformation
+(OT) \cite{SuClarence}, a technique that consists in a rule-based transformation
+of edit operations which amends the position of an edit operation against a previous edit.
+In the previous example, the edit sequence \textit{[Ins(2, ``f''), Del(5)]} should be
+transformed as follows:
+\begin{equation*}
+  \textit{OT([Ins(2, ``f''), Del(5)])} \Rightarrow \textit{[Ins(2, ``f''), Del(6)]}
+\end{equation*}
+to ensure consistency with respect to the alternative edit sequence
+\textit{[Del(5), Ins(2, ``f'')]}.
+
+%% Three types of divergences:
+%% Divergence
+%% Causality Violation
+%% Intention Violation
+
+OT-based RTE systems work with linear data-structures, typically lists of characters, but it
+is possible to work with list of elements at other levels, such as words, paragraphs or
+XML nodes \cite{Imine2009,SuClarence}. For instance, in a RTE annotation application, one
+might want to consider labels (annotation keys and values) instead of characters as the
+atomic targets of edit operations.
+
+%% Limitations...?
+
+\subsection{Version Control System}\label{subsec:vcs}
+
+VCSs have a large tradition originating in the 1970s as groupware for enabling collaborative
+software development and more recently have become widely adopted as a result of their
+integration with social media environments (GitHub, BitBucket).
+Current VCSs follow the copy-modify-merge model, also known as ``optimistic'', to
+collaborative document editing, in opposition to the ``pessimistic'' lock-modify-unlock model
+in use among early VCSs such as SCCS, RCS or CVS \cite{Loeliger2012}.
+In order to guarantee consistency maintenence the lock-modify-model forces users to first
+acquire a lock for the target file and release it once changes are finished. However, 
+the lock model proved to be too restrictive in practice.
+
+The optimistic flavour of VCS represents an asynchronous collaboration model based on a
+two-step procedure of local editing and merging with the shared document.
+
+In principle, this two-step procedure resembles the one described in section \ref{subsec:rte}
+for RTE systems. However, they essentially differ in that local changes are not merged
+immediately (synchronously) into the shared document (as opposed to edit prograpagation
+within the RTE framework); instead they are ``commited'' at a later stage (asynchronously)
+when the user decides to. By separating edit and merge logic real-time responsiveness is
+sacrified but in exchange two crucial features are gained: (i) the concept of a
+\textit{working copy}, (ii) changes are meaningful in the sense that succesful merges are
+to be considered as intended \textit{versions} of the document. We now turn to these aspects
+in more depth.
+
+A \textit{working copy} is a local copy of the shared document that allows the user owning
+the copy to start modifying the document despite parallel work by other users
+\cite{Collins-Sussman}.
+When a user wants to update the central data to reflect the changes in her working copy
+(commits), a ``push'' operation is issued. Similarly, other users can update their local
+working copies to reflect the current state of the shared data \textemdash an operation
+known as ``pull'' in some implementations of this model.
+In both cases a conflict between the local and shared copies may arise if (i) the shared
+copy was successfully updated in a particular way by another user before the local changes
+are pushed, (ii) or there have been incompatible local changes with the shared copy before
+this is pulled.
+VCS provides a merging mechanism to solve these potential version divergences known as
+three-way merging involving all three document versions (conflicting copies and their
+shared ancestor) \cite{Altmanninger2009}. 
+
+A useful aspect of working copies is that they allow for more complex and flexible workflows
+than the previously depicted of a single working copy. In particular, users may create
+multiple working copies addressing disparate aspects of the document and delay merging
+to a later stage.
+This way, the collaboration process can be seen as a tree of branches (working copies
+representing parallel versions of the shared data) that are being splitted and merged with
+the root (the shared data).
+
+\textit{Versioning}
+\textemdash this is in opposition to RTE document updates that are triggered automatically
+after any modification; moreover, the asynchronous nature of VCS commits allows attaching
+metadata to commits before merging.
+
+- Expansion of Github from Soft
+
+%% Commits are a further layer of asynchrony between local changes and local branches?.
+%% Versioning systems
+%% Collabode (bringing RTE to VCS)
+%% Deep hypertext with embedded revision control (bringing VCS to RTE on the web)
+
+\subsection{Advantages of Asynchronous Collaboration for Corpus Annotations/Hybrid solution}
+\label{subsec:hybrid}
+We have highlighted the benefits of a VCS approach to data management in the context of
+analysis metadata. However, it also has some drawbacks.
+Given a sufficiently large corpus, researchers working in the same project can arguably be
+expected to spend longer periods of time on non-overlapping parts of the corpus. Therefore,
+commits will only result in conflicts with low probability - this allows to simulate more
+RT interaction.
+
+\section{Case Study?}\label{sec:case}
+
+\subsection{Architecture}
+Decoupling of the annotation application and the search engine. Enforce modularity.
+Ideally, one should be able to swap backend search engines in a seamlessly way.
+
+\subsubsection{Concoordancer}
+
+\subsubsection{Annotation Database}
+Data Model, refer to 
+
+\subsubsection{Web-based Client}
+Enabling real time interaction between users.
+
+\subsection{Use Cases}
+How our application addresses the problems specified in Section \ref{sec:intro}
+
+\subsection{Limitations}
+By decoupling annotation app from the backend search engine, we lose the power to incorporate
+the body of on-going annotations.
+While we acknowdlege this to be an important limitation of our current architecture, it need
+also be pointed out that current corpus search engines are built around static corpus
+representations, thus not allowing for incremental indexing of new metadata.
+
+\section{Future Research}\label{sec:future}
+Integration with other tools, being agnostic with respect to which search engine is used,
+providing a simple API (only requirements are that the backend allows to retrieve data via
+a communication protocol such as HTTP or RTC and that tokens are given an id corresponding
+to their position in the corpus.
+
+\section{Conclusions}\label{sec:conclusion}
+
+\section{Acknowledgements}
+
+%% \section{References}
+% The following two commands are all you need in the
+% initial runs of your .tex file to
+% produce the bibliography for the citations in your paper.
+\bibliographystyle{abbrv}
+\bibliography{/home/enrique/Documents/texts/bib/library}
+% You must have a proper ".bib" file
+%  and remember to run:
+% latex bibtex latex latex
+% to resolve all references
+%
+% ACM needs 'a single self-contained file'!
+%
+
+%\balancecolumns % GM June 2007
+% That's all folks!
+\end{document}
