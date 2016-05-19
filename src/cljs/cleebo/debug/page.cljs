@@ -71,20 +71,22 @@
 
 (defn style [path] {:margin-left (str (* 10 (count path)) "px") :cursor "pointer"})
 
+(defn i [k v path children & {:keys [tag] :or {tag :div}}]
+  (let [background (reagent/atom "white")]
+    (fn [k v path children & {:keys [tag] :or {tag :div}}]
+      [tag
+       {:style (merge (style path) {:background-color @background})
+        :on-click (fn [e]
+                    (.stopPropagation e)
+                    (swap! background #(condp = % "white" "black" "black" "white")))}
+       (str "P<" k ">")
+       children])))
+
 (defn recursive* [data path]
   (cond (map? data) (into [:div {:style (style path)}]
-                          (mapv (fn [[k v]]
-                                  [:div
-                                   {:style (style path)
-                                    :on-click #(do (.stopPropagation %) (timbre/info "k" k "v" v))}
-                                   (str "P<" k ">")
-                                   (recursive* v (conj path k))])
-                                data))
+                          (mapv (fn [[k v]] [i k v path (recursive* v (conj path k))]) data))
         (sequential? data) (into [:ul {:style (style path)}]
-                                 (mapv (fn [[i v]]
-                                         [:li {:style (style path)}
-                                          (str "P<" i ">")
-                                          (recursive* v (conj path i))])
+                                 (mapv (fn [[k v]] [i k v path (recursive* v (conj path k)) :tag :li])
                                        (map-indexed vector data)))
         :else (str (nbsp (* 10 (count path))) "C<" data ">")))
 
@@ -93,7 +95,9 @@
         :d {:f "A"}})
 
 (defn recursive [data]
-  [recursive* data []])
+  [recursive*
+   (clojure.walk/walk #(with-meta % {:show? (reagent/atom false)}) identity data)
+   []])
 
 (defn frisk []
   (let [db (re-frame/subscribe [:db])

@@ -305,8 +305,8 @@ atomic targets of edit operations.
 \subsection{Version Control System}\label{subsec:vcs}
 
 VCSs have a large tradition originating in the 1970s as groupware for enabling collaborative
-software development and more recently have become widely adopted as a result of their
-integration with social media environments (GitHub, BitBucket).
+software development and more recently have become widely adopted as a result of
+integration with a social network environment (GitHub, BitBucket).
 Current VCSs follow the copy-modify-merge model, also known as ``optimistic'', to
 collaborative document editing, in opposition to the ``pessimistic'' lock-modify-unlock model
 in use among early VCSs such as SCCS, RCS or CVS \cite{Loeliger2012}.
@@ -318,44 +318,77 @@ The optimistic flavour of VCS represents an asynchronous collaboration model bas
 two-step procedure of local editing and merging with the shared document.
 
 In principle, this two-step procedure resembles the one described in section \ref{subsec:rte}
-for RTE systems. However, they essentially differ in that local changes are not merged
+for RTE systems. However, they essentially differ in that in VCS local changes are not merged
 immediately (synchronously) into the shared document (as opposed to edit prograpagation
-within the RTE framework); instead they are ``commited'' at a later stage (asynchronously)
-when the user decides to. By separating edit and merge logic real-time responsiveness is
+within the RTE framework); instead they are ``commited'' at a later stage
+\textemdash i.e. asynchronously.
+By separating edit and merge logic real-time responsiveness is
 sacrified but in exchange two crucial features are gained: (i) the concept of a
-\textit{working copy}, (ii) changes are meaningful in the sense that succesful merges are
-to be considered as intended \textit{versions} of the document. We now turn to these aspects
-in more depth.
+\textit{working copy}, (ii) the fact that edits are meaningful \textemdash in the sense
+that succesful merges can be deemed as intended \textit{versions} of the document.
+We now turn to these aspects in more depth.
 
-A \textit{working copy} is a local copy of the shared document that allows the user owning
-the copy to start modifying the document despite parallel work by other users
-\cite{Collins-Sussman}.
-When a user wants to update the central data to reflect the changes in her working copy
+\paragraph*{Working copy}
+A working copy is a local copy of the shared document that allows users
+to modifying the document (in their local environment) despite parallel work by other users
+\cite{Collins-Sussman}. The concept of working copy has the potential for VCS implementations
+that are completely distributed \textemdash known as DVCS (Distributed Version Control Systems). %citation needed?
+The general collaborative workflow with working copies can be described as folllows:
+When a user wants to update the shared data to reflect the local changes in her working copy
 (commits), a ``push'' operation is issued. Similarly, other users can update their local
 working copies to reflect the current state of the shared data \textemdash an operation
 known as ``pull'' in some implementations of this model.
 In both cases a conflict between the local and shared copies may arise if (i) the shared
 copy was successfully updated in a particular way by another user before the local changes
-are pushed, (ii) or there have been incompatible local changes with the shared copy before
-this is pulled.
+are pushed, (ii) or there have been local changes incompatible with the shared copy before
+the latter is pulled.
 VCS provides a merging mechanism to solve these potential version divergences known as
-three-way merging involving all three document versions (conflicting copies and their
-shared ancestor) \cite{Altmanninger2009}. 
+three-way merging, which involves all three document copies (both conflicting copies and their
+shared ancestor) \cite{Altmanninger2009}. In general, VCSs provide automatic merging in cases
+of ``syntactically'' unambiguous and it is commonly resorted to manual merging in cases
+of ``semantic'' ambiguity, in which conflicting edit intentions may be present.%citation needed.
 
-A useful aspect of working copies is that they allow for more complex and flexible workflows
-than the previously depicted of a single working copy. In particular, users may create
-multiple working copies addressing disparate aspects of the document and delay merging
-to a later stage.
-This way, the collaboration process can be seen as a tree of branches (working copies
+A crucial aspect of working copies is that they allow for more complex and flexible workflows
+than the previously depicted case of a single working copy. In particular, users may create
+multiple working copies, each of which can focus on a certain aspect of the project, and
+delay merging to a later stage.
+By this token, the workflow can be seen as a tree of branches (working copies
 representing parallel versions of the shared data) that are being splitted and merged with
 the root (the shared data).
 
-\textit{Versioning}
-\textemdash this is in opposition to RTE document updates that are triggered automatically
-after any modification; moreover, the asynchronous nature of VCS commits allows attaching
-metadata to commits before merging.
+\paragraph*{Versioning}
+Versioning is a powerful feature for backtracking changes and restoring project state to a
+previous one. Thanks to the concept of working copies this is again independent of concurrent
+versions by other users, allowing for parallel versions of the same document. (Forks?)
+This is in opposition to RTE document updates that are triggered automatically
+after any modification. Moreover, the asynchronous nature of VCS commits allows attaching
+metadata to commits before merging. 
+(i) new versions are provided with metadata, (while structuring of the metadata is not enforced,
+it can be easily introduced by following particular internal project conventions)
+(ii) tree-shaped edit history can be easily traversed, allowing for more specific
+staet restoration.
 
-- Expansion of Github from Soft
+\begin{verbatim}
+  {"word": "the", "pos": "AT"} \\ Brown Tagset
+  {"word": "the", "pos": "DT"} \\ PTB Tagset
+\end{verbatim}
+
+%%                      _branch: brown->PTB     _ merge
+%%                     /                         \
+%% - user1 uses brown - continue adding more PTB  --
+%%                                                   - merge ----
+%% - user2 uses PTB   - continue adding more PTB  --
+%%                     
+%% --
+%% - user1 starts using PTB
+%% - user3 branches to correct previous annotations
+
+Given that 
+Asynchronous collaboration systems are more powerful in that they allow for .
+Furthermore, versions
+In fact, another popular feature of VCS implementations is ``forking'' (creating a parallel version
+of the project, which may eventually be merged again with its root).
+
 
 %% Commits are a further layer of asynchrony between local changes and local branches?.
 %% Versioning systems
@@ -370,6 +403,8 @@ Given a sufficiently large corpus, researchers working in the same project can a
 expected to spend longer periods of time on non-overlapping parts of the corpus. Therefore,
 commits will only result in conflicts with low probability - this allows to simulate more
 RT interaction.
+
+- Expansion of Github from Soft
 
 \section{Case Study?}\label{sec:case}
 
