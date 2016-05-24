@@ -57,13 +57,14 @@
 
 \title{
   Enabling Annotation of Historical Corpora in an Asynchronous Collaborative Environment
-}
-\subtitle{
-  [Extended Abstract]
-  \titlenote{
+    \titlenote{
     This research was supported by ...
   }  
 }
+%% \subtitle{
+  %% [Extended Abstract] Do we need a subtitle?
+
+%% }
 
 %
 % You need the command \numberofauthors to handle the 'placement
@@ -126,15 +127,15 @@ Peter Petr\'e\\
   Current research in Corpus Linguistics and other related disciplines within the
   multi-disciplanary field of Digital Humanities, involves computer-aided manual processing
   of large text corpora. Typically, corpus instances are retrieved with the help of
-  concoordancers or textual search engines and subsequently labeled by hand before being
-  submitted to quantitative analysis.
-  While well-established resources already cover the data retrieval aspect,
+  concoordancers and textual search engines and subsequently labeled by hand before being
+  submitted to quantitative or qualitative analysis.
+  While well-established systems already cover the data retrieval aspect,
   less attention has been paid to the annotation process in terms of both software
   facilities and best practices. However, with the current increase in size and scope
   of research projects we envisage new needs for coordinating and managing interdependent
   analysis (meta-)data created being simultaneously created by different reasearchers.
-  Current ad-hoc solutions typically involve general-purpose RTE (Real-Time Editing)
-  software, whose functionality may be suboptimal for the present needs, as we shall argue.
+  Current ad-hoc solutions typically involve general-purpose Real-Time Editing (RTE)
+  and cloud storage software, whose functionality are arguably suboptimal for research purposes.
   In the present paper we will discuss potential problems related to coordinating
   annotations in large-scale projects as well as the potential benefits that can be
   derived from an application-based approach to annotation data management.
@@ -222,6 +223,8 @@ responsive and non-blocking Graphic User Interfaces (GUIs) are privileged in det
 other features, such as support for document versioning, which stand in a direct trade-off
 with user experience.
 
+[TODO: Brief description of the research project]
+
 In the present paper we sketch an application-based approach addressing the aforemention
 issues in a way that fits better the concrete needs of the practicioner.
 More concretely, we propose to address the problem of managing concurrent annotation
@@ -246,10 +249,9 @@ Microsoft's Office Online \cite{Microsoft}.
 
 We note, however, that other approaches are available beyond the RTE framework. In
 particular, Version Control Systems (VCS) \textemdash also known as Revision Control
-Systems (RCS), or Source Code Manager (SCM) due to their popularity among software
-developers \textemdash, represent a solution to collaborative editing that is often
-overlooked due arguably to its less user-friendly nature and more complex document
-updates procedures.
+Systems (RCS), or Concurrent Versioning Systems (CVS) \textemdash, represent a solution
+to collaborative editing that is often overlooked due arguably to its less user-friendly
+nature and more complex document updates procedures.
 
 In general, RTE and VCS can be seen as alternative solutions to collaborative
 editing \cite{Altmanninger2009}, differring with respect to, respectively, whether edit
@@ -260,9 +262,9 @@ In the next two sections (\ref{subsec:rte} and \ref{subsec:vcs}) we summarily de
 and VCS systems.
 
 \subsection{Real-Time document Editing}\label{subsec:rte}
-RTE software system aim at solving the synchronous flavour of the collaborative editing
-problem, which involves the following two-step procedure \cite{Imine2009}: first, local
-changes are immeditaely reflected in the local copy of the document and, secondly,
+RTE software systems aim at solving the synchronous flavour of the collaborative editing
+problem, which can be describe in terms of the following two-step procedure \cite{Imine2009}:
+first, local changes are immeditaely reflected in the local copy of the document and, secondly,
 the changes are propagated to other users across the network.
 More concretely, RTE systems can be defined by the following characteristics \cite{Sun1998}:
 (i) the user responsible for a change is able to observe it \textit{real-time};
@@ -272,12 +274,15 @@ latency; (iii) the system allows for \textit{unconstrained}, non-locking edit op
 \textemdash i.e. any user can edit the shared data at any time.
 
 Thus, one major technical puzzle a RTE system has to solve consists of the fact that changes
-are propragated across networks with different communication latencies and therefore do not
-reach all end points in the same order. For example, given
+are propragated across networks with different communication latencies, therefore not
+reaching all end-points in the same order. For example, given
 the string ``efecte'' and concurrent edit operations \textit{Ins(2, ``f'')} \textemdash i.e.
 insert character ``f'' at position 2 \textemdash and \textit{Del(5)} \textemdash i.e.
-delete character ``e'' at position 5 \textemdash, the spell-corrected string ``effect''
+delete character at position 5: ``e'' \textemdash, the spell-corrected string ``effect''
 can only be obtained if \textit{Del(5)} is executed before \textit{Ins(2, ``f'')}.
+But if the operations were issued by different users and reached a third user in different
+order due to different communication latencies in the network,
+the document seen by the third user would reflect an inconsistent state.
 
 A common solution to consistency maintenance is Operational Transformation
 (OT) \cite{SuClarence}, a technique that consists in a rule-based transformation
@@ -331,9 +336,10 @@ We now turn to these aspects in more depth.
 
 \paragraph*{Working copy}
 A working copy is a local copy of the shared document that allows users
-to modifying the document (in their local environment) despite parallel work by other users
+to modify the document (in their local environment) despite parallel work by other users
 \cite{Collins-Sussman}. The concept of working copy has the potential for VCS implementations
 that are completely distributed \textemdash known as DVCS (Distributed Version Control Systems). %citation needed?
+
 The general collaborative workflow with working copies can be described as folllows:
 When a user wants to update the shared data to reflect the local changes in her working copy
 (commits), a ``push'' operation is issued. Similarly, other users can update their local
@@ -355,7 +361,11 @@ multiple working copies, each of which can focus on a certain aspect of the proj
 delay merging to a later stage.
 By this token, the workflow can be seen as a tree of branches (working copies
 representing parallel versions of the shared data) that are being splitted and merged with
-the trunk (the shared data).
+the trunk (the shared data)\footnote{
+  Strictly speaking, the graph structure resulting from the collaborative model of copy-edit-merge
+  with branching does not correspond to a tree due to the presence of merges but rather to a DAG
+  (directed acyclic graph).
+}.
 
 \paragraph*{Versioning}
 Versioning is a powerful feature for backtracking changes and restoring project state to a
@@ -370,11 +380,8 @@ collaborative features with respect to the following two aspects: (i) edits to a
 meaningful allowing for the specification of the motivations behind the edit as well as to link
 to metadata in previous versions in a structured way \textemdash while structuring of the metadata
 is not enforced by default, it can be easily introduced by following particular internal project
-conventions; (ii) the resulting tree-shaped\footnote{
-  Strictly speaking, the graph structure resulting from the collaborative model of copy-edit-merge
-  with branching does not correspond to a tree due to the presence of merges but rather to a DAG
-  (directed acyclic graph).
-} edit history can be easily traversed back, choosing which particular development branch should be
+conventions; (ii) the resulting tree-shaped edit history can be easily traversed back, choosing
+which particular development branch should be
 followed, and therefore enabling more specific state restoration.
 
 Finally, as a consequence of the concept of working copies, project state can be again restored
@@ -403,7 +410,7 @@ again with the original trunk).
 %% Collabode (bringing RTE to VCS)
 %% Deep hypertext with embedded revision control (bringing VCS to RTE on the web)
 
-\subsection{Advantages of Asynchronous Collaboration for Corpus Annotations/Hybrid solution}
+\subsection{Advantages of Asynchronous Collaboration for Corpus Annotations}
 \label{subsec:hybrid}
 
 Having outlined RTE and VCS approaches to document collaborative editing, we now proceed to discuss
@@ -412,56 +419,95 @@ their suitability and aptness to handling synchronous corpus metadata creation.
 We note that RTE is conceptually simpler (although its implementation is non trivial and 
 constitutes a topic of current research): from a user perspective, little overhead is added to
 the actual annotation process.
-This conceptual simplicity \textemdash together with high GUI responsiveness \textemdash, provides
-a better user experience, which explains why RTEs are more widely used by average users.
-This also means that the synchronization logic is done in the background and eludes user control.
-VCS is, in comparison, more involved and requires grounded knowdlege of the underlying mechanism,
-but it also offers a more powerful collaboration model that supports complex collaborative
-workflows and better version metadata handling.
-In our view, \ref{sec:intro} the asynchronous copy-modify-merge approach better fit the  
+This conceptual simplicity \textemdash together with high GUI responsiveness \textemdash,
+a better user experience, which explains why RTEs are more widely used by average users;
+however, it also means that the synchronization logic is done in the background beyond user
+influence.
+VCS is, in comparison, more involved and requires grounded knowledge of the underlying
+synchronization mechanisms, but it also offers a more powerful collaboration model that
+supports complex collaborative workflows and better version metadata handling.
+
+In our view, \ref{sec:intro} the asynchronous copy-modify-merge approach provides a better fit
+for creating and managing research metadata, since it favours expliciteness with respect to new
+edit operations and flexibility (branching, as a result of working copies
+not only as a solution to availability despite network
+partitioning, but also as a possibility to develop parallel streaks of research),
+both properties essential to research activities.
+
+In abiding by the asynchronous approach towards collaborative research, we also intend to
 contribute to an incipient trend of expansion of VCSs from the Software Development community
 to other areas of group-based data creation \textemdash in particular, scientific research\footnote{
-  As commented by GitHub CEO in a recent interview \cite{Begel2013}.
+  This trend has pointed out by Brian Doll, CEO of the online network for software version
+  control GitHub in an recent interview \cite{Begel2013}.
 }.
 
-Furthermore, we consider that a significant increase in research quality can be obtained as
-a result of rich and structured versioning metadata. Easier metadata export capabilities leads
-to better reproducibility and aggregation. In many cases, annotation metadata can be utilized in
-order to better understand the phenomenon at stake ().
+Furthermore, as pointed out in section \ref{sec:intro}, we consider that a significant increase in
+research quality can be obtained as a result of rich and structured versioning metadata,
+which leads to better reproducibility as well as it facilitates aggregation across research
+projects. In many cases, annotation metadata can be utilized in order to better understand the
+phenomenon at stake.
 %research using research metadata to improve systems.
-%% For instance in 
 
-Researchers working with large sequential datasets (such as text corpora) will most often find
-themselves analyzing chunks in the absence of concurrent work by other peers\footnote{
-  This is not to say that the analysis can be carried out outside the scope of a collaborative system
-  since updates still have to be brought to the attention of other users and documented.
-}, meaning that updates will result in conflicts with lower probability than in other setups.
-We can take advantage of this fact in order to alleviate some aspects 
-simulate more RT interaction.
-As we will see in the next section, we also improve    reducing the complexity of actual
-implementations of VCSs by including only a minimal subset of neccessary features.
+\section{Application-based approach towards the Management of Annotation Data}\label{sec:case}
 
-\section{Case Study?}\label{sec:case}
+In order to make use of the asynchronous collaborative features described in section
+\ref{subsec:vcs}, we propose an application design which we have tailored to the specific needs
+of on-going collaborative corpus-based research \textemdash see section \ref{sec:intro}.
 
-\subsection{Architecture}
-Decoupling of the annotation application and the search engine. Enforce modularity.
-Ideally, one should be able to swap backend search engines in a seamlessly way.
+While we acknowledge the maturity and availability of open source VCS implementations such as
+``git'', ``mercurial'', or ``subversion'', we have instead chosen for an in-house implementation
+of the VCS features that are needed (branching, merging and versioning). The motivation is twofold.
+On the one hand, by relying on our own implementation we are able to reduce the complexity of
+current off-the-shelf VCS tools \textemdash although at the price of losing features,
+and adapt to the concrete needs (which are comparably less extensive than in software projects).
+On the other hand, given that the creation of annotation metadata in corpus-based research
+pipelines is tightly linked to the query and retrieval of a centralized corpus engine, rolling out
+a dedicated application would allow us to more easily connect the VCS module with the corpus
+query engine\footnote{
+  However, we note that these two application levels represent logically separated
+  concerns \textemdash which our implementation takes into account by providing a highly decoupled
+  and modular design which aims at easy module substitution.
+}.
 
-\subsubsection{Concoordancer}
+Our application follows a client-server architecture implemented on top of modern web standards
+\textemdash WebSockets, LocalStorage \textemdash as well as a NoSQL database.
+We plan to release the application as an open-source project once developement reaches alpha state.
 
+In the following sections (\ref{subsec:conc}, \ref{subsec:db}, \ref{subsec:client}), we describe
+the three layers of our application: the concoordancer, the version controled storage and the
+web client, respectively. Finally, in section \ref{sec:future}, we point at future research
+developements that arise from our infrastructure design.
 
-\subsubsection{Annotation Database}
-Data Model, refer to RelANNIS.
+\subsection{Concoordancer}\label{subsec:conc}
+The first component consists of a concoordancer that provides the entry point to the static
+layer of the application: the corpus data. Currently, we are using the Java-based corpus retrieval
+engine BlackLab\footnote{
+  See \texttt{https://github.com/INL/BlackLab}.
+}, which is an extension to the full-text search engine Apache Lucene. 
+
+\subsection{Annotation Database}\label{subsec:db}
+Data Model, refer to RelANNIS and Ziggurat \cite{Krause2016,Evert2015}.
 - Versioning,
 - Branching, Centralized around (given that our app is tightly connected to a corpus query backend)
 a search engine which not only can be stored given to high memory usage and technical complexity.
 Always open to client implementation.
 
-\subsubsection{Web-based Client}
+\subsection{Web-based Client}\label{subsec:client}
+Researchers working with large sequential datasets (such as text corpora) will most often find
+themselves analyzing chunks in the absence of concurrent work by other peers\footnote{
+  This is not to say that the analysis can be carried out outside the scope of a collaborative system
+  since updates still have to be documented and brought to the attention of other users.
+}, meaning that updates will result in conflicts with lower probability than in other setups.
+We can take advantage of this fact in order to alleviate some aspects 
+simulate more RT interaction.
+As we will see in the next section, we also seek to improve user experience by reducing the
+complexity of actual implementations of VCSs to a minimal subset of neccessary features.
+
 Enabling real time interaction between users.
 
 \subsection{Use Cases}
-How our application addresses the problems specified in Section \ref{sec:intro}
+How our application addresses the problems specified in Section \ref{sec:intro}. Perhaps this
+should stay in section \ref{subsec:hybrid}.
 
 \subsection{Limitations}
 By decoupling annotation app from the backend search engine, we lose the power to incorporate
