@@ -47,6 +47,8 @@
 
 \documentclass{sig-alternate}
 
+\usepackage{url}
+
 \begin{document}
 %
 % --- Author Metadata here ---
@@ -88,12 +90,12 @@
 % the seventh etc. author(s) as the argument for the
 % \additionalauthors command.
 % These 'additional authors' will be output/set for you
-% without further effort on your part as the last section in
+% without further effort on your part as the last Section in
 % the body of your article BEFORE References or any Appendices.
 
 \numberofauthors{2} %  in this sample file, there are a *total*
 % of EIGHT authors. SIX appear on the 'first-page' (for formatting
-% reasons) and the remaining two appear in the \additionalauthors section.
+% reasons) and the remaining two appear in the \additionalauthors Section.
 %
 \author{
 % You can go ahead and credit any number of authors here,
@@ -229,14 +231,14 @@ In the present paper we sketch an application-based approach addressing the afor
 issues in a way that fits better the concrete needs of the practicioner.
 More concretely, we propose to address the problem of managing concurrent annotation
 metadata by multiple researchers in the terms of collaborative working systems.
-Therefore, in sections \ref{subsec:rte} and \ref{subsec:vcs}, we will review two major and
+Therefore, in Sections \ref{subsec:rte} and \ref{subsec:vcs}, we will review two major and
 not necessarily competing approaches to concurrent multi-user document editing
 (Real-time document Editing systems and Version Control Systems).
-Next, in section \ref{subsec:hybrid}, we argue that a hybrid approach may be better suit for
-the issues established in the current section.
-In section \ref{sec:case}, we describe the research infrastructure that we have implemented
-following the design principles stated in section \ref{sec:cde}.
-Finally, in section \ref{sec:future} we shall highlight lines of further research before
+Next, in Section \ref{subsec:hybrid}, we argue that a hybrid approach may be better suit for
+the issues established in the current Section.
+In Section \ref{sec:case}, we describe the research infrastructure that we have implemented
+following the design principles stated in Section \ref{sec:cde}.
+Finally, in Section \ref{sec:future} we shall highlight lines of further research before
 concluding in \ref{sec:conclusion}.
 
 \section{Collaborative Editing}\label{sec:cde}
@@ -258,7 +260,7 @@ editing \cite{Altmanninger2009}, differring with respect to, respectively, wheth
 operations are non-blocking synchronous operations, and immediatly reflected on the shared
 data, or asynchronous \textemdash i.e. updates are first piped
 through a working copy which is only sporadically merged with the source document.
-In the next two sections (\ref{subsec:rte} and \ref{subsec:vcs}) we summarily describe RTE
+In the next two Sections (\ref{subsec:rte} and \ref{subsec:vcs}) we summarily describe RTE
 and VCS systems.
 
 \subsection{Real-Time document Editing}\label{subsec:rte}
@@ -323,7 +325,7 @@ the lock model proved to be too restrictive in practice.
 The optimistic flavour of VCS represents an asynchronous collaboration model based on a
 two-step procedure of local editing and merging with the shared document.
 
-In principle, this two-step procedure resembles the one described in section \ref{subsec:rte}
+In principle, this two-step procedure resembles the one described in Section \ref{subsec:rte}
 for RTE systems. However, they essentially differ in that in VCS local changes are not merged
 immediately (synchronously) into the shared document (as opposed to edit prograpagation
 within the RTE framework); instead they are ``commited'' at a later stage
@@ -334,11 +336,12 @@ sacrified but in exchange two crucial features are gained: (i) the concept of a
 that succesful merges can be deemed as intended \textit{versions} of the document.
 We now turn to these aspects in more depth.
 
-\paragraph*{Working copy}
+\subsubsection{Working copy}\label{subsec:workingcopy}
 A working copy is a local copy of the shared document that allows users
 to modify the document (in their local environment) despite parallel work by other users
 \cite{Collins-Sussman}. The concept of working copy has the potential for VCS implementations
-that are completely distributed \textemdash known as DVCS (Distributed Version Control Systems). %citation needed?
+that are completely distributed \textemdash known as DVCS (Distributed Version Control Systems).
+%citation needed?
 
 The general collaborative workflow with working copies can be described as folllows:
 When a user wants to update the shared data to reflect the local changes in her working copy
@@ -367,7 +370,7 @@ the trunk (the shared data)\footnote{
   (directed acyclic graph).
 }.
 
-\paragraph*{Versioning}
+\subsubsection{Versioning}\label{subsec:versioning}
 Versioning is a powerful feature for backtracking changes and restoring project state to a
 previous one. Versions can be generally defined as the state of a document in a given time point.
 In the context of VCSs, a version refers to the project state resulting from a successful merge.
@@ -427,10 +430,10 @@ VCS is, in comparison, more involved and requires grounded knowledge of the unde
 synchronization mechanisms, but it also offers a more powerful collaboration model that
 supports complex collaborative workflows and better version metadata handling.
 
-In our view, \ref{sec:intro} the asynchronous copy-modify-merge approach provides a better fit
-for creating and managing research metadata, since it favours expliciteness with respect to new
-edit operations and flexibility (branching, as a result of working copies
-not only as a solution to availability despite network
+In our view, the asynchronous copy-modify-merge approach provides a
+better fit for creating and managing research metadata, since it favours expliciteness with
+respect to new edit operations (version metadata) and flexibility (branching, as a result of
+working copies not only as a solution to availability despite network
 partitioning, but also as a possibility to develop parallel streaks of research),
 both properties essential to research activities.
 
@@ -441,7 +444,7 @@ to other areas of group-based data creation \textemdash in particular, scientifi
   control GitHub in an recent interview \cite{Begel2013}.
 }.
 
-Furthermore, as pointed out in section \ref{sec:intro}, we consider that a significant increase in
+Furthermore, as pointed out in Section \ref{sec:intro}, we consider that a significant increase in
 research quality can be obtained as a result of rich and structured versioning metadata,
 which leads to better reproducibility as well as it facilitates aggregation across research
 projects. In many cases, annotation metadata can be utilized in order to better understand the
@@ -450,9 +453,9 @@ phenomenon at stake.
 
 \section{Application-based approach towards the Management of Annotation Data}\label{sec:case}
 
-In order to make use of the asynchronous collaborative features described in section
+In order to make use of the asynchronous collaborative features described in Section
 \ref{subsec:vcs}, we propose an application design which we have tailored to the specific needs
-of on-going collaborative corpus-based research \textemdash see section \ref{sec:intro}.
+of on-going collaborative corpus-based research \textemdash see Section \ref{sec:intro}.
 
 While we acknowledge the maturity and availability of open source VCS implementations such as
 ``git'', ``mercurial'', or ``subversion'', we have instead chosen for an in-house implementation
@@ -461,36 +464,115 @@ On the one hand, by relying on our own implementation we are able to reduce the 
 current off-the-shelf VCS tools \textemdash although at the price of losing features,
 and adapt to the concrete needs (which are comparably less extensive than in software projects).
 On the other hand, given that the creation of annotation metadata in corpus-based research
-pipelines is tightly linked to the query and retrieval of a centralized corpus engine, rolling out
-a dedicated application would allow us to more easily connect the VCS module with the corpus
-query engine\footnote{
-  However, we note that these two application levels represent logically separated
-  concerns \textemdash which our implementation takes into account by providing a highly decoupled
-  and modular design which aims at easy module substitution.
+is tightly linked to the retrieval of corpus data from a (possibly remote) centralized corpus engine,
+rolling out a dedicated application allows us to more easily connect the VCS module with the Corpus
+Query Engine\footnote{
+  However, we note that these two application levels represent logically separated concerns.
+  As we will see, our implementation takes this into account by enforcing decoupling and modularity
+  in the design of the application. This is in contrast to current corpus application developers,
+  among which end-to-end monolithic designs are preferred \textemdash see for instance
+  CQPWeb \cite{Hardie2012}, ANNIS \cite{Zeldes2009}.
 }.
 
-Our application follows a client-server architecture implemented on top of modern web standards
+Figure \ref{fig:app} visualizes the general architecture of the application.
+Our application follows a client-server architecture implemented on top of current web standards
 \textemdash WebSockets, LocalStorage \textemdash as well as a NoSQL database.
-We plan to release the application as an open-source project once developement reaches alpha state.
+The client is a browser-based interface offering both a Corpus Query Interface and an Annotation
+Interface which interact with the local server through HTTP.
+At the server side, there are two components responsible respectively for the dynamic (annotation
+metadata) and the static (corpus data) application storage layer. We plan to release the
+application as an open-source project once developement reaches alpha state.
 
-In the following sections (\ref{subsec:conc}, \ref{subsec:db}, \ref{subsec:client}), we describe
-the three layers of our application: the concoordancer, the version controled storage and the
-web client, respectively. Finally, in section \ref{sec:future}, we point at future research
-developements that arise from our infrastructure design.
+\begin{figure}
+  \centering
+  \includegraphics[width=0.45\textwidth]{./img/app-remote.pdf}
+  \caption{\label{fig:app}Client-server architecture of the app}
+\end{figure}
 
-\subsection{Concoordancer}\label{subsec:conc}
-The first component consists of a concoordancer that provides the entry point to the static
-layer of the application: the corpus data. Currently, we are using the Java-based corpus retrieval
-engine BlackLab\footnote{
+In the following sections, we describe the three layers of our application: the query engine module
+(Section \ref{subsec:conc}), the version controlled metadata storage (Section \ref{subsec:db}),
+and the client interface (Section \ref{subsec:client}). Finally, in Section \ref{sec:future},
+we point at future research developements that arise from our infrastructure design.
+
+\subsection{Corpus Query Engine}\label{subsec:conc}
+A concoordancer or corpus query engine provides the entry point to the static layer of the
+application: the corpus data. Currently, we are using the Java-based corpus retrieval engine
+BlackLab\footnote{
   See \texttt{https://github.com/INL/BlackLab}.
-}, which is an extension to the full-text search engine Apache Lucene. 
+}, which is an extension to the full-text search engine Apache Lucene and provides ample and
+flexible possibilities for indexing corpus documents alongside rich metadata.
+As shown in Figure \ref{fig:app}, the corpus query engine may be hosted at a separate server.
+User queries are forwarded to the remote server according to a REST Application Programming
+Interface (API) specified by the corpus query engine server application.
+For instance, a server implementation of BlackLab is available\footnote{
+  See \texttt{https://github.com/INL/BlackLab-server}.
+} allowing for client queries to be forwarded as
+\begin{verbatim}
+  http://server/webservice/corpus/resource?parameters
+\end{verbatim}
+where:
+
+\begin{description}
+\item [server/webservice] is the URL of the web service,
+\item [corpus] is the corpus to be queried,
+\item [resource] is the type of information to be retrieved (hits, entire documents, etc..),
+\item [parameters] is a sequence of URL encoded query strings specifying a query expression,
+  whether to sort the results, whether to filter the results according to metadata, etc...
+\end{description}
+
+Provided a server implementation for a given corpus query engine, our application can be easily
+extended\footnote{
+  In the next section we will review the minimal assumptions that the annotation database make on
+the structure of the corpus data.
+} in order to work with that corpus query engine as the backend. This way we aim to
+foster for more \textbf{reusability} corpus software development.
 
 \subsection{Annotation Database}\label{subsec:db}
-Data Model, refer to RelANNIS and Ziggurat \cite{Krause2016,Evert2015}.
+The local server is in charge of storing and retrieving the user metadata. Once the corpus data
+is retrieved from the corpus query engine, the local server retrieves the corresponding user
+annotations and merges them with the corpus data before sending the result to the client.
+Additionally, it also hosts the implementation of the centralized VCS features (branching,
+merging and versioning)\footnote{
+  See Section \ref{subsec:workingcopy} for the distinction between centralized and distributed
+  VCS systems.
+} provided by the application.
+
+\subsubsection{Annotation Metadata Model}\label{subsec:datamodel}
+Our annotation metadata model is based on simple key-value structures and pointers to the token
+positions to which the metadata refers. An annotation, therefore, consists of an annotation key
+and annotation value \textemdash e.g. for a token like ``going'', we might have an annotation
+key ``aspect'' associated with an annotation value ``progressive''. In order to match annotations
+to the tokens to they which refer, our model has to be provided with a unique id for each
+corpus token. Furthermore, to allow for fast we also require that these ids be ordered integers
+\textemdash with the order corresponding to the sequence of tokens in the corpus.
+Besides token annotations, our model also covers span annotations, which match annotation
+key-value pairs to span of adjacent tokens in the corpus, instead of single tokens.
+
+%% \begin{verbatim}
+%%   {
+%%     "ann" : {
+%%       "key" : "aspect",
+%%       "value" : "progressive"
+%%     },
+%%     "username" : "user",
+%%     "project" : "periphrastic-progressive",
+%%     "span" : {
+%%       "type" : "IOB",
+%%       "scope" : {
+%% 	"B" : 416,
+%% 	"O" : 41
+%%       }
+%%     }
+%%   }
+%% \end{verbatim}
+
+\subsubsection{Versioning}\label{subsec:dbversion}
+
+All annotations coming into the database are assigned a version. Similarly, modifications to
+existing annotations always store the previous annotation in a history
 - Versioning,
-- Branching, Centralized around (given that our app is tightly connected to a corpus query backend)
-a search engine which not only can be stored given to high memory usage and technical complexity.
-Always open to client implementation.
+- Branching,
+- Merging,
 
 \subsection{Web-based Client}\label{subsec:client}
 Researchers working with large sequential datasets (such as text corpora) will most often find
@@ -500,16 +582,19 @@ themselves analyzing chunks in the absence of concurrent work by other peers\foo
 }, meaning that updates will result in conflicts with lower probability than in other setups.
 We can take advantage of this fact in order to alleviate some aspects 
 simulate more RT interaction.
-As we will see in the next section, we also seek to improve user experience by reducing the
+As we will see in the next Section, we also seek to improve user experience by reducing the
 complexity of actual implementations of VCSs to a minimal subset of neccessary features.
 
-Enabling real time interaction between users.
+Annotation visualization is tailored to (KWIC with token and span annotations)
+Enabling real time interaction between users. 
 
 \subsection{Use Cases}
 How our application addresses the problems specified in Section \ref{sec:intro}. Perhaps this
-should stay in section \ref{subsec:hybrid}.
+should stay in Section \ref{subsec:hybrid}.
 
 \subsection{Limitations}
+Data Model, refer to RelANNIS and Ziggurat \cite{Krause2016,Evert2015}.
+
 By decoupling annotation app from the backend search engine, we lose the power to incorporate
 the body of on-going annotations.
 While we acknowdlege this to be an important limitation of our current architecture, it need
@@ -522,6 +607,7 @@ providing a simple API (only requirements are that the backend allows to retriev
 a communication protocol such as HTTP or RPC and that tokens are given an id corresponding
 to their position in the corpus.
 
+
 \section{Conclusions}\label{sec:conclusion}
 
 \section{Acknowledgements}
@@ -533,7 +619,7 @@ to their position in the corpus.
 \bibliographystyle{abbrv}
 \bibliography{/home/enrique/Documents/texts/bib/library}
 % You must have a proper ".bib" file
-%  and remember to run:
+% and remember to run:
 % latex bibtex latex latex
 % to resolve all references
 %
