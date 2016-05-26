@@ -573,16 +573,24 @@ All annotations coming into the database are assigned a version. Similarly, prev
 of an annotation key are stored in the annotation version history with metadata about the author
 and time of the edit as well as the corpus query that retrieved the target token(s).
 As a further layer of consistency maintenance, users are only allowed to commit their changes
-to other user's annotations depending on roles and write rights assigned by the application during
-setup time \textemdash see Section \ref{subsec:client}.
-However, this type of versioning does not exploit the concept of working copy in order to enable
-powerful VCS features as described in Section \ref{subsec:workingcopy}.
+to other user's annotations depending on user roles and write rights assigned by the application
+during setup time \textemdash i.e. if the user does not have neccessary rights the update is
+considered to stay in conflict with the current project version and both the author of the
+current annotation and the author of the edit have to decide on the merge operation.
+%% see Section \ref{subsec:client}.
 
-We incorporate working copies through the operation of branching in the following way. At any point,
-a user may create a separate branch and start modifying annotations independently of the annotation
-activities of other researchers and of
-
-- Merging,
+While the described work pipeline enables basic versioning capabilites, it does not exploit
+the concept of working copy in order to support the flexibility of VCS features as described in
+Section \ref{subsec:workingcopy}. In particular, it is desirable to allow parallel work \textemdash
+circumventing the conflicts that may thereby arise \textemdash and delay mergin to a later point. 
+Therefore, we incorporate working copies through the operation of branching in the following way.
+At any point, a user may create a separate branch and start modifying annotations independently of
+annotation activities by other researchers as well as write rights. Whenever the parallel work in
+the branch is finished, a global merge operation with the original trunk can be issued.
+This operation triggers a three-way merging algorithm in the local server which will
+automatically incorporate non-conflicting changes and prompt users involved in conflicts for
+a merge solution. As mentioned in Section \ref{subsec:hybrid}, user defined metadata is attached
+to conflict resolutions to .
 
 \subsection{Web-based Client}\label{subsec:client}
 
