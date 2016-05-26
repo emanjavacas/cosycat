@@ -538,6 +538,7 @@ merging and versioning)\footnote{
 } provided by the application.
 
 \subsubsection{Annotation Metadata Model}\label{subsec:datamodel}
+
 Our annotation metadata model is based on simple key-value structures and pointers to the token
 positions to which the metadata refers. An annotation, therefore, consists of an annotation key
 and annotation value \textemdash e.g. for a token like ``going'', we might have an annotation
@@ -566,15 +567,25 @@ key-value pairs to span of adjacent tokens in the corpus, instead of single toke
 %%   }
 %% \end{verbatim}
 
-\subsubsection{Versioning}\label{subsec:dbversion}
+\subsubsection{Versioning, Branching and Merging}\label{subsec:dbversion}
 
-All annotations coming into the database are assigned a version. Similarly, modifications to
-existing annotations always store the previous annotation in a history
-- Versioning,
-- Branching,
+All annotations coming into the database are assigned a version. Similarly, previous values
+of an annotation key are stored in the annotation version history with metadata about the author
+and time of the edit as well as the corpus query that retrieved the target token(s).
+As a further layer of consistency maintenance, users are only allowed to commit their changes
+to other user's annotations depending on roles and write rights assigned by the application during
+setup time \textemdash see Section \ref{subsec:client}.
+However, this type of versioning does not exploit the concept of working copy in order to enable
+powerful VCS features as described in Section \ref{subsec:workingcopy}.
+
+We incorporate working copies through the operation of branching in the following way. At any point,
+a user may create a separate branch and start modifying annotations independently of the annotation
+activities of other researchers and of
+
 - Merging,
 
 \subsection{Web-based Client}\label{subsec:client}
+
 Researchers working with large sequential datasets (such as text corpora) will most often find
 themselves analyzing chunks in the absence of concurrent work by other peers\footnote{
   This is not to say that the analysis can be carried out outside the scope of a collaborative system
