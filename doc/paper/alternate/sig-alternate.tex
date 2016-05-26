@@ -159,22 +159,40 @@ Peter Petr\'e\\
 
 \section{Introduction}\label{sec:intro}
 Current corpus-based research practices entail interacting with a single ground-truth
-collection of documents \textemdash i.e. a corpus \textemdash, to which analysis metadata,
-such as annotations, are added.
+collection of documents \textemdash i.e. a corpus \textemdash, to which analysis metadata
+such as annotations are added.
 
 In a context in which the responsability for the design of the research is not shared
 amongst several researchers, decisions as to how to create, design and manage annotation
-metadata are rather unproblematic. However, with the current increase in size and scope of
-research projects in the Digital Humanities?, we expect new issues to arise from the need
-for synchronization of concurrent research activities which could otherwise lead to
-inconsistency in the annotation metadata. In general, inconsistency may arise for reasons
-that are both intrinsic and extrinsic to the proper research activity \textemdash i.e. having
-to do, respectively, with interpretational disagreements as to the content and scope of
-annotations, and problems related to concurrent modification of the annotation metadata
-by several researchers. In particular, we are confronted with the following problems:
+metadata may be considered unproblematic. However, with the current increase in size and scope of
+research projects in Digital Humanities and related fields, we expect new issues to arise from
+the need for synchronization of concurrent research activities which could otherwise lead to
+inconsistency in the annotation metadata.
+
+Although to our knowledge no prior studies have addressed the issue \textemdash both in terms of
+established practices and available tools, %% [TODO: look for (tentative) studies in this direction.]
+it can be assumed that a large part of current research requiring support for a
+collaborative environment typically resorts to (i) general-purpose Real-Time document Editing
+(RTE) software in the best case\footnote{
+  See, for instance, \cite{Rowlands2011} and \cite{Wood2011}, for examples of reports on
+  using Google Docs for research.
+}, (ii) cloud-storage services such as Dropbox \cite{Dropboxa}, which provide versioning but do
+not support proper collaborative editing of documents\footnote{
+  For instance, DropBox explicitely recommends users to modify shared documents outside the scope
+  of the synchronization functionality to avoid the creation of conflicting copies \cite{Dropbox}.
+}, or (iii) simply avoiding direct collaboration by implementing ad-hoc heuristics \textemdash for
+instance, splitting the total annotation load in non-overlapping chunks to be annotated by
+single researchers.
+
+%% [TODO: Brief description of the research project]
+In any case, inconsistency issues still has to be addressed. In general, inconsistency may arise
+for reasons that are both intrinsic and extrinsic to the research activity \textemdash i.e. having
+to do, respectively, with interpretational disagreements as to the content and scope of annotations,
+and problems related to concurrent modification of the annotation metadata by several researchers.
+In particular, we are confronted with the following problems:
 \begin{itemize}
-\item Unifying label conventions and tagging systems, which may not be given as closed
-  set tagging systems prior to research or may subject to revision renegotiation.
+\item Unifying label conventions and tagging system, which may not be given as closed
+  set tagging system prior to research or may subject to revision renegotiation.
 \item Synchronizing the introduction and removal of labels into dynamic tag systems,
   guaranteeing that these updates do not lead to an inconsistent tag system.
 \item Ensuring that every involved researcher is notified of parallel work by other members
@@ -185,7 +203,7 @@ by several researchers. In particular, we are confronted with the following prob
 \end{itemize}
 
 Furthermore, a principled solution to collaborative corpus-based research is not only
-desirable for the sake of the aforementioned problems, but it also provides a number of
+desirable for the sake of the aforementioned synchronization issues, but it also provides a number of
 associated advantages which have the potential to improve the quality of the research.
 For instance, managing annotation metadata through a specialized application implies
 having available these metadata in a unified and structured shape, easily allowing
@@ -200,33 +218,6 @@ for the following features:
   metadata derived from the researcher activities (annotation updates, user behaviour, etc.).
 \end{itemize}
 
-Although to our knowledge no prior studies have addressed these issues, both in terms of
-established practices and available tools\footnote{
-  [TODO: look for (tentative) studies in this direction.]
-}, it can be assumed that a large part of current research requiring support for a
-collaborative environment typically resorts to general-purpose Real-Time document Editing
-(RTE) software in the best case\footnote{
-  See, for instance, \cite{Rowlands2011} and \cite{Wood2011}, for examples of reports on
-  using Google Docs for research.
-}, or to cloud-storage services \textemdash such as Dropbox \cite{Dropboxa} \textemdash,
-which provide versioning but do not support proper collaborative editing of documents,
-as specified, for instance, in \cite{Dropbox}.
-
-While RTE software solutions represent powerful and thoroughly tested tools, there are also
-a number of drawbacks associated with their use in research.
-For instance, their functionality may still be too general and overshoot the specific needs of
-researchers, more specialized than those of common end-users. In particular, it is usually
-cumbersome to cross-reference newly added annotations with the corpus positions and corpus
-context in their scope.
-Furthermore, the fact that data is managed in servers owned by the service providers may not
-always be compatible with legal constraints around corpus data.
-Finally, RTE software solutions tend to prioritize user experience, which means that
-responsive and non-blocking Graphic User Interfaces (GUIs) are privileged in detriment of
-other features, such as support for document versioning, which stand in a direct trade-off
-with user experience.
-
-[TODO: Brief description of the research project]
-
 In the present paper we sketch an application-based approach addressing the aforemention
 issues in a way that fits better the concrete needs of the practicioner.
 More concretely, we propose to address the problem of managing concurrent annotation
@@ -237,7 +228,7 @@ not necessarily competing approaches to concurrent multi-user document editing
 Next, in Section \ref{subsec:hybrid}, we argue that a hybrid approach may be better suit for
 the issues established in the current Section.
 In Section \ref{sec:case}, we describe the research infrastructure that we have implemented
-following the design principles stated in Section \ref{sec:cde}.
+following the design principles discussed in Section \ref{sec:cde}.
 Finally, in Section \ref{sec:future} we shall highlight lines of further research before
 concluding in \ref{sec:conclusion}.
 
@@ -246,8 +237,7 @@ Collaborative editing refers to the practice by which dispersed
 users are able to concurrently modify shared artifacts with the guarantee that changes
 by different users will not overwrite each other \textemdash see also \cite{Altmanninger2009}.
 Currently, collaborative software has become ubiquitous thanks to Web 2.0 services, such as
-Google's web-based suite Google Docs \cite{Googlea} or
-Microsoft's Office Online \cite{Microsoft}.
+Google's web-based suite Google Docs \cite{Googlea} or Microsoft's Office Online \cite{Microsoft}.
 
 We note, however, that other approaches are available beyond the RTE framework. In
 particular, Version Control Systems (VCS) \textemdash also known as Revision Control
@@ -366,8 +356,8 @@ By this token, the workflow can be seen as a tree of branches (working copies
 representing parallel versions of the shared data) that are being splitted and merged with
 the trunk (the shared data)\footnote{
   Strictly speaking, the graph structure resulting from the collaborative model of copy-edit-merge
-  with branching does not correspond to a tree due to the presence of merges but rather to a DAG
-  (directed acyclic graph).
+  with branching does not correspond to a tree due to the presence of merges but rather to a
+  Directed Acyclic Graph (DAG).
 }.
 
 \subsubsection{Versioning}\label{subsec:versioning}
@@ -437,10 +427,24 @@ working copies not only as a solution to availability despite network
 partitioning, but also as a possibility to develop parallel streaks of research),
 both properties essential to research activities.
 
+%% %% Further disadvantages of RTE systems
+%% While RTE software solutions represent powerful and thoroughly tested tools, there are also
+%% a number of drawbacks associated with their use in research.
+%% For instance, their functionality may still be too general and overshoot the specific needs of
+%% researchers, more specialized than those of common end-users. For instance, it is usually
+%% cumbersome to cross-reference newly added annotations with the corpus positions and corpus
+%% context in their scope.
+%% Furthermore, the fact that data is managed in servers owned by the service providers may not
+%% always be compatible with legal constraints around corpus data.
+%% Finally, RTE software solutions tend to prioritize user experience, which means that
+%% responsive and non-blocking Graphic User Interfaces (GUIs) are privileged in detriment of
+%% other features, such as support for document versioning, which stand in a direct trade-off
+%% with user experience.
+
 In abiding by the asynchronous approach towards collaborative research, we also intend to
 contribute to an incipient trend of expansion of VCSs from the Software Development community
 to other areas of group-based data creation \textemdash in particular, scientific research\footnote{
-  This trend has pointed out by Brian Doll, CEO of the online network for software version
+  This trend has been pointed out by Brian Doll, CEO of the online network for software version
   control GitHub in an recent interview \cite{Begel2013}.
 }.
 
@@ -544,7 +548,9 @@ positions to which the metadata refers. An annotation, therefore, consists of an
 and annotation value \textemdash e.g. for a token like ``going'', we might have an annotation
 key ``aspect'' associated with an annotation value ``progressive''. In order to match annotations
 to the tokens to they which refer, our model has to be provided with a unique id for each
-corpus token. Furthermore, to allow for fast we also require that these ids be ordered integers
+corpus token.
+
+Furthermore, to speed up annotation queries we also require that these ids be ordered integers
 \textemdash with the order corresponding to the sequence of tokens in the corpus.
 Besides token annotations, our model also covers span annotations, which match annotation
 key-value pairs to span of adjacent tokens in the corpus, instead of single tokens.
@@ -590,7 +596,7 @@ the branch is finished, a global merge operation with the original trunk can be 
 This operation triggers a three-way merging algorithm in the local server which will
 automatically incorporate non-conflicting changes and prompt users involved in conflicts for
 a merge solution. As mentioned in Section \ref{subsec:hybrid}, user defined metadata is attached
-to conflict resolutions to .
+to conflict resolutions to allow for better informed state restoration.
 
 \subsection{Web-based Client}\label{subsec:client}
 
@@ -601,15 +607,16 @@ themselves analyzing chunks in the absence of concurrent work by other peers\foo
 }, meaning that updates will result in conflicts with lower probability than in other setups.
 We can take advantage of this fact in order to alleviate some aspects 
 simulate more RT interaction.
-As we will see in the next Section, we also seek to improve user experience by reducing the
+As we will see in the next Section,
+We also seek to improve user experience by reducing the
 complexity of actual implementations of VCSs to a minimal subset of neccessary features.
 
 Annotation visualization is tailored to (KWIC with token and span annotations)
 Enabling real time interaction between users. 
 
-\subsection{Use Cases}
-How our application addresses the problems specified in Section \ref{sec:intro}. Perhaps this
-should stay in Section \ref{subsec:hybrid}.
+%% \subsection{Use Cases}
+%% How our application addresses the problems specified in Section \ref{sec:intro}. Perhaps this
+%% should stay in Section \ref{subsec:hybrid}.
 
 \subsection{Limitations}
 Data Model, refer to RelANNIS and Ziggurat \cite{Krause2016,Evert2015}.
