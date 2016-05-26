@@ -15,7 +15,7 @@
 *** Flexibility (range of corpora that an interface can work with)
 ** 4th generation concoordancers (web-based client/server)
 *** Pros
- - conpyrights
+ - copyrights
  - cross-system compatibilty
 
 * Survey on model versioning approaches

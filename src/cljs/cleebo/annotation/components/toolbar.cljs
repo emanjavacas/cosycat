@@ -28,10 +28,11 @@
      {:inverse false
       :responsive true
       :fixedTop true
-      :style {:margin-top "55px" :z-index "1000"}
+      :style {:margin-top "52px" :z-index "1000"}
       :fluid true}
      [bs/nav
       {:pullRight true
-       :style {:margin "2px 25px"}}
+       :style {:margin "5px 5px"}}
       [:li.toolbar [display-buttons marked-hits open-hits]]
-      [:li [filter-annotation-buttons]]]]))
+      [:li.toolbar]
+      [:li.toolbar [filter-annotation-buttons]]]]))

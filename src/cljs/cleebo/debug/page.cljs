@@ -6,7 +6,8 @@
             [cleebo.utils :refer [nbsp]]
             [cleebo.schemas.app-state-schemas :refer [db-schema]]
             [cleebo.localstorage :as ls]
-            [cleebo.debug.tree :as tree]))
+;            [cleebo.debug.tree :as tree]
+            ))
 
 (defn kv-pairs [s]
   (into [:div]

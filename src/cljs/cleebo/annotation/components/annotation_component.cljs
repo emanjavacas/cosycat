@@ -37,36 +37,38 @@
     (when (= 16 (.-keyCode event))
       (swap! shift? not))))
 
-(defn cell-class [has-anns? is-match? is-selected?]
-  (str; (when has-anns? "has-annotation ")
+(defn cell-class [{:keys [has-anns? is-match? is-selected?]}]
+  (str (when has-anns? "has-annotation ")
        (when is-match? "info ")
        (when is-selected? "highlighted")))
 
 (defn hit-number-cell [n hit-id open-hits]
   (fn [n hit-id open-hits]
-    [:td {:style {:background-color "#f5f5f5"}
-          :on-click #(swap! open-hits disjconj hit-id)} n]))
+    [:td.hit-number-cell
+     {:style {:background-color "#f5f5f5"}
+      :on-click #(swap! open-hits disjconj hit-id)}
+     n]))
 
 (defn hit-row
   "component for a (currently being annotated) hit row"
   [{hit :hit hit-id :id meta :meta} open-hits & args]
   (let [shift? (reagent/atom false)]
     (fn hit-row
-      [{hit :hit hit-id :id meta :meta} open-hits
-       & {:keys [row-number selection]}]
+      [{hit :hit hit-id :id meta :meta} open-hits & {:keys [row-number selection]}]
       (into
        [:tr
-        {:style {:background-color "#cedede" :cursor "pointer"}}]
-       (-> (for [{id :id word :word match :match anns :anns} (filter-dummy-tokens hit)
-                 :let [id (->int id)]]
+        {:style {:background-color "#eeeeee" :cursor "pointer"}}]
+       (-> (for [{id :id word :word match :match anns :anns} (filter-dummy-tokens hit)]
              ^{:key (str hit-id "-" id)}
              [:td.unselectable        ;avoid text-selection
               {:tab-index 0
+               :class (cell-class {:has-anns? anns
+                                   :is-match? match
+                                   :is-selected? (contains? (get @selection hit-id) (->int id))})
                :on-key-down (on-key-shift shift?)
                :on-key-up (on-key-shift shift?)
                ;; :on-double-click #(swap! open-hits disjconj hit-id)
-               :on-click (on-click id hit-id selection shift?)
-               :class (cell-class anns match (contains? (get @selection hit-id) id))}
+               :on-click (on-click (->int id) hit-id selection shift?)}
               word])
            (prepend-cell
             {:key (str "number" hit-id)

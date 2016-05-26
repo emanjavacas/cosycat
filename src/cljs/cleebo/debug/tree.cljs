@@ -10,11 +10,11 @@
    :numbers {:color "blue"}
    :shell-visible-button {:backgroundColor "#4EE24E"}})
 
-(defn root
-  [{data :data expanded :expanded :or {:expanded false}}]
-  (let [data (clojure.walk/walk #(with-meta % {:expanded (r/atom false)}) identity data)]
-    (for [[k v] data]
-      )))
+;; (defn root
+;;   [{data :data expanded :expanded :or {:expanded false}}]
+;;   (let [data (clojure.walk/walk #(with-meta % {:expanded (r/atom false)}) identity data)]
+;;     (for [[k v] data]
+;;       )))
 
 (defn expand-button [{data :data path :path}]
   (let [expanded? (meta (get-in data path))]

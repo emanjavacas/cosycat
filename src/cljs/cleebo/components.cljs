@@ -84,8 +84,9 @@
   (fn []
     [:td ""]))
 
-(defn prepend-cell [siblings {:keys [key child opts]}]
-  {:pre ([(vector? opts)])}
+(defn prepend-cell
+  [siblings {:keys [key child opts]}]
+;  {:pre [(vector? opts)]}
   (vec (cons ^{:key k} (apply merge [child] opts) siblings)))
 
 (defn notification-child

@@ -134,19 +134,17 @@ Peter Petr\'e\\
   While well-established systems already cover the data retrieval aspect,
   less attention has been paid to the annotation process in terms of both software
   facilities and best practices. However, with the current increase in size and scope
-  of research projects we envisage new needs for coordinating and managing interdependent
-  analysis (meta-)data created being simultaneously created by different reasearchers.
+  of research projects we envisage new needs for synchronizing interdependent
+  analysis metadata by different reasearchers.
   Current ad-hoc solutions typically involve general-purpose Real-Time Editing (RTE)
   and cloud storage software, whose functionality are arguably suboptimal for research purposes.
   In the present paper we will discuss potential problems related to coordinating
   annotations in large-scale projects as well as the potential benefits that can be
   derived from an application-based approach to annotation data management.
-  Furthermore, we discuss some of the design decisions that arise in the process of
-  developing a principled solution.
-  %% Furthermore, we sketch an application design as an attempt to provide a principled solution.
-  Finally, we showcase our current implementation of a collaborative asynchronous system
-  in the context of a Historical Linguistics research project involving several parallel
-  studies and multiple researchers.
+  Furthermore, we discuss some of the design choices that have to be taken regarding the
+  nature of collaborative software. Finally, we showcase our current implementation of a
+  collaborative asynchronous system in the context of a Historical Linguistics research
+  project involving several parallel studies and multiple researchers.
 \end{abstract}
 
 %% A category with the (minimum) three required fields
@@ -203,8 +201,8 @@ In particular, we are confronted with the following problems:
 \end{itemize}
 
 Furthermore, a principled solution to collaborative corpus-based research is not only
-desirable for the sake of the aforementioned synchronization issues, but it also provides a number of
-associated advantages which have the potential to improve the quality of the research.
+desirable for the sake of the aforementioned synchronization issues, but it also provides
+a number of associated advantages which have the potential to improve the quality of the research.
 For instance, managing annotation metadata through a specialized application implies
 having available these metadata in a unified and structured shape, easily allowing
 for the following features:
@@ -363,9 +361,9 @@ the trunk (the shared data)\footnote{
 \subsubsection{Versioning}\label{subsec:versioning}
 Versioning is a powerful feature for backtracking changes and restoring project state to a
 previous one. Versions can be generally defined as the state of a document in a given time point.
-In the context of VCSs, a version refers to the project state resulting from a successful merge.
-Moreover, the asynchronous nature of VCS commits allows attaching metadata to commits before
-merging. This is in opposition to RTE document updates that are triggered automatically
+In the context of VCSs, a version refers to the project state resulting from a successful commit.
+Moreover, the asynchronous nature of VCS commits allows to attach metadata to changes before
+commiting. This is in opposition to RTE document edits that are triggered automatically
 after any modification and propagated to other users.
 
 Besides enabling responsability traceability, version metadata provide grounds to build useful
@@ -374,8 +372,8 @@ meaningful allowing for the specification of the motivations behind the edit as 
 to metadata in previous versions in a structured way \textemdash while structuring of the metadata
 is not enforced by default, it can be easily introduced by following particular internal project
 conventions; (ii) the resulting tree-shaped edit history can be easily traversed back, choosing
-which particular development branch should be
-followed, and therefore enabling more specific state restoration.
+which particular development branch should be followed, and therefore enabling more specific
+state restoration.
 
 Finally, as a consequence of the concept of working copies, project state can be again restored
 to a certain version independently of concurrent actions by other users, allowing for parallel
@@ -450,9 +448,9 @@ to other areas of group-based data creation \textemdash in particular, scientifi
 
 Furthermore, as pointed out in Section \ref{sec:intro}, we consider that a significant increase in
 research quality can be obtained as a result of rich and structured versioning metadata,
-which leads to better reproducibility as well as it facilitates aggregation across research
-projects. In many cases, annotation metadata can be utilized in order to better understand the
-phenomenon at stake.
+leading to better reproducibility as well as facilitating data aggregation across research
+projects. Moreover, annotation metadata can also be utilized in order to better understand
+the dynamics of the annotation process enabling meta-research.
 %research using research metadata to improve systems.
 
 \section{Application-based approach towards the Management of Annotation Data}\label{sec:case}
@@ -509,7 +507,8 @@ As shown in Figure \ref{fig:app}, the corpus query engine may be hosted at a sep
 User queries are forwarded to the remote server according to a REST Application Programming
 Interface (API) specified by the corpus query engine server application.
 For instance, a server implementation of BlackLab is available\footnote{
-  See \texttt{https://github.com/INL/BlackLab-server}.
+  See \texttt{https://github.com/INL/BlackLab-server}. Another corpus query engine offering similar
+  functionality is ANNIS3.
 } allowing for client queries to be forwarded as
 \begin{verbatim}
   http://server/webservice/corpus/resource?parameters
@@ -524,31 +523,31 @@ where:
   whether to sort the results, whether to filter the results according to metadata, etc...
 \end{description}
 
-Provided a server implementation for a given corpus query engine, our application can be easily
-extended\footnote{
+Provided a REST API server implementation for a given corpus query engine, our application can
+be easily extended\footnote{
   In the next section we will review the minimal assumptions that the annotation database make on
 the structure of the corpus data.
-} in order to work with that corpus query engine as the backend. This way we aim to
-foster for more \textbf{reusability} corpus software development.
+} in order to work with that corpus query engine as the backend. This way we aim to foster 
+more \textbf{reusability} in corpus software development.
 
 \subsection{Annotation Database}\label{subsec:db}
-The local server is in charge of storing and retrieving the user metadata. Once the corpus data
-is retrieved from the corpus query engine, the local server retrieves the corresponding user
+The local server is in charge of storing and retrieving the annotation metadata. Once the corpus data
+are retrieved from the corpus query engine, the local server retrieves the corresponding user
 annotations and merges them with the corpus data before sending the result to the client.
-Additionally, it also hosts the implementation of the centralized VCS features (branching,
-merging and versioning)\footnote{
+Additionally, it also hosts the implementation of the centralized\footnote{
   See Section \ref{subsec:workingcopy} for the distinction between centralized and distributed
   VCS systems.
-} provided by the application.
+} VCS features (versioning, branching, and merging) provided by the application.
 
 \subsubsection{Annotation Metadata Model}\label{subsec:datamodel}
 
-Our annotation metadata model is based on simple key-value structures and pointers to the token
-positions to which the metadata refers. An annotation, therefore, consists of an annotation key
-and annotation value \textemdash e.g. for a token like ``going'', we might have an annotation
-key ``aspect'' associated with an annotation value ``progressive''. In order to match annotations
-to the tokens to they which refer, our model has to be provided with a unique id for each
-corpus token.
+Our annotation metadata model is compatible with the CQP data model \cite{Christ1999} and
+it is based on simple key-value structures and pointers to the token
+positions to which the metadata refers. An annotation, therefore, consists of an mapping from
+an annotation key to an annotation value \textemdash e.g. for a token like ``going'', we might
+have an annotation key ``aspect'' associated with an annotation value ``progressive''.
+In order to match annotations with the tokens to they which refer, our model has to be provided
+with a unique id for each corpus token.
 
 Furthermore, to speed up annotation queries we also require that these ids be ordered integers
 \textemdash with the order corresponding to the sequence of tokens in the corpus.
@@ -600,43 +599,76 @@ to conflict resolutions to allow for better informed state restoration.
 
 \subsection{Web-based Client}\label{subsec:client}
 
+The last component of our application is a browser-based web interface that provides access to and
+interaction with the search engine and the annotation database. It is designed to provide
+multi-user interaction, keeping users informed of parallel work by other users and arising
+annotation conflicts in real-time via notifications.
+
+An essential feature of our front-end interface is that annotation work is always done within
+so-called ``projects''. A project can be seen as a type of metadata underlying all annotations.
+Users can create new projects to address particular research questions and manage user
+roles and write rights. Given that each annotation is provided with project metadata,
+annotation metadata queries can be done in a more specific way. Besides handling user write
+rights and enabling more focused annotation queries, projects provide the ground for the
+publish-subscribe (pub/sub) notification pattern.
+Projects are the target of the branching funtionality described in Section \ref{subsec:dbversion}.
+As a result of branching a sibling project is created to which other users can subscribe.
+
+Modern user interface design framework ReactJS, which uses functional reactive programming features
+to ease the synchronization of application state with the backend model \textemdash for instance,
+the client view of the annotation database with its current status.
+
 Researchers working with large sequential datasets (such as text corpora) will most often find
 themselves analyzing chunks in the absence of concurrent work by other peers\footnote{
-  This is not to say that the analysis can be carried out outside the scope of a collaborative system
-  since updates still have to be documented and brought to the attention of other users.
+  This is not to say that the analysis can be carried out outside the scope of a collaborative
+  system since updates still have to be documented and brought to the attention of other users.
 }, meaning that updates will result in conflicts with lower probability than in other setups.
 We can take advantage of this fact in order to alleviate some aspects 
-simulate more RT interaction.
-As we will see in the next Section,
-We also seek to improve user experience by reducing the
-complexity of actual implementations of VCSs to a minimal subset of neccessary features.
 
 Annotation visualization is tailored to (KWIC with token and span annotations)
-Enabling real time interaction between users. 
 
 %% \subsection{Use Cases}
 %% How our application addresses the problems specified in Section \ref{sec:intro}. Perhaps this
 %% should stay in Section \ref{subsec:hybrid}.
 
-\subsection{Limitations}
-Data Model, refer to RelANNIS and Ziggurat \cite{Krause2016,Evert2015}.
+\section{Related Work, Limitations and Future Work}
 
-By decoupling annotation app from the backend search engine, we lose the power to incorporate
-the body of on-going annotations.
-While we acknowdlege this to be an important limitation of our current architecture, it need
-also be pointed out that current corpus search engines are built around static corpus
-representations, thus not allowing for incremental indexing of new metadata.
+Our implementation of an asynchronous collaborative annotation interface is still in developement
+and certain aspects are subject to improvement. In particular we would like to highlight the
+following two points.
 
-\section{Future Research}\label{sec:future}
-Integration with other tools, being agnostic with respect to which search engine is used,
-providing a simple API (only requirements are that the backend allows to retrieve data via
-a communication protocol such as HTTP or RPC and that tokens are given an id corresponding
-to their position in the corpus.
+First, while the simplicity of our annotation data model provides an easily maintenable and
+implementable abstraction, it does not, however, reflect current advances made by other researchers
+with respect to corpus data modelling. For instance, authors related to the ANNIS project have
+presented a generic, multi-layer, graph-based data model known as RelANNIS \cite{Krause2016} that
+aims at covering an extensive set of annotation types (including subtoken, token, span and
+tree annotations). Similarly, members of the CQP developement team have recently released a working
+paper describing the data model \textemdash known as Ziggurat \cite{Evert2015} \textemdash to be
+used in a future release of the CQP engine. Similarly to RelANNIS, Ziggurat describes a multilayer
+data model anchored at the token level that allows to incorporate tree and graph annotations.
+In the future, our annotation data model should be extended to be compatible with their
+specifications (in particular, tree and graph structures).
 
+Secondly, decoupling annotation application logic from the corpus query engine implies that
+users cannot reflect the on-going body of annotations in their queries. This is, however, in
+pair with the status of current corpus query engines which do not allow for incremental indexing of
+new metadata. In the short-term, a less cumbersome solution can be implemented in terms of
+on-demand and off-line incremental indexing \textemdash i.e. triggering corpus reindexing
+to include the newly produced annotation metadata from the annotation database.
 
 \section{Conclusions}\label{sec:conclusion}
+In the present paper, we have discussed the neccessity of specifically addressing issues arising
+in a research context in which the annotation metadata created by multiple independent researchers
+have to be synchronized. 
+As a precondition to the design of appropriate collaborative tool, we have discussed the principles
+behind RTE and VCS systems highlighting how they represent the synchronous and asynchronous
+alternatives to the collaborative document editing problem. As result of our discussion
+we concluded that research metadata curation in a collaborative environment may take better
+advantage of the asynchronous features of versioning, branching and merging.
 
 \section{Acknowledgements}
+The first author wants to thank Chris Emmery for useful discussions on previous drafts of this
+work. 
 
 %% \section{References}
 % The following two commands are all you need in the

@@ -1,5 +1,5 @@
 table td.highlighted {
-    background-color: #eee !important;
+    background-color: #e3e3e3 !important;
     color: black !important;
     /* border: 0.5px solid black !important; */
 }
@@ -16,35 +16,9 @@ table#table-annotation {
 table#table-annotation tr.queue-row:hover {
     opacity: 0.8;
     color: black !important;
-    /* box-shadow: inset 0 0 100px 100px rgba(255, 255, 255, 0.9); */
-    /* background-color: #fcfdfd; */
-    /* border-bottom: 0.5px solid #dcdcdc; */
-    /* border-top: 0.5px solid #dcdcdc; */
 }
-
-table#table-annotation tr.queue-row:hover td {
-    /* background-color: #fcfdfd; */
-    /* border-bottom: 0.5px solid #dcdcdc; */
-    /* border-top: 0.5px solid #dcdcdc; */
-}
-
-table#table-annotation tr.queue-row:hover td:first-child {
-    /* background-color: #fcfdfd; */
-    /* border-left: 0.5px solid #dcdcdc; */
-}
-
-table#table-annotation tr.queue-row:hover td:last-child {
-    /* background-color: #fcfdfd; */
-    /* border-right: 0.5px solid #dcdcdc; */
-}
-
-/* tr.queue-row > td { */
-/*     border-bottom: 1em !important; */
-/* } */
 
 table td.has-annotation {
-    /* box-shadow: 0 -3px #d5bfb7 inset; */
-    /* background-color: rgba(0, 0, 0, 0.05); */
     background-color: #E7E7E7;
 }
 
@@ -59,12 +33,11 @@ table .info {
 
 /* annotation table */
 table#table-annotation input.input-cell:focus {
-    background-color: #cedede;
+    background-color: #e7e7e7;
 }
 
 table#table-annotation input.input-cell {
-    background-color: #dde8e8;
-    /* box-sizing: border-box; */
+    background-color: #e7e7e7;
     border: none;
     font-size: 14px;
     width: 100%;
@@ -79,29 +52,12 @@ table#table-annotation td.unselectable { /*avoid text selection on hit-row*/
     -webkit-user-select: none; /* Webkit (Safari, Chrome) */
 }
 
-table#table-annotation .row-shadow {
-    /* -webkit-box-shadow: 2px 2px 2px 0px rgba(0, 0, 0, 0.5); */
-    /* -moz-box-shadow: 2px 2px 2px 0px rgba(0, 0, 0, 0.5); */
-    /* box-shadow: 2px 2px 2px 0px rgba(0, 0, 0, 0.5); */
-}
-
 table#table-annotation tr:hover td.ann-cell {
-    /* background-color: #f6f7f9; */
     background-color: #f6f6f6;
     cursor: pointer;
 }
 
 table#table-annotation tr.ann-row:hover {
-    /* background-color: #fafbfc; */
     background-color: #fafafa;
 }
-
-/* table#table-results tr td:first-child { */
-/*     visibility: hidden; */
-/*     background-color: white; */
-/* } */
-
-/* table#table-results tr:hover td:first-child { */
-/*     visibility: visible; */
-/* } */
 
