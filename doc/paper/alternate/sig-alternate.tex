@@ -59,8 +59,10 @@
 
 \title{
   Enabling Annotation of Historical Corpora in an Asynchronous Collaborative Environment
-    \titlenote{
-    This research was supported by ...
+  \titlenote{
+    The research reported on in this paper is part of the project \textit{Mind-Bending Grammars},
+    funded by the ERC Horizon 2020
+    (Project ID 639008; \texttt{http://www.uantwerpen.be/mind-bending-grammars/)}.
   }  
 }
 %% \subtitle{
@@ -135,7 +137,7 @@ Peter Petr\'e\\
   less attention has been paid to the annotation process in terms of both software
   facilities and best practices, especially in the context of collaborative research.
   However, with the increase in size and scope of research projects we envisage new
-  needs for synchronizing interdependent analysis metadata by different researchers.
+  needs for synchronizing interdependent annotation metadata by different researchers.
   Current ad-hoc solutions to collaborative corpus analysis and annotation typically involve
   general-purpose Real-Time Editing (RTE) and cloud storage software, whose functionality
   are arguably sub-optimal for research purposes.
@@ -155,7 +157,7 @@ Peter Petr\'e\\
 \category{I.7.1}{Document and Text Processing}{Document and Text Editing}
 %% \category{I.6.5}{Simulation and Modelling}{Model Development}
 
-\keywords{Corpus Annotation, Asynchronous Collaboration, Groupware, User Interfaces}
+\keywords{corpus annotation, asynchronous collaboration, groupware}
 
 \section{Introduction}\label{sec:intro}
 Current corpus-based research practices entail interacting with a single ground-truth
@@ -165,20 +167,20 @@ In contexts in which researchers do not share the responsibility for the design 
 decisions as to how to create, design and manage annotation metadata may be considered unproblematic.
 However, with the current increase in size and scope of research projects in Digital Humanities and
 related fields, we expect new issues to arise from the need for synchronization of concurrent
-research activities which could otherwise lead to inconsistency in the annotation metadata.
+research activities which could, if unsolved, lead to inconsistency in the annotation metadata.
 
 Although to our knowledge no prior studies have addressed the issue ---both in terms of
 established practices and software solutions---,
 it can be assumed that a large part of current research requiring support for a
 collaborative environment typically resorts to (i) general-purpose Real-Time document Editing
-(RTE) software in the best case\footnote{
+(RTE) software (such as Google Docs) in the best case\footnote{
   See \cite{Rowlands2011} and \cite{Wood2011}, for examples of reports on using Google Docs
   for research.
 }, (ii) cloud-storage services such as DropBox, which provide versioning but do
 not support proper collaborative editing of documents\footnote{
   For instance, DropBox explicitly recommends users to modify shared documents outside the scope
   of the synchronization functionality to avoid the creation of conflicting copies ---see
-  ~https://www.dropbox.com/en/help/36~.
+  \texttt{https://www.dropbox.com/en/help/36}.
 }, or (iii) simply avoiding direct collaboration by implementing ad-hoc heuristics ---for
 instance, splitting the total annotation load in non-overlapping chunks to be annotated by
 single researchers.
@@ -204,8 +206,8 @@ as to the content and scope of annotations, and problems related to concurrent m
 the annotation metadata by several researchers. In particular, we are confronted with the
 following problems:
 \begin{itemize}
-\item Unifying label conventions and tagging system, which may not be given as closed-set
-  tagging system prior to the actual research or may be subject to revision or renegotiation.
+\item Unifying label conventions and tagging systems, which may not be given as closed-set
+  tagging systems prior to the actual research or may be subject to revision.
 \item Synchronizing the introduction and removal of labels into dynamic tag systems,
   guaranteeing that these updates do not lead to an inconsistent tag system.
 \item Ensuring that every involved researcher is notified of parallel work by other members
@@ -234,8 +236,8 @@ for the following features:
 In the present paper we sketch an application-based approach addressing the aforementioned
 issues in a way that better fits the concrete needs of the practitioner.
 More concretely, we propose to address the problem of managing concurrent annotation
-metadata by multiple researchers in the terms of collaborative working systems.
-Therefore, in Sections \ref{subsec:rte} and \ref{subsec:vcs}, we review two major,
+metadata by multiple researchers in terms of collaborative working systems.
+To this purpose, in Sections \ref{subsec:rte} and \ref{subsec:vcs}, we review two major,
 alternative approaches to concurrent multi-user document editing ---RTE and VCS systems.
 Next, in Section \ref{subsec:hybrid}, we argue that VCS asynchronous features are better suited
 for managing synchronized corpus metadata.
@@ -247,7 +249,7 @@ concluding in \ref{sec:conclusion}.
 \section{Collaborative Editing}\label{sec:cde}
 Collaborative editing refers to the practice by which dispersed
 users are able to concurrently modify shared artifacts with the guarantee that changes
-by different users will not overwrite each other ---see also \cite{Altmanninger2009}.
+by different users will not automatically overwrite each other \cite{Altmanninger2009}.
 Currently, collaborative software has become ubiquitous thanks to Web 2.0 services, such as
 Google's web-based suite Google Docs or Microsoft's Office Online.
 
@@ -267,7 +269,7 @@ and VCS systems.
 
 \subsection{Real-Time document Editing}\label{subsec:rte}
 RTE software systems aim at solving the synchronous flavor of the collaborative editing
-problem, which can be describe in terms of the following two-step procedure \cite{Imine2009}:
+problem, which can be described in terms of the following two-step procedure \cite{Imine2009}:
 first, local changes are immediately reflected in the local copy of the document and, secondly,
 the changes are propagated to other users across the network.
 More concretely, RTE systems can be defined by the following characteristics \cite{Sun1998}:
@@ -304,11 +306,11 @@ to ensure consistency with respect to the alternative edit sequence
 %% Causality Violation
 %% Intention Violation
 
-Finally, OT-based RTE systems work with linear data-structures, typically lists of
-characters, but it is possible to work with lists of elements at other levels, such as words,
-paragraphs or XML nodes \cite{Imine2009,SuClarence}. For instance, in a RTE annotation application,
-one might want to consider labels (annotation keys and values) rather than characters as the
-atomic targets of edit operations.
+In addition, OT-based RTE systems are bound to linear data-structures. While documents are, therefore,
+typically modeled as lists of characters, it is also possible to work with lists of elements at other
+levels, such as words, paragraphs or XML nodes \cite{Imine2009,SuClarence}. For instance, in a RTE
+annotation application, one might want to consider labels (annotation keys and values) rather than
+characters as the atomic targets of edit operations.
 
 %% Limitations...?
 
@@ -377,15 +379,15 @@ Finally, the concept of working copies enables VCS implementations that are comp
 Versioning is a powerful feature for backtracking changes and restoring project state to a
 previous one. Versions can be generally defined as the state of a document at a given point in time.
 In the context of VCSs, a version refers to the project state resulting from a successful commit.
-Moreover, the asynchronous nature of VCS commits allows users to attach metadata to changes before
+As such, the asynchronous nature of VCS commits allows users to attach metadata to changes before
 commiting. By constrast, RTE document edits are triggered automatically after any modification and
 propagated to other users.
 
-Besides enabling responsibility traceability, version metadata provide grounds to build useful
+Besides enabling traceability of responsibility, version metadata provide grounds for building useful
 collaborative features with respect to the following two aspects: (i) edits to a document become
-meaningful, allowing users to specify the motivations behind the edit as well as to cross-reference
-edits ---i.e. to record that the current edit is in a causal relationship with a previous one---;
-(ii) the resulting tree-shaped edit history can be easily traversed back, choosing
+meaningful, allowing users to specify the motivations behind an edit as well as to cross-reference
+it to previous edits ---i.e. to record that the current edit is in a causal relationship with a
+previous one---; (ii) the resulting tree-shaped edit history can be easily traversed back, choosing
 which particular development branch should be followed, and therefore enabling more specific
 state restoration.
 
@@ -429,26 +431,26 @@ however, it also means that the synchronization logic is done in the background 
 influence.
 VCS is, in comparison, conceptually more involved and its use requires grounded knowledge of the
 underlying synchronization mechanisms, but it also offers a more powerful collaboration model that
-supports complex collaborative workflows and better version metadata handling.
+supports complex collaborative workflows and better handling of version metadata.
 
 In our view, the asynchronous copy-modify-merge approach provides a
-better fit for creating and managing research metadata, since it favors explicitness with
-respect to new edit operations (version metadata) and flexibility (branching, as a result of
-working copies not only as a solution to availability despite network
-partitioning, but also as a possibility to develop parallel streaks of research),
+better fit for creating and managing research metadata, since it favors \textit{explicitness} with
+respect to new edit operations (version metadata) and \textit{flexibility} (branching, whereby
+working copies prove to be not only a solution to availability despite network
+partitioning, but also open up the possibility to develop parallel streaks of research),
 both properties essential to research activities.
 
 By adopting the asynchronous approach towards collaborative research, we also intend to
 contribute to an incipient trend of expansion of VCSs from the Software Development community
 to other areas of group-based data creation ---in particular, scientific research\footnote{
   This trend has been pointed out by Brian Doll, CEO of the online network for software version
-  control GitHub, in an recent interview \cite{Begel2013}.
+  control GitHub, in a recent interview \cite{Begel2013}.
 }.
 
 Furthermore, as suggested in Section \ref{sec:intro}, we believe rich and structured versioning
 metadata will increase research quality in terms of better reproducibility as well as facilitating
-data aggregation across research projects. Moreover, annotation metadata can also be employed
-to better understand the dynamics of the annotation process, therefore enabling meta-research.
+data aggregation across research projects. Moreover, annotation metadata also enable meta-research,
+in that they can be exploited to better understand the dynamics of the annotation process.
 %research using research metadata to improve systems.
 
 \section{Application-based approach towards the Management of Annotation Data}\label{sec:case}
@@ -477,8 +479,8 @@ Query Engine\footnote{
 Figure \ref{fig:app} visualizes the general architecture of the application.
 Our application follows a client-server architecture implemented on top of current web
 standards ---WebSockets, LocalStorage--- as well as a NoSQL database.
-The client is a browser-based interface offering both a Corpus Query Interface and an Annotation
-Interface which interact with the local server through HTTP.
+The client is a browser-based interface combining both a corpus query interface and an annotation
+interface, which interact with the local server through HTTP.
 At the server side, two components are responsible for the dynamic (annotation
 metadata) and the static (corpus data) application storage layer. We plan to release the
 application as an open-source project once development reaches alpha state.
@@ -546,14 +548,16 @@ Additionally, it hosts the implementation of the centralized\footnote{
 Our annotation metadata model is compatible with the CQP data model \cite{Christ1999} and
 it is based on simple key-value structures and pointers to the token
 positions to which the metadata refers. An annotation, therefore, consists of a mapping from
-an annotation key to an annotation value ---e.g. for a token like ``going'', we might
-have an annotation key ``aspect'' associated with an annotation value ``progressive''.
+an annotation key to an annotation value ---e.g. for a token like ``fish'', we might
+have an annotation key ``animacy'' associated with an annotation value ``animate (non-human)''.
 In order to match annotations with the tokens to which they refer, our model requires that
 each corpus token be provided with a unique id.
 Furthermore, to speed up annotation queries we also require that these ids be ordered integers
 ---with the order corresponding to the sequence of tokens in the corpus.
 Besides token annotations, our model also covers span annotations, which match annotation
-key-value pairs to a span of adjacent tokens in the corpus, instead of single tokens.
+key-value pairs to a span of adjacent tokens in the corpus (constituents, grammatical constructions),
+instead of single tokens. For instance, a span ``a fish'' may have a key ``constituency type''
+associated with a value ``indefinite noun phrase''.
 
 %% \begin{verbatim}
 %%   {
@@ -601,13 +605,13 @@ to conflict resolutions to allow for better informed state restoration.
 
 \subsection{Web-based Client}\label{subsec:client}
 
-The last component of our application is a browser-based web interface through which researchers
+The last component of our application is a browser-based interface through which researchers
 can access and interact with the search engine and the annotation database.
 Moreover, it is designed to provide real-time multi-user interaction, keeping users informed of
 parallel annotations by other users, notifying and logging annotation conflicts as well as
 highlighting possible inconsistencies in the tagging system.
 
-\subsubsection{Interface}
+\subsubsection{Browser-based Interface}
 Access to corpus data is provided through a query panel with an input field and several
 controllers for sorting, filtering and paginating ---core functionalities provided by
 most corpus query engines. Hits fetched from the corpus query engine are displayed as Keyword
@@ -664,7 +668,7 @@ specifications (in particular, tree and graph structures).
 Secondly, decoupling annotation application logic from the corpus query engine implies that
 users cannot reflect the on-going body of annotations in their queries. This is, however, in
 pair with the status of current corpus query engines which do not allow for incremental indexing of
-new metadata. In the short-term, a less cumbersome solution can be implemented in terms of
+new metadata. In the short-term, a feasible solution can be implemented in terms of
 on-demand and off-line incremental indexing ---i.e. asynchronously triggering corpus
 reindexing to include the newly produced annotation metadata from the annotation database.
 
@@ -679,10 +683,12 @@ principles behind RTE and VCS systems, highlighting to what extent they represen
 the synchronous and asynchronous alternatives to the collaborative document editing problem.
 We concluded that research metadata curation in a collaborative environment is better served with
 the asynchronous features of versioning, branching and merging.
-Finally, we have showcased our particular implementation of a asynchronous collaborative application,
-which encompasses (i) a remote corpus query engine, (ii) a version controled annotation storage
-and (iii) an interactive multi-user interface for collaborative annotation. Finally, our design
-pledges for modularity and reusability in corpus software development.
+Finally, we have showcased our particular implementation of an asynchronous collaborative application,
+which encompasses (i) a remote corpus query engine, (ii) a version controlled annotation storage
+and (iii) an interactive multi-user interface for collaborative annotation.
+In addition, our application allows for easy meta-research on annotation practives, which can
+also be used as feedback for research optimization.
+Finally, our design pledges for modularity and reusability in corpus software development.
 
 \section{Acknowledgments}
 The first author wants to thank Chris Emmery for useful discussions on previous drafts of this work. 
