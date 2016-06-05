@@ -7,7 +7,7 @@
             [cleebo.query.components.query-field :refer [query-field]]
             [cleebo.query.components.results-table :refer [results-table]]
             [cleebo.query.components.snippet-modal :refer [snippet-modal]]
-            [cleebo.components :refer [error-panel throbbing-panel]]
+            [cleebo.components :refer [error-panel throbbing-panel minimize-panel]]
             [taoensso.timbre :as timbre]))
 
 (defn results-frame []
@@ -45,8 +45,12 @@
     (fn []
       [:div.container
        {:style {:width "100%" :padding "0px 10px 0px 10px"}}
-       [:div.row [query-field query-str]]
-       (when @has-query? [:div.row [toolbar]])
+       [:div.row
+        [minimize-panel
+         query-field query-str
+                                        ;[:div.row [query-field query-str]]
+                                        ;(when @has-query? [:div.row [toolbar]])
+         ]]
        [:br]
        [:div.row [results-frame]]
        [snippet-modal]])))

@@ -33,7 +33,7 @@
   (let [resource-path (:dynamic-resource-path env)
         avatar-path (:avatar-path env)]
     (when-not (.exists (io/file resource-path))
-      (do (println "Creating `app-resources`")
+      (do (println "Creating app-resources dir")
           (io/make-parents (str resource-path avatar-path "dummy"))))
     (alter-var-root #'system (constantly (create-dev-system dev-config-map)))))
 

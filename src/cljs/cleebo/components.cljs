@@ -141,6 +141,15 @@
                     :let [filtered (contains? @filtered-users username)]]
                 ^{:key username} [filter-annotation-btn username filtered]))])))
 
+(defn minimize-panel [child & args]
+  (let [open (reagent/atom true)]
+    (fn [child]
+      [:div
+       [bs/panel {:collapsible true :expanded @open}
+        (into [child] args)]
+       [bs/button {:onClick #(swap! open not)}
+        [bs/glyphicon {:glyph "close"}]]])))
+
 (defn disabled-button-tooltip [disabled?-fn msg]
   (if (disabled?-fn)
     (reagent/as-component
