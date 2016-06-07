@@ -20,7 +20,6 @@
 (def prod-config-map
   {:port (env :port)
    :database-url (env :database-url)
-   :cqp-init-file (env :cqp-init-file)
    :blacklab-paths-map (env :blacklab-paths-map)})
 
 (defn create-prod-system [config-map]

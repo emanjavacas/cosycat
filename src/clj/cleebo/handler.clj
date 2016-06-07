@@ -26,7 +26,6 @@
             [cleebo.routes.auth :refer [is-logged? safe auth-backend token-backend
                                         login-route logout-route signup-route]]
             [cleebo.components.ws :refer [ws-handler-http-kit send-clients]]
-            [cleebo.routes.cqp :refer [cqp-router]]            
             [cleebo.routes.blacklab :refer [blacklab-router]]
             [cleebo.routes.sessions :refer [session-route]]
             [cleebo.routes.projects :refer [project-route]]
@@ -57,7 +56,6 @@
   (POST "/project" [] project-route)
   (ANY "/logout" [] logout-route)
   (GET "/blacklab" [] blacklab-router)
-  (GET "/cqp" [] cqp-router)
   (GET "/ws" [] ws-handler-http-kit)
   (route/resources "/")
   (route/files "/" {:root (:dynamic-resource-path env)})

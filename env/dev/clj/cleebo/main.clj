@@ -17,7 +17,7 @@
    :blacklab-paths-map (env :blacklab-paths-map)})
 
 (defn create-dev-system [config-map]
-  (let [{:keys [handler port cqp-init-file database-url blacklab-paths-map]} config-map]
+  (let [{:keys [handler port database-url blacklab-paths-map]} config-map]
     (-> (component/system-map
          :blacklab (new-bl blacklab-paths-map)
          :db (new-db database-url)
