@@ -6,7 +6,6 @@
             [cleebo.backend.handlers.components]
             [cleebo.backend.handlers.settings]
             [cleebo.backend.handlers.query]
-            [cleebo.backend.handlers.snippet]
             [cleebo.backend.handlers.annotations]
             [cleebo.backend.handlers.notifications]
             [cleebo.backend.handlers.session]

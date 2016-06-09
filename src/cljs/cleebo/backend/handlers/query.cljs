@@ -71,18 +71,18 @@
  (fn [db _]
    (assoc-in db [:session :results-by-id] {})))
 
+;;; query backend handlers
 (re-frame/register-handler
  :query
  standard-middleware
  (fn [db [_ query-str source-component]]
    (let [{{:keys [corpus context size]} :query-opts
-          {:keys [from]}                :query-results} (:session db)]
+          {:keys [from]}                :query-results} (:session db)
+         callback #(re-frame/dispatch [:reset-query-results])]
      (re-frame/dispatch [:start-throbbing source-component])
      (GET "/blacklab"
-          {:handler (results-handler
-                     source-component
-                     #(re-frame/dispatch [:reset-query-results]))
-           :error-handler (error-handler source-component)
+          {:handler (results-handler source-component callback)
+           :error-handler (error-handler source-cmpnt)
            :params {:query-str (js/encodeURIComponent query-str)
                     :corpus corpus
                     :context context
@@ -147,4 +147,36 @@
                     :route route
                     :sort-map {:criterion criterion
                                :prop-name prop-name}}})
+     db)))
+
+(defn snippet-error-handler
+  [{:keys [status status-content] :as error}]
+  (re-frame/dispatch
+   [:notify
+    {:message (str "Error while retrieving snippet" status-content)
+     :status :error}]))
+
+(defn snippet-result-handler [& [context]]
+  (fn [{:keys [snippet status hit-idx] :as data}]
+    (if (string? data)                  ;crsf page
+      (.assign js/location "/logout")
+      (let [data (case context
+                   nil data
+                   :left (update-in data [:snippet] dissoc :right)
+                   :right (update-in data [:snippet] dissoc :left))]
+        (re-frame/dispatch [:open-modal :snippet data])))))
+
+(defn fetch-snippet [hit-idx snippet-size & {:keys [context]}]
+  (GET "/blacklab"
+       {:handler (snippet-result-handler context)
+        :error-handler snippet-error-handler 
+        :params {:hit-idx hit-idx
+                 :snippet-size snippet-size
+                 :route :snippet}}))
+
+(re-frame/register-handler
+ :fetch-snippet
+ (fn [db [_ hit-idx & {:keys [snippet-size context]}]]
+   (let [snippet-size (or snippet-size (get-in db [:settings :snippets :snippet-size]))]
+     (fetch-snippet hit-idx snippet-size :context context)
      db)))

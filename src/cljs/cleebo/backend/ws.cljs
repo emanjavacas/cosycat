@@ -10,7 +10,6 @@
 (def json-reader (t/reader :json-verbose))
 (def json-writer (t/writer :json-verbose))
 
-;;; TODO: automatic reconnect in case of WS-error
 (defn open-ws-channel
   [{:keys [url retry-count retried-count] :or {retry-count 10} :as opts}]
   (if-let [socket (js/WebSocket. url)]
