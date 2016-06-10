@@ -32,7 +32,7 @@
 
 (defn sort-buttons []
   (let [criterion (re-frame/subscribe [:session :query-opts :criterion])
-        prop-name (re-frame/subscribe [:session :query-opts :prop-name])
+        attribute (re-frame/subscribe [:session :query-opts :attribute])
         corpus (re-frame/subscribe [:session :query-opts :corpus])]
     (fn []
       [bs/button-toolbar
@@ -47,8 +47,8 @@
         {:label "sort prop: "
          :header "Select property"
          :options (->default-map ["word" "pos" "lemma"]);[TODO:This is corpus-dependent]
-         :model @prop-name
-         :select-fn (fn [k] (re-frame/dispatch [:set-session [:query-opts :prop-name] k]))}]
+         :model @attribute
+         :select-fn (fn [k] (re-frame/dispatch [:set-session [:query-opts :attribute] k]))}]
        [bs/button
         {:onClick (on-click-sort :sort-range)}
         "Sort page"]

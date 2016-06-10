@@ -13,7 +13,7 @@
                           :context 5
                           :size 10
                           :criterion "match"
-                          :prop-name "word"}
+                          :attribute "word"}
              :query-results {:query-size 0
                              :query-str ""
                              :status {:status :ok :status-content ""}

@@ -33,11 +33,11 @@
   [{{{username :username} :identity} :session 
     {blacklab :blacklab} :components
     {corpus :corpus query-str :query-str context :context to :to from :from
-     {criterion :criterion prop-name :prop-name} :sort-map} :params}]
+     {criterion :criterion attribute :attribute} :sort-map} :params}]
   (let [from (->int from)
         to (->int to)
         context (->int context)
-        sort-map {:criterion (keyword criterion) :prop-name prop-name}
+        sort-map {:criterion (keyword criterion) :attribute attribute}
         query-id username]
     (bl-sort-query blacklab corpus from to context sort-map query-id)))
 
@@ -45,11 +45,11 @@
   [{{{username :username} :identity} :session 
     {blacklab :blacklab} :components
     {corpus :corpus query-str :query-str context :context to :to from :from
-     {criterion :criterion prop-name :prop-name} :sort-map} :params}]
+     {criterion :criterion attribute :attribute} :sort-map} :params}]
   (let [from (->int from)
         to (->int to)
         context (->int context)
-        sort-map {:criterion (keyword criterion) :prop-name prop-name}        
+        sort-map {:criterion (keyword criterion) :attribute attribute}        
         query-id username]
     (bl-sort-range blacklab corpus from to context sort-map query-id)))
 

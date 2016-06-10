@@ -23,14 +23,7 @@
            (neg?  new-from) [0 (+ new-from page-size)]
            :else            [new-from from]))))
 
-(defn error-handler
-  [source-component]
-  (fn [{:keys [status status-content]}]
-    (re-frame/dispatch [:stop-throbbing source-component])
-    (re-frame/dispatch
-     [:set-session
-      [:query-results :status]
-      {:status status :status-content status-content}])))
+
 
 (defn keywordify-results [results]
   (into {} (map (juxt :id identity) results)))
@@ -41,18 +34,6 @@
   (fn [old-results]
     (merge (keywordify-results results)
            (filter-marked-hits old-results :has-marked? has-marked?))))
-
-(defn results-handler
-  "general success handler for query routes
-  (:query, :query-range :query-sort :query-refresh).
-  Accepts additional callbacks `extra-work` that are passed the incoming data."
-  [source-component & extra-work]
-  (fn [data]
-    (if (string? data)
-      (.assign js/location "/logout")
-      (do (doall (map #(% data) extra-work))
-          (re-frame/dispatch [:set-query-results data])
-          (re-frame/dispatch [:stop-throbbing source-component])))))
 
 (re-frame/register-handler
  :set-query-results
@@ -72,6 +53,27 @@
    (assoc-in db [:session :results-by-id] {})))
 
 ;;; query backend handlers
+(defn results-handler
+  "general success handler for query routes
+  (:query, :query-range :query-sort :query-refresh).
+  Accepts additional callbacks `extra-work` that are passed the incoming data."
+  [source-component & extra-work]
+  (fn [data]
+    (if (string? data)
+      (.assign js/location "/logout")
+      (do (doall (map #(% data) extra-work))
+          (re-frame/dispatch [:set-query-results data])
+          (re-frame/dispatch [:stop-throbbing source-component])))))
+
+(defn error-handler
+  [source-component]
+  (fn [{:keys [status status-content]}]
+    (re-frame/dispatch [:stop-throbbing source-component])
+    (re-frame/dispatch
+     [:set-session
+      [:query-results :status]
+      {:status status :status-content status-content}])))
+
 (re-frame/register-handler
  :query
  standard-middleware
@@ -134,7 +136,7 @@
  :query-sort
  standard-middleware
  (fn [db [_ route source-component]]
-   (let [{{:keys [corpus context size criterion prop-name]} :query-opts
+   (let [{{:keys [corpus context size criterion attribute]} :query-opts
           {:keys [from]} :query-results} (:session db)]
      (re-frame/dispatch [:start-throbbing source-component])
      (GET "/blacklab"
@@ -146,7 +148,7 @@
                     :to (+ from size)
                     :route route
                     :sort-map {:criterion criterion
-                               :prop-name prop-name}}})
+                               :attribute attribute}}})
      db)))
 
 (defn snippet-error-handler
