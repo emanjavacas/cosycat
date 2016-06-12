@@ -29,13 +29,14 @@
           :blacklab    [:ws]
           :ws          [:db]}))))
 
-(defn init []
+(defn init [& [config-map]]
   (let [resource-path (:dynamic-resource-path env)
-        avatar-path (:avatar-path env)]
+        avatar-path (:avatar-path env)
+        config-map (merge dev-config-map config-map)]
     (when-not (.exists (io/file resource-path))
       (do (println "Creating app-resources dir")
           (io/make-parents (str resource-path avatar-path "dummy"))))
-    (alter-var-root #'system (constantly (create-dev-system dev-config-map)))))
+    (alter-var-root #'system (constantly (create-dev-system config-map)))))
 
 (defn start []
   (alter-var-root #'system component/start))
@@ -43,8 +44,8 @@
 (defn stop []
   (alter-var-root #'system component/stop))
 
-(defn run []
-  (init)
+(defn run [& [config-map]]
+  (init config-map)
   (start))
 
 (defn reset []

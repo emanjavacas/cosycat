@@ -130,11 +130,14 @@
           new-map (assoc hit-map :hit hit-match)]
       (handler new-map))))
 
+(defn hit-id [^Hit -hit]
+  (str (.doc -hit) "." (.start -hit) "." (.end -hit)))
+
 (defn- wrap-hit-id
-  "Add hit id. See .hashCode docs for how this is implemented"
+  "Add hit id"
   [handler]
   (fn [{:keys [-hit hit] :as hit-map}]
-    (let [new-map (assoc hit-map :id (.hashCode -hit))]
+    (let [new-map (assoc hit-map :id (hit-id -hit))]
       (handler new-map))))
 
 (defn- hits-handler [^Hits hits ^Searcher searcher]
@@ -194,8 +197,8 @@
     (hits-handler -hits-window searcher)))
 
 (defn snippet ;todo home-made function to handle xml-conc adding anns to it?
-  [^Hits -hits hit-idx snippet-size]
-  (let [^Hit -hit (.get -hits hit-idx)
+  [^Hits -hits hit-id snippet-size]
+  (let [^Hit -hit (.get -hits hit-id)
         ^Concordance conc (.getConcordance -hits -hit snippet-size)]
     (->> [(.left conc) (.match conc) (.right conc)]
          (map #(XmlUtil/xmlToPlainText %))

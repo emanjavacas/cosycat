@@ -1,4 +1,4 @@
-[] (ns cleebo.main
+(ns cleebo.main
      (:require [com.stuartsierra.component :as component]
                [clojure.tools.namespace.repl :refer [refresh refresh-all]]
                [cleebo.utils :refer [prn-format delete-directory]]
