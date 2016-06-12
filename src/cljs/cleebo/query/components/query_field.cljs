@@ -91,25 +91,23 @@
   (let [query-str-atom (reagent/atom @query-str)]
     (fn [query-str]
       [:div.row
-       [:div.col-lg-12
-        [:div.row
-         [:div.col-lg-5.col-sm-7
-          [query-opts-menu]]
-         [:div.col-lg-7.col-sm-5
-          [:div.input-group
-           [:input#query-str.form-control.form-control-no-border
-            {:style {:width "100%"}
-             :type "text"
-             :name "query"
-             :value @query-str-atom
-             :placeholder "Example: [pos='.*\\.']" ;remove?
-             :autoCorrect "false"
-             :autoCapitalize "false"
-             :autoComplete "false"
-             :spellCheck "false"
-             :on-change #(reset! query-str-atom (.. % -target -value))
-             :on-key-press on-key-press}]
-           [:span.input-group-addon
-            {:on-click on-click-search
-             :style {:cursor "pointer"}}
-            [bs/glyphicon {:glyph "search"}]]]]]]])))
+       [:div.col-lg-5.col-sm-7
+        [query-opts-menu]]
+       [:div.col-lg-7.col-sm-5
+        [:div.input-group
+         [:input#query-str.form-control.form-control-no-border
+          {:style {:width "100%"}
+           :type "text"
+           :name "query"
+           :value @query-str-atom
+           :placeholder "Example: [pos='.*\\.']" ;remove?
+           :autoCorrect "false"
+           :autoCapitalize "false"
+           :autoComplete "false"
+           :spellCheck "false"
+           :on-change #(reset! query-str-atom (.. % -target -value))
+           :on-key-press on-key-press}]
+         [:span.input-group-addon
+          {:on-click on-click-search
+           :style {:cursor "pointer"}}
+          [bs/glyphicon {:glyph "search"}]]]]])))

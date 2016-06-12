@@ -5,44 +5,7 @@
             [react-bootstrap.components :as bs]
             [cleebo.utils :refer [nbsp]]
             [cleebo.schemas.app-state-schemas :refer [db-schema]]
-            [cleebo.localstorage :as ls]
-;            [cleebo.debug.tree :as tree]
-            ))
-
-(defn kv-pairs [s]
-  (into [:div]
-        (map
-         (fn [[k v]]
-           [:div.row
-            {:style {:width "95%"}}
-            [:div.col-sm-2 (str k)]
-            [:div.col-sm-10 (str v)]])
-         s)))
-
-(defn summary-session []
-  (let [query-opts (re-frame/subscribe [:query-opts])
-        query-results (re-frame/subscribe [:query-results])
-        results (re-frame/subscribe [:session :results-by-id])
-        result-keys (re-frame/subscribe [:session :results])
-        marked-hits (re-frame/subscribe [:marked-hits])
-        users (re-frame/subscribe [:session :users])]
-    (fn []
-      [:div.container-fluid
-       [:div.row [:h4 [:span.text-muted "Query Options"]]]
-       [:div.row [kv-pairs @query-opts]]
-       [:div.row [:h4 [:span.text-muted "Query Results"]]]
-       [:div.row [kv-pairs @query-results]]
-       [:div.row [:h4 [:span.text-muted "Users"]]]
-       [:div.row
-        (doall (for [user @users]
-                 ^{:key (:username user)}
-                 [kv-pairs user]))]
-       [:div.row [:h4 [:span.text-muted "Results"]]]
-       (into [:div] (map (fn [k] [:div.row k]) @result-keys))
-       [:div.row [:h4 [:span.text-muted "Results by key"]]]
-       [:div.row [kv-pairs (zipmap (keys @results) (vals @results))]]
-       [:div.row [:h4 [:span.text-muted "Marked hits"]]]
-       [:div.row [kv-pairs (map (juxt :id identity) @marked-hits)]]])))
+            [cleebo.localstorage :as ls]))
 
 (defn ls-dump []
   [bs/button
@@ -70,41 +33,33 @@
       [:notify {:message "Hello World! How are you doing?"}])}
    "Notify"])
 
-(defn style [path] {:margin-left (str (* 10 (count path)) "px") :cursor "pointer"})
+(defn style [depth] {:margin-left (str (+ 10 depth) "px") :cursor "pointer"})
 
-(defn i [k v path children & {:keys [tag] :or {tag :div}}]
-  (let [background (reagent/atom "white")]
-    (fn [k v path children & {:keys [tag] :or {tag :div}}]
+(defn i [k v depth children & {:keys [tag] :or {tag :div}}]
+  (let [open (reagent/atom true)]
+    (fn [k v depth children & {:keys [tag] :or {tag :div}}]
       [tag
-       {:style (merge (style path) {:background-color @background})
-        :on-click (fn [e]
-                    (.stopPropagation e)
-                    (swap! background #(condp = % "white" "black" "black" "white")))}
-       (str "P<" k ">")
-       children])))
+       {:style (merge (style depth))}
+       [:span
+        [:span {:on-click #(do (.stopPropagation %)  (swap! open not))}
+         [:i.glyphicon
+          {:class (if @open "glyphicon-triangle-bottom" "glyphicon-triangle-right")}]]
+        (str k)]
+       [:div {:style {:margin-left "15px"}} (when @open children)]])))
 
-(defn recursive* [data path]
-  (cond (map? data) (into [:div {:style (style path)}]
-                          (mapv (fn [[k v]] [i k v path (recursive* v (conj path k))]) data))
-        (sequential? data) (into [:ul {:style (style path)}]
-                                 (mapv (fn [[k v]] [i k v path (recursive* v (conj path k)) :tag :li])
+(defn recursive* [data depth]
+  (cond (map? data)        (into [:div {:style (style depth)}]
+                                 (mapv (fn [[k v]] [i k v depth (recursive* v (inc depth)) :tag :div])
+                                       data))
+        (sequential? data) (into [:ul {:style (style depth) :list-style-type "none"}]
+                                 (mapv (fn [[k v]] [i k v depth (recursive* v (inc depth)) :tag :li])
                                        (map-indexed vector data)))
-        :else (str (nbsp (* 10 (count path))) "C<" data ">")))
+        :else (str data)))
 
-(def d {:a [{:d "a"} {:b {:d [1 2 3] :e [{:a "a" :b "b"}] :f "A!"}}]
-        :c {:e false}
-        :d {:f "A"}})
+(defn recursive [data] [recursive* data 0])
 
-(defn recursive [data]
-  [recursive*
-   (clojure.walk/walk #(with-meta % {:show? (reagent/atom false)}) identity data)
-   []])
-
-(defn frisk []
-  (let [db (re-frame/subscribe [:db])
-        d {:a [{:d "a"} {:b {:d [1 2 3] :e [{:a "a" :b "b"}] :f "A!"}}]
-           :c {:e false}
-           :d {:f "A"}}]
+(defn data-tree []
+  (let [db (re-frame/subscribe [:db])]
     (fn []
       [recursive @db])))
 
@@ -120,5 +75,5 @@
        [ls-dump]
        [ls-print]
        [ls-reload]]]
-     [:div.row [frisk]]
-     [:div.row [summary-session]]]))
+     [:div.row [:hr]]
+     [:div.row [data-tree]]]))

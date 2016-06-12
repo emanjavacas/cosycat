@@ -6,8 +6,28 @@
             [cleebo.query.components.toolbar :refer [toolbar]]
             [cleebo.query.components.results-table :refer [results-table]]
             [cleebo.query.components.snippet-modal :refer [snippet-modal]]
+            [cleebo.annotation.components.annotation-panel :refer [annotation-panel]]
             [cleebo.components :refer [error-panel throbbing-panel minimize-panel]]
             [taoensso.timbre :as timbre]))
+
+(defn internal-error-panel [status-content]
+  (fn [status-content]
+    [error-panel
+     :status "Oops! something bad happened"
+     :status-content [:div status-content]]))
+
+(defn query-error-panel [status-content]
+  (fn [status-content]
+    [error-panel
+     :status (str "Query misquoted starting at position " (inc (:at status-content)))
+     :status-content (highlight-error status-content)]))
+
+(defn no-results-panel [query-str]
+  (fn [query-str]
+    [error-panel :status (format "No matches found for query: %s" @query-str)]))
+
+(defn do-research-panel []
+  [error-panel :status "No hits to be shown... Go do some research!"])
 
 (defn results-frame []
   (let [status (re-frame/subscribe [:session :query-results :status])
@@ -21,31 +41,19 @@
     (fn []
       (let [{:keys [status status-content]} @status]
         (cond
-          @throbbing?          [throbbing-panel]
-          (has-error status)   [error-panel
-                                :status "Oops! something bad happened"
-                                :status-content [:div status-content]]
-          (query-error status) [error-panel
-                                :status (str "Query misquoted starting at position "
-                                             (inc (:at status-content)))
-                                :status-content (highlight-error status-content)]
-          (no-results
-           @query-str
-           @query-size)        [error-panel
-                                :status (format "No matches found for query: %s" @query-str)]
-          (has-results
-           @query-size)        [results-table]
-          :else                [error-panel
-                                :status "No hits to be shown... Go do some research!"])))))
+          @throbbing?                         [throbbing-panel]
+          (has-error status)                  [internal-error-panel status-content]
+          (query-error status)                [query-error-panel status-content]
+          (no-results @query-str @query-size) [no-results-panel query-str]
+          (has-results @query-size)           [results-table]
+          :else                               [do-research-panel])))))
 
 (defn query-panel []
-  (let [
-        has-query? (re-frame/subscribe [:has-query?])]
+  (let [has-query? (re-frame/subscribe [:has-query?])]
     (fn []
       [:div.container
        {:style {:width "100%" :padding "0px 10px 0px 10px"}}
-       [:div.row [minimize-panel toolbar]]
-       [:div.row [minimize-panel results-frame]]
-       [:div.row [minimize-panel cleebo.annotation.page.annotation-panel]]
+       [:div.row [minimize-panel {:child toolbar :init true}]]
+       [:div.row [minimize-panel {:child results-frame}]]
+       [:div.row [minimize-panel {:child annotation-panel}]]
        [snippet-modal]])))
- 

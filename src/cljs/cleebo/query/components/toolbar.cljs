@@ -118,6 +118,6 @@
   (let [has-query? (re-frame/subscribe [:has-query?])
         query-str (re-frame/subscribe [:session :query-results :query-str])]
     (fn []
-      [:div.container
+      [:div.container-fluid
        [:div.row [query-field query-str]]
        (when @has-query? [:div.row [query-toolbar]])])))

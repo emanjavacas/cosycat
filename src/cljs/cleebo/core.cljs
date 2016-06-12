@@ -18,7 +18,6 @@
             [cleebo.localstorage :as ls]
             [cleebo.components :refer [notification-container load-from-ls-modal user-thumb]]
             [cleebo.query.page :refer [query-panel]]
-            [cleebo.annotation.page :refer [annotation-panel]]
             [cleebo.settings.page :refer [settings-panel]]
             [cleebo.updates.page :refer [updates-panel]]
             [cleebo.debug.page :refer [debug-panel]]
@@ -36,7 +35,6 @@
 (defmethod panels :settings-panel [] [#'settings-panel])
 (defmethod panels :debug-panel [] [#'debug-panel])
 (defmethod panels :updates-panel [] [#'updates-panel])
-(defmethod panels :annotation-panel [] [#'annotation-panel])
 (defmethod panels :error-panel [] [#'error-panel])
 
 (defn icon-label [icon label]
@@ -136,8 +134,6 @@
         (when-not (= @active-panel :front-panel)
           [navlink :query-panel (str "#/project/" (:name @active-project))
            "Query" "zmdi-search"])
-        (when-not (= @active-panel :front-panel)
-          [navlink :annotation-panel "#/annotation" "Annotation" "zmdi-edit"])
         (when-not (= @active-panel :front-panel)
           [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"])
         (when-not (= @active-panel :front-panel)

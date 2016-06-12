@@ -3,8 +3,7 @@
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
             [cleebo.components :refer [dropdown-select]]
-            [cleebo.settings.components.shared-components
-             :refer [row-component]]
+            [cleebo.settings.components.shared-components :refer [row-component]]
             [taoensso.timbre :as timbre]))
 
 (def help-map

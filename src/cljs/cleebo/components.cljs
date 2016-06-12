@@ -141,9 +141,9 @@
                     :let [filtered (contains? @filtered-users username)]]
                 ^{:key username} [filter-annotation-btn username filtered]))])))
 
-(defn minimize-panel [child & args]
-  (let [open (reagent/atom true)]
-    (fn [child]
+(defn minimize-panel [{:keys [child init args] :or {init false}}]
+  (let [open (reagent/atom init)]
+    (fn [{:keys [child init args]}]
       [:div
        [bs/panel
         {:collapsible true
