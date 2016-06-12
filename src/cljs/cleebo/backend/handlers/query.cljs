@@ -84,7 +84,7 @@
      (re-frame/dispatch [:start-throbbing source-component])
      (GET "/blacklab"
           {:handler (results-handler source-component callback)
-           :error-handler (error-handler source-cmpnt)
+           :error-handler (error-handler source-component)
            :params {:query-str (js/encodeURIComponent query-str)
                     :corpus corpus
                     :context context

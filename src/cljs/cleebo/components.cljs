@@ -145,10 +145,13 @@
   (let [open (reagent/atom true)]
     (fn [child]
       [:div
-       [bs/panel {:collapsible true :expanded @open}
-        (into [child] args)]
-       [bs/button {:onClick #(swap! open not)}
-        [bs/glyphicon {:glyph "close"}]]])))
+       [bs/panel
+        {:collapsible true
+         :expanded @open
+         :header (reagent/as-component
+                  [bs/button {:onClick #(swap! open not) :bsSize "xsmall"}
+                   [bs/glyphicon {:glyph (if @open "triangle-top" "triangle-bottom")}]])}
+        (into [child] args)]])))
 
 (defn disabled-button-tooltip [disabled?-fn msg]
   (if (disabled?-fn)

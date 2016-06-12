@@ -4,7 +4,6 @@
             [cleebo.utils :refer [format]]
             [cleebo.query.components.highlight-error :refer [highlight-error]]
             [cleebo.query.components.toolbar :refer [toolbar]]
-            [cleebo.query.components.query-field :refer [query-field]]
             [cleebo.query.components.results-table :refer [results-table]]
             [cleebo.query.components.snippet-modal :refer [snippet-modal]]
             [cleebo.components :refer [error-panel throbbing-panel minimize-panel]]
@@ -40,18 +39,13 @@
                                 :status "No hits to be shown... Go do some research!"])))))
 
 (defn query-panel []
-  (let [query-str (re-frame/subscribe [:session :query-results :query-str])
+  (let [
         has-query? (re-frame/subscribe [:has-query?])]
     (fn []
       [:div.container
        {:style {:width "100%" :padding "0px 10px 0px 10px"}}
-       [:div.row
-        [minimize-panel
-         query-field query-str
-                                        ;[:div.row [query-field query-str]]
-                                        ;(when @has-query? [:div.row [toolbar]])
-         ]]
-       [:br]
-       [:div.row [results-frame]]
+       [:div.row [minimize-panel toolbar]]
+       [:div.row [minimize-panel results-frame]]
+       [:div.row [minimize-panel cleebo.annotation.page.annotation-panel]]
        [snippet-modal]])))
  

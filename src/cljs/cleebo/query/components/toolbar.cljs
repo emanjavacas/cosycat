@@ -8,7 +8,8 @@
             [cleebo.routes :refer [nav!]]
             [cleebo.components :refer
              [dropdown-select user-thumb filter-annotation-buttons disabled-button-tooltip]]
-            [cleebo.query.components.annotation-modal :refer [annotation-modal-button]]))
+            [cleebo.query.components.annotation-modal :refer [annotation-modal-button]]
+            [cleebo.query.components.query-field :refer [query-field]]))
 
 (defn pager-button [& {:keys [direction label]}]
   [bs/button
@@ -95,7 +96,7 @@
    [annotation-hit-button]
    [annotation-modal-button]])
 
-(defn toolbar []
+(defn query-toolbar []
   (let [query-size (re-frame/subscribe [:query-results :query-size])
         filtered-users (re-frame/subscribe [:session :active-project :filtered-users])]
     (fn []
@@ -112,3 +113,11 @@
         [:div.col-lg-8.col-sm-8.pad [mark-buttons]]
         [:div.col-lg-4.col-sm-4.pad
          [:div.pull-right [filter-annotation-buttons]]]]])))
+
+(defn toolbar []
+  (let [has-query? (re-frame/subscribe [:has-query?])
+        query-str (re-frame/subscribe [:session :query-results :query-str])]
+    (fn []
+      [:div.container
+       [:div.row [query-field query-str]]
+       (when @has-query? [:div.row [query-toolbar]])])))

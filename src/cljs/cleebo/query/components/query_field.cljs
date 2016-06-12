@@ -79,12 +79,12 @@
 
 (defn on-key-press [k]
   (let [query-str (normalize-str (by-id "query-str"))]
-    (when (and (not (zero? (count query-str))) (= (.-charCode k) 13)) ;trigger condition
+    (when (and (not (zero? (count query-str))) (= (.-charCode k) 13))
       (trigger-query query-str))))
 
 (defn on-click-search []
   (let [query-str (normalize-str (by-id "query-str"))]
-    (when-not (zero? (count query-str)) ;trigger condition
+    (when-not (zero? (count query-str))
       (trigger-query query-str))))
 
 (defn query-field [query-str]
