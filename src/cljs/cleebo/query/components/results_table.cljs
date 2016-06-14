@@ -103,7 +103,7 @@
         :tab-index 0
         :style {:border-collapse "collapse"}}
        [:thead]
-       [:tbody {:style {:font-size "11px"}}
+       [:tbody {:style {:font-size "12px"}}
         (doall
          (for [[idx {:keys [hit meta id] :as hit-map}] (map-indexed vector @results)
                :let [hit-num (+ idx @from)]]

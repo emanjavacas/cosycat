@@ -3,8 +3,9 @@
             [re-frame.core :as re-frame]
             [cleebo.utils :refer [format]]
             [cleebo.query.components.highlight-error :refer [highlight-error]]
-            [cleebo.query.components.toolbar :refer [toolbar]]
+            [cleebo.query.components.query-field :refer [query-field]]
             [cleebo.query.components.results-table :refer [results-table]]
+            [cleebo.query.components.results-toolbar :refer [results-toolbar]]
             [cleebo.query.components.snippet-modal :refer [snippet-modal]]
             [cleebo.annotation.components.annotation-panel :refer [annotation-panel]]
             [cleebo.components :refer [error-panel throbbing-panel minimize-panel]]
@@ -29,31 +30,66 @@
 (defn do-research-panel []
   [error-panel :status "No hits to be shown... Go do some research!"])
 
+(defn has-error [status]
+  (= status :error))
+
+(defn has-query-error [status]
+  (= status :query-str-error))
+
+(defn no-results [query-str query-size]
+  (and (not (= "" query-str)) (zero? query-size)))
+
+(defn has-results [query-size]
+  (not (zero? query-size)))
+
+(defn has-marked-hits [marked-hits]
+  (not (zero? (count marked-hits))))
+
 (defn results-frame []
   (let [status (re-frame/subscribe [:session :query-results :status])
         query-size (re-frame/subscribe [:session :query-results :query-size])
         query-str (re-frame/subscribe [:session :query-results :query-str])
-        throbbing? (re-frame/subscribe [:throbbing? :results-frame])
-        has-error (fn [status] (= status :error))
-        query-error (fn [status] (= status :query-str-error))
-        no-results (fn [q-str q-size] (and (not (= "" q-str)) (zero? q-size)))
-        has-results (fn [query-size] (not (zero? query-size)))]
+        throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
     (fn []
       (let [{:keys [status status-content]} @status]
         (cond
           @throbbing?                         [throbbing-panel]
           (has-error status)                  [internal-error-panel status-content]
-          (query-error status)                [query-error-panel status-content]
+          (has-query-error status)            [query-error-panel status-content]
           (no-results @query-str @query-size) [no-results-panel query-str]
-          (has-results @query-size)           [results-table]
-          :else                               [do-research-panel])))))
+          (has-results @query-size)           [results-table])))))
+
+(defn label-closed-header [label]
+  (fn [] [:div label]))
+
+(defn results-closed-header []
+  (let [query-size (re-frame/subscribe [:session :query-results :query-size])]
+    (fn []
+      [:div (str "Query results (Displaying " @query-size " hits)")])))
+
+(defn annotation-closed-header []
+  (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
+    (fn []
+      [:div (str "Annotation panel (" (count @marked-hits) " selected hits)")])))
 
 (defn query-panel []
-  (let [has-query? (re-frame/subscribe [:has-query?])]
+  (let [query-size (re-frame/subscribe [:session :query-results :query-size])
+        marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
     (fn []
       [:div.container
        {:style {:width "100%" :padding "0px 10px 0px 10px"}}
-       [:div.row [minimize-panel {:child toolbar :init true}]]
-       [:div.row [minimize-panel {:child results-frame}]]
-       [:div.row [minimize-panel {:child annotation-panel}]]
+       [:div.row [minimize-panel
+                  {:child query-field
+                   :open-header (label-closed-header "Query field")
+                   :closed-header (label-closed-header "Query field")}]]
+       (when (has-results @query-size)
+         [:div.row [minimize-panel
+                    {:child results-frame
+                     :open-header results-toolbar
+                     :closed-header results-closed-header}]])
+       (when (has-marked-hits @marked-hits)
+         [:div.row [minimize-panel
+                    {:child annotation-panel
+                     :closed-header annotation-closed-header
+                     :init false}]])
        [snippet-modal]])))

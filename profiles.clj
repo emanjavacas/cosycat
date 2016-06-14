@@ -9,7 +9,7 @@
              :session-expires 900       ;in minutes
              :corpora ["brown"]
              :blacklab-paths-map
-             {"brown" "/home/enrique/code/BlackLab/brown-tei/"}}}
+             {"brown" "/home/enrique/code/cleebo/dev-resources/brown-tei-index/"}}}
  :test {:env {:database-url "mongodb://127.0.0.1:27017/cleeboTest"
               :corpora ["brown"]
               :blacklab-paths-map

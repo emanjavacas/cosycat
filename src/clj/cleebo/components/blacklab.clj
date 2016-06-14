@@ -203,7 +203,8 @@
 ;; (do-things)
 
 ;; (def path-maps (:blacklab-paths-map environ.core/env))
+;; (def path-maps {"brown" "/home/enrique/code/cleebo/dev-resources/brown-tei-index/"})
 ;; (def corpus (first (:corpora environ.core/env)))
 ;; (def bl-component (-> (new-bl path-maps) (.start)))
-;; (bl-query bl-component corpus "[pos='NP.*']*" 0 10 5)
+;; (first (:results (bl-query bl-component "brown" "[pos='NP.*']*" 0 10 5)))
 

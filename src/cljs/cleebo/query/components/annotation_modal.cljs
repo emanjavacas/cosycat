@@ -99,13 +99,13 @@
     (fn []
       (let [disabled? (fn [marked-tokens] (zero? (count @marked-tokens)))]
         [bs/overlay-trigger
-         {:overlay (disabled-button-tooltip
-                    #(disabled? marked-tokens)
-                    "No tokens selected!")
+         {:overlay (disabled-button-tooltip #(disabled? marked-tokens) "No tokens selected!")
           :placement "bottom"}
          [bs/button
           {:bsStyle "primary"
-           :style (when (disabled? marked-tokens) {:opacity 0.65 :cursor "auto"})
+           :style {:opacity (if (disabled? marked-tokens)  0.65 1)
+                   :cursor (if (disabled? marked-tokens) "auto" "auto")
+                   :height "34px"}
            :onClick #(when-not (disabled? marked-tokens) (swap! show? not))}
           [:div "Annotate Tokens"
            [annotation-modal show? marked-tokens]]]]))))

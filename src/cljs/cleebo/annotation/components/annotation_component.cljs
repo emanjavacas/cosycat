@@ -130,10 +130,9 @@
     (fn annotation-component [marked-hits open-hits]
       [bs/table
        {:id "table-annotation"
-        :responsive true
-        :style {:text-align "center"}}
+        :responsive true}
        [:thead]
-       [:tbody
+       [:tbody {:style {:font-size "12px"}}
         (doall
          (for [[idx hit-map] (map-indexed vector @marked-hits)
                {:keys [key component]} (annotation-panel-hit hit-map open-hits @project)]

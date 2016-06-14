@@ -131,7 +131,8 @@
       (handler new-map))))
 
 (defn hit-id [^Hit -hit]
-  (str (.doc -hit) "." (.start -hit) "." (.end -hit)))
+  ;; (str (.doc -hit) "." (.start -hit) "." (.end -hit))
+  (.hashCode -hit))
 
 (defn- wrap-hit-id
   "Add hit id"
@@ -224,11 +225,12 @@
 ;; (defn check-overlap [s1 s2]
 ;;   (clojure.set/difference (into (hash-set) s1) (into (hash-set) s2)))
 
-;; (def paths-map {"brown-id" "/home/enrique/code/BlackLab/brown-index-id/"})
-;; (def shc-searcher (new-searcher "/home/enrique/code/BlackLab/brown-index-id/"))
+;; (def path-maps {"brown" "/home/enrique/code/cleebo/dev-resources/brown-tei-index/"})
+;; (def shc-searcher (new-searcher "/home/enrique/code/cleebo/dev-resources/brown-tei-index/"))
 ;; (init-searcher! shc-searcher)
 
 ;; (def hits (query shc-searcher "\".*man\"" 0 10 5))
+;; (first hits)
 ;; (map (fn [hit]
 ;;         (map (fn [token]
 ;;                (:word token))

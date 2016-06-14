@@ -1,2 +1,0 @@
-host 127.0.0.1;       # localhost should always be enabled
-user quique "alright";
