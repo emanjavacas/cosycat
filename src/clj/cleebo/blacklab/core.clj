@@ -150,11 +150,11 @@
 
 (defn ^HitProperty make-property
   "creates a property for sorting purposes"
-  [^Hits -hits criterion ^String prop-name]
+  [^Hits -hits criterion ^String attribute]
   (case criterion
-    :match         (HitPropertyHitText. -hits "contents" prop-name)
-    :left-context  (HitPropertyLeftContext. -hits "contents" prop-name)
-    :right-context (HitPropertyRightContext. -hits "contents" prop-name)))
+    :match         (HitPropertyHitText. -hits "contents" attribute)
+    :left-context  (HitPropertyLeftContext. -hits "contents" attribute)
+    :right-context (HitPropertyRightContext. -hits "contents" attribute)))
 
 (defn query-size
   "sorts a given Hits object"
@@ -182,18 +182,18 @@
 
 (defn sort-query
   "returns a specified hits window after sorting the entire query results."
-  [searcher-agent -hits from to context criterion prop-name]
+  [searcher-agent -hits from to context criterion attribute]
   (let [{searcher :conn} @searcher-agent
-        hit-property (make-property -hits criterion prop-name)]
+        hit-property (make-property -hits criterion attribute)]
     (.sort ^Hits -hits hit-property)
     (hits-handler (-hits->window -hits from to context) searcher)))
 
 (defn sort-range
   "sorts a specified hits window."
-  [searcher-agent -hits from to context criterion prop-name]
+  [searcher-agent -hits from to context criterion attribute]
   (let [{searcher :conn} @searcher-agent
         -hits-window (-hits->window -hits from to context)
-        hit-property (make-property -hits-window criterion prop-name)]
+        hit-property (make-property -hits-window criterion attribute)]
     (.sort ^Hits -hits-window hit-property)
     (hits-handler -hits-window searcher)))
 

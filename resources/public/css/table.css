@@ -4,9 +4,9 @@ table td.highlighted {
     /* border: 0.5px solid black !important; */
 }
 
-table td.snippet-trigger:hover {
-    background-color: #e0e0e0 !important;
-}
+/* table td.snippet-trigger:hover { */
+/*     background-color: #e0e0e0 !important; */
+/* } */
 
 table#table-annotation {
     /* border-collapse: collapse !important; */

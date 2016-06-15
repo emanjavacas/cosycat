@@ -14,7 +14,7 @@
 
 (defonce db (component/start (new-db (:database-url env))))
 ;; (do (clear-dbs db))
-;; (def force-int ((g/fmap inc) check-generators/int))
+(def force-int ((g/fmap inc) check-generators/int))
 
 (defn create-dummy-annotation [username & [n]]
   (let [anns (map (fn [m] (assoc m :username username))

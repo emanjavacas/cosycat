@@ -8,6 +8,20 @@
              :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))
 
+(defn has-marked?
+  "for a given hit-map we look if the current (un)marking update
+  leaves marked tokens behind. Returns false if no marked
+  tokens remain or the token-id of the marked token otherwise"
+  [{:keys [hit meta] :as hit-map} flag token-id]
+  (if flag
+    true
+    (let [marked-tokens (filter :marked hit)
+          first-id (:id (first marked-tokens))]
+      (case (count marked-tokens)
+        0 (do (timbre/debug "Trying to unmark a token, but no marked tokens found") false)
+        1 (do (timbre/debug  (str token-id " should equal " first-id)) false)
+        (some #(= token-id %) (map :id marked-tokens))))))
+
 (re-frame/register-handler
  :mark-hit
  standard-middleware
@@ -33,19 +47,6 @@
       (assoc-in acc-db [:session :results-by-id hit-id :meta :marked] false))
     db
     (keys (get-in db [:session :results-by-id])))))
-
-(defn has-marked?
-  "for a given hit-map we look if the current (de)marking update
-  leave behind marked tokens. The result will be false if no marked
-  tokens remain, otherwise it returns the token-id of the token marked"
-  [{:keys [hit meta] :as hit-map} flag token-id]
-  (if flag
-    true
-    (let [marked-tokens (filter :marked hit)]
-      (case (count marked-tokens)
-        0 (throw (js/Error. "Trying to unmark a token, but no marked tokens found"))
-        1 (do (assert (= token-id (:id (first marked-tokens)))) false)
-        (some #(= token-id %) (map :id marked-tokens))))))
 
 (defn update-token
   "apply token-fn where due"

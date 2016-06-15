@@ -224,7 +224,9 @@
          :transition-enter-timeout 0
          :transition-leave-timeout 0}
         (when @open?
-          [new-project-form selected-users
-           {:name-input-error name-input-error
-            :desc-input-error desc-input-error}])]
+          [:div
+           [:h2#new-project {:style {:padding "50px 0 30px 0"}} "New Project"]
+           [new-project-form selected-users
+            {:name-input-error name-input-error
+             :desc-input-error desc-input-error}]])]
        [project-btn open? selected-users user-projects name-input-error desc-input-error]])))

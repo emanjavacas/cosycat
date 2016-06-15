@@ -41,7 +41,7 @@
    :context s/Int
    :size s/Int
    :criterion s/Str
-   :prop-name s/Str})
+   :attribute s/Str})
 
 (def query-results-schema
   {:query-size s/Int

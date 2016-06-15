@@ -1,5 +1,6 @@
 (ns cleebo.settings.components.shared-components
-  (:require [react-bootstrap.components :as bs]))
+  (:require [react-bootstrap.components :as bs]
+            [cleebo.utils :refer [nbsp]]))
 
 (defn row-component [& {:keys [label controllers help-text]}]
   (fn [& {:keys [label controllers help-text]}]
@@ -10,7 +11,8 @@
      [:br]
      [:div.row [:hr]]
      [:div.row
-      [:div.col-lg-5
-       controllers]
-      [:div.col-lg-7.text-muted @help-text]]
+      [:div.col-lg-5 controllers]]     
+     [:div.row
+      {:style {:margin-top "10px"}}
+      [:div.col-lg-7.text-muted (str (nbsp 10) @help-text)]]
      [:br]]))

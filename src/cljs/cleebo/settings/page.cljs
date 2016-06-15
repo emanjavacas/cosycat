@@ -33,7 +33,7 @@
 
 (defn settings-panel []
   (let [active-tab (reagent/atom :session)
-        expanded? (reagent/atom false)]
+        expanded? (reagent/atom true)]
     (fn []
       [:div
        {:class (if @expanded? "container-fluid" "container")}

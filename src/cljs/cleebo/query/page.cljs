@@ -8,7 +8,8 @@
             [cleebo.query.components.results-toolbar :refer [results-toolbar]]
             [cleebo.query.components.snippet-modal :refer [snippet-modal]]
             [cleebo.annotation.components.annotation-panel :refer [annotation-panel]]
-            [cleebo.components :refer [error-panel throbbing-panel minimize-panel]]
+            [cleebo.components :refer
+             [error-panel throbbing-panel minimize-panel filter-annotation-buttons]]
             [taoensso.timbre :as timbre]))
 
 (defn internal-error-panel [status-content]
@@ -72,6 +73,12 @@
     (fn []
       [:div (str "Annotation panel (" (count @marked-hits) " selected hits)")])))
 
+(defn annotation-open-header []
+  (fn []
+    [:div.container-fluid
+     [:div.row
+      [:div.col-lg-5.pull-left [filter-annotation-buttons]]]]))
+
 (defn query-panel []
   (let [query-size (re-frame/subscribe [:session :query-results :query-size])
         marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
@@ -91,5 +98,6 @@
          [:div.row [minimize-panel
                     {:child annotation-panel
                      :closed-header annotation-closed-header
+                     :open-header annotation-open-header
                      :init false}]])
        [snippet-modal]])))

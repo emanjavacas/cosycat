@@ -70,6 +70,6 @@
     (fn []
       [:div.container-fluid
        [:div.row
-        [:div.col-lg-1.col-sm-2.pad [query-result-label]]
-        [:div.col-lg-3.col-sm-3.pad.pull-left [pager-buttons]]
+        [:div.col-lg-2.col-sm-3.pad [query-result-label]]
+        [:div.col-lg-2.col-sm-3.pad.pull-left [pager-buttons]]
         [:div.col-lg-3.col-sm-5.pad.pull-right [mark-buttons]]]])))

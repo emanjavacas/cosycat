@@ -128,9 +128,10 @@
          [bs/button
           (merge
            {:active (boolean filtered)
+            :style {:max-height "40px"}
             :onClick #(re-frame/dispatch [:update-filtered-users username (not filtered)])}
            opts)
-          (reagent/as-component [user-thumb href {:height "25px" :width "25px"}])]]))))
+          (reagent/as-component [user-thumb href {:height "20px" :width "20px"}])]]))))
 
 (defn filter-annotation-buttons []
   (let [filtered-users (re-frame/subscribe [:session :active-project :filtered-users])

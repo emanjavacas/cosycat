@@ -33,16 +33,14 @@
         throbbing? (re-frame/subscribe [:throbbing? :front-panel])]
     (fn []
       [:div.container-fluid
-       [:div.col-lg-1]
-       [:div.col-lg-10
-        [:div
+       [:div.row
+        [:div.col-lg-1]
+        [:div.col-lg-10
          (if @throbbing?
            [my-throbbing-panel]
            [bs/jumbotron
-            [:h2
-             {:style {:padding-bottom "50px"}}
-             "Projects"]
-            (if (= 1 (count @projects))
+            [:h2#projects {:style {:padding-bottom "30px"}} "Projects"]
+            (if (= 1 (count @projects)) ;default project
               [:div [no-projects username] [new-project-btn]]
-              [:div [projects-panel projects] [new-project-btn]])])]]
-       [:div.col-lg-1]])))
+              [:div [projects-panel projects] [new-project-btn]])])]
+        [:div.col-lg-1]]])))

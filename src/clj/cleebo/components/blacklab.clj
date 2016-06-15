@@ -103,28 +103,28 @@
       :to to})))
 
 (defn- bl-sort-query*
-  "sorts the entire hits of a previous query using `criterion` and `prop-name` 
+  "sorts the entire hits of a previous query using `criterion` and `attribute` 
   returning a range of hit-kwics (:result) specified by `from`, `to` and `context`"
   ([bl corpus from to context sort-map]
    (bl-sort-query* bl corpus from to context sort-map "default"))
-  ([bl corpus from to context {:keys [criterion prop-name]} query-id]
+  ([bl corpus from to context {:keys [criterion attribute]} query-id]
    (let [searcher (ensure-searcher! bl corpus)
          hits (get-hits bl query-id)
-         hits-range (bl/sort-query searcher hits from to context criterion prop-name)]
+         hits-range (bl/sort-query searcher hits from to context criterion attribute)]
      {:results (format-hits hits-range context)
       :from from
       :to to})))
 
 (defn- bl-sort-range*
   "sorts the a given range of hits from a previous query using `criterion`
-  and `prop-name` returning a range of hit-kwics (:result) 
+  and `attribute` returning a range of hit-kwics (:result) 
   specified by `from`, `to` and `context`"
   ([bl corpus from to context sort-map]
    (bl-sort-range* bl corpus from to context sort-map "default"))
-  ([bl corpus from to context {:keys [criterion prop-name]} query-id]
+  ([bl corpus from to context {:keys [criterion attribute]} query-id]
    (let [searcher (ensure-searcher! bl corpus)
          hits (get-hits bl query-id)
-         hits-range (bl/sort-range searcher hits from to context criterion prop-name)]
+         hits-range (bl/sort-range searcher hits from to context criterion attribute)]
      {:results (format-hits hits-range context)
       :from from
       :to to})))

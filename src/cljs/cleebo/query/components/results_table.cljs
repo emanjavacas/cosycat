@@ -8,18 +8,24 @@
             [react-bootstrap.components :as bs]
             [cleebo.utils :refer [highlight-annotation]]))
 
+(defn is-in-checked-hit [e]
+  (gclass/has (gdom/getFirstElementChild (gdom/getParentElement e)) "checked"))
+
+(defn get-hit-id [e]
+  (js/parseInt (gdataset/get (gdom/getParentElement e) "hit")))
+
 (defn on-mouse-down [mouse-down? highlighted?]
   (fn [event]
     (let [e   (aget event "target")
           btn (aget event "button")]
       (.preventDefault event)                                 ;avoid text selection
-      (when (and (zero? btn) (not (gclass/has e "ignore-mark"))) ;check btn type
+      (when (and (zero? btn) (not (is-in-checked-hit e)) (not (gclass/has e "ignore"))) ;check btn type
         (gclass/toggle e "highlighted")
         (swap! mouse-down? not)
         (reset! highlighted? (gclass/has e "highlighted"))
         (re-frame/dispatch
          [:mark-token
-          {:hit-id (js/parseInt (gdataset/get (gdom/getParentElement e) "hit"))
+          {:hit-id (get-hit-id e)
            :token-id (gdataset/get e "id")
            :flag @highlighted?}])))))
 
@@ -27,11 +33,11 @@
   (fn [event]
     (let [e   (aget event "target")
           btn (aget event "button")]
-      (when (and (zero? btn) @mouse-down? (not (gclass/has e "ignore-mark")))
+      (when (and (zero? btn) @mouse-down? (not (gclass/has e "ignore")) (not (is-in-checked-hit e)))
         (gclass/enable e "highlighted" @highlighted?)
         (re-frame/dispatch
          [:mark-token
-          {:hit-id (js/parseInt (gdataset/get (gdom/getParentElement e) "hit"))
+          {:hit-id (get-hit-id e)
            :token-id (gdataset/get e "id")
            :flag @highlighted?}])))))
 
@@ -39,7 +45,7 @@
   (fn [event]
     (let [btn (aget event "button")
           e   (aget event "target")]
-      (when (and (zero? btn) (not (gclass/has e "ignore-mark")))
+      (when (and (zero? btn) (not (gclass/has e "ignore")))
         (swap! mouse-down? not)))))
 
 (defn hit-token [{:keys [id word match marked anns]}]
@@ -48,7 +54,7 @@
     (fn [{:keys [id word match marked anns] :as token}]
       (let [highlighted (if marked "highlighted " "")
             color (when anns (highlight-annotation token @project @filtered-users-colors))
-            is-match (if match "info" "")]
+            is-match (when match "info")]
         [:td
          {:class (str highlighted is-match)
           :style {:box-shadow color}
@@ -62,25 +68,24 @@
 
 (defn results-row [hit-num tabindex  {:keys [hit id meta]}]
   (fn [hit-num tabindex {:keys [hit id meta]}]
-    [:tr {:data-hit id}
+    [:tr {:data-hit id :style {:opacity (if (:marked meta) 0.6 1)}}
      (concat
       ;; checkbox
       [^{:key (str hit-num "-check")}
-       [:td.ignore-mark
-        {:style {:width "20px" :background-color "#F9F9F9"}}
-        [:input.ignore-mark
-         {:type "checkbox"
-          :tab-index (inc tabindex)
-          :checked (:marked meta)
-          :on-change
-          #(let [flag (.-checked (.-target %))]
-             (re-frame/dispatch [:mark-hit {:hit-id id :flag flag}]))}]]
+       [:td.ignore
+        {:style {:width "20px" :background-color "#F9F9F9" :cursor "pointer"
+                 :color (if (:marked meta) "#158CBA" "black")}
+         :on-click #(let [elem (.-target %)
+                          flag (not (gclass/has elem "checked"))]
+                      (gclass/toggle elem "checked")
+                      (re-frame/dispatch [:mark-hit {:hit-id id :flag flag}]))}
+        [:i.zmdi.zmdi-edit.ignore]]
        ;; hit number
        ^{:key (str hit-num "-num")}
-       [:td.ignore-mark.snippet-trigger
+       [:td.ignore.snippet-trigger
         {:style {:width "20px" :background-color "#F9F9F9" :cursor "pointer"}
          :on-double-click (on-double-click hit-num)}
-        [:label.ignore-mark
+        [:label.ignore
          {:style {:font-weight "bold" :cursor "pointer"}}
          (inc hit-num)]]]
       ;; hit
