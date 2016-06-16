@@ -112,17 +112,17 @@
                               (map #(assoc % :hit-id id))))
                        @results-by-id)))))
 
-(defn get-all-users-info
+(defn get-users-info
   ([db] (cons (get-in db [:session :user-info]) (get-in db [:session :users])))
-  ([db by-name] (filter #(contains? by-name (:username %)) (get-all-users-info db))))
+  ([db by-name] (filter #(contains? by-name (:username %)) (get-users-info db))))
 
 (defn find-user [db username]
-  (first (get-all-users-info db #{username})))
+  (first (get-users-info db #{username})))
 
 (re-frame/register-sub
  :users
  (fn [db _]
-   (reaction (get-all-users-info @db))))
+   (reaction (get-users-info @db))))
 
 (re-frame/register-sub
  :user
@@ -143,7 +143,7 @@
  (fn [db _]
    (let [active-project-name (reaction (get-in @db [:session :active-project :name]))
          active-project (reaction (get-project-info @db @active-project-name))
-         users (reaction (get-all-users-info @db))
+         users (reaction (get-users-info @db))
          users-map (reaction (zipmap (map :username @users) @users))]
      (reaction (map #(get @users-map %) (map :username (:users @active-project)))))))
 
@@ -151,7 +151,7 @@
  :filtered-users-colors
  (fn [db _]
    (let [filtered-users (reaction (get-in @db [:session :active-project :filtered-users]))
-         filtered-users-info (reaction (get-all-users-info @db @filtered-users))]
+         filtered-users-info (reaction (get-users-info @db @filtered-users))]
      (reaction (zipmap (map :username @filtered-users-info)
                        (map #(get-in % [:avatar :dominant-color]) @filtered-users-info))))))
 

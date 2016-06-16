@@ -37,9 +37,8 @@
     (when (= 16 (.-keyCode event))
       (swap! shift? not))))
 
-(defn cell-class [{:keys [has-anns? is-match? is-selected?]}]
-  (str (when has-anns? "has-annotation ")
-       (when is-match? "info ")
+(defn hit-row-cell-class [{:keys [is-match? is-selected?]}]
+  (str (when is-match? "info ")
        (when is-selected? "highlighted")))
 
 (defn hit-number-cell [n hit-id open-hits]
@@ -62,12 +61,11 @@
              ^{:key (str hit-id "-" id)}
              [:td.unselectable        ;avoid text-selection
               {:tab-index 0
-               :class (cell-class {:has-anns? anns
-                                   :is-match? match
-                                   :is-selected? (contains? (get @selection hit-id) (->int id))})
+               :class (hit-row-cell-class
+                       {:is-match? match
+                        :is-selected? (contains? (get @selection hit-id) (->int id))})
                :on-key-down (on-key-shift shift?)
                :on-key-up (on-key-shift shift?)
-               ;; :on-double-click #(swap! open-hits disjconj hit-id)
                :on-click (on-click (->int id) hit-id selection shift?)}
               word])
            (prepend-cell
@@ -103,16 +101,16 @@
        word])))
 
 (defn queue-row
-  "component-fn for a hit row"
-  [{hit-id :id hit-map :hit hit-meta :meta} open-hits & args]
-  (fn queue-row [{hit-id :id hit-map :hit hit-meta :meta} open-hits &
+  "component-fn for a non active hit row"
+  [{hit-id :id hit :hit hit-meta :meta} open-hits & args]
+  (fn queue-row [{hit-id :id hit :hit hit-meta :meta} open-hits &
                  {:keys [row-number project-name]}]
     (into
      [:tr
       {:style {:background-color "#f5f5f5" :cursor "pointer"}
        :class "queue-row"
        :on-click #(swap! open-hits disjconj hit-id)}]
-     (-> (for [{:keys [id] :as token} (filter-dummy-tokens hit-map)]
+     (-> (for [{:keys [id] :as token} (filter-dummy-tokens hit)]
            ^{:key id} [token-cell token project-name])
          (prepend-cell
           {:key (str "dummy" hit-id)

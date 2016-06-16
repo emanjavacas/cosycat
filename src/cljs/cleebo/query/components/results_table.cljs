@@ -6,20 +6,24 @@
             [goog.dom.classes :as gclass]
             [goog.dom.dataset :as gdataset]
             [react-bootstrap.components :as bs]
-            [cleebo.utils :refer [highlight-annotation]]))
+            [cleebo.utils :refer [->box]]))
 
-(defn is-in-checked-hit [e]
+(defn is-in-checked-hit
+  "is current cell child inside a checked hit row"
+  [e]
   (gclass/has (gdom/getFirstElementChild (gdom/getParentElement e)) "checked"))
 
-(defn get-hit-id [e]
+(defn get-hit-id
+  "get hit id from hit row given a cell child"
+  [e]
   (js/parseInt (gdataset/get (gdom/getParentElement e) "hit")))
 
 (defn on-mouse-down [mouse-down? highlighted?]
   (fn [event]
     (let [e   (aget event "target")
           btn (aget event "button")]
-      (.preventDefault event)                                 ;avoid text selection
-      (when (and (zero? btn) (not (is-in-checked-hit e)) (not (gclass/has e "ignore"))) ;check btn type
+      (.preventDefault event)
+      (when (and (zero? btn) (not (is-in-checked-hit e)) (not (gclass/has e "ignore")))
         (gclass/toggle e "highlighted")
         (swap! mouse-down? not)
         (reset! highlighted? (gclass/has e "highlighted"))
@@ -33,7 +37,10 @@
   (fn [event]
     (let [e   (aget event "target")
           btn (aget event "button")]
-      (when (and (zero? btn) @mouse-down? (not (gclass/has e "ignore")) (not (is-in-checked-hit e)))
+      (when (and (zero? btn)
+                 @mouse-down?
+                 (not (gclass/has e "ignore"))
+                 (not (is-in-checked-hit e)))
         (gclass/enable e "highlighted" @highlighted?)
         (re-frame/dispatch
          [:mark-token
@@ -48,12 +55,21 @@
       (when (and (zero? btn) (not (gclass/has e "ignore")))
         (swap! mouse-down? not)))))
 
+(defn highlight-annotation
+  "if a given token has annotations it computes a color for the user with the most
+  annotations in that token"
+  [{anns :anns :as token} project-name color-map]
+  (let [filt-anns (filter #(contains? color-map (:username %)) (vals (anns project-name)))
+        [user _] (first (sort-by second > (frequencies (map :username filt-anns))))]
+    (if-let [color (get color-map user)]
+      (->box color))))
+
 (defn hit-token [{:keys [id word match marked anns]}]
-  (let [filtered-users-colors (re-frame/subscribe [:filtered-users-colors])
-        project (re-frame/subscribe [:session :active-project :name])]
+  (let [color-map (re-frame/subscribe [:filtered-users-colors])
+        project-name (re-frame/subscribe [:session :active-project :name])]
     (fn [{:keys [id word match marked anns] :as token}]
       (let [highlighted (if marked "highlighted " "")
-            color (when anns (highlight-annotation token @project @filtered-users-colors))
+            color (when anns (highlight-annotation token @project-name @color-map))
             is-match (when match "info")]
         [:td
          {:class (str highlighted is-match)

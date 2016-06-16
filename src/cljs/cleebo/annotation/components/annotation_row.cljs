@@ -16,7 +16,7 @@
 (defn spacer-row [] [:tr {:style {:height "10px"}}])
 
 (defn history-body [history]
-  (fn history-body [history]
+  (fn [history]
     [:tbody
      (doall
       (for [{{v :value} :ann user :username time :timestamp} (sort-by :timestamp > history)]
@@ -61,7 +61,7 @@
          [history-body history]
          [no-history-body])]])))
 
-(defn cell-style
+(defn annotation-cell-style
   [color-map username]
   (if-let [color (get color-map username)]
     {:box-shadow (->box (get color-map username))}
@@ -81,7 +81,7 @@
       :rootClose true
       :placement "bottom"}
      [:td.ann-cell       
-      {:style (cell-style @color-map username)}
+      {:style (annotation-cell-style @color-map username)}
       [key-val ann-map]]]))
 
 (defmethod annotation-cell "IOB"
@@ -96,7 +96,7 @@
       :rootClose true
       :placement "bottom"}
      [:td.ann-cell
-      {:style (cell-style @color-map username)}
+      {:style (annotation-cell-style @color-map username)}
       [:span (when (= B token-id) [key-val ann-map])]]]))
 
 (defmethod annotation-cell :default

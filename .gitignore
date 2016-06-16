@@ -4,7 +4,7 @@
 /resources/public/js/compiled
 /app-resources/
 /dev-resources/
-# /doc/paper/
+/doc/
 *~
 #*
 /.lein*
