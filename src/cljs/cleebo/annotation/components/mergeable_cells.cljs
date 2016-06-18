@@ -53,6 +53,7 @@
 
 (defn spread-cell [id metadata]
   (let [display (reagent/atom true)
+        
         target-chans (reagent/atom {})
         colspan (reagent/atom 1)
         ch (chan)]
