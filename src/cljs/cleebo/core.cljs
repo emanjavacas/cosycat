@@ -85,7 +85,8 @@
         :id "dropdown"
         :class (if (= @active target) "active")
         :title (reagent/as-component [icon-label icon label])}
-       (for [[idx {:keys [label href on-select style] :as args}] (map-indexed vector children)
+       (for [[idx {:keys [label href on-select style] :as args}]
+             (map-indexed vector children)
              :let [k (str label idx)]]
          ^{:key k} [bs/menu-item
                     (merge {:eventKey k
@@ -140,7 +141,7 @@
           [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"])
         (when-not (or (= @active-panel :front-panel) (empty? @projects))
           [projects-dropdown projects active-project])
-;        [debug-dropdown]
+        ;; [debug-dropdown]
         [navlink :exit "#/exit" "Exit" "zmdi-power"]]])))
 
 (defn main-panel []

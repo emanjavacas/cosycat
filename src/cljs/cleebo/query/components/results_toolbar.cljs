@@ -40,12 +40,6 @@
     :style {:font-size "12px" :height "34px"}}
    "Mark hits"])
 
-(defn unmark-all-hits-btn []
-  [bs/button
-   {:onClick #(re-frame/dispatch [:unmark-all-hits])
-    :style {:font-size "12px" :height "34px"}}
-   "Unmark hits"])
-
 (defn annotation-hit-button []
   (let [marked-hits (re-frame/subscribe [:marked-hits])]
     (fn []
@@ -62,7 +56,6 @@
 (defn mark-buttons []
   [bs/button-toolbar
    [mark-all-hits-btn]
-   [unmark-all-hits-btn]
    [annotation-modal-button]])
 
 (defn results-toolbar []
@@ -70,6 +63,6 @@
     (fn []
       [:div.container-fluid
        [:div.row
-        [:div.col-lg-2.col-sm-3.pad [query-result-label]]
-        [:div.col-lg-2.col-sm-3.pad.pull-left [pager-buttons]]
-        [:div.col-lg-3.col-sm-5.pad.pull-right [mark-buttons]]]])))
+        [:div.col-lg-2.col-sm-3 [query-result-label]]
+        [:div.col-lg-2.col-sm-3.pull-left [pager-buttons]]
+        [:div.col-lg-3.pull-right [mark-buttons]]]])))

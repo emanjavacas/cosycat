@@ -22,6 +22,7 @@
   (fn [event]
     (let [e   (aget event "target")
           btn (aget event "button")]
+      (.log js/console (gclass/has e "ignore"))
       (.preventDefault event)
       (when (and (zero? btn) (not (is-in-checked-hit e)) (not (gclass/has e "ignore")))
         (gclass/toggle e "highlighted")
@@ -92,8 +93,9 @@
         {:style {:width "20px" :background-color "#F9F9F9" :cursor "pointer"
                  :color (if (:marked meta) "#158CBA" "black")}
          :on-click #(let [elem (.-target %)
-                          flag (not (gclass/has elem "checked"))]
-                      (gclass/toggle elem "checked")
+                          parent (gdom/getParentElement elem) 
+                          flag (not (gclass/has parent "checked"))]
+                      (gclass/toggle parent "checked")
                       (re-frame/dispatch [:mark-hit {:hit-id id :flag flag}]))}
         [:i.zmdi.zmdi-edit.ignore]]
        ;; hit number

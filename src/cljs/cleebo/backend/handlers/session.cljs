@@ -2,6 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [ajax.core :refer [GET]]
+            [cleebo.backend.db :refer [default-db]]
             [cleebo.backend.middleware :refer [standard-middleware]]
             [cleebo.app-utils :refer [default-project-name]]
             [cleebo.utils :refer [format]]
@@ -13,6 +14,20 @@
  (fn [db [_ path value]]
    (let [session (:session db)]
      (assoc db :session (assoc-in session path value)))))
+
+(re-frame/register-handler
+ :reset-session
+ standard-middleware
+ ;; todo: this should fetch user-defaults from db
+ (fn [db [_ current-project]]
+   (timbre/debug current-project)
+   (if (= current-project (get-in db [:session :active-project :name]))
+     db
+     (-> db
+         (assoc-in [:session :query-panel] (get-in default-db [:session :query-panel]))
+         (assoc-in [:session :query-results] (get-in default-db [:session :query-results]))
+         (assoc-in [:session :results-by-id] (get-in default-db [:session :results-by-id]))
+         (assoc-in [:session :results] (get-in default-db [:session :results]))))))
 
 (re-frame/register-handler
  :update-session

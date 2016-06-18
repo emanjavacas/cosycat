@@ -1,6 +1,7 @@
 (ns cleebo.query.page
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
+            [react-bootstrap.components :as bs]
             [cleebo.utils :refer [format]]
             [cleebo.query.components.highlight-error :refer [highlight-error]]
             [cleebo.query.components.query-field :refer [query-field]]
@@ -60,36 +61,59 @@
           (no-results @query-str @query-size) [no-results-panel query-str]
           (has-results @query-size)           [results-table])))))
 
+(defn unmark-all-hits-btn []
+  [bs/button
+   {:onClick #(re-frame/dispatch [:unmark-all-hits])
+    :style {:font-size "12px" :height "34px"}}
+   "Unmark hits"])
+
 (defn label-closed-header [label]
-  (fn [] [:div label]))
+  (fn []
+    [:div.container-fluid [:div.row [:div.col-lg-10 [:div label]]]]))
+
+(defn query-field-closed-header []
+  (let [query-str (re-frame/subscribe [:session :query-results :query-str])]
+    (fn []
+      [:div.container-fluid
+       [:div.row
+        [:div.col-lg-10 (str "Query Field (" @query-str ")")]]])))
 
 (defn results-closed-header []
   (let [query-size (re-frame/subscribe [:session :query-results :query-size])]
     (fn []
-      [:div (str "Query results (Displaying " @query-size " hits)")])))
+      [:div.container-fluid
+       [:div.row
+        [:div.col-lg-10
+         (str "Query results (Displaying " @query-size " Hits)")]]])))
 
 (defn annotation-closed-header []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
     (fn []
-      [:div (str "Annotation panel (" (count @marked-hits) " selected hits)")])))
+      [:div.container-fluid
+       [:div.row
+        [:div.col-lg-10
+         (str "Annotation panel (" (count @marked-hits) " selected hits)")]]])))
 
 (defn annotation-open-header []
   (fn []
     [:div.container-fluid
      [:div.row
-      [:div.col-lg-5.pull-left [filter-annotation-buttons]]]]))
+      [:div.col-lg-2.pull-left [filter-annotation-buttons]]
+      [:div.col-lg-2]
+      [:div.col-lg-3.pull-right [unmark-all-hits-btn]]]]))
 
 (defn query-panel []
   (let [query-size (re-frame/subscribe [:session :query-results :query-size])
-        marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
+        marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])
+        throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
     (fn []
       [:div.container
        {:style {:width "100%" :padding "0px 10px 0px 10px"}}
        [:div.row [minimize-panel
                   {:child query-field
-                   :open-header (label-closed-header "Query field")
-                   :closed-header (label-closed-header "Query field")}]]
-       (when (has-results @query-size)
+                   :open-header (label-closed-header "Query Field")
+                   :closed-header query-field-closed-header}]]
+       (when (or (has-results @query-size) @throbbing?)
          [:div.row [minimize-panel
                     {:child results-frame
                      :open-header results-toolbar
@@ -99,5 +123,5 @@
                     {:child annotation-panel
                      :closed-header annotation-closed-header
                      :open-header annotation-open-header
-                     :init false}]])
+                     :init true}]])
        [snippet-modal]])))

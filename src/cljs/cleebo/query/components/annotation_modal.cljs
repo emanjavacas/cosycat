@@ -31,7 +31,7 @@
      {:width "100%"}
      [:tbody
       [:tr
-       [:td "Annotate tokens"]
+       [:td [:i.zmdi.zmdi-edit]]
        [:td
         [autocomplete-jq
          {:source :complex-source
@@ -107,5 +107,5 @@
                    :cursor (if (disabled? marked-tokens) "auto" "auto")
                    :height "34px"}
            :onClick #(when-not (disabled? marked-tokens) (swap! show? not))}
-          [:div "Annotate Tokens"
+          [:div [:i.zmdi.zmdi-edit]
            [annotation-modal show? marked-tokens]]]]))))
