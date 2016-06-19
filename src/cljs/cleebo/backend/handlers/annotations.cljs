@@ -194,9 +194,10 @@
      :ann-map ann-maps}))
 
 (defmulti handler
-  "Variadic handler for successfull annotations. Dispatches are based on whether
+  "Variadic handler for successful annotations. Dispatches are based on whether
   ann-map is a vector (bulk annotation payload) or a map (single annotation payload)"
   type)
+
 (defmethod handler cljs.core/PersistentArrayMap
   [{status :status {hit-id :hit-id ann-map :ann-map :as data} :data
     {{B :B O :O :as scope} :scope type :type} :span reason :reason e :e}]
@@ -206,6 +207,7 @@
             [:notify {:message (case type
                                  "token" (get-msg [:annotation :error :token] scope reason)
                                  "IOB" (get-msg [:annotation :error :IOB] B O reason))}])))
+
 (defmethod handler cljs.core/PersistentVector
   [payloads]
   (doseq [payload payloads]

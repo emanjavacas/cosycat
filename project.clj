@@ -19,7 +19,8 @@
                   :exclusions [cljsjs/react]]
                  [cljsjs/react-bootstrap "0.28.1-1"
                   :exclusions [org.webjars.bower/jquery cljsjs/react]]
-                 [cljsjs/react-with-addons "0.14.3-0"] 
+                 [cljsjs/react-with-addons "0.14.3-0"]
+                 [cljsjs/react-autosuggest "3.5.1-0"]                 
                  [re-frame "0.7.0-alpha"]
                  [secretary "1.2.3"]
                  [ring "1.4.0" :exclusions [ring/ring-jetty-adapter]]                 

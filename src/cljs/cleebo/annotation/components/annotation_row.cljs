@@ -3,17 +3,13 @@
             [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cleebo.utils :refer [human-time ->int filter-dummy-tokens ->box]]
-            [cleebo.components :refer [user-thumb prepend-cell dummy-cell]]
-            [schema.core :as s]
+            [cleebo.components :refer [user-thumb prepend-cell]]
             [taoensso.timbre :as timbre]))
 
 (defn key-val
   [{{k :key v :value} :ann user :username time :timestamp}]
   [:div [bs/label k]
-   [:span {:style {:text-align "right" :margin-left "7px"}}
-    v]])
-
-(defn spacer-row [] [:tr {:style {:height "10px"}}])
+   [:span {:style {:text-align "right" :margin-left "7px"}} v]])
 
 (defn history-body [history]
   (fn [history]
@@ -98,24 +94,7 @@
       {:style (annotation-cell-style @color-map username)}
       [:span (when (= B (->int token-id)) [key-val ann-map])]]]))
 
-(defmethod annotation-cell :default
-  [args-map]
-  [:td ""])
-
-(defn parse-ann-type
-  "transforms an ann-map into a a map representing the ann key and the span type"
-  [{{key :key} :ann {type :type} :span}]
-  {:key key :type type})
-
-(defn get-anns-in-project [anns project-name]
-  (-> anns (get project-name) vals))
-
-(defn ann-types
-  "extracts the unique annotation keys in a given hit"
-  [{hit :hit} project-name]
-  (->> (mapcat (fn [{anns :anns :as token}] (get-anns-in-project anns project-name)) hit)
-       (map parse-ann-type)
-       (into (hash-set))))
+(defmethod annotation-cell :default [_] [:td ""])
 
 (defn annotation-row [hit ann-key project-name]
   (let [color-map (re-frame/subscribe [:filtered-users-colors])]
@@ -126,28 +105,3 @@
                 [annotation-cell {:ann-map   (get-in anns [project-name ann-key])
                                   :token-id  token-id
                                   :color-map color-map}]))])))
-
-(defn ann-rows [{hit-id :id :as hit} project-name]
-  (for [{key :key} (sort-by (juxt :type :key) > (ann-types hit project-name))]
-    ^{:key (str key hit-id)}
-    [annotation-row hit key project-name]))
-
-(defn annotation-rows
-  "build component-fns [:tr] for each annotation type in a given hit"
-  [{hit-id :id :as hit-map} project-name]
-  (for [{key :key} (sort-by (juxt :type :key) > (ann-types hit-map project-name))]
-    {:key (str key hit-id)
-     :component
-     (fn annotation-row-component [hit open-hits & args]
-       (let [users-colors (re-frame/subscribe [:filtered-users-colors])]
-         (fn [{hit :hit hit-id :id} open-hits & {:keys [project-name]}]
-           (into
-            [:tr.ann-row]
-            (-> (doall (for [{token-id :id anns :anns} (filter-dummy-tokens hit)]
-                         ^{:key (str key hit-id token-id)}
-                         [annotation-cell {:ann-map  (get-in anns [project-name key])
-                                           :token-id token-id
-                                           :color-map users-colors}]))
-                (prepend-cell
-                 {:key (str "dummy" hit-id)
-                  :child dummy-cell}))))))}))

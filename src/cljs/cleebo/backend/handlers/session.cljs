@@ -24,7 +24,7 @@
    (if (= current-project (get-in db [:session :active-project :name]))
      db
      (-> db
-         (assoc-in [:session :query-panel] (get-in default-db [:session :query-panel]))
+         (assoc-in [:session :query-opts] (get-in default-db [:session :query-opts]))
          (assoc-in [:session :query-results] (get-in default-db [:session :query-results]))
          (assoc-in [:session :results-by-id] (get-in default-db [:session :results-by-id]))
          (assoc-in [:session :results] (get-in default-db [:session :results]))))))
