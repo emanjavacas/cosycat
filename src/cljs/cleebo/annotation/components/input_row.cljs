@@ -7,7 +7,7 @@
             [cleebo.autocomplete :refer [autocomplete-jq]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
-(def border "1px solid grey")
+(def border "1px solid darkgray")
 
 (defn assoc-metadata! [metadata & bindings]
   (doseq [[key val] (partition 2 bindings)]
@@ -60,8 +60,7 @@
   (let [text (reagent/atom "")]
     (fn [hit-id token-id chans]
       [:input.from-control.input-cell
-       {:style {:width "100%" :padding "0px" :margin "0px"}
-        :type "text"
+       {:type "text"
         :name "input-row"
         :on-key-down (on-key-down hit-id (map ->int (keys @chans)))}])))
 
@@ -71,7 +70,10 @@
     (handle-chan-events token-id display chans)
     (fn [hit-id token-id metadata]
       [:td
-       {:style {:display (if @display "table-cell" "none") :border border}
+       {:style {:display (if @display "table-cell" "none")
+                :padding "0px"
+                :min-width "100%"
+                :border border}
         :colSpan (count @chans)
         :on-mouse-down #(input-mouse-down metadata (@chans token-id))
         :on-mouse-enter #(input-mouse-over token-id metadata chans)
@@ -81,10 +83,11 @@
 (defn input-row [{hit :hit hit-id :id meta :meta}]
   (let [metadata {:mouse-down (reagent/atom false) :source (reagent/atom nil)}]
     (fn [{hit :hit hit-id :id meta :meta}]
-      [:tr
-       {:style {:height "100%"}
-        :on-mouse-leave #(reset-metadata! metadata)
-        :on-mouse-up #(reset-metadata! metadata)}
-       (doall (for [{token-id :id word :word match :match} (filter-dummy-tokens hit)]
-                ^{:key (str hit-id "-" token-id)}
-                [input-cell hit-id token-id metadata]))])))
+      (into [:tr
+             {:style {:width "100%"}
+              :on-mouse-leave #(reset-metadata! metadata)
+              :on-mouse-up #(reset-metadata! metadata)}]
+            (-> (for [{token-id :id word :word match :match} (filter-dummy-tokens hit)]
+                  ^{:key (str hit-id "-" token-id)}
+                  [input-cell hit-id token-id metadata])
+                (prepend-cell {:key (str hit-id "first") :child dummy-cell}))))))

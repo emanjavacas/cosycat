@@ -85,8 +85,8 @@
     [:td ""]))
 
 (defn prepend-cell
+  "prepend a cell `child` to a seq of siblings (useful for prepending :td in a :tr)"
   [siblings {:keys [key child opts]}]
-;  {:pre [(vector? opts)]}
   (vec (cons ^{:key k} (apply merge [child] opts) siblings)))
 
 (defn notification-child
@@ -142,9 +142,7 @@
                     :let [filtered (contains? @filtered-users username)]]
                 ^{:key username} [filter-annotation-btn username filtered]))])))
 
-(defn- default-header []
-  (fn []
-    [:div ""]))
+(defn- default-header [] [:div ""])
 
 (defn minimize-panel
   [{:keys [child args init open-header closed-header]
@@ -205,15 +203,3 @@
              (for [backup history
                    :let [timestamp (.parse js/Date backup)]]
                ^{:key timestamp} [load-from-ls-row backup])]]]))]]))
-
-;; [bs/modal-footer
-;;  [bs/button-toolbar
-;;   {:className "pull-right"}
-;;   [bs/button
-;;    ;; {:on-click #(let [dump (ls/recover-db)]
-;;    ;;               (re-frame/dispatch [:load-db dump])
-;;    ;;               (re-frame/dispatch [:close-init-modal]))}
-;;    "yes"]
-;;   [bs/button
-;;    {:on-click #(re-frame/dispatch [:close-ls-modal])}
-;;    "no"]]]

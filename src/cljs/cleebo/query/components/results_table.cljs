@@ -120,6 +120,7 @@
        {:responsive true
         :striped true
         :id "table-results"
+        :on-mouse-leave #(reset! mouse-down? false)
         :on-mouse-down (on-mouse-down mouse-down? highlighted?)        
         :on-mouse-over (on-mouse-over mouse-down? highlighted?)
         :on-mouse-up (on-mouse-up mouse-down? highlighted?)
