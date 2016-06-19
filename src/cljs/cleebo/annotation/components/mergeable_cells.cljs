@@ -3,10 +3,11 @@
             [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [cleebo.utils :refer [filter-dummy-tokens]]
+            [cleebo.annotation.components.annotation-row :refer [ann-rows annotation-row ann-types]]
             [react-bootstrap.components :as bs])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
-(def border "1px solid black")
+(def border "1px solid grey")
 
 (defn hit-row [{hit :hit hit-id :id meta :meta}]
   (fn [{hit :hit hit-id :id meta :meta}]
@@ -25,47 +26,48 @@
 (defn spread-mouse-down [metadata ch]
   (assoc-metadata! metadata :mouse-down true :source ch))
 
-(defn spread-mouse-over [metadata ch colspan id]
-  (when (and @(:mouse-down metadata) (not (= ch @(:source metadata))))
-    (put! @(:source metadata) [:merge {:colspan @colspan :ch ch :id id}])
-    (put! ch [:display false])))
+(defn spread-mouse-over [id metadata chans]
+  (let [ch (@chans id)
+        source-ch @(:source metadata)]
+    (when (and @(:mouse-down metadata) (not (= ch source-ch)))
+      (put! source-ch [:merge @chans])
+      (put! ch [:display false])
+      (reset! chans {id ch}))))
 
-(defn unmerge-cells [colspan target-chans]
-  (doseq [[id ch] @target-chans] (put! ch [:display true]))
-  (reset! colspan 1)
-  (reset! target-chans {}))
+(defn unmerge-cells [id chans]
+  (doseq [[id ch] @chans] (put! ch [:display true]))
+  (reset! chans {id (@chans id)}))
 
-(defn handle-display-event [display flag colspan target-chans]
-  (reset! display flag))
-
-(defn handle-merge-event
-  [{target-colspan :colspan ch :ch id :id} colspan target-chans]
-  (swap! colspan + target-colspan)
-  (swap! target-chans assoc id ch))
-
-(defn handle-chan-events [ch display colspan target-chans]
+(defn handle-chan-events [id display chans]
   (go-loop []
-    (let [[action data] (<! ch)]
+    (let [[action data] (<! (@chans id))]
       (case action
-        :display (handle-display-event display data colspan target-chans)
-        :merge   (handle-merge-event data colspan target-chans))
+        :display (reset! display data)
+        :merge   (swap! chans merge data))
       (recur))))
+
+(defn input []
+  (let [text (reagent/atom "asd")]
+    (fn []
+      [:input.from-control
+       {:style {:width "100%"}
+        :type "text"
+        :name "input-row"
+        :on-change #(.log js/console %)
+        :on-key-down #(.log js/console %)}])))
 
 (defn spread-cell [id metadata]
   (let [display (reagent/atom true)
-        
-        target-chans (reagent/atom {})
-        colspan (reagent/atom 1)
-        ch (chan)]
-    (handle-chan-events ch display colspan target-chans)
+        chans (reagent/atom {id (chan)})]
+    (handle-chan-events id display chans)
     (fn [id metadata]
       [:td
        {:style {:display (if @display "table-cell" "none") :border border}
-        :colSpan @colspan
-        :on-mouse-down #(do (.preventDefault %) (spread-mouse-down metadata ch))
-        :on-mouse-enter #(spread-mouse-over metadata ch colspan id)
-        :on-double-click #(unmerge-cells colspan target-chans)}
-       (apply str id (keys @target-chans))])))
+        :colSpan (count @chans)
+        :on-mouse-down #(spread-mouse-down metadata (@chans id))
+        :on-mouse-enter #(spread-mouse-over id metadata chans)
+        :on-double-click #(unmerge-cells id chans)}
+       [input]])))
 
 (defn spread-row [{hit :hit hit-id :id meta :meta}]
   (let [metadata {:mouse-down (reagent/atom false) :source (reagent/atom nil)}]
@@ -77,18 +79,27 @@
                 ^{:key (str hit-id "-" id)}
                 [spread-cell id metadata]))])))
 
-(defn ann-comp [marked-hit]
-  (fn [marked-hit]
-    [bs/table
-     {:style {:width "100%"}}
-     [:thead]
-     [:tbody
-      [hit-row marked-hit]
-      [spread-row marked-hit]]]))
+(defn ann-comp [{hit-id :id :as hit} project-name]
+  (let [ann-keys (sort-by (juxt :type :key) > (ann-types hit project-name))
+        rows (concat [{:component hit-row :k (str "hit" hit-id)}]
+                     [{:component spread-row :k (str "spread" hit-id)}]
+                     (for [{ann-key :key} ann-keys]
+                       {:component annotation-row :ann-key ann-key
+                        :k (str ann-key hit-id)}))]
+    (fn [hit project-name]
+      [bs/table
+       {:style {:width "100%"}}
+       [:thead]
+       [:tbody
+        (doall (for [{:keys [component k ann-key]} rows]
+                 ^{:key k}
+                 [component hit ann-key project-name]))]])))
 
-(defn annotation-component [marked-hits]
-  (fn [marked-hits]
-    [:div.container-fluid
-     (doall (for [{id :id :as hit} @marked-hits]
-              ^{:key (str "hit-" id)} [ann-comp hit]))]))
+(defn annotation-component [hits]
+  (let [project-name (re-frame/subscribe [:session :active-project :name])]
+    (fn [hits]
+      [:div.container-fluid
+       (doall (for [{id :id :as hit} @hits]
+                ^{:key (str "hit-" id)}
+                [ann-comp hit @project-name]))])))
 
