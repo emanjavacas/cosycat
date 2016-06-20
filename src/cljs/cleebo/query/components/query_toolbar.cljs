@@ -1,42 +1,12 @@
-(ns cleebo.query.components.query-field
+(ns cleebo.query.components.query-toolbar
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [clojure.string :as str]
             [react-bootstrap.components :as bs]
-            [cleebo.utils :refer [->map by-id ->default-map]]
+            [cleebo.utils :refer [->map by-id]]
             [cleebo.query-parser :refer [missing-quotes]]
             [cleebo.components :refer [dropdown-select]]
             [taoensso.timbre :as timbre]))
-
-(defn on-click-sort [route]
-  (fn []
-    (re-frame/dispatch [:query-sort route :results-frame])))
-
-(defn sort-buttons []
-  (let [criterion (re-frame/subscribe [:session :query-opts :criterion])
-        attribute (re-frame/subscribe [:session :query-opts :attribute])
-        corpus (re-frame/subscribe [:session :query-opts :corpus])]
-    (fn []
-      [bs/button-toolbar
-       {:justified true}
-       [dropdown-select
-        {:label "sort by: "
-         :header "Select criterion"
-         :model @criterion
-         :options (->default-map ["match" "left-context" "right-context"])
-         :select-fn (fn [k] (re-frame/dispatch [:set-session [:query-opts :criterion] k]))}]
-       [dropdown-select
-        {:label "sort prop: "
-         :header "Select property"
-         :options (->default-map ["word" "pos" "lemma"]);[TODO:This is corpus-dependent]
-         :model @attribute
-         :select-fn (fn [k] (re-frame/dispatch [:set-session [:query-opts :attribute] k]))}]
-       [bs/button
-        {:onClick (on-click-sort :sort-range)}
-        "Sort page"]
-       [bs/button
-        {:onClick (on-click-sort :sort-query)}
-        "Sort all"]])))
 
 (defn on-select [query-opt & {:keys [has-query?]}]
   (fn [v]
@@ -117,32 +87,28 @@
     (when-not (zero? (count query-str))
       (trigger-query query-str))))
 
-(defn query-field []
+(defn query-toolbar []
   (let [query-str (re-frame/subscribe [:session :query-results :query-str])
         query-str-atom (reagent/atom @query-str)]
     (fn []
-      [:div.container-fluid
-       [:div.row
-        [:div.col-lg-5.col-sm-7
-         [query-opts-menu]]
-        [:div.col-lg-7.col-sm-5
-         [:div.input-group
-          [:input#query-str.form-control.form-control-no-border
-           {:style {:width "100%"}
-            :type "text"
-            :name "query"
-            :value @query-str-atom
-            :placeholder "Example: [pos='.*\\.']" ;remove?
-            :autoCorrect "false"
-            :autoCapitalize "false"
-            :autoComplete "false"
-            :spellCheck "false"
-            :on-change #(reset! query-str-atom (.. % -target -value))
-            :on-key-press on-key-press}]
-          [:span.input-group-addon
-           {:on-click on-click-search
-            :style {:cursor "pointer"}}
-           [bs/glyphicon {:glyph "search"}]]]]]
-       [:div.row
-        {:style {:margin-top "10px"}}
-        [:div.col-lg-12 [sort-buttons]]]]))) ;to do, add filter possibilities
+      [:div.row
+       [:div.col-lg-5.col-sm-7
+        [query-opts-menu]]
+       [:div.col-lg-7.col-sm-5
+        [:div.input-group
+         [:input#query-str.form-control.form-control-no-border
+          {:style {:width "100%"}
+           :type "text"
+           :name "query"
+           :value @query-str-atom
+           :placeholder "Example: [pos='.*\\.']" ;remove?
+           :autoCorrect "false"
+           :autoCapitalize "false"
+           :autoComplete "false"
+           :spellCheck "false"
+           :on-change #(reset! query-str-atom (.. % -target -value))
+           :on-key-press on-key-press}]
+         [:span.input-group-addon
+          {:on-click on-click-search
+           :style {:cursor "pointer"}}
+          [bs/glyphicon {:glyph "search"}]]]]]))) ;to do, add filter possibilities

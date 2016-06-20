@@ -92,11 +92,7 @@
        [:td.ignore
         {:style {:width "20px" :background-color "#F9F9F9" :cursor "pointer"
                  :color (if (:marked meta) "#158CBA" "black")}
-         :on-click #(let [elem (.-target %)
-                          parent (gdom/getParentElement elem) 
-                          flag (not (gclass/has parent "checked"))]
-                      (gclass/toggle parent "checked")
-                      (re-frame/dispatch [:mark-hit {:hit-id id :flag flag}]))}
+         :on-click #(re-frame/dispatch [:mark-hit {:hit-id id :flag (not (:marked meta))}])}
         [:i.zmdi.zmdi-edit.ignore]]
        ;; hit number
        ^{:key (str hit-num "-num")}

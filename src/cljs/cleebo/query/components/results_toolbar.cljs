@@ -61,8 +61,7 @@
 (defn results-toolbar []
   (let [filtered-users (re-frame/subscribe [:session :active-project :filtered-users])]
     (fn []
-      [:div.container-fluid
-       [:div.row
-        [:div.col-lg-2.col-sm-3 [query-result-label]]
-        [:div.col-lg-2.col-sm-3.pull-left [pager-buttons]]
-        [:div.col-lg-3.pull-right [mark-buttons]]]])))
+      [:div.row
+       [:div.col-lg-2.col-sm-3 [query-result-label]]
+       [:div.col-lg-2.col-sm-3.pull-left [pager-buttons]]
+       [:div.col-lg-3.pull-right [mark-buttons]]])))

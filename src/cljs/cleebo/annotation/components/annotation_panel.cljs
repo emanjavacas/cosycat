@@ -68,7 +68,7 @@
 (defn annotation-panel []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])
         project-name (re-frame/subscribe [:session :active-project :name])
-        open-hits (reagent/atom (into (hash-set) (map :id @marked-hits)))]
+        open-hits (reagent/atom #{})]
     (fn []
       [:div.container-fluid
        (doall (for [{hit-id :id :as hit} @marked-hits]

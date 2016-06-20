@@ -8,23 +8,23 @@
 
 (defn key-val
   [{{k :key v :value} :ann user :username time :timestamp}]
-  [:div [bs/label k]
-   [:span {:style {:text-align "right" :margin-left "7px"}} v]])
+  [:div
+   [:span {:style {:text-align "right" :margin-left "7px"}} [bs/label v]]])
 
 (defn history-body [history]
   (fn [history]
     [:tbody
      (doall
-      (for [{{v :value} :ann user :username time :timestamp} (sort-by :timestamp > history)]
-        ^{:key (str v time)}
+      (for [{{value :value} :ann :as ann} (sort-by :timestamp > history)]
+        ^{:key (str value (:timestamp ann))}
         [:tr {:style {:padding "50px"}}
-         [:td [bs/label v]]
+         [:td [bs/label value]]
          [:td {:style {:width "25px"}}]
          [:td
-          [:span.text-muted user]
+          [:span.text-muted (:username ann)]
           [:span
            {:style {:margin-left "10px"}}
-           (human-time time)]]]))]))
+           (human-time (:timestamp ann))]]]))]))
 
 (defn no-history-body []
   (let [editing? (reagent/atom false)]
@@ -108,4 +108,4 @@
              [annotation-cell {:ann-map   (get-in anns [project-name ann-key])
                                :token-id  token-id
                                :color-map color-map}])
-           (prepend-cell {:key (str ann-key) :child ann-key-cell :opts ann-key}))))))
+           (prepend-cell {:key (str ann-key) :child ann-key-cell :opts [ann-key]}))))))
