@@ -4,7 +4,7 @@
             [react-bootstrap.components :as bs]
             [cleebo.utils :refer [nbsp ->map]]
             [cleebo.components :refer [dropdown-select]]
-            [cleebo.query.components.query-field
+            [cleebo.query.components.query-toolbar
              :refer [corpus-select context-select size-select]]
             [cleebo.settings.components.shared-components
              :refer [row-component]]))
