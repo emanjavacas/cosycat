@@ -13,7 +13,6 @@
    (update-in db [:session :user-info :projects] conj project)))
 
 (defn get-project-info [db project-name]
-  {:post [true?]}
   (first (filter #(= project-name (:name %))
                  (get-in db [:session :user-info :projects]))))
 

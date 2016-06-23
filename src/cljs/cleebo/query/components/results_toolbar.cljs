@@ -40,19 +40,6 @@
     :style {:font-size "12px" :height "34px"}}
    "Mark hits"])
 
-(defn annotation-hit-button []
-  (let [marked-hits (re-frame/subscribe [:marked-hits])]
-    (fn []
-      (let [disabled? (fn [marked-hits] (zero? (count @marked-hits)))]
-        [bs/overlay-trigger
-         {:overlay (disabled-button-tooltip #(disabled? marked-hits) "No hits selected!")
-          :placement "bottom"}
-         [bs/button
-          {:bsStyle "primary"
-           :style (when (disabled? marked-hits) {:opacity 0.65 :cursor "auto"})
-           :onClick #(when-not (disabled? marked-hits) (nav! "#/annotation"))}
-          "Annotate hits"]]))))
-
 (defn mark-buttons []
   [bs/button-toolbar
    [mark-all-hits-btn]

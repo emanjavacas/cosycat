@@ -7,8 +7,7 @@
                          :snippet-delta 10}}
    :history {:ws []
              :query []}
-   :session {:init-session false
-             :active-panel :front-panel
+   :session {:active-panel :front-panel
              :query-opts {:corpus ""
                           :context 5
                           :size 10

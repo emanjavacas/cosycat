@@ -51,4 +51,3 @@
       (doseq [k (drop 9 dbs)]
         (delete k)))
     (re-frame/dispatch [:dump-db])))
-

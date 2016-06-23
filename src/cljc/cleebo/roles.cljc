@@ -33,6 +33,5 @@
 (defn check-project-role [action role]
   (check-role project-roles action role))
 
-(defn check-annotation-update-role
-  [action role]
+(defn check-annotation-update-role [action role]
   (check-role annotation-roles action role))

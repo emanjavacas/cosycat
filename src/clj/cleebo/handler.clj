@@ -64,7 +64,7 @@
 (defn is-ajax
   "not sure how robust this is"
   [{headers :headers :as req}]
-  (timbre/debug headers)
+  ;; (timbre/debug headers)
   (boolean (= "XMLHttpRequest" (get headers "X-Requested-With"))))
 
 ;;; middleware
@@ -73,14 +73,14 @@
     (try
       (handler req)
       (catch Throwable t
-        (error-page
-         {:status 500
-          :title "Something very bad happened!"
-          :message (str (class t))})
         (if (is-ajax req)
           {:status 500
            :body {:message "Oops! Something bad happened!"
-                  :data {:exception (str (class t)) :type :internal-error}}})))))
+                  :data {:exception (str (class t)) :type :internal-error}}}
+          (error-page
+           {:status 500
+            :title "Something very bad happened!"
+            :message (str (class t))}))))))
 
 (defn wrap-base [handler]
   (-> handler   

@@ -6,7 +6,7 @@
             [cleebo.utils :refer [get-token-id ->int deep-merge-with]]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema cpos-anns-schema]]
             [cleebo.components.db :refer [new-db colls]]
-            [cleebo.db.projects :refer [new-project find-project]]
+            [cleebo.db.projects :refer [new-project find-project-by-name]]
             [cleebo.roles :refer [check-annotation-update-role]]
             [schema.coerce :as coerce]))
 
@@ -25,7 +25,8 @@
   (fn [db {{type :type} :span}] type))
 
 (defn overwrite-span-exception [scope]
-  (ex-info "Attempt to overwrite span ann with token ann" {:scope scope :reason :wrong-update}))
+  (ex-info "Attempt to overwrite span ann with token ann"
+           {:scope scope :reason :wrong-update}))
 
 (defmethod find-ann-id "token"
   [{db :db} {{scope :scope} :span project :project {k :key} :ann}]
@@ -46,10 +47,12 @@
         first)))
 
 (defn overwrite-token-exception [scope]
-  (ex-info "Attempt to overwrite token ann with span ann" {:scope scope :reason :wrong-update}))
+  (ex-info "Attempt to overwrite token ann with span ann"
+           {:scope scope :reason :wrong-update}))
 
 (defn overlapping-span-exception [source-scope scope]
-  (ex-info "Overlapping span" {:source-scope source-scope :scope scope :reason :wrong-update}))
+  (ex-info "Overlapping span"
+           {:source-scope source-scope :scope scope :reason :wrong-update}))
 
 (defmethod find-ann-id "IOB"
   [{db :db} {{{new-B :B new-O :O :as new-scope} :scope} :span
@@ -153,7 +156,7 @@
 (defn attempt-annotation-update
   "update authorization middleware to prevent update attempts by non-authorized users"
   [db {username :username project-name :project :as ann-map} ann-id]
-  (let [{project-creator :creator project-users :users} (find-project db project-name)
+  (let [{project-creator :creator project-users :users} (find-project-by-name db project-name)
         role (if (= username project-creator) "creator" (find-role project-users username))]
     (if (check-annotation-update-role :update role)
       (update-annotation db ann-map ann-id)

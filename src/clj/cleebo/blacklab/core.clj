@@ -7,7 +7,8 @@
            [nl.inl.blacklab.queryParser.corpusql CorpusQueryLanguageParser]
            [nl.inl.util XmlUtil]
            [org.apache.lucene.document Document]
-           [org.apache.lucene.index IndexableField]))
+           [org.apache.lucene.index IndexableField]
+           [org.apache.lucene.search Query]))
 
 (set! *warn-on-reflection* true)
 

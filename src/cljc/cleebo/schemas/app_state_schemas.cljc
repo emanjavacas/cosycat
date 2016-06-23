@@ -63,6 +63,18 @@
    :snippets {:snippet-delta s/Int
               :snippet-size s/Int}})
 
+(def ws-history-schema
+  [{:received s/Int
+    :type s/Keyword
+    :data {s/Any s/Any}}])
+
+(def query-history-schema
+  [{:query-str s/Str :received s/Int}])
+
+(def history-schema
+  {:ws ws-history-schema
+   :query query-history-schema})
+
 (def public-user-schema
   (-> user-schema
       (dissoc :projects)
@@ -75,13 +87,8 @@
 
 (def db-schema
   {:settings settings-schema
-   :history {:ws [{:received s/Int
-                   :type s/Keyword
-                   :data {s/Any s/Any}}]
-             :query [{:query-str s/Str
-                      :received s/Int}]}
-   :session {:init-session s/Bool
-             (s/optional-key :session-error) app-error-schema
+   :history history-schema
+   :session {(s/optional-key :session-error) app-error-schema
              :query-opts query-opts-schema
              :query-results query-results-schema
              :results-by-id (s/conditional empty? {} :else results-by-id-schema)
@@ -97,3 +104,41 @@
              (s/optional-key :modals)     {s/Keyword s/Any}
              (s/optional-key :throbbing?) {s/Any s/Bool}
              (s/optional-key :has-error?) {s/Keyword s/Any}}})
+
+;;; reworking
+(def query-opts-schema
+  {:query-opts {:context s/Int :from s/Int :page-size s/Int}
+   :sort-match-opts {:attribute s/Str :facet s/Str}
+   :sort-context-opts {:attribute s/Str :facet s/Str}
+   :filter-opts {:attribute s/Str :value s/Str}
+   :snippet-opts {:snippet-size s/Int}})
+
+(def query-meta-schema
+  {:page {:from s/Int :to s/Int}
+   :size s/Int
+   :query-str s/Str
+   :status {:status (s/enum :ok :error) :content s/Str}})
+
+(def project-session-schema
+  {:query {:results-data query-meta-schema ;info about last query
+           :results (s/conditional empty? [] :else results-schema) ;current hits ids
+           :results-by-id (s/conditional empty? {} :else results-by-id-schema)} ;current hits by id
+   :settings {:opts query-opts-schema}  ;project-specific settings; might overwrite global-settings
+   :filtered-users #{s/Str}})           ;filter out annotations by other users
+
+(def new-db-schema
+  {:settings settings-schema            ;global settings (may be overwritten by project-settings)
+   :corpora [s/Any]                     ;see query-backends/Corpus
+   :users [{:name s/Str                 ;users associated with client
+            :user public-user-schema}]
+   :history history-schema              ;keeps track of events
+   :projects [{:name s/Str              
+               :project project-schema
+               :session project-session-schema}]
+   :session {:active-project s/Str
+             :active-panel s/Keyword
+             :notifications {s/Any notification-schema}
+             (s/optional-key :modals)     {s/Keyword s/Any}
+             (s/optional-key :throbbing?) {s/Any s/Bool}
+             (s/optional-key :component-error?) {s/Keyword s/Any}
+             (s/optional-key :session-error) app-error-schema}})

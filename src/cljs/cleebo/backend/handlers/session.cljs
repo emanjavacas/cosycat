@@ -67,7 +67,6 @@
     (re-frame/dispatch [:set-session [:corpora] corpora])
     (re-frame/dispatch [:set-session [:query-opts :corpus] (first corpora)])
     (re-frame/dispatch [:set-session [:users] users])
-    (re-frame/dispatch [:set-session [:init-session] true])
     (js/setTimeout #(re-frame/dispatch [:stop-throbbing :front-panel]) 2000)))
 
 (defn session-error-handler [data]
