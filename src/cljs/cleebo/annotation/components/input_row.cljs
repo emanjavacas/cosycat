@@ -2,7 +2,7 @@
   (:require [cljs.core.async :refer [<! chan put!]]
             [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [parse-annotation ->int filter-dummy-tokens]]
+            [cleebo.utils :refer [parse-annotation ->int filter-dummy-tokens nbsp]]
             [cleebo.components :refer [prepend-cell dummy-cell]]
             [cleebo.autocomplete :refer [autocomplete-jq]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
@@ -64,21 +64,27 @@
         :name "input-row"
         :on-key-down (on-key-down hit-id (map ->int (keys @chans)))}])))
 
+(defn hidden-input-cell []
+  (fn [] [:td {:style {:display "none"}}]))
+
+(defn visible-input-cell [hit-id token-id chans metadata]
+  (fn [hit-id token-id chans metadata]
+    [:td {:style {:padding "0px"
+                  :border border}
+          :colSpan (count @chans)
+          :on-mouse-down #(input-mouse-down metadata (get @chans token-id))
+          :on-mouse-enter #(input-mouse-over token-id metadata chans)
+          :on-double-click #(unmerge-cells token-id chans)}
+     [input hit-id token-id chans]]))
+
 (defn input-cell [hit-id token-id metadata]
   (let [display (reagent/atom true)
         chans (reagent/atom {token-id (chan)})]
     (handle-chan-events token-id display chans)
     (fn [hit-id token-id metadata]
-      [:td
-       {:style {:display (if @display "table-cell" "none")
-                :padding "0px"
-                :min-width "100%"
-                :border border}
-        :colSpan (count @chans)
-        :on-mouse-down #(input-mouse-down metadata (@chans token-id))
-        :on-mouse-enter #(input-mouse-over token-id metadata chans)
-        :on-double-click #(unmerge-cells token-id chans)}
-       [input hit-id token-id chans]])))
+      (if @display
+        [visible-input-cell hit-id token-id chans metadata]
+        [hidden-input-cell]))))
 
 (defn input-row [{hit :hit hit-id :id meta :meta}]
   (let [metadata {:mouse-down (reagent/atom false) :source (reagent/atom nil)}]

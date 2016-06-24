@@ -23,7 +23,13 @@
        (map :key)
        (into (hash-set))))
 
-(defn hit-id-cell [hit-id] [:td hit-id])
+(defn hit-id-cell [hit-id] [:td {:style {:width "100%" :display "table-cell"}} hit-id])
+
+(defn hit-cell [{:keys [word match]}]
+  (fn [{:keys [word match]}]
+    [:td.unselectable
+     {:class (when match "info")}
+     word]))
 
 (defn hit-row
   "component for a (currently being annotated) hit row"
@@ -31,11 +37,10 @@
   (fn [{hit :hit hit-id :id meta :meta} open-hits]
     (into
      [:tr
-      {:style {:background-color "#f5f5f5" :cursor "pointer"}
+      {:style {:background-color "#f5f5f5" :cursor "pointer" :width "100%"}
        :on-click #(swap! open-hits disjconj hit-id)}]
-     (-> (for [{id :id word :word match :match anns :anns} (filter-dummy-tokens hit)]
-              ^{:key (str "hit" hit-id id)}
-           [:td.unselectable {:class (when match "info")} word])
+     (-> (for [{id :id :as token} (filter-dummy-tokens hit)]
+           ^{:key (str "hit" hit-id id)} [hit-cell token])
          (prepend-cell {:key (str hit-id) :child hit-id-cell :opts [hit-id]})))))
 
 (defn open-annotation-component [hit project-name open-hits]

@@ -11,6 +11,17 @@ table td.highlighted {
 table#table-annotation {
     /* border-collapse: collapse !important; */
     box-sizing: border-box;
+    table-layout: fixed; /* same cell widths (avoid wierd resizing) */
+    width: 100%;
+}
+
+table#table-annotation tr td {
+    width: 100%;
+    display: table-cell;
+}
+
+table#table-annotation tr td:first-child {
+    width: 50% !important;
 }
 
 table#table-annotation tr.queue-row:hover {
