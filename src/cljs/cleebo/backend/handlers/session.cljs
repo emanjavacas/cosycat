@@ -4,78 +4,56 @@
             [ajax.core :refer [GET]]
             [cleebo.backend.db :refer [default-db]]
             [cleebo.backend.middleware :refer [standard-middleware]]
-            [cleebo.app-utils :refer [default-project-name]]
+            [cleebo.app-utils :refer [default-project-name update-coll]]
             [cleebo.utils :refer [format]]
             [taoensso.timbre :as timbre]))
 
-(re-frame/register-handler
+(re-frame/register-handler              ;set session data to given path
  :set-session
  standard-middleware
  (fn [db [_ path value]]
    (let [session (:session db)]
      (assoc db :session (assoc-in session path value)))))
 
-(re-frame/register-handler
- :reset-session
+(re-frame/register-handler              ;set session data related to active project
+ :set-project-session
  standard-middleware
- ;; todo: this should fetch user-defaults from db
- (fn [db [_ current-project]]
-   (timbre/debug current-project)
-   (if (= current-project (get-in db [:session :active-project :name]))
-     db
-     (-> db
-         (assoc-in [:session :query-opts] (get-in default-db [:session :query-opts]))
-         (assoc-in [:session :query-results] (get-in default-db [:session :query-results]))
-         (assoc-in [:session :results-by-id] (get-in default-db [:session :results-by-id]))
-         (assoc-in [:session :results] (get-in default-db [:session :results]))))))
+ (fn [db [_ path value]]
+   (let [active-project (get-in db [:session :active-project])
+         pred (fn [{:keys [name]}] (= name active-project))]
+     (update-in db [:projects] update-coll pred assoc-in (into [:session] path)) value)))
 
 (re-frame/register-handler
- :update-session
+ :set-active-panel
  standard-middleware
- (fn [db [_ path f & args]]
-   (update-in db (concat [:session] path) f args)))
-
-(defn preprocess-user [user]
-  (update-in user [:roles] (partial apply hash-set)))
+ (fn [db [_ active-panel]]
+   (assoc-in db [:session :active-panel] active-panel)))
 
 (re-frame/register-handler
- :add-user
+ :update-notification
  standard-middleware
- (fn [db [_ user]]
-   (let [user (assoc user :active true)]
-     (update-in db [:session :users] conj (preprocess-user user)))))
+ (fn [db [_ path f]]
+   (let [notification-settings (get-in db [:settings :notifications])]
+     (assoc-in db [:settings :notifications]
+               (update-in notification-settings path f)))))
 
 (re-frame/register-handler
- :user-active
+ :initialize-db
  standard-middleware
- (fn [db [_ target-username status]]
-   (assert (some #(= target-username (:username %)) (get-in db [:session :users])))
-   (update-in db [:session :users]
-              (fn [users]
-                (map (fn [{:keys [username] :as user}]
-                       (if (= username target-username)
-                         (assoc user :active status)
-                         user))
-                     users)))))
+ (fn [_ [_ {:keys [me users corpora projects] :as payload}]]
+   (deep-merge payload )))              ;TODO
 
 (defn session-handler
-  [{{username :username roles :roles projects :projects :as user-info} :user-info
-    corpora :corpora users :users :as payload}]
-  (let [user-info (assoc user-info :roles roles)
-        users (doall (map preprocess-user users))]
-    (re-frame/dispatch [:set-session [:user-info] user-info])
-    (re-frame/dispatch [:set-session [:corpora] corpora])
-    (re-frame/dispatch [:set-session [:query-opts :corpus] (first corpora)])
-    (re-frame/dispatch [:set-session [:users] users])
-    (js/setTimeout #(re-frame/dispatch [:stop-throbbing :front-panel]) 2000)))
+  [{me :me users :users projects :projects corpora :corpora :as payload}]
+  (re-frame/dispatch [:initialize-db payload])
+  (js/setTimeout #(re-frame/dispatch [:stop-throbbing :front-panel]) 2000))
 
 (defn session-error-handler [data]
   (re-frame/dispatch [:stop-throbbing :front-panel])
   (re-frame/dispatch
    [:session-error
     {:error "initialisation error"
-     :message "Couldn't load user session. Try refreshing the browser :-S"}])
-  (timbre/debug data))
+     :message "Couldn't load user session. Try refreshing the browser :-S"}]))
 
 (re-frame/register-handler
  :init-session
@@ -87,13 +65,10 @@
          :error-handler session-error-handler})
    db))
 
-(re-frame/register-handler
+(re-frame/register-handler              ;global error
  :session-error
  standard-middleware
  (fn [db [_ {:keys [error message] :as args}]]
-   (timbre/info (format "[APP Error: %s] with message: %s" error message))
    (-> db
        (assoc-in [:session :active-panel] :error-panel)
        (assoc-in [:session :session-error] args))))
-
-

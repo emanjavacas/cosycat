@@ -67,12 +67,12 @@
 
 (defn error-handler
   [source-component]
-  (fn [{:keys [status status-content]}]
+  (fn [{:keys [status content]}]
     (re-frame/dispatch [:stop-throbbing source-component])
     (re-frame/dispatch
      [:set-session
       [:query-results :status]
-      {:status status :status-content status-content}])))
+      {:status status :content content}])))
 
 (re-frame/register-handler
  :query
@@ -152,10 +152,10 @@
      db)))
 
 (defn snippet-error-handler
-  [{:keys [status status-content] :as error}]
+  [{:keys [status content] :as error}]
   (re-frame/dispatch
    [:notify
-    {:message (str "Error while retrieving snippet" status-content)
+    {:message (str "Error while retrieving snippet" content)
      :status :error}]))
 
 (defn snippet-result-handler [& [context]]

@@ -10,19 +10,6 @@
             [taoensso.timbre :as timbre]))
 
 (re-frame/register-handler
- :initialize-db
- (fn [_ [_ & [overwrite-init-state]]]
-   (if overwrite-init-state
-     (deep-merge default-db overwrite-init-state)
-     default-db)))
-
-(re-frame/register-handler
- :reset-db
- no-debug-middleware
- (fn [_ _]
-   default-db))
-
-(re-frame/register-handler
  :load-db
  standard-middleware
  (fn [db [_ new-db]]
@@ -30,9 +17,7 @@
      (s/validate db-schema new-db)
      new-db
      (catch :default e
-       (re-frame/dispatch [:notify
-                           {:message "Oops! Couldn't load backup"
-                            :status :error}])
+       (re-frame/dispatch [:notify {:message "Oops! Couldn't load backup" :status :error}])
        db))))
 
 (re-frame/register-handler
@@ -41,10 +26,7 @@
  (fn [db _]
    (let [now (js/Date)]
      (ls/put now db)
-     (re-frame/dispatch
-      [:notify
-       {:message "State succesfully backed-up"
-        :status :ok}]))
+     (re-frame/dispatch [:notify {:message "State succesfully backed-up" :status :ok}]))
    db))
 
 (re-frame/register-handler

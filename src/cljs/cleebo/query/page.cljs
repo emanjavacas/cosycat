@@ -14,17 +14,17 @@
              [error-panel throbbing-panel minimize-panel filter-annotation-buttons]]
             [taoensso.timbre :as timbre]))
 
-(defn internal-error-panel [status-content]
-  (fn [status-content]
+(defn internal-error-panel [content]
+  (fn [content]
     [error-panel
      :status "Oops! something bad happened"
-     :status-content [:div status-content]]))
+     :content [:div content]]))
 
-(defn query-error-panel [status-content]
-  (fn [status-content]
+(defn query-error-panel [content]
+  (fn [content]
     [error-panel
-     :status (str "Query misquoted starting at position " (inc (:at status-content)))
-     :status-content (highlight-error status-content)]))
+     :status (str "Query misquoted starting at position " (inc (:at content)))
+     :content (highlight-error content)]))
 
 (defn no-results-panel [query-str]
   (fn [query-str]
@@ -54,11 +54,11 @@
         query-str (re-frame/subscribe [:session :query-results :query-str])
         throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
     (fn []
-      (let [{:keys [status status-content]} @status]
+      (let [{:keys [status content]} @status]
         (cond
           @throbbing?                         [throbbing-panel]
-          (has-error status)                  [internal-error-panel status-content]
-          (has-query-error status)            [query-error-panel status-content]
+          (has-error status)                  [internal-error-panel content]
+          (has-query-error status)            [query-error-panel content]
           (no-results @query-str @query-size) [no-results-panel query-str]
           (has-results @query-size)           [results-table])))))
 

@@ -4,7 +4,7 @@
             [cleebo.schemas.annotation-schemas :refer [annotation-schema span-schema]]
             [cleebo.schemas.project-schemas :refer [project-schema]]
             [cleebo.schemas.user-schemas :refer [avatar-schema]]
-            [cleebo.schemas.app-state-schemas :refer [public-user-schema]]
+            [cleebo.schemas.app-state-schemas :refer [public-user-schema hit-id-schema]]
             [cleebo.app-utils :refer [deep-merge]]
             [taoensso.timbre :as timbre]))
 
@@ -15,13 +15,13 @@
 (def ann-from-server-schema
   "multiple anns implies multiple hit-ids"
   (deep-merge blueprint-from-server
-              {:data {:hit-id  (s/if vector? [s/Int] s/Int)
+              {:data {:hit-id  (s/if vector? [hit-id-schema] hit-id-schema)
                       :ann-map (s/if vector? [annotation-schema] annotation-schema)}}))
 
 (def ann-error-from-server-schema
   (deep-merge blueprint-from-server
               {:data {:span (s/if vector? [span-schema] span-schema)
-                      :hit-id (s/if vector? [s/Int] s/Int)
+                      :hit-id (s/if vector? [hit-id-schema] hit-id-schema)
                       :reason   s/Keyword
                       (s/optional-key :e) s/Str
                       (s/optional-key :username) s/Str}}))
@@ -61,7 +61,7 @@
   [{:keys [type data] :as payload}]
   (case type
     :annotation {:type s/Keyword
-                 :data {:hit-id  (s/if vector? [s/Int]   s/Int)
+                 :data {:hit-id  (s/if vector? [hit-id-schema] hit-id-schema)
                         :ann-map (s/if vector? [annotation-schema] annotation-schema)}
                  :payload-id s/Any
                  (s/optional-key :status) s/Any}

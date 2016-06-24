@@ -10,7 +10,7 @@
 
 (defn on-select [query-opt & {:keys [has-query?]}]
   (fn [v]
-    (re-frame/dispatch [:set-session [:query-opts query-opt] v])
+    (re-frame/dispatch [:set-settings [:query :query-opts query-opt] v])
     (when @has-query?
       (re-frame/dispatch [:query-refresh :results-frame]))))
 
@@ -23,7 +23,7 @@
                :header "Select a corpus"
                :options (mapv #(->map % %) corpora)
                :model corpus
-               :select-fn #(re-frame/dispatch [:set-session [:query-opts :corpus] %])}
+               :select-fn #(re-frame/dispatch [:set-settings [:query :corpus] %])}
               args)])))
 
 (defn context-select [query-opts & {:keys [has-query?] :as args}]
@@ -48,7 +48,7 @@
          :header "Select page size"
          :options (map #(->map % %) [5 10 15 25 35 55 85 125])
          :model size
-         :select-fn (on-select :size :has-query? has-query?)}
+         :select-fn (on-select :page-size :has-query? has-query?)}
         args)])))
 
 (defn query-opts-menu []
@@ -72,9 +72,9 @@
         at (+ at (empty-before query-str at))]
     (case status
       :mismatch (re-frame/dispatch
-                 [:set-session [:query-results :status]
+                 [:set-project-session [:query :results-summary :status]
                   {:status :query-str-error
-                   :status-content {:query-str query-str :at at}}])
+                   :content {:query-str query-str :at at}}])
       :finished (re-frame/dispatch [:query query-str :results-frame]))))
 
 (defn on-key-press [k]

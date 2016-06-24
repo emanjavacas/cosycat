@@ -3,6 +3,7 @@
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
             [cleebo.backend.handlers.db]
+            [cleebo.backend.handlers.users]
             [cleebo.backend.handlers.components]
             [cleebo.backend.handlers.settings]
             [cleebo.backend.handlers.query]
@@ -16,7 +17,8 @@
             [cleebo.backend.ws :refer [open-ws-channel]]
             [cleebo.routes :as routes]
             [cleebo.localstorage :as ls]
-            [cleebo.components :refer [notification-container load-from-ls-modal user-thumb]]
+            [cleebo.components :refer
+             [notification-container load-from-ls-modal user-thumb]]
             [cleebo.query.page :refer [query-panel]]
             [cleebo.settings.page :refer [settings-panel]]
             [cleebo.updates.page :refer [updates-panel]]
@@ -88,13 +90,14 @@
        (for [[idx {:keys [label href on-select style] :as args}]
              (map-indexed vector children)
              :let [k (str label idx)]]
-         ^{:key k} [bs/menu-item
-                    (merge {:eventKey k
-                            :style style
-                            :href href
-                            :onSelect on-select}
-                           args)
-                    label])])))
+         ^{:key k}
+         [bs/menu-item
+          (merge {:eventKey k
+                  :style style
+                  :href href
+                  :onSelect on-select}
+                 args)
+          label])])))
 
 (defn projects-dropdown [projects active-project]
   (fn [projects active-project]
@@ -169,11 +172,7 @@
   (add-interceptor ajax-header-interceptor)
   ;; web-sockets
   (open-ws-channel {:url (host-url)})
-  ;; start db
-  (re-frame/dispatch-sync
-   [:initialize-db
-    {:session {:throbbing? {:front-panel true}}}])
-  ;; fetch user data and projects
+  ;; start session
   (re-frame/dispatch [:init-session])
   ;; ensure we start on home page (so that db can be loaded)
   (routes/nav! "/")

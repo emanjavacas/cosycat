@@ -15,6 +15,11 @@
     (update-user-info db username {:avatar avatar})
     (send-clients ws {:type :new-user-avatar :data {:avatar avatar :username username}})
     avatar))
+(defmethod settings-router :new-settings
+  [{{{username :username} :identity} :session
+    {db :db ws :ws} :components}]
+  ;; todo
+  )
 
 (def settings-route 
   (safe (fn [req]

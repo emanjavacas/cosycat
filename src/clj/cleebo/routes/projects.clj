@@ -1,7 +1,7 @@
 (ns cleebo.routes.projects
   (:require [buddy.auth :refer [authenticated?]]
             [cleebo.routes.auth :refer [safe]]
-            [cleebo.db.projects :refer [user-projects new-project]]
+            [cleebo.db.projects :refer [new-project]]
             [cleebo.components.ws :refer [send-clients]]
             [taoensso.timbre :as timbre]))
 

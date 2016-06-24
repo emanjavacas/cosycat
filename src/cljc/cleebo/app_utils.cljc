@@ -37,6 +37,13 @@
   [s1 & args]
   (reduce #(if (%1 %2) (disj %1 %2) (conj %1 %2)) s1 args))
 
+(defn update-coll [coll pred f & args]
+  (let [s (for [item coll]
+            (if (pred item)
+              (apply f item args)
+              item))]
+    (if (vector? coll) (vec s) s)))
+
 ;;; LOGIC
 (defn default-project-name [username]
   (str username "-playground"))

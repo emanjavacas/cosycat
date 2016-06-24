@@ -4,47 +4,18 @@
             [ajax.core :refer [POST]]
             [taoensso.timbre :as timbre]))
 
-(re-frame/register-handler
- :update-notification
+(re-frame/register-handler              ;set global settings data to given path
+ :set-settings
  standard-middleware
- (fn [db [_ path f]]
-   (let [notification-settings (get-in db [:settings :notifications])]
-     (assoc-in db [:settings :notifications]
-               (update-in notification-settings path f)))))
+ (fn [db [_ path value]]
+   (let [settings (get-in db [:session :settings])]
+     (assoc db [:session :settings] (assoc-in settings path value)))))
 
-(re-frame/register-handler
- :set-snippet-size
+(re-frame/register-handler              ;set session data related to active project
+ :set-project-settings
  standard-middleware
- (fn [db [_ snippet-size]]
-   (assoc-in db [:settings :snippets :snippet-size] snippet-size)))
-
-(re-frame/register-handler
- :set-snippet-delta
- standard-middleware
- (fn [db [_ snippet-delta]]
-   (assoc-in db [:settings :snippets :snippet-delta] snippet-delta)))
-
-(defn error-handler [& args]
-  (re-frame/dispatch [:notify {:message "Couldn't update avatar"}])
-  (timbre/debug args))
-
-(re-frame/register-handler
- :regenerate-avatar
- (fn [db _]
-   (POST "settings"
-         {:params {:route :new-avatar}
-          :handler #(re-frame/dispatch [:set-session [:user-info :avatar] %])
-          :error-handler error-handler})
-   db))
-
-(re-frame/register-handler
- :new-user-avatar
- (fn [db [_ {:keys [username avatar]}]]
-   (update-in
-    db [:session :users]
-    (fn [users] (map (fn [user]
-                       (timbre/debug user)
-                       (if (= username (:username user))
-                         (assoc user :avatar avatar)
-                         user))
-                     users)))))
+ (fn [db [_ path value]]
+   (let [active-project (get-in db [:session :active-project])
+         pred (fn [{:keys [name]}] (= name active-project))]
+     ;; TODO: this should send the updated settings to the db
+     (update-in db [:projects] update-coll pred assoc-in (into [:settings] path)) value)))

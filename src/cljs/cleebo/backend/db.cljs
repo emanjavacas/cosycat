@@ -15,7 +15,7 @@
                           :attribute "word"}
              :query-results {:query-size 0
                              :query-str ""
-                             :status {:status :ok :status-content ""}
+                             :status {:status :ok :content ""}
                              :from 0
                              :to 0}
              :notifications {}

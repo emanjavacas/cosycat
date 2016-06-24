@@ -34,13 +34,13 @@
 
 (defmethod ws-handler :login
   [db {{username :username :as data} :data}]
-  (re-frame/dispatch  [:user-active username true])
+  (re-frame/dispatch  [:update-user-active username true])
   (re-frame/dispatch [:notify {:message (get-msg [:login] username) :by username}])
   db)
 
 (defmethod ws-handler :logout
   [db {{username :username :as data} :data}]
-  (re-frame/dispatch [:user-active username false])
+  (re-frame/dispatch [:update-user-active username false])
   (re-frame/dispatch [:notify {:message (get-msg [:logout] username) :by username}])
   db)
 

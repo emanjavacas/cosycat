@@ -62,7 +62,10 @@
                        :header "Select a snippet size"
                        :options (map #(->map % %) [5 10 15 25 35 50 75 100 150])
                        :model @snippet-size
-                       :select-fn (fn [choice] (re-frame/dispatch [:set-snippet-size choice]))
+                       :select-fn (fn [choice]
+                                    (re-frame/dispatch
+                                     [:set-settings
+                                      [:query :snippet-opts :snippet-size] choice]))
                        :on-mouse-over (on-mouse-over :snippet-size snippet-size-help)
                        :on-mouse-out (on-mouse-out snippet-size-help)}]
                      [dropdown-select
@@ -70,7 +73,10 @@
                        :header "Select number of words"
                        :options (map #(->map % %) [5 10 15 25 35])
                        :model @snippet-delta
-                       :select-fn (fn [choice] (re-frame/dispatch [:set-snippet-delta choice]))
+                       :select-fn (fn [choice]
+                                    (re-frame/dispatch
+                                     [:set-settings
+                                      [:query :snippet-opts :snippet-delta] choice]))
                        :on-mouse-over (on-mouse-over :snippet-delta snippet-size-help)
                        :on-mouse-out (on-mouse-out snippet-size-help)}]]
        :help-text snippet-size-help])))

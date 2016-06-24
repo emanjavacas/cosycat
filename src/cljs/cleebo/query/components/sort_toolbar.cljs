@@ -21,13 +21,13 @@
          :header "Select criterion"
          :model @criterion
          :options (->default-map ["match" "left-context" "right-context"])
-         :select-fn (fn [k] (re-frame/dispatch [:set-session [:query-opts :criterion] k]))}]
+         :select-fn #(re-frame/dispatch [:set-settings [:query :sort-context-opts :attribute] %])}]
        [dropdown-select
         {:label "sort prop: "
          :header "Select property"
          :options (->default-map ["word" "pos" "lemma"]);[TODO:This is corpus-dependent]
          :model @attribute
-         :select-fn (fn [k] (re-frame/dispatch [:set-session [:query-opts :attribute] k]))}]
+         :select-fn #(re-frame/dispatch [:set-settings [:query :sort-match-opts :attribute] %])}]
        [bs/button
         {:onClick (on-click-sort :sort-range)}
         "Sort page"]

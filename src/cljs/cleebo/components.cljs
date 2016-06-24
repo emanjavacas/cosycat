@@ -13,13 +13,13 @@
 (defn throbbing-panel [& {:keys [css-class] :or {css-class "loader"}}]
   [:div.text-center [:div {:class css-class}]])
 
-(defn error-panel [& {:keys [status status-content]}]
+(defn error-panel [& {:keys [status content]}]
   {:pre [(and status)]}
   [:div.container-fluid.text-center
    {:style {:padding "40px"}}
    [:div.row [:h3 [:span.text-muted status]]]
    [:div.row [:br]]
-   [:div.row.text-center status-content]])
+   [:div.row.text-center content]])
 
 (defn dropdown-select [{:keys [label model options select-fn header] :as args}]
   (let [local-label (reagent/atom model)]
@@ -142,7 +142,7 @@
                     :let [filtered (contains? @filtered-users username)]]
                 ^{:key username} [filter-annotation-btn username filtered]))])))
 
-(defn- default-header [] [:div ""])
+(defn default-header [] [:div ""])
 
 (defn minimize-panel
   [{:keys [child args init open-header closed-header]
@@ -164,8 +164,7 @@
 
 (defn disabled-button-tooltip [disabled?-fn msg]
   (if (disabled?-fn)
-    (reagent/as-component
-     [bs/tooltip {:id "tooltip"} msg])
+    (reagent/as-component [bs/tooltip {:id "tooltip"} msg])
     (reagent/as-component [:span])))
 
 (defn load-from-ls-row [backup]
@@ -185,9 +184,7 @@
      [bs/modal-header
       {:closeButton true}
       [bs/modal-title
-       [:div [:span
-              {:style {:padding-right "20px"}}
-              [:i.zmdi.zmdi-storage]]
+       [:div [:span {:style {:padding-right "20px"}} [:i.zmdi.zmdi-storage]]
         "Application history"]]]
      [bs/modal-body
       (let [history (ls/recover-all-db-keys)]

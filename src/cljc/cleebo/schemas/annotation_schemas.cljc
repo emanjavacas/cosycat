@@ -29,9 +29,10 @@
                  #(= (:type %) "IOB")   iob-span-schema))
 
 (def annotation-schema
-  {:ann {:key s/Str
+  {:id s/Any                            ;version-overarching unique identifier
+   :ann {:key s/Str
          :value s/Str}
-   (s/optional-key :username) s/Str     ;anns are sent without username to the server
+   :username s/Str
    :timestamp s/Int
    :span span-schema
    :project s/Str

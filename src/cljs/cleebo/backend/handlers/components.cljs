@@ -19,12 +19,6 @@
    (assoc-in db [:session :modals modal] false)))
 
 (re-frame/register-handler
- :set-active-panel
- standard-middleware
- (fn [db [_ active-panel]]
-   (assoc-in db [:session :active-panel] active-panel)))
-
-(re-frame/register-handler
  :start-throbbing
  standard-middleware
  (fn [db [_ panel]]

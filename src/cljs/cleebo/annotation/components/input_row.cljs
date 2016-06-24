@@ -69,8 +69,7 @@
 
 (defn visible-input-cell [hit-id token-id chans metadata]
   (fn [hit-id token-id chans metadata]
-    [:td {:style {:padding "0px"
-                  :border border}
+    [:td {:style {:padding "0px" :border border}
           :colSpan (count @chans)
           :on-mouse-down #(input-mouse-down metadata (get @chans token-id))
           :on-mouse-enter #(input-mouse-over token-id metadata chans)
