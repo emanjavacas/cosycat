@@ -6,7 +6,7 @@
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
             [cleebo.components.ws :refer [send-clients]]
             [cleebo.components.blacklab :refer [remove-hits!]]
-            [cleebo.db.users :refer [lookup-user is-user? new-user postprocess-user-load]]
+            [cleebo.db.users :refer [lookup-user is-user? new-user postprocess-user]]
             [cleebo.db.projects :refer [new-project]]
             [cleebo.views.error :refer [error-page]]
             [cleebo.views.login :refer [login-page]]
@@ -44,7 +44,7 @@
       is-user               (on-signup-failure req "User already exists")
       :else (let [user (-> (new-user db user) (assoc :active true))]
               (new-project db username) ;create default project
-              (send-clients ws {:type :signup :data (postprocess-user-load user :projects)})
+              (send-clients ws {:type :signup :data (postprocess-user user :projects)})
               (-> (redirect (or next-url "/"))
                   (assoc-in [:session :identity] user))))))
 
@@ -58,7 +58,7 @@
         user {:username username :password password}]
     (if-let [user (lookup-user db user)]
       (let [user (assoc user :active true)]
-        (send-clients ws {:type :login :data (postprocess-user-load user :project)})
+        (send-clients ws {:type :login :data (postprocess-user user :project)})
         (-> (redirect (or next-url "/"))
             (assoc-in [:session :identity] user)))
       (on-login-failure req))))

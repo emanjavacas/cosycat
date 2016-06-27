@@ -3,9 +3,8 @@
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
             [cleebo.components :refer [dropdown-select]]
-            [cleebo.settings.components.shared-components
-             :refer [row-component]]
-            [cleebo.backend.db :refer [default-db]]
+            [cleebo.settings.components.shared-components :refer [row-component]]
+            [cleebo.backend.db :refer [default-settings]]
             [taoensso.timbre :as timbre]))
 
 (def help-map
@@ -15,9 +14,9 @@
 
 (defn on-mouse-out [text-atom] (fn [e] (reset! text-atom "")))
 
-(defn on-click [v] (fn [] (re-frame/dispatch [:update-notification [:delay] v])))
+(defn on-click [v] (fn [] (re-frame/dispatch [:set-settings [:notifications :delay] v])))
 
-(defn get-default [path] (fn [] (get-in default-db path)))
+(defn get-default [path] (fn [] (get-in (default-settings) path)))
 
 (defn notification-controller []
   (let [notification-help (reagent/atom "")
@@ -43,7 +42,7 @@
                         [bs/glyphicon {:glyph "plus"}]]]]
                      [:button.btn.btn-default
                       {:type "button"
-                       :on-click (on-click (get-default [:settings :notifications :delay]))}
+                       :on-click (on-click (get-default [:notifications :delay]))}
                       "Set default"]]
        :help-text notification-help])))
 

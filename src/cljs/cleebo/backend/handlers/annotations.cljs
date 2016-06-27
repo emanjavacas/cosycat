@@ -26,27 +26,31 @@
  :mark-hit
  standard-middleware
  (fn [db [_ {:keys [hit-id flag]}]]
-   (assoc-in db [:session :results-by-id hit-id :meta :marked] (boolean flag))))
+   (let [active-project (:active-project db)
+         path [:projects active-project :session :results-by-id hit-id :meta :marked]]
+     (assoc-in db path (boolean flag)))))
 
 (re-frame/register-handler
  :mark-all-hits
  standard-middleware
  (fn [db _]
-   (reduce
-    (fn [acc-db hit-id]
-      (assoc-in acc-db [:session :results-by-id hit-id :meta :marked] true))
-    db
-    (get-in db [:session :results]))))
+   (let [active-project (:active-project db)
+         path-to-results [:projects active-project :session :results-by-id]]
+     (reduce (fn [acc hit-id]
+               (assoc-in acc (into path-to-results [hit-id :meta :marked]) true))
+             db
+             (get-in db [:projects active-project :session :results]))))) ;hit-ids
 
 (re-frame/register-handler
  :unmark-all-hits
  standard-middleware
  (fn [db _]
-   (reduce
-    (fn [acc-db hit-id]
-      (assoc-in acc-db [:session :results-by-id hit-id :meta :marked] false))
-    db
-    (keys (get-in db [:session :results-by-id])))))
+   (let [active-project (:active-project db)
+         path-to-results [:projects active-project :session :results-by-id]]
+     (reduce (fn [acc hit-id]
+               (assoc-in acc (into path-to-results [hit-id :meta :marked]) false))
+             db
+             (keys (get-in db [:projects active-project :session :results-by-id]))))))
 
 (defn update-token
   "apply token-fn where due"
@@ -60,16 +64,14 @@
 (re-frame/register-handler
  :mark-token
  standard-middleware
- (fn [db [_ {:keys [hit-id token-id flag]}]]
+ (fn [{active-project :active-project :as db} [_ {:keys [hit-id token-id flag]}]]
    (let [hit-map (get-in db [:session :results-by-id hit-id])
          has-marked (has-marked? hit-map flag token-id)
          hit-map (assoc-in hit-map [:meta :has-marked] (boolean has-marked))
          check-token-fn (fn [id] (= token-id id))
-         token-fn (fn [tk] (if flag (assoc tk :marked true) (dissoc tk :marked)))]
-     (assoc-in
-      db
-      [:session :results-by-id hit-id]
-      (update-token hit-map check-token-fn token-fn)))))
+         token-fn (fn [token] (if flag (assoc token :marked true) (dissoc token :marked)))
+         path [:projects active-project :session :results-by-id hit-id]]
+     (assoc-in db path (update-token hit-map check-token-fn token-fn)))))
 
 (defmulti update-token-anns
   "inserts incoming annotation into the corresponding hit map"
@@ -87,11 +89,10 @@
     (update-token hit-map check-fn token-fn)))
 
 (defn- find-ann-hit-id*
-  ([pred hit-maps]
-   (some (fn [{:keys [hit meta id]}]
-           (when (some pred (map :id hit))
-             id))
-         hit-maps)))
+  [pred hit-maps]
+  (some (fn [{:keys [hit id meta]}]
+          (when (some pred (map :id hit)) id))
+        hit-maps))
 
 (defmulti find-ann-hit-id (fn [{{type :type} :span} hit-id] type))
 (defmethod find-ann-hit-id "token"
@@ -124,17 +125,17 @@
 (re-frame/register-handler
  :add-annotation
  standard-middleware
- (fn [db [_ {:keys [hit-id ann-map] :as data}]]
-   (let [me (get-in db [:session :user-info :username])
+ (fn [{active-project :active-project :as db} [_ {:keys [hit-id ann-map] :as data}]]
+   (let [me (get-in db [:me :username])
          {:keys [message by]} (compute-notification-data data me)
-         results-by-id (get-in db [:session :results-by-id])
+         results-by-id (get-in db [:projects active-project :session :results-by-id])
          hit-id (if (contains? results-by-id hit-id) hit-id
                     (find-ann-hit-id ann-map (vals results-by-id)))]
      (if-let [hit-map (get results-by-id hit-id)]
        (do (re-frame/dispatch [:notify {:message message :by by}])
            (assoc-in
             db
-            [:session :results-by-id hit-id]
+            [:project active-project :session :results-by-id hit-id]
             (update-token-anns hit-map ann-map)))
        (do (timbre/debug "couldn't find hit") db)))))
 
@@ -210,8 +211,7 @@
 
 (defmethod handler cljs.core/PersistentVector
   [payloads]
-  (doseq [payload payloads]
-    (handler payload)))
+  (doseq [payload payloads] (handler payload)))
 
 (defn error-handler [& args]
   (re-frame/dispatch [:notify {:message "Unrecognized internal error"}]))

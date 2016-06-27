@@ -67,7 +67,7 @@
 
 (defn hit-token [{:keys [id word match marked anns]}]
   (let [color-map (re-frame/subscribe [:filtered-users-colors])
-        project-name (re-frame/subscribe [:session :active-project :name])]
+        active-project (re-frame/subscribe [:session :active-project])]
     (fn [{:keys [id word match marked anns] :as token}]
       (let [highlighted (if marked "highlighted " "")
             color (when anns (highlight-annotation token @project-name @color-map))
@@ -108,7 +108,7 @@
 
 (defn results-table []
   (let [results (re-frame/subscribe [:results])
-        from (re-frame/subscribe [:session :query-results :from])
+        from (re-frame/subscribe [:project-session :query :results-summary :from])
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]
     (fn []

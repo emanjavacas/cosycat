@@ -7,22 +7,24 @@
             [environ.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
-(defn add-active-info [active-users user]
+(defn add-active-info [user active-users]
   (if (contains? active-users (:username user))
     (assoc user :active true)
     (assoc user :active false)))
 
+(defn normalize-users [users username active-users]
+  (->> users
+       (remove (fn [user] (= username (:username user))))
+       (mapv (fn [user] {:username (:username user) :user (add-active-info user active-users)}))))
+
 (defn fetch-init-session
   [{{{username :username roles :roles} :identity} :session
     {db :db ws :ws} :components}]
-  (let [me (user-info db username)
-        rest-users (remove #(= username (:username %)) (users-info db))
-        corpora (env :corpora)
-        projects (get-projects username)]
-    {:me me
-     :users (mapv (partial add-active-info (get-active-users ws)) rest-users)
+  (let [active-users (get-active-users ws)]
+    {:me (user-info db username)
+     :users (normalize-users (users-info db) username active-users)
      :projects (get-projects db username)
-     :corpora corpora}))
+     :corpora (env :corpora)}))
 
 (def session-route
   (safe (fn [req] {:status 200 :body (fetch-init-session req)})

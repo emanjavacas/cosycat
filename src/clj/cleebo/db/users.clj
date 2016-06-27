@@ -5,7 +5,6 @@
             [taoensso.timbre :as timbre]
             [schema.core :as s]
             [cleebo.schemas.user-schemas :refer [user-schema]]
-            [cleebo.db.projects]
             [cleebo.components.db :refer [new-db colls]]
             [cleebo.avatar :refer [user-avatar]]))
 
@@ -69,7 +68,7 @@
    {$set update-map}
    {}))
 
-(defn users-info [{db-conn :db}]
+(defn users-info [{db-conn :db}] ;todo, retrieve only users with which users has interactions
   (->> (mc/find-maps db-conn (:users colls) {})
        (map #(postprocess-user % :projects))))
 

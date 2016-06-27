@@ -3,43 +3,35 @@
             [reagent.core :as reagent]
             [ajax.core :refer [POST]]
             [cleebo.backend.middleware :refer [standard-middleware check-project-exists]]
+            [cleebo.backend.db :refer [default-project-session]]
             [cleebo.schemas.project-schemas :refer [project-schema update-schema]]
             [taoensso.timbre :as timbre]))
-
-(re-frame/register-handler
- :add-project
- standard-middleware
- (fn [db [_ project]]
-   (update-in db [:session :user-info :projects] conj project)))
-
-(defn get-project-info [db project-name]
-  (first (filter #(= project-name (:name %))
-                 (get-in db [:session :user-info :projects]))))
 
 (re-frame/register-handler
  :set-active-project
  (conj standard-middleware check-project-exists)
  (fn [db [_ {:keys [project-name]}]]
-   (let [project (get-project-info db project-name)
-         active-project {:name project-name
-                         :filtered-users (into #{} (map :username (:users project)))}]
-     (assoc-in db [:session :active-project] active-project))))
+   (assoc-in db [:session :active-project] project-name)))
+
+(defn normalize-projects [projects]
+  (reduce (fn [acc {:keys [name] :as project}]
+            (assoc acc name {:project project :session default-project-session}))
+          {}
+          projects))
 
 (re-frame/register-handler
- :reset-active-project
+ :add-project
  standard-middleware
- (fn [db _]
-   (update-in db [:session] dissoc :active-project)))
+ (fn [db [_ project]]
+   (update db [:projects] merge (normalize-projects [project]))))
 
 (defn new-project-handler [project]
-  (re-frame/dispatch [:add-project project]))
+  (re-frame/dispatch [:add-project project])
+  (re-frame/dispatch [:notify {:message "Succesfully created project"}])) ;should navigate to project
 
-(defn new-project-error-handler [data]
+(defn new-project-error-handler [{:keys [message data]}]
   (re-frame/dispatch
-   [:notify {:message "Couldn't create project" :status :error}]))
-
-(defn users-by-name [db & [usernames]]
-  (filter #(some #{(:username %)} usernames) (get-in db [:session :users])))
+   [:notify {:message (str "Couldn't create project: [" data "]" ) :status :error}]))
 
 (re-frame/register-handler
  :new-project
@@ -58,6 +50,6 @@
  :update-filtered-users
  standard-middleware
  (fn [db [_ username flag]]
-   (let [action (if flag conj disj)]
-     (update-in db [:session :active-project :filtered-users] action username))))
-
+   (let [active-project (:active-project db)
+         action (if flag conj disj)]
+     (update-in db [:projects active-project :session :filtered-users] action username))))

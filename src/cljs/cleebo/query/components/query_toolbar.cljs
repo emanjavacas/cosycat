@@ -14,52 +14,48 @@
     (when @has-query?
       (re-frame/dispatch [:query-refresh :results-frame]))))
 
-(defn corpus-select [query-opts & {:keys [corpora] :as args}]
-  (fn [query-opts & {:keys [corpora]}]
-    (let [{:keys [corpus]} @query-opts
-          args (dissoc args :corpora)]
-      [dropdown-select
-       (merge {:label "corpus: "
-               :header "Select a corpus"
-               :options (mapv #(->map % %) corpora)
-               :model corpus
-               :select-fn #(re-frame/dispatch [:set-settings [:query :corpus] %])}
-              args)])))
+(defn corpus-select [corpus & {:keys [corpora] :as args}]
+  (fn [corpus & {:keys [corpora]}]
+    [dropdown-select
+     (merge {:label "corpus: "
+             :header "Select a corpus"
+             :options (mapv #(->map % %) corpora)
+             :model @corpus
+             :select-fn #(re-frame/dispatch [:set-settings [:query :corpus] %])}
+            (dissoc args :corpora))]))
 
-(defn context-select [query-opts & {:keys [has-query?] :as args}]
-  (fn [query-opts & {:keys [has-query?]}]
-    (let [{:keys [context]} @query-opts
-          args (dissoc args :has-query?)]
-      [dropdown-select
-       (merge {:label "window: "
-               :header "Select window size"
-               :options (map #(->map % %) (range 1 10))
-               :model context
-               :select-fn (on-select :context :has-query? has-query?)}
-              args)])))
+(defn context-select [context & {:keys [has-query?] :as args}]
+  (fn [context & {:keys [has-query?]}]
+    [dropdown-select
+     (merge {:label "window: "
+             :header "Select window size"
+             :options (map #(->map % %) (range 1 10))
+             :model @context
+             :select-fn (on-select :context :has-query? has-query?)}
+            (dissoc args :has-query?))]))
 
-(defn size-select [query-opts & {:keys [has-query?] :as args}]
-  (fn [query-opts & {:keys [has-query?] :as args}]
-    (let [{:keys [size]} @query-opts
-          args (dissoc args :has-query?)]
-      [dropdown-select
-       (merge 
-        {:label "size: "
-         :header "Select page size"
-         :options (map #(->map % %) [5 10 15 25 35 55 85 125])
-         :model size
-         :select-fn (on-select :page-size :has-query? has-query?)}
-        args)])))
+(defn size-select [page-size & {:keys [has-query?] :as args}]
+  (fn [page-size & {:keys [has-query?] :as args}]    
+    [dropdown-select
+     (merge 
+      {:label "size: "
+       :header "Select page size"
+       :options (map #(->map % %) [2 5 7 10 15 25 35 55 85 125])
+       :model @page-size
+       :select-fn (on-select :page-size :has-query? has-query?)}
+      (dissoc args :has-query?))]))
 
 (defn query-opts-menu []
-  (let [query-opts (re-frame/subscribe [:session :query-opts])
+  (let [corpus (re-frame/subscribe [:settings :query :corpus])
+        context (re-frame/subscribe [:settings :query :context])
+        page-size (re-frame/subscribe [:settings :query :page-size])
         has-query? (re-frame/subscribe [:has-query?])
-        corpora (re-frame/subscribe [:session :corpora])]
+        corpora (re-frame/subscribe [:corpora])]
     (fn []
       [bs/button-toolbar
-       [corpus-select query-opts :corpora @corpora]
-       [context-select query-opts :has-query? has-query?]
-       [size-select query-opts :has-query? has-query?]])))
+       [corpus-select corpus :corpora @corpora]
+       [context-select context :has-query? has-query?]
+       [size-select page-size :has-query? has-query?]])))
 
 (defn empty-before [s n]
   (count (filter #(= % " ")  (subs s n))))
@@ -88,7 +84,7 @@
       (trigger-query query-str))))
 
 (defn query-toolbar []
-  (let [query-str (re-frame/subscribe [:session :query-results :query-str])
+  (let [query-str (re-frame/subscribe [:project-session :query :results-summary :query-str])
         query-str-atom (reagent/atom @query-str)]
     (fn []
       [:div.row

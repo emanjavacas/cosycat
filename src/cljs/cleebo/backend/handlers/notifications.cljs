@@ -1,6 +1,6 @@
 (ns cleebo.backend.handlers.notifications
   (:require [re-frame.core :as re-frame]
-            [cleebo.backend.subs :refer [find-user]]
+            [cleebo.backend.subs :refer [get-user]]
             [cleebo.backend.middleware
              :refer [standard-middleware no-debug-middleware]]
             [cleebo.utils :refer [time-id]]))
@@ -24,7 +24,7 @@
  (fn [db [_ {:keys [message by] :as data}]]
    (let [id (time-id)
          delay (get-in db [:settings :notifications :delay])
-         href (or (get-in (find-user db by) [:avatar :href]) "img/avatars/server.png")
+         href (or (get-in (get-user db by) [:avatar :href]) "img/avatars/server.png")
          notification-payload {:data (assoc data :by {:href href}) :id id}]
      (js/setTimeout #(re-frame/dispatch [:drop-notification id]) delay)
      (re-frame/dispatch [:add-notification notification-payload]))

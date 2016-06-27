@@ -17,5 +17,17 @@
  (fn [db [_ path value]]
    (let [active-project (get-in db [:session :active-project])
          pred (fn [{:keys [name]}] (= name active-project))]
-     ;; TODO: this should send the updated settings to the db
-     (update-in db [:projects] update-coll pred assoc-in (into [:settings] path)) value)))
+     ;; TODO: this should also send the updated settings to the db.
+     (assoc-in db (into [:projects active-project :settings] path) value))))
+
+(defn avatar-error-handler [& args]
+  (re-frame/dispatch [:notify {:message "Couldn't update avatar"}]))
+
+(re-frame/register-handler
+ :regenerate-avatar
+ (fn [db _]
+   (POST "settings"
+         {:params {:route :new-avatar}
+          :handler #(re-frame/dispatch [:set-user [:avatar] %])
+          :error-handler avatar-error-handler})
+   db))

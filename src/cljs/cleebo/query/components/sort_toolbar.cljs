@@ -10,9 +10,9 @@
     (re-frame/dispatch [:query-sort route :results-frame])))
 
 (defn sort-buttons []
-  (let [criterion (re-frame/subscribe [:session :query-opts :criterion])
-        attribute (re-frame/subscribe [:session :query-opts :attribute])
-        corpus (re-frame/subscribe [:session :query-opts :corpus])]
+  (let [criterion (re-frame/subscribe [:settings :query :query-opts :criterion])
+        attribute (re-frame/subscribe [:settings :query :query-opts :attribute])
+        corpus (re-frame/subscribe [:settings :query :corpus])]
     (fn []
       [bs/button-toolbar
        {:justified true}
@@ -29,12 +29,12 @@
          :model @attribute
          :select-fn #(re-frame/dispatch [:set-settings [:query :sort-match-opts :attribute] %])}]
        [bs/button
-        {:onClick (on-click-sort :sort-range)}
-        "Sort page"]
-       [bs/button
         {:onClick (on-click-sort :sort-query)}
-        "Sort all"]])))
+        "Sort"]])))
 
 (defn sort-toolbar []
-  [:div.row
-   [:div.col-lg-12.pull-left [sort-buttons]]])
+  (let [sort-opts (re-frame/subscribe [:settings :query :sort-opts])
+        corpus (re-frame/subscribe [:settings :query :corpus])]
+    (fn []
+      [:div.row
+       [:div.col-lg-12.pull-left [sort-buttons]]])))

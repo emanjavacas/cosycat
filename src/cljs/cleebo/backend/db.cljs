@@ -1,23 +1,27 @@
 (ns cleebo.backend.db)
 
-(def default-db
-  "defines app default state"
-  {:settings {:notifications {:delay 7500}
-              :snippets {:snippet-size 25
-                         :snippet-delta 10}}
-   :history {:ws []
-             :query []}
-   :session {:active-panel :front-panel
-             :query-opts {:corpus ""
-                          :context 5
-                          :size 10
-                          :criterion "match"
-                          :attribute "word"}
-             :query-results {:query-size 0
-                             :query-str ""
-                             :status {:status :ok :content ""}
-                             :from 0
-                             :to 0}
-             :notifications {}
-             :results-by-id {}
-             :results []}})
+(defn default-settings
+  [& {:keys [corpora] :or {corpora []}}] ;TODO: settings should be adapted to corpus config
+  (let [corpus (first corpora)]
+    {:notifications {:delay 7500}
+     :query {:query-opts {:context 5 :from 0 :page-size 10}
+             :sort-opts [{:position "match" :attribute "word" :facet "i"}]
+             :filter-opts []
+             :snippet-opts {:snippet-size 30 :snippet-delta 15}
+             :corpus corpus}}))
+
+(defn default-session
+  [& {:keys [corpora] :or {corpora []}}] ;TODO: settings should be adapted to corpus config
+  {:active-panel :front-panel
+   :active-project nil
+   :settings (default-settings :corpora corpora)})
+
+(def default-project-session
+  {:query {:results-summary {}
+           :results []
+           :results-by-id {}}
+   :filtered-users #{}})
+
+(def default-history
+  {:ws-events []
+   :internal-events []})

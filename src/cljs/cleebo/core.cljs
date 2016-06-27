@@ -18,7 +18,7 @@
             [cleebo.routes :as routes]
             [cleebo.localstorage :as ls]
             [cleebo.components :refer
-             [notification-container load-from-ls-modal user-thumb]]
+             [notification-container load-from-ls-modal user-thumb throbbing-panel]]
             [cleebo.query.page :refer [query-panel]]
             [cleebo.settings.page :refer [settings-panel]]
             [cleebo.updates.page :refer [updates-panel]]
@@ -31,6 +31,8 @@
             [taoensso.timbre :as timbre]
             [clojure.string :as str]))
 
+(defn loading-panel [] [throbbing-panel])
+
 (defmulti panels identity)
 (defmethod panels :front-panel [] [#'front-panel])
 (defmethod panels :query-panel [] [#'query-panel])
@@ -38,6 +40,7 @@
 (defmethod panels :debug-panel [] [#'debug-panel])
 (defmethod panels :updates-panel [] [#'updates-panel])
 (defmethod panels :error-panel [] [#'error-panel])
+(defmethod panels :loading-panel [] [#'loading-panel])
 
 (defn icon-label [icon label]
   [:span [:i {:class (str "zmdi " icon)      
@@ -151,14 +154,13 @@
   (let [active-panel (re-frame/subscribe [:active-panel])
         ls-modal? (re-frame/subscribe [:modals :localstorage])]
     (fn []
-      (timbre/debug @active-panel)
       [:div
        [navbar active-panel]
        [notification-container]
        [load-from-ls-modal ls-modal?]
        [:div.container-fluid
         {:style {:padding "75px 50px 0 50px"}}
-        (panels @active-panel)]])))
+        (panels (or @active-panel :loading-panel))]])))
 
 (defn mount-root []
   (reagent/render [main-panel] (.getElementById js/document "app")))
@@ -167,14 +169,14 @@
   (str "ws://" (.-host js/location) "/ws"))
 
 (defn init! []
-  ;; install csrf-token
+  ;; install csrf-token & other ajax interceptors
   (add-interceptor csrf-interceptor {:csrf-token js/csrf})
   (add-interceptor ajax-header-interceptor)
   ;; web-sockets
   (open-ws-channel {:url (host-url)})
   ;; start session
-  (re-frame/dispatch [:init-session])
-  ;; ensure we start on home page (so that db can be loaded)
+  (re-frame/dispatch-sync [:initialize-session])
+  ;; ;; ensure we start on home page (so that db can be loaded)
   (routes/nav! "/")
   ;; declare app routes
   (routes/app-routes)

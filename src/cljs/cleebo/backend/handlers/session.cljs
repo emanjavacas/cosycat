@@ -2,8 +2,10 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [ajax.core :refer [GET]]
-            [cleebo.backend.db :refer [default-db]]
+            [cleebo.backend.db
+             :refer [default-history default-session default-project-session]]
             [cleebo.backend.middleware :refer [standard-middleware]]
+            [cleebo.backend.handlers.projects :refer [normalize-projects]]
             [cleebo.app-utils :refer [default-project-name update-coll]]
             [cleebo.utils :refer [format]]
             [taoensso.timbre :as timbre]))
@@ -19,9 +21,8 @@
  :set-project-session
  standard-middleware
  (fn [db [_ path value]]
-   (let [active-project (get-in db [:session :active-project])
-         pred (fn [{:keys [name]}] (= name active-project))]
-     (update-in db [:projects] update-coll pred assoc-in (into [:session] path)) value)))
+   (let [active-project (get-in db [:session :active-project])]
+     (assoc-in db (into [:projects active-project :session] path) value))))
 
 (re-frame/register-handler
  :set-active-panel
@@ -30,42 +31,30 @@
    (assoc-in db [:session :active-panel] active-panel)))
 
 (re-frame/register-handler
- :update-notification
- standard-middleware
- (fn [db [_ path f]]
-   (let [notification-settings (get-in db [:settings :notifications])]
-     (assoc-in db [:settings :notifications]
-               (update-in notification-settings path f)))))
-
-(re-frame/register-handler
  :initialize-db
  standard-middleware
  (fn [_ [_ {:keys [me users corpora projects] :as payload}]]
-   (deep-merge payload )))              ;TODO
+   (-> payload
+       (assoc :session (default-session :corpora corpora) :history default-history)
+       (assoc :projects (normalize-projects projects)))))
 
-(defn session-handler
-  [{me :me users :users projects :projects corpora :corpora :as payload}]
-  (re-frame/dispatch [:initialize-db payload])
-  (js/setTimeout #(re-frame/dispatch [:stop-throbbing :front-panel]) 2000))
+(defn initialize-session-handler [payload]
+  (re-frame/dispatch [:initialize-db payload]))
 
-(defn session-error-handler [data]
-  (re-frame/dispatch [:stop-throbbing :front-panel])
-  (re-frame/dispatch
-   [:session-error
-    {:error "initialisation error"
-     :message "Couldn't load user session. Try refreshing the browser :-S"}]))
+(defn initialize-session-error-handler [payload]
+  (re-frame/dispatch [:session-error
+                      {:error "initialisation error"
+                       :message "Couldn't load user session :-S"}]))
 
 (re-frame/register-handler
- :init-session
- standard-middleware
+ :initialize-session
  (fn [db _]
-   (re-frame/dispatch [:start-throbbing :front-panel])
    (GET "/session"
-        {:handler session-handler
-         :error-handler session-error-handler})
+        {:handler initialize-session-handler
+         :error-handler initialize-session-error-handler})
    db))
 
-(re-frame/register-handler              ;global error
+(re-frame/register-handler              ;load error
  :session-error
  standard-middleware
  (fn [db [_ {:keys [error message] :as args}]]

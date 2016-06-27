@@ -8,18 +8,17 @@
 (defrecord DB [db conn url]
   component/Lifecycle 
   (start [component]
+    (timbre/info "starting DB on" url)
     (if (and conn db)
       component
       (let [{:keys [conn db]} (mg/connect-via-uri url)]
-        (timbre/info "starting DB on" url)
         (assoc component :db db :conn conn))))
   (stop [component]
+    (timbre/info "Shutting down DB")
     (if-not conn
-      component
-      (do
-        (timbre/info "Shutting down DB")
-        (mg/disconnect conn)
-        (assoc component :db nil :conn nil)))))
+      (assoc component :db nil)
+      (do (mg/disconnect conn)
+          (assoc component :db nil :conn nil)))))
 
 (defn new-db [url]
   (map->DB {:url url}))

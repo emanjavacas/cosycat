@@ -12,8 +12,7 @@
 (defn on-mouse-over [target text-atom] (fn [e] (reset! text-atom (get help-map target))))
 
 (defn appearance-controller []
-  (let [help-text (reagent/atom "")
-        user-info (re-frame/subscribe [:session :user-info])]
+  (let [help-text (reagent/atom "")]
     (fn []
       [row-component
        :label "Avatar"

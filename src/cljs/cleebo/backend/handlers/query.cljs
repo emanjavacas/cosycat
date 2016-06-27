@@ -23,8 +23,6 @@
            (neg?  new-from) [0 (+ new-from page-size)]
            :else            [new-from from]))))
 
-
-
 (defn keywordify-results [results]
   (into {} (map (juxt :id identity) results)))
 

@@ -20,8 +20,7 @@
 (def hit-id-schema s/Any)
 
 (def hit-meta-schema
-  {(s/required-key :id) hit-id          ;hit-id used to quickly identify ann updates
-   (s/required-key :num) s/Int          ;index of hit in current query
+  {(s/required-key :num) s/Int          ;index of hit in current query
    ;; optional keys 
    (s/optional-key :marked) s/Bool      ;is hit marked for annotation?
    (s/optional-key :has-marked) s/Bool  ;does hit contain marked tokens?
@@ -31,26 +30,30 @@
 ;;; projects
 (def results-by-id-schema
   "Internal representation of results. A map from ids to hit-maps"
-  {hit-id {:hit  [hit-token-schema]
-           :meta hit-meta-schema}})
+  {hit-id-schema {:hit  [hit-token-schema]
+                  :id s/Any ;hit-id used to quickly identify ann updates
+                  :meta hit-meta-schema}})
 
 (def results-schema
   "Current results being displayed are represented as an ordered list
   of hits ids. Each `id` map to an entry in the :results-by-id map"
-  [hit-id])                             ;use hit-num instead?
+  [hit-id-schema])                             ;use hit-num instead?
 
 (def results-summary-schema
-  {:page {:from s/Int :to s/Int}
-   :size s/Int
-   :query-str s/Str
-   :status {:status (s/enum :ok :error) :content s/Str}})
+  (s/conditional
+   empty? {}
+   :else
+   {:page {:from s/Int :to s/Int}
+    :size s/Int
+    :query-str s/Str
+    :status {:status (s/enum :ok :error) :content s/Str}}))
 
 (def project-session-schema
   {:query {:results-summary results-summary-schema ;info about last query
            :results (s/conditional empty? [] :else results-schema) ;current hits ids
            :results-by-id (s/conditional empty? {} :else results-by-id-schema)} ;hits by id
    :filtered-users #{s/Str}             ;filter out annotations by other users
-   :corpus s/Str})                      ;current corpus
+})
 
 ;;; history
 (def ws-event-history-schema
@@ -86,12 +89,13 @@
 
 (def session-schema
   {:active-panel s/Keyword
-   :settings settings-schema            ;session-settings
-   :notifications {s/Any notification-schema}
+   :active-project s/Any
+   :settings settings-schema            ;mutable global session-settings (in case outside project)
+   (s/optional-key :notifications) {s/Any notification-schema}
    (s/optional-key :modals)     {s/Keyword s/Any}
+   (s/optional-key :session-error) session-error-schema
    (s/optional-key :throbbing?) {s/Any s/Bool}
-   (s/optional-key :component-error?) {s/Keyword s/Any}
-   (s/optional-key :session-error) session-error-schema})
+   (s/optional-key :component-error?) {s/Keyword s/Any}})
 
 ;;; full db-schema
 (def db-schema
@@ -103,7 +107,7 @@
    :users [{:username s/Str :user public-user-schema}]
    :corpora [s/Any]                     ;see query-backends/Corpus
    :projects
-   [{:name s/Str                        ;key
-     :project project-schema
-     (s/optional-key :session) project-session-schema}] ;client mutable project-specific data
+   {s/Str                        ;key
+    {:project project-schema
+     (s/optional-key :session) project-session-schema}} ;client mutable project-specific data
 })

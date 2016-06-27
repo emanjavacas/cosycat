@@ -2,7 +2,6 @@
   (:require [re-frame.core :as re-frame]
             [schema.core :as s]
             [cleebo.app-utils :refer [deep-merge]]
-            [cleebo.backend.db :refer [default-db]]
             [cleebo.localstorage :as ls]
             [cleebo.backend.middleware
              :refer [standard-middleware no-debug-middleware]]

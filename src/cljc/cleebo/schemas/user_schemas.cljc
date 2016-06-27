@@ -7,10 +7,9 @@
 
 ;;; query opts (used in [:me :settings] and [:projects [{:settings}])
 (def query-opts-schema
-  {:corpus s/Int
+  {:corpus s/Str
    :query-opts {:context s/Int :from s/Int :page-size s/Int} ;from is kept updated
-   :sort-match-opts {:attribute s/Str :facet s/Str}
-   :sort-context-opts {:attribute s/Str :facet s/Str}
+   :sort-opts [{:position s/Str :attribute s/Str :facet s/Str}]
    :filter-opts [{:attribute s/Str :value s/Str}]            ;multiple filters
    :snippet-opts {:snippet-size s/Int :snippet-delta s/Int}})
 

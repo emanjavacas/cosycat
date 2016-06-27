@@ -26,9 +26,9 @@
     :label [:div "next" [:i.zmdi.zmdi-arrow-right {:style {:margin-left "10px"}}]]]])
 
 (defn query-result-label []
-  (let [query-results (re-frame/subscribe [:session :query-results])]
+  (let [results-summary (re-frame/subscribe [:project-session :query :results-summary])]
     (fn []
-      (let [{:keys [from to query-size]} @query-results]
+      (let [{:keys [from to query-size]} @results-summary]
         [:label
          {:style {:line-height "35px"}}
          (let [from (inc from) to (min to query-size)]
@@ -46,9 +46,8 @@
    [annotation-modal-button]])
 
 (defn results-toolbar []
-  (let [filtered-users (re-frame/subscribe [:session :active-project :filtered-users])]
-    (fn []
-      [:div.row
-       [:div.col-lg-2.col-sm-3 [query-result-label]]
-       [:div.col-lg-2.col-sm-3.pull-left [pager-buttons]]
-       [:div.col-lg-3.pull-right [mark-buttons]]])))
+  (fn []
+    [:div.row
+     [:div.col-lg-2.col-sm-3 [query-result-label]]
+     [:div.col-lg-2.col-sm-3.pull-left [pager-buttons]]
+     [:div.col-lg-3.pull-right [mark-buttons]]]))

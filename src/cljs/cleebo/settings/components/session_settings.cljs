@@ -25,32 +25,33 @@
   (fn [e] (reset! text-atom "")))
 
 (defn query-opts-controller []
-  (let [query-opts (re-frame/subscribe [:session :query-opts])
-        query-opts-help (reagent/atom "")
-        corpora (re-frame/subscribe [:session :corpora])]
+  (let [corpus (re-frame/subscribe [:settings :query :corpus])
+        context (re-frame/subscribe [:settings :query :context])
+        page-size (re-frame/subscribe [:settings :query :page-size])
+        corpora (re-frame/subscribe [:corpora])
+        query-opts-help (reagent/atom "")]
     (fn []
       [row-component
        :label "Query Options"
        :controllers [bs/button-toolbar
                      {:class "text-center"}
-                     [corpus-select
-                      query-opts
+                     [corpus-select corpus
                       :on-mouse-over (on-mouse-over :corpus query-opts-help)
                       :on-mouse-out (on-mouse-out query-opts-help)
                       :corpora @corpora]
-                     [context-select query-opts
+                     [context-select context
                       :on-mouse-over (on-mouse-over :context query-opts-help)
                       :on-mouse-out (on-mouse-out query-opts-help)          
                       :has-query? false]
-                     [size-select query-opts
+                     [size-select page-size
                       :on-mouse-over (on-mouse-over :size query-opts-help)
                       :on-mouse-out (on-mouse-out query-opts-help)          
                       :has-query? false]]
        :help-text query-opts-help])))
 
 (defn snippet-controller []
-  (let [snippet-size (re-frame/subscribe [:settings :snippets :snippet-size])
-        snippet-delta (re-frame/subscribe [:settings :snippets :snippet-delta])
+  (let [snippet-size (re-frame/subscribe [:settings :query :snippet-opts :snippet-size])
+        snippet-delta (re-frame/subscribe [:settings :query :snippet-opts :snippet-delta])
         snippet-size-help (reagent/atom "")]
     (fn []
       [row-component
