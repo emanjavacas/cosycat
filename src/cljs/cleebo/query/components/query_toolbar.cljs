@@ -46,9 +46,9 @@
       (dissoc args :has-query?))]))
 
 (defn query-opts-menu []
-  (let [corpus (re-frame/subscribe [:settings :query :corpus])
-        context (re-frame/subscribe [:settings :query :context])
-        page-size (re-frame/subscribe [:settings :query :page-size])
+  (let [corpus (re-frame/subscribe [:settings :query :query-opts :corpus])
+        context (re-frame/subscribe [:settings :query :query-opts :context])
+        page-size (re-frame/subscribe [:settings :query :query-opts :page-size])
         has-query? (re-frame/subscribe [:has-query?])
         corpora (re-frame/subscribe [:corpora])]
     (fn []

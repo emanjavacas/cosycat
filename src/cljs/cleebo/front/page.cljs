@@ -10,14 +10,15 @@
             [taoensso.timbre :as timbre]))
 
 (defn no-projects [username]
-  [:div
-   [:p "You don't have current projects. Start one right now."]
-   [:p.text-mute
-    {:style {:font-size "15px"}}
-    "... or just "
-    [:a {:style {:cursor "pointer"}
-         :on-click #(nav! (str "/project/" (default-project-name @username)))}
-     "try it"]]])
+  (fn [username]
+    [:div
+     [:p "You don't have current projects. Start one right now."]
+     [:p.text-mute
+      {:style {:font-size "15px"}}
+      "... or just "
+      [:a {:style {:cursor "pointer"}
+           :on-click #(nav! (str "/project/" (default-project-name @username)))}
+       "try it"]]]))
 
 (defn my-throbbing-panel []
   [:div.container-fluid
@@ -28,8 +29,8 @@
     [:h2.text-muted "Loading Database"]]])
 
 (defn front-panel []
-  (let [projects (re-frame/subscribe [:session :user-info :projects])
-        username (re-frame/subscribe [:session :user-info :username])
+  (let [projects (re-frame/subscribe [:projects])
+        username (re-frame/subscribe [:me :username])
         throbbing? (re-frame/subscribe [:throbbing? :front-panel])]
     (fn []
       [:div.container-fluid

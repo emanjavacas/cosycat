@@ -70,7 +70,7 @@
         active-project (re-frame/subscribe [:session :active-project])]
     (fn [{:keys [id word match marked anns] :as token}]
       (let [highlighted (if marked "highlighted " "")
-            color (when anns (highlight-annotation token @project-name @color-map))
+            color (when anns (highlight-annotation token @active-project @color-map))
             is-match (when match "info")]
         [:td
          {:class (str highlighted is-match)

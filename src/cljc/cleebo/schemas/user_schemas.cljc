@@ -20,7 +20,7 @@
 (def user-project-schema
   {:name s/Str
    :settings settings-schema  ;user specific project-settings
-   :query-history [{:query-str s/Str :timestamp s/Int}]})
+   :history {:query [{:query-str s/Str :timestamp s/Int}]}})
 
 (def user-schema
   {:username s/Str

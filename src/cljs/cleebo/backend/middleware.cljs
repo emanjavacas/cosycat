@@ -29,8 +29,8 @@
   (fn [db [_ {:keys [project-name]} :as args]]
     (if-not project-name
       (do (warn "Project middleware requires named :project-name but got" args) db)
-      (let [projects (get-in db [:session :user-info :projects])]
-        (if-not (some #{project-name} (map :name projects))
+      (let [projects (get-in db [:projects])]
+        (if-not (some #{project-name} (keys projects))
           (do (re-frame/dispatch
                [:session-error
                 {:error "Project not found!"

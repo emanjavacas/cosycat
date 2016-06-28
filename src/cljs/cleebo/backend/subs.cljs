@@ -55,13 +55,23 @@
 (re-frame/register-sub
  :settings
  (fn [db [_ & path]]
-   (let [global-settings (reaction (:settings @db))]
+   (let [global-settings (reaction (get-in @db [:session :settings]))]
      (reaction (get-in @global-settings path)))))
 
 (re-frame/register-sub
  :corpora
  (fn [db _]
    (reaction (:corpora @db))))
+
+(re-frame/register-sub
+ :projects
+ (fn [db _]
+   (reaction (:projects @db))))
+
+(re-frame/register-sub
+ :me
+ (fn [db [_ & path]]
+   (reaction (get-in @db (into [:me] path)))))
 
 (re-frame/register-sub
  :has-query?
@@ -101,7 +111,7 @@
 
 (defn get-users
   ([db] (cons (:me db) (map :user (:users db))))
-  ([db by-name] (filter #(contains? by-name (:name %)) (get-users db))))
+  ([db by-name] (filter #(contains? by-name (:username %)) (get-users db))))
 
 (defn get-user [db username]
   (first (get-users db #{username})))
@@ -115,7 +125,7 @@
  (fn [db [_ username & [path]]]
    (let [user (reaction (get-user @db username))]
      (if path
-       (reaction (get-in user path))
+       (reaction (get-in @user path))
        user))))
 
 (re-frame/register-sub

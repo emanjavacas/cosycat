@@ -49,5 +49,5 @@
     [:div.container-fluid
      [:div.row
       [bs/list-group
-       (doall (for [{:keys [name] :as project} @projects]
+       (doall (for [[name {:keys [project]}] @projects]
                 ^{:key (str name)} [project-row project]))]]]))

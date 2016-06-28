@@ -31,7 +31,13 @@
             [taoensso.timbre :as timbre]
             [clojure.string :as str]))
 
-(defn loading-panel [] [throbbing-panel])
+(defn loading-panel []
+  [:div.container-fluid
+   [:div.row.text-center
+    {:style {:height "250px"}}
+    [throbbing-panel :css-class "loader-ticks"]]
+   [:div.row.text-center
+    [:h2.text-muted "Loading Database"]]])
 
 (defmulti panels identity)
 (defmethod panels :front-panel [] [#'front-panel])

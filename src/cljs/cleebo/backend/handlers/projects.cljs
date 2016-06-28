@@ -3,7 +3,7 @@
             [reagent.core :as reagent]
             [ajax.core :refer [POST]]
             [cleebo.backend.middleware :refer [standard-middleware check-project-exists]]
-            [cleebo.backend.db :refer [default-project-session]]
+            [cleebo.backend.db :refer [default-project-session default-project-history]]
             [cleebo.schemas.project-schemas :refer [project-schema update-schema]]
             [taoensso.timbre :as timbre]))
 
@@ -15,7 +15,8 @@
 
 (defn normalize-projects [projects]
   (reduce (fn [acc {:keys [name] :as project}]
-            (assoc acc name {:project project :session default-project-session}))
+            (let [project {:project project :session default-project-session}]
+              (assoc acc name project)))
           {}
           projects))
 
@@ -25,9 +26,9 @@
  (fn [db [_ project]]
    (update db [:projects] merge (normalize-projects [project]))))
 
-(defn new-project-handler [project]
+(defn new-project-handler [project]   ;should navigate to project
   (re-frame/dispatch [:add-project project])
-  (re-frame/dispatch [:notify {:message "Succesfully created project"}])) ;should navigate to project
+  (re-frame/dispatch [:notify {:message "Succesfully created project"}]))
 
 (defn new-project-error-handler [{:keys [message data]}]
   (re-frame/dispatch
