@@ -27,8 +27,7 @@
  :set-project-settings
  standard-middleware
  (fn [db [_ path value]]
-   (let [active-project (get-in db [:session :active-project])
-         pred (fn [{:keys [name]}] (= name active-project))]
+   (let [active-project (get-in db [:session :active-project])]
      ;; TODO: this should also send the updated settings to the db.
      ;; TODO: and also update session settings {:session :settings}
      (assoc-in db (into [:projects active-project :settings] path) value))))

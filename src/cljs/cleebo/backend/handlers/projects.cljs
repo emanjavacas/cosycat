@@ -7,18 +7,22 @@
             [cleebo.schemas.project-schemas :refer [project-schema update-schema]]
             [taoensso.timbre :as timbre]))
 
-(re-frame/register-handler
- :set-active-project
- (conj standard-middleware check-project-exists)
- (fn [db [_ {:keys [project-name]}]]
-   (assoc-in db [:session :active-project] project-name)))
-
 (defn normalize-projects [projects]
   (reduce (fn [acc {:keys [name] :as project}]
             (let [project {:project project :session default-project-session}]
               (assoc acc name project)))
           {}
           projects))
+
+(re-frame/register-handler
+ :set-active-project
+ (conj standard-middleware check-project-exists)
+ (fn [db [_ {:keys [project-name]}]]
+   (let [project-settings (get-in db [:projects project-name :settings] {})]
+     (-> db
+         (assoc-in [:session :active-project] project-name)
+         (assoc-in [:session :active-panel] :query-panel)
+         (update-in [:session :settings] merge project-settings)))))
 
 (re-frame/register-handler
  :add-project
@@ -28,7 +32,7 @@
 
 (defn new-project-handler [project]   ;should navigate to project
   (re-frame/dispatch [:add-project project])
-  (re-frame/dispatch [:notify {:message "Succesfully created project"}]))
+  (re-frame/dispatch [:set-active-project {:project-name (:name project)}]))
 
 (defn new-project-error-handler [{:keys [message data]}]
   (re-frame/dispatch

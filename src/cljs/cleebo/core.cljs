@@ -56,27 +56,25 @@
    label])
 
 (defn user-brand-span [username active-project]
-  (let [projects (re-frame/subscribe [:session :user-info :projects])]
-    (fn [username active-project]
-      [:div (str/capitalize username)
-       [:span {:style {:white-space "nowrap"}}
-        (if-let [{project-name :name} @active-project]
-          (str "@" project-name))]])))
+  (fn [username active-project]
+    [:div (str/capitalize username)
+     [:span {:style {:white-space "nowrap"}}
+      (str "@" @active-project)]]))
 
 (defn user-brand [active-project]
-  (let [user (re-frame/subscribe [:session :user-info])]
+  (let [user (re-frame/subscribe [:me])]
     (fn [active-project]
       (let [{username :username {href :href} :avatar} @user]
         [bs/navbar-brand
          [:div.container-fluid
           {:style {:margin-top "-9.5px"}}
           [:div.row
-           {:style {:line-height "40px" :text-align "right"}}
+           {:style {:line-height "35px" :text-align "right"}}
            [:div.col-sm-8
-            ;; wait until user-info is fetched in main
+            ;; wait until user info is fetched in main
             (when username [user-brand-span username active-project])]
            [:div.col-sm-4
-            ;; wait until user-info is fetched in main
+            ;; wait until user info is fetched in main
             (when username [user-thumb href {:height "30px" :width "30px"}])]]]]))))
 
 (defn navlink [target href label icon]
@@ -117,10 +115,10 @@
        {:divider true}
        {:label "Projects" :header true}]
       (doall
-       (for [{project-name :name} @projects]
+       (for [[project-name {:keys [project]}] @projects]
          {:label project-name
           :href (str "#/project/" project-name)
-          :style (when (= project-name (:name @active-project))
+          :style (when (= project-name @active-project)
                    {:background-color "#e7e7e7"
                     :color "black"})})))]))
 
@@ -134,8 +132,8 @@
      :on-select ls/dump-db}]])
 
 (defn navbar [active-panel]
-  (let [active-project (re-frame/subscribe [:active-project])
-        projects (re-frame/subscribe [:session :user-info :projects])]
+  (let [active-project (re-frame/subscribe [:session :active-project])
+        projects (re-frame/subscribe [:projects])]
     (fn [active-panel]
       [bs/navbar
        {:inverse false
@@ -145,7 +143,7 @@
        [bs/navbar-header [user-brand active-project]]
        [bs/nav {:pullRight true}
         (when-not (= @active-panel :front-panel)
-          [navlink :query-panel (str "#/project/" (:name @active-project))
+          [navlink :query-panel (str "#/project/" @active-project)
            "Query" "zmdi-search"])
         (when-not (= @active-panel :front-panel)
           [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"])

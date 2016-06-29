@@ -34,6 +34,13 @@
          (let [from (inc from) to (min to query-size)]
            (gstr/format "%d-%d of %d hits" from to query-size))]))))
 
+(defn result-label-pager []
+  (fn []
+    [:div.container-fluid
+     [:div.row
+      [:div.col-lg-3.col-sm-5 [query-result-label]]
+      [:div.col-lg-9.col-sm-7 [:div.pull-left [pager-buttons]]]]]))
+
 (defn mark-all-hits-btn []
   [bs/button
    {:onClick #(re-frame/dispatch [:mark-all-hits])
@@ -48,6 +55,5 @@
 (defn results-toolbar []
   (fn []
     [:div.row
-     [:div.col-lg-2.col-sm-3 [query-result-label]]
-     [:div.col-lg-2.col-sm-3.pull-left [pager-buttons]]
-     [:div.col-lg-3.pull-right [mark-buttons]]]))
+     [:div.col-sm-6 [result-label-pager]]
+     [:div.col-sm-6 [:div.pull-right [mark-buttons]]]]))

@@ -30,19 +30,19 @@
   "on new results, update current results leaving untouched those that are marked"
   [results & {:keys [has-marked?]}]
   (fn [old-results]
-    (merge (keywordify-results results)
-           (filter-marked-hits old-results :has-marked? has-marked?))))
+    (merge (keywordify-results results) (filter-marked-hits old-results :has-marked? has-marked?))))
 
 (re-frame/register-handler
  :set-query-results
  standard-middleware
- (fn [db [_ & [{:keys [results from to] :as data}]]]
-   (let [query-results (dissoc data :results)
+ (fn [db [_ & [{:keys [results] :as payload}]]]
+   (let [results-summary (dissoc payload :results)
+         active-project (get-in db [:session :active-project])
          merge-old-results (merge-fn results :has-marked? true)]
      (-> db
-         (update-in [:session :query-results] merge query-results)
-         (assoc-in [:session :results] (map :id results))
-         (update-in [:session :results-by-id] merge-old-results)))))
+         (update-in [:projects active-project :session :results-summary] merge results-summary)
+         (assoc-in [:projects active-project :session :results] (map :id results))
+         (update-in [:projects active-project :session :results-by-id] merge-old-results)))))
 
 (re-frame/register-handler
  :reset-query-results
@@ -55,33 +55,25 @@
   "general success handler for query routes
   (:query, :query-range :query-sort :query-refresh).
   Accepts additional callbacks `extra-work` that are passed the incoming data."
-  [source-component & extra-work]
-  (fn [data]
-    (if (string? data)
-      (.assign js/location "/logout")
-      (do (doall (map #(% data) extra-work))
-          (re-frame/dispatch [:set-query-results data])
-          (re-frame/dispatch [:stop-throbbing source-component])))))
+  [source-component]
+  (fn [payload]
+    (re-frame/dispatch [:set-query-results payload])
+    (re-frame/dispatch [:stop-throbbing source-component])))
 
 (defn error-handler
   [source-component]
   (fn [{:keys [status content]}]
     (re-frame/dispatch [:stop-throbbing source-component])
-    (re-frame/dispatch
-     [:set-session
-      [:query-results :status]
-      {:status status :content content}])))
+    (re-frame/dispatch [:set-project-session [:query :status] {:status status :content content}])))
 
 (re-frame/register-handler
  :query
- standard-middleware
  (fn [db [_ query-str source-component]]
-   (let [{{:keys [corpus context size]} :query-opts
-          {:keys [from]}                :query-results} (:session db)
-         callback #(re-frame/dispatch [:reset-query-results])]
-     (re-frame/dispatch [:start-throbbing source-component])
+   (let [{{:keys [context from page-size]} :query-opts corpus :corpus} (get-in db [:session :settings :query])]
+     (re-frame/dispatch [:start-throbbing source-component]) ;todo
+
      (GET "/blacklab"
-          {:handler (results-handler source-component callback)
+          {:handler (results-handler source-component)
            :error-handler (error-handler source-component)
            :params {:query-str (js/encodeURIComponent query-str)
                     :corpus corpus
@@ -93,7 +85,6 @@
 
 (re-frame/register-handler
  :query-range
- standard-middleware
  (fn [db [_ direction source-component]]
    (let [{{:keys [corpus context size]} :query-opts
           {:keys [from to query-size]}  :query-results} (:session db)
@@ -114,7 +105,6 @@
 
 (re-frame/register-handler
  :query-refresh
- standard-middleware
  (fn [db [_ source-component]]
    (let [{{:keys [corpus context size]} :query-opts
           {:keys [from to query-size]}  :query-results} (:session db)
@@ -132,7 +122,6 @@
 
 (re-frame/register-handler
  :query-sort
- standard-middleware
  (fn [db [_ route source-component]]
    (let [{{:keys [corpus context size criterion attribute]} :query-opts
           {:keys [from]} :query-results} (:session db)]
@@ -157,14 +146,12 @@
      :status :error}]))
 
 (defn snippet-result-handler [& [context]]
-  (fn [{:keys [snippet status hit-idx] :as data}]
-    (if (string? data)                  ;crsf page
-      (.assign js/location "/logout")
-      (let [data (case context
-                   nil data
-                   :left (update-in data [:snippet] dissoc :right)
-                   :right (update-in data [:snippet] dissoc :left))]
-        (re-frame/dispatch [:open-modal :snippet data])))))
+  (fn [{:keys [snippet status hit-idx] :as payload}]
+    (let [payload (case context
+                 nil payload
+                 :left (update-in payload [:snippet] dissoc :right)
+                 :right (update-in payload [:snippet] dissoc :left))]
+      (re-frame/dispatch [:open-modal :snippet payload]))))
 
 (defn fetch-snippet [hit-idx snippet-size & {:keys [context]}]
   (GET "/blacklab"
