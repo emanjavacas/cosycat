@@ -9,5 +9,9 @@
   (to-interceptor {:name "AJAX-Header interceptor"
                    :request #(assoc-in % [:header "X-Requested-With"] "XMLHttpRequest")}))
 
+(defn debug-interceptor []
+  (to-interceptor {:name "Debug interceptor"
+                   :request (fn [req] (.log js/console req) req)}))
+
 (defn add-interceptor [interceptor & args]
   (swap! default-interceptors (partial cons (apply interceptor args))))

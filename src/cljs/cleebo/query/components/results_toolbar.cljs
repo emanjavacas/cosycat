@@ -28,11 +28,10 @@
 (defn query-result-label []
   (let [results-summary (re-frame/subscribe [:project-session :query :results-summary])]
     (fn []
-      (let [{:keys [from to query-size]} @results-summary]
+      (let [{{from :from to :to} :page query-size :query-size} @results-summary]
         [:label
          {:style {:line-height "35px"}}
-         (let [from (inc from) to (min to query-size)]
-           (gstr/format "%d-%d of %d hits" from to query-size))]))))
+         (gstr/format "%d-%d of %d hits" (inc from) to query-size)]))))
 
 (defn result-label-pager []
   (fn []

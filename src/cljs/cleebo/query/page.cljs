@@ -49,9 +49,9 @@
   (not (zero? (count marked-hits))))
 
 (defn results-frame []
-  (let [status (re-frame/subscribe [:session :query-results :status])
-        query-size (re-frame/subscribe [:session :query-results :query-size])
-        query-str (re-frame/subscribe [:session :query-results :query-str])
+  (let [status (re-frame/subscribe [:project-session :status])
+        query-size (re-frame/subscribe [:project-session :query :results-summery :query-size])
+        query-str (re-frame/subscribe [:project-session :query :results-summary :query-str])
         throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
     (fn []
       (let [{:keys [status content]} @status]
@@ -62,16 +62,20 @@
           (no-results @query-str @query-size) [no-results-panel query-str]
           (has-results @query-size)           [results-table])))))
 
+(defn query-frame-spacer []
+  [:div.row {:style {:margin-top "5px"}}])
+
 (defn query-frame []
-  (fn []
-    [:div.container-fluid
-     [query-toolbar]
-     [:div.row {:style {:margin-top "5px"}}]
-     [sort-toolbar]
-     [:hr]
-     [results-toolbar]
-     [:div.row {:style {:margin-top "5px"}}]
-     [results-frame]]))
+  (let [has-query? (re-frame/subscribe [:has-query?])]
+    (fn []
+      [:div.container-fluid
+       [query-toolbar]
+       [query-frame-spacer]
+       [sort-toolbar]
+       (when @has-query? [:hr])
+       (when @has-query? [results-toolbar])
+       [query-frame-spacer]
+       [results-frame]])))
 
 (defn unmark-all-hits-btn []
   [bs/button

@@ -48,8 +48,9 @@
 (re-frame/register-sub                  ;related to query results
  :project-session                       ;TODO: no-project queries
  (fn [db [_ & path]]
-   (let [active-project (reaction (get @db [:session :active-project]))
+   (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))]
+
      (reaction (get-in @project (into [:session] path))))))
 
 (re-frame/register-sub
@@ -77,16 +78,17 @@
  :has-query?
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
-         project (reaction (get-in @db [:projects @active-project]))]
-     (reaction (not (zero? (get-in @project [:session :results-summary :query-size])))))))
+         project (reaction (get-in @db [:projects @active-project]))
+         query-size (reaction (get-in @project [:session :query :results-summary :query-size]))]
+     (reaction (not (or (not (number? @query-size)) (zero? @query-size)))))))
 
 (re-frame/register-sub
  :results
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))
-         results-ids (reaction (get-in @project [:session :results]))
-         results-by-id (reaction (get-in @project [:session :results-by-id]))]
+         results-ids (reaction (get-in @project [:session :query :results]))
+         results-by-id (reaction (get-in @project [:session :query :results-by-id]))]
      (reaction (select-values @results-by-id @results-ids)))))
 
 (re-frame/register-sub ;all marked hits, also if currently not in table-results

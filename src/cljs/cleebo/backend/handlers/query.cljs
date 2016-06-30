@@ -23,32 +23,25 @@
            (neg?  new-from) [0 (+ new-from page-size)]
            :else            [new-from from]))))
 
-(defn keywordify-results [results]
-  (into {} (map (juxt :id identity) results)))
-
 (defn merge-fn
   "on new results, update current results leaving untouched those that are marked"
   [results & {:keys [has-marked?]}]
   (fn [old-results]
-    (merge (keywordify-results results) (filter-marked-hits old-results :has-marked? has-marked?))))
+    (merge (zipmap (map :id results) results) ;normalize results
+           (filter-marked-hits old-results :has-marked? has-marked?))))
 
 (re-frame/register-handler
  :set-query-results
  standard-middleware
- (fn [db [_ & [{:keys [results] :as payload}]]]
-   (let [results-summary (dissoc payload :results)
-         active-project (get-in db [:session :active-project])
+ (fn [db [_ {:keys [results-summary results status]}]]
+   (let [active-project (get-in db [:session :active-project])
+         path-fn (fn [k] [:projects active-project :session :query k])
          merge-old-results (merge-fn results :has-marked? true)]
      (-> db
-         (update-in [:projects active-project :session :results-summary] merge results-summary)
-         (assoc-in [:projects active-project :session :results] (map :id results))
-         (update-in [:projects active-project :session :results-by-id] merge-old-results)))))
-
-(re-frame/register-handler
- :reset-query-results
- standard-middleware
- (fn [db _]
-   (assoc-in db [:session :results-by-id] {})))
+         (assoc-in [:projects active-project :session :status] status)
+         (update-in (path-fn :results-summary) merge results-summary)
+         (assoc-in (path-fn :results) (map :id results))
+         (update-in (path-fn :results-by-id) merge-old-results)))))
 
 ;;; query backend handlers
 (defn results-handler
@@ -69,7 +62,8 @@
 (re-frame/register-handler
  :query
  (fn [db [_ query-str source-component]]
-   (let [{{:keys [context from page-size]} :query-opts corpus :corpus} (get-in db [:session :settings :query])]
+   (let [query-settings (get-in db [:session :settings :query])
+         {{:keys [context page-size]} :query-opts corpus :corpus} query-settings]
      (re-frame/dispatch [:start-throbbing source-component]) ;todo
 
      (GET "/blacklab"
@@ -79,7 +73,7 @@
                     :corpus corpus
                     :context context
                     :from 0
-                    :size size
+                    :size page-size
                     :route :query}})
      db)))
 

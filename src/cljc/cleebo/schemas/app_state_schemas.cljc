@@ -44,14 +44,17 @@
    empty? {}
    :else
    {:page {:from s/Int :to s/Int}
-    :size s/Int
+    :query-size s/Int
     :query-str s/Str
-    :status {:status (s/enum :ok :error) :content s/Str}}))
+    :query-time s/Int
+    :has-next s/Bool
+    :corpus s/Any}))
 
 (def project-session-schema
   {:query {:results-summary results-summary-schema ;info about last query
            :results (s/conditional empty? [] :else results-schema) ;current hits ids
            :results-by-id (s/conditional empty? {} :else results-by-id-schema)} ;hits by id
+   :status (s/conditional empty? {} :else {:status (s/enum :ok :error) :content s/Str})
    :filtered-users #{s/Str}             ;filter out annotations by other users
 })
 
@@ -107,7 +110,7 @@
    :users [{:username s/Str :user public-user-schema}]
    :corpora [s/Any]                     ;see query-backends/Corpus
    :projects
-   {s/Str                        ;key
+   {s/Any                        ;key
     {:project project-schema
      (s/optional-key :session) project-session-schema}} ;client mutable project-specific data
 })

@@ -21,8 +21,8 @@
 
 (defn handler
   "general handler called with normalized corpus query data"
-  [data]
-  (.log js/console "SUCCESS!" data))
+  [{:keys [results results-summary] :as payload}]
+  (re-frame/dispatch [:set-query-results payload]))
 
 (defn error-handler
   "general error handler called with normalized query error data"

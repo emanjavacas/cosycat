@@ -16,7 +16,7 @@
 (defn get-hit-id
   "get hit id from hit row given a cell child"
   [e]
-  (js/parseInt (gdataset/get (gdom/getParentElement e) "hit")))
+  (gdataset/get (gdom/getParentElement e) "hit"))
 
 (defn on-mouse-down [mouse-down? highlighted?]
   (fn [event]

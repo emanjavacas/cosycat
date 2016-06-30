@@ -25,6 +25,7 @@
   {:query {:results-summary {}
            :results []
            :results-by-id {}}
+   :status {}
    :filtered-users #{}})
 
 (def default-project-history

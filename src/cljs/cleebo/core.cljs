@@ -27,7 +27,7 @@
             [cleebo.error.page :refer [error-panel]]            
             [cleebo.utils :refer [nbsp]]
             [cleebo.ajax-interceptors
-             :refer [add-interceptor csrf-interceptor ajax-header-interceptor]]
+             :refer [add-interceptor csrf-interceptor ajax-header-interceptor debug-interceptor]]
             [taoensso.timbre :as timbre]
             [clojure.string :as str]))
 
@@ -176,6 +176,7 @@
   ;; install csrf-token & other ajax interceptors
   (add-interceptor csrf-interceptor {:csrf-token js/csrf})
   (add-interceptor ajax-header-interceptor)
+  (add-interceptor debug-interceptor)
   ;; web-sockets
   (open-ws-channel {:url (host-url)})
   ;; start session

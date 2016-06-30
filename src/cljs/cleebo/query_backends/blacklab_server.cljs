@@ -1,11 +1,12 @@
 (ns cleebo.query-backends.blacklab-server
   (:require [cleebo.ajax-jsonp :refer [jsonp]]
-            [cleebo.query-backends.protocols :refer [Corpus handle-query]]))
+            [cleebo.query-backends.protocols :as p]
+            [cleebo.utils :refer [->int]]))
 
 (defn bl-server-url
   "builds the blacklab server url"
   [server web-service corpus-name & {:keys [resource] :or {resource "hits"}}]
-  (str "http://" server "/" web-service "/" corpus-name "/" resource "?"))
+  (str "http://" server "/" web-service "/" corpus-name "/" resource))
 
 (defn join-params [& params]
   (apply str (interpose ":" (filter identity params))))
@@ -36,43 +37,87 @@
   (let [[doc-id hit-start hit-end] (clojure.string/split hit-id #"\.")]
     {:doc-id doc-id :hit-start hit-start :hit-end hit-end}))
 
+(defn sub-hit
+  [{:keys [punct id word]} & {:keys [is-match?]}]
+  (mapv (fn [word id]
+          (let [base {:word word :id id}]
+            (if is-match?
+              (assoc base :match true)
+              base)))
+        word id))
+
+(defn normalize-meta [idx doc]
+  (assoc doc :num idx))
+
+(defn normalize-bl-hit
+  [{left :left match :match right :right doc-id :docPid start :start end :end} idx doc]
+  {:hit (concat (sub-hit left) (sub-hit match :is-match? true) (sub-hit right))
+   :id (apply str (interpose "." [doc-id start end]))
+   :meta (normalize-meta idx doc)})
+
+(def bl-default-params
+  {:maxcount 100000
+   :waitfortotal "yes"})
+
 (deftype BlacklabServerCorpus [corpus-name server web-service]
-  Corpus
-  (query [this query-str {:keys [context from page-size] :as query-opts}]
-    (handle-query
+  p/Corpus
+  (p/query [this query-str {:keys [context from page-size] :as query-opts}]
+    (p/handle-query
      this (bl-server-url server web-service corpus-name)
-     {:patt query-str
-      :wordsaroundhit context
-      :first from
-      :number page-size
-      :jsonp "callback"}
+     (merge {:patt query-str
+             :wordsaroundhit context
+             :first from
+             :number page-size
+             :jsonp "callback"}
+            bl-default-params)
      :method jsonp))
 
-  (query-sort [this query-str {:keys [context from page-size]} sort-opts filter-opts]
+  (p/query-sort [this query-str {:keys [context from page-size]} sort-opts filter-opts]
     (let [sort-str (bl-server-sort-str sort-opts filter-opts)]
-      (handle-query
+      (p/handle-query
        this (bl-server-url server web-service corpus-name)
-       {:patt (js/encodeURIComponent query-str)
-        :wordsaroundhit context
-        :first from
-        :number page-size
-        :sort sort-str
-        :jsonp "callback"}
+       (merge {:patt (js/encodeURIComponent query-str)
+               :wordsaroundhit context
+               :first from
+               :number page-size
+               :sort sort-str
+               :jsonp "callback"}
+              bl-default-params)
        :method jsonp)))
 
-  (snippet [this query-str {:keys [snippet-size] :as query-opts} hit-id]
+  (p/snippet [this query-str {:keys [snippet-size] :as query-opts} hit-id]
     (let [{:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)]
-      (handle-query
+      (p/handle-query
        this (bl-server-url server web-service corpus-name :resource (str "docs/" doc-id "snippet"))
-       {:wordsaroundhit snippet-size
-        :hitstart hit-start
-        :hitend hit-end
-        :jsonp "callback"}
+       (merge {:wordsaroundhit snippet-size
+               :hitstart hit-start
+               :hitend hit-end
+               :jsonp "callback"}
+              bl-default-params)
        :method jsonp)))
   
-  (handler-data [corpus data] (identity data))
-  (error-handler-data [corpus data] (identity data)))
+  (p/handler-data [corpus data]
+    (let [{summary :summary hits :hits doc-infos :docInfos} (js->clj data :keywordize-keys true)
+          {{from :first corpus :indexname query-str :patt} :searchParam
+           num-hits :numberOfHitsRetrieved query-size :numberOfHits
+           query-time :searchTime has-next :windowHasNext} summary
+          results-summary {:page {:from (->int from) :to (+ (->int from) num-hits)}
+                           :query-size query-size
+                           :query-str query-str
+                           :query-time query-time
+                           :has-next has-next
+                           :corpus corpus}
+          results (map-indexed
+                   (fn [idx {doc-id :docPid :as hit}]
+                     (normalize-bl-hit hit (+ idx (->int from)) (get doc-infos (keyword doc-id))))
+                   hits)]
+      {:results-summary results-summary
+       :results results
+       :status {:status :ok :content "Hi"}}))
+ 
+  (p/error-handler-data [corpus data]
+    (identity data)))
 
-(comment
-  (def corpus (BlacklabServerCorpus. "mbg-index-small" "localhost:8080" "blacklab-server-1.3.4"))
-  (query corpus "[word=\"a\"]" {:context 10 :from 0 :page-size 10}))
+(def corpus (BlacklabServerCorpus. "mbg-index-small" "localhost:8080" "blacklab-server-1.3.4"))
+(p/query corpus "\"is\" \".*d\" \"at\"" {:context 5 :from 0 :page-size 5})
+

@@ -26,37 +26,37 @@
  :mark-hit
  standard-middleware
  (fn [db [_ {:keys [hit-id flag]}]]
-   (let [active-project (:active-project db)
-         path [:projects active-project :session :results-by-id hit-id :meta :marked]]
+   (let [active-project (get-in db [:session :active-project])
+         path [:projects active-project :session :query :results-by-id hit-id :meta :marked]]
      (assoc-in db path (boolean flag)))))
 
 (re-frame/register-handler
  :mark-all-hits
  standard-middleware
  (fn [db _]
-   (let [active-project (:active-project db)
-         path-to-results [:projects active-project :session :results-by-id]]
+   (let [active-project (get-in db [:session :active-project])
+         path-to-results [:projects active-project :session :query :results-by-id]]
      (reduce (fn [acc hit-id]
                (assoc-in acc (into path-to-results [hit-id :meta :marked]) true))
              db
-             (get-in db [:projects active-project :session :results]))))) ;hit-ids
+             (get-in db [:projects active-project :session :query :results]))))) ;hit-ids
 
 (re-frame/register-handler
  :unmark-all-hits
  standard-middleware
  (fn [db _]
    (let [active-project (:active-project db)
-         path-to-results [:projects active-project :session :results-by-id]]
+         path-to-results [:projects active-project :session :query :results-by-id]]
      (reduce (fn [acc hit-id]
                (assoc-in acc (into path-to-results [hit-id :meta :marked]) false))
              db
-             (keys (get-in db [:projects active-project :session :results-by-id]))))))
+             (keys (get-in db [:projects active-project :session :query :results-by-id]))))))
 
 (defn update-token
   "apply token-fn where due"
-  [{:keys [hit meta] :as hit-map} check-token-fn token-fn]
+  [{:keys [hit meta] :as hit-map} token-pred token-fn]
   (assoc hit-map :hit (map (fn [{:keys [id] :as token}]
-                             (if (check-token-fn id)
+                             (if (token-pred id)
                                (token-fn token)
                                token))
                            hit)))
@@ -64,14 +64,16 @@
 (re-frame/register-handler
  :mark-token
  standard-middleware
- (fn [{active-project :active-project :as db} [_ {:keys [hit-id token-id flag]}]]
-   (let [hit-map (get-in db [:session :results-by-id hit-id])
+ (fn [db [_ {:keys [hit-id token-id flag]}]]
+   (let [active-project (get-in db [:session :active-project])
+         project (get-in db [:projects active-project])
+         hit-map (get-in project [:session :query :results-by-id hit-id])
          has-marked (has-marked? hit-map flag token-id)
          hit-map (assoc-in hit-map [:meta :has-marked] (boolean has-marked))
-         check-token-fn (fn [id] (= token-id id))
+         token-pred (fn [id] (= token-id id))
          token-fn (fn [token] (if flag (assoc token :marked true) (dissoc token :marked)))
-         path [:projects active-project :session :results-by-id hit-id]]
-     (assoc-in db path (update-token hit-map check-token-fn token-fn)))))
+         path [:projects active-project :session :query :results-by-id hit-id]]
+     (assoc-in db path (update-token hit-map token-pred token-fn)))))
 
 (defmulti update-token-anns
   "inserts incoming annotation into the corresponding hit map"
@@ -79,14 +81,14 @@
 (defmethod update-token-anns "token"
   [hit-map {{scope :scope} :span project-name :project {k :key} :ann :as ann-map}]
   (let [token-fn (fn [token] (assoc-in token [:anns project-name k] ann-map))
-        check-token-fn (fn [id] (= (str scope) id))]
-    (update-token hit-map check-token-fn token-fn)))
+        token-pred (fn [id] (= (str scope) id))]
+    (update-token hit-map token-pred token-fn)))
 (defmethod update-token-anns "IOB"
   [hit-map {{scope :scope} :span project-name :project {k :key} :ann :as ann-map}]
   (let [{B :B O :O} scope
         token-fn (fn [token] (assoc-in token [:anns project-name k] ann-map))
-        check-fn (fn [id] (contains? (apply hash-set (range B (inc O))) (->int id)))]
-    (update-token hit-map check-fn token-fn)))
+        token-pred (fn [id] (contains? (apply hash-set (range B (inc O))) (->int id)))]
+    (update-token hit-map token-pred token-fn)))
 
 (defn- find-ann-hit-id*
   [pred hit-maps]
