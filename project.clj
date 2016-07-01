@@ -14,6 +14,7 @@
                  [prismatic/schema-generators "0.1.0"]
                  [prone "0.8.2"]
                  [environ "1.0.1"]
+                 [yogthos/config "0.8"]
                  [hiccup "1.0.5"]
                  [reagent "0.6.0-alpha"
                   :exclusions [cljsjs/react]]

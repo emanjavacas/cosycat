@@ -1,7 +1,8 @@
 (ns cleebo.query-backends.blacklab-server
   (:require [cleebo.ajax-jsonp :refer [jsonp]]
             [cleebo.query-backends.protocols :as p]
-            [cleebo.utils :refer [->int]]))
+            [cleebo.utils :refer [->int]]
+            [taoensso.timbre :as timbre]))
 
 (defn bl-server-url
   "builds the blacklab server url"
@@ -37,23 +38,23 @@
   (let [[doc-id hit-start hit-end] (clojure.string/split hit-id #"\.")]
     {:doc-id doc-id :hit-start hit-start :hit-end hit-end}))
 
-(defn sub-hit
-  [{:keys [punct id word]} & {:keys [is-match?]}]
-  (mapv (fn [word id]
-          (let [base {:word word :id id}]
-            (if is-match?
-              (assoc base :match true)
-              base)))
-        word id))
+(defn sub-hit [{:keys [punct id word]} & {:keys [is-match?]}]
+  (mapv (fn [token-word token-id]
+          (if is-match?
+            {:word token-word :id token-id :match true}
+            {:word token-word :id token-id}))
+        word
+        id))
 
-(defn normalize-meta [idx doc]
-  (assoc doc :num idx))
+(defn normalize-meta [num doc]
+  (assoc doc :num num))
 
 (defn normalize-bl-hit
-  [{left :left match :match right :right doc-id :docPid start :start end :end} idx doc]
-  {:hit (concat (sub-hit left) (sub-hit match :is-match? true) (sub-hit right))
-   :id (apply str (interpose "." [doc-id start end]))
-   :meta (normalize-meta idx doc)})
+  [hit num doc]
+  (let [{left :left match :match right :right doc-id :docPid start :start end :end} hit]    
+    {:hit (concat (sub-hit left) (sub-hit match :is-match? true) (sub-hit right))
+     :id (apply str (interpose "." [doc-id start end]))
+     :meta (normalize-meta num doc)}))
 
 (def bl-default-params
   {:maxcount 100000
@@ -109,15 +110,19 @@
                            :corpus corpus}
           results (map-indexed
                    (fn [idx {doc-id :docPid :as hit}]
-                     (normalize-bl-hit hit (+ idx (->int from)) (get doc-infos (keyword doc-id))))
+                     (let [num (+ idx (->int from))
+                           doc (get doc-infos (keyword doc-id))]
+                       (normalize-bl-hit hit num doc)))
                    hits)]
       {:results-summary results-summary
-       :results results
+       :results (vec results)
        :status {:status :ok :content "Hi"}}))
  
   (p/error-handler-data [corpus data]
     (identity data)))
 
-(def corpus (BlacklabServerCorpus. "mbg-index-small" "localhost:8080" "blacklab-server-1.3.4"))
-(p/query corpus "\"is\" \".*d\" \"at\"" {:context 5 :from 0 :page-size 5})
+;; (def mbg-corpus (BlacklabServerCorpus. "mbg-index-small" "localhost:8080" "blacklab-server-1.3.4"))
+;; (def brown-corpus (BlacklabServerCorpus. "brown-tei" "localhost:8080" "blacklab-server-1.3.4"))
+;; (p/query brown-corpus "[word=\"was\"] [word=\"s.*t\"] [word=\"\\.\"]"
+;;          {:context 5 :from 0 :page-size 15})
 

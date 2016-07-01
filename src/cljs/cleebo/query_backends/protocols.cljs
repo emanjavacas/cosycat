@@ -33,3 +33,4 @@
   "wrapper for ajax/jsonp queries that simplifies protocol implementations"
   [corpus url params & {:keys [method] :or {method GET}}]
   (method url {:params params :handler (fn [data] (handler (handler-data corpus data)))}))
+

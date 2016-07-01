@@ -182,7 +182,7 @@
   ;; start session
   (re-frame/dispatch-sync [:initialize-session])
   ;; ;; ensure we start on home page (so that db can be loaded)
-  (routes/nav! "/")
+  ;; (routes/nav! "/")
   ;; declare app routes
   (routes/app-routes)
   ;; handle refreshes

@@ -63,18 +63,8 @@
  :query
  (fn [db [_ query-str source-component]]
    (let [query-settings (get-in db [:session :settings :query])
-         {{:keys [context page-size]} :query-opts corpus :corpus} query-settings]
+         {query-opts :query-opts corpus :corpus} query-settings]
      (re-frame/dispatch [:start-throbbing source-component]) ;todo
-
-     (GET "/blacklab"
-          {:handler (results-handler source-component)
-           :error-handler (error-handler source-component)
-           :params {:query-str (js/encodeURIComponent query-str)
-                    :corpus corpus
-                    :context context
-                    :from 0
-                    :size page-size
-                    :route :query}})
      db)))
 
 (re-frame/register-handler

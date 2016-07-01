@@ -1,5 +1,5 @@
 {:dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
-                      [figwheel-sidecar "0.5.0-1"]]
+                      [figwheel-sidecar "0.5.2"]]
        :source-paths ["env/dev/clj"]
        :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]}}}
        :env {:dev? true
