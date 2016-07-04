@@ -4,7 +4,7 @@
             [cleebo.db.users :refer [update-user-info]]
             [cleebo.avatar :refer [user-avatar]]
             [cleebo.components.ws :refer [send-clients]]
-            [environ.core :refer [env]]
+            [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
 (defmulti settings-router (fn [{{route :route} :params}] route))

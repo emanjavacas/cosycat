@@ -1,5 +1,5 @@
 (ns cleebo.figwheel
-  (:require [environ.core :refer [env]]
+  (:require [config.core :refer [env]]
             [figwheel-sidecar.repl-api :as f-repl]
             [taoensso.timbre :as timbre]
             [com.stuartsierra.component :as component]))

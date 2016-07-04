@@ -2,7 +2,7 @@
   (:require [monger.core :as mg]
             [monger.collection :as mc]
             [com.stuartsierra.component :as component]
-            [environ.core :refer [env]]
+            [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
 (defrecord DB [db conn url]

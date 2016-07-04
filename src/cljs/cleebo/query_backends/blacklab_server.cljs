@@ -6,8 +6,8 @@
 
 (defn bl-server-url
   "builds the blacklab server url"
-  [server web-service corpus-name & {:keys [resource] :or {resource "hits"}}]
-  (str "http://" server "/" web-service "/" corpus-name "/" resource))
+  [server web-service index & {:keys [resource] :or {resource "hits"}}]
+  (str "http://" server "/" web-service "/" index "/" resource))
 
 (defn join-params [& params]
   (apply str (interpose ":" (filter identity params))))
@@ -60,11 +60,11 @@
   {:maxcount 100000
    :waitfortotal "yes"})
 
-(deftype BlacklabServerCorpus [corpus-name server web-service]
+(deftype BlacklabServerCorpus [index server web-service]
   p/Corpus
   (p/query [this query-str {:keys [context from page-size] :as query-opts}]
     (p/handle-query
-     this (bl-server-url server web-service corpus-name)
+     this (bl-server-url server web-service index)
      (merge {:patt query-str
              :wordsaroundhit context
              :first from
@@ -76,7 +76,7 @@
   (p/query-sort [this query-str {:keys [context from page-size]} sort-opts filter-opts]
     (let [sort-str (bl-server-sort-str sort-opts filter-opts)]
       (p/handle-query
-       this (bl-server-url server web-service corpus-name)
+       this (bl-server-url server web-service index)
        (merge {:patt (js/encodeURIComponent query-str)
                :wordsaroundhit context
                :first from
@@ -89,7 +89,7 @@
   (p/snippet [this query-str {:keys [snippet-size] :as query-opts} hit-id]
     (let [{:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)]
       (p/handle-query
-       this (bl-server-url server web-service corpus-name :resource (str "docs/" doc-id "snippet"))
+       this (bl-server-url server web-service index :resource (str "docs/" doc-id "snippet"))
        (merge {:wordsaroundhit snippet-size
                :hitstart hit-start
                :hitend hit-end

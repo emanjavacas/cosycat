@@ -1,7 +1,7 @@
 (ns cleebo.handler
   (:require [com.stuartsierra.component :as component]
             [taoensso.timbre :as timbre]
-            [environ.core :refer [env]]
+            [config.core :refer [env]]
             [compojure.core :refer [GET POST ANY HEAD defroutes wrap-routes]]
             [compojure.route :as route]
             [prone.middleware :refer [wrap-exceptions]]

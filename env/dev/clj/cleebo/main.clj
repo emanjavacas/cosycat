@@ -5,21 +5,21 @@
             [cleebo.figwheel :refer [new-figwheel]]
             [cleebo.components.http-server :refer [new-http-server]]
             [cleebo.components.db :refer [new-db]]
-            [cleebo.components.blacklab :refer [new-bl]]
+            [cleebo.components.blacklab :refer [new-bl paths-map-from-corpora]]
             [cleebo.components.ws :refer [new-ws]]
-            [environ.core :refer [env]]))
+            [config.core :refer [env]]))
 
 (defonce system nil)
 
 (def dev-config-map
   {:port (env :port)
    :database-url (env :database-url)
-   :blacklab-paths-map (env :blacklab-paths-map)})
+   :corpora (env :corpora)})
 
 (defn create-dev-system [config-map]
-  (let [{:keys [handler port database-url blacklab-paths-map]} config-map]
+  (let [{:keys [handler port database-url corpora]} config-map]
     (-> (component/system-map
-         :blacklab (new-bl blacklab-paths-map)
+         :blacklab (new-bl (paths-map-from-corpora corpora))
          :db (new-db database-url)
          :ws (new-ws)
          :figwheel (new-figwheel)

@@ -51,8 +51,7 @@
         (remove-hits! component query-id)))))
 
 (defn new-bl [paths-map]
-  (map->BLComponent
-   {:paths-map paths-map}))
+  (map->BLComponent {:paths-map paths-map}))
 
 (defmacro with-bl [bindings & body]
   `(let ~bindings
@@ -62,8 +61,12 @@
          (throw (ex-info (:message (bean e#)) {})))
        (finally (close-searchers! ~(bindings 0))))))
 
+(defn paths-map-from-corpora [corpora]
+  (let [bl-corpora (filter #(= :blacklab (:type %)) corpora)]
+    (zipmap (map :name bl-corpora) (map #(get-in % [:args :path]) bl-corpora))))
+
 (defn format-hit
-  "pads hi-kwic with an empty hit in case of missing context"
+  "pads hit-kwic with an empty hit in case of missing context"
   ([hit context]
    (format-hit hit context dummy-hit))
   ([hit context empty-hit-fn]
@@ -201,10 +204,8 @@
 ;;     (dothreads! #(apply steps "gamma" messages))))
 
 ;; (do-things)
-
-;; (def path-maps (:blacklab-paths-map environ.core/env))
-;; (def path-maps {"brown" "/home/enrique/code/cleebo/dev-resources/brown-tei-index/"})
-;; (def corpus (first (:corpora environ.core/env)))
-;; (def bl-component (-> (new-bl path-maps) (.start)))
+;; (def corpora (:corpora config.core/env))
+;; (def corpus (first (map :name corpora)))
+;; (def bl-component (-> (new-bl corpora) (.start)))
 ;; (first (:results (bl-query bl-component "brown" "[pos='NP.*']*" 0 10 5)))
 

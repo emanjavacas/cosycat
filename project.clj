@@ -13,7 +13,6 @@
                  [prismatic/schema "1.1.0"]
                  [prismatic/schema-generators "0.1.0"]
                  [prone "0.8.2"]
-                 [environ "1.0.1"]
                  [yogthos/config "0.8"]
                  [hiccup "1.0.5"]
                  [reagent "0.6.0-alpha"
@@ -53,6 +52,7 @@
 
   :env {:dynamic-resource-path "app-resources/"
         :avatar-path "img/avatars/"}
+  
   :resource-path "resources/"
   
   :source-paths ["src/clj" "src/cljc" "src/cljs"]

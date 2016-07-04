@@ -4,13 +4,13 @@
                [cleebo.utils :refer [prn-format delete-directory]]
                [cleebo.components.http-server :refer [new-http-server]]
                [cleebo.components.db :refer [new-db colls clear-dbs]]
-               [cleebo.components.blacklab :refer [new-bl]]
+               [cleebo.components.blacklab :refer [new-bl paths-map-from-corpora]]
                [cleebo.components.ws :refer [new-ws]]
                [clojure.tools.cli :refer [parse-opts]]
                [clojure.java.io :as io]
                [clojure.string :as string]
                [taoensso.timbre :as timbre]
-               [environ.core :refer [env]]
+               [config.core :refer [env]]
                [clojure.string :as str])
      (:gen-class))
 
@@ -20,12 +20,12 @@
 (def prod-config-map
   {:port (env :port)
    :database-url (env :database-url)
-   :blacklab-paths-map (env :blacklab-paths-map)})
+   :corpora (env :corpora)})
 
 (defn create-prod-system [config-map]
-  (let [{:keys [handler port database-url blacklab-paths-map]} config-map]
+  (let [{:keys [handler port database-url corpora]} config-map]
     (-> (component/system-map
-         :blacklab (new-bl blacklab-paths-map)
+         :blacklab (new-bl (paths-map-from-corpora corpora))
          :db (new-db database-url)
          :ws (new-ws)
          :http-server (new-http-server {:port port :components [:db :ws :blacklab]}))

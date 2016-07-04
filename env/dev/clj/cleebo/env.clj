@@ -1,5 +1,4 @@
-(ns cleebo.env
-  (:require [environ.core :as environ]))
+(ns cleebo.env)
 
 (defmacro cljs-env [& ks]
-  (get-in environ/env ks))
+  (get-in config.core/env ks))

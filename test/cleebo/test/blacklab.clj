@@ -1,14 +1,14 @@
 (ns cleebo.test.blacklab
   (:require [cleebo.components.blacklab :as bl]
-            [environ.core :refer [env]]
+            [config.core :refer [env]]
             [clojure.test :refer [deftest testing is]]))
 
-(def path-maps (:blacklab-paths-map env))
-(def corpus (first (:corpora env)))
+(def path-maps (bl/paths-map-from-corpora (:corpora env)))
+(def corpus (->> (:corpora env) (filter #(= :blacklab (:type %))) (map :name) first))
 
 (deftest bl-query-test
   (testing "Runtime Exception on bl-query-test"
-    (is (= :ok (bl/with-bl [bl-component (-> (bl/new-bl path-maps) (.start))]
+    (is (= :ok (bl/with-bl [bl-component (-> (bl/new-bl paths-map) (.start))]
                  (-> (bl/bl-query bl-component corpus "\"a\"" 0 10 5)
                      (get-in [:status :status]))))
         "status should be :ok")))

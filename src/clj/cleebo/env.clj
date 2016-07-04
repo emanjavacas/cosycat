@@ -1,5 +1,5 @@
 (ns cleebo.env
-  (:require [environ.core :refer [env]]
+  (:require [config.core :refer [env]]
             [cleebo.components.db :refer [new-db clear-dbs colls]]
             [cleebo.utils :refer [delete-directory]]))
 

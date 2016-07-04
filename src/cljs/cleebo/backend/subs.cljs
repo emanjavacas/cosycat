@@ -62,7 +62,7 @@
 (re-frame/register-sub
  :corpora
  (fn [db _]
-   (reaction (:corpora @db))))
+   (reaction (doall (map :name (:corpora @db))))))
 
 (re-frame/register-sub
  :projects

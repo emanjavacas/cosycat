@@ -7,7 +7,7 @@
 
 (defn default-settings
   [& {:keys [corpora] :or {corpora []}}] ;TODO: settings should be adapted to corpus config
-  (let [corpus (first corpora)]
+  (let [corpus (first (map :name corpora))]
     {:notifications {:delay 7500}
      :query {:query-opts {:context 5 :from 0 :page-size 10}
              :sort-opts [(default-opts-map :sort-opts)]

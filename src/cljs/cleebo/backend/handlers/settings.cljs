@@ -10,7 +10,7 @@
  standard-middleware
  (fn [db [_ path value]]
    (let [settings (get-in db [:session :settings])]
-     (assoc db [:session :settings] (assoc-in settings path value)))))
+     (assoc-in db [:session :settings] (assoc-in settings path value)))))
 
 (re-frame/register-handler              ;key is one of (:sort-opts, :filter-opts)
  :add-default-opts-map

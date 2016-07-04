@@ -2,27 +2,35 @@
                       [figwheel-sidecar "0.5.2"]]
        :source-paths ["env/dev/clj"]
        :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]}}}
-       :env {:dev? true
-             :host "localhost"
+       :env {:host "localhost"
              :database-url "mongodb://127.0.0.1:27017/cleeboDev"
              :port 3000
              :session-expires 900       ;in minutes
-             :corpora ["mbg-small"]
-             :blacklab-paths-map
-             {"mbg-small" "/home/enrique/cleebo-dep/indices/blacklab/mbg-index-small/"}}}
+             :corpora
+             [{:name "mbg-small"
+               :type :blacklab-server
+               :args {:index "mbg-small"
+                      :server "localhost:8080"
+                      :service "blacklab-server-1.3.4"}}
+              {:name "mbg-small-local"
+               :type :blacklab
+               :args {:path "/home/enrique/cleebo-dep/indices/blacklab/mbg-index-small/"}}]}}
  :test {:env {:database-url "mongodb://127.0.0.1:27017/cleeboTest"
-              :corpora ["mbg-small"]
-              :blacklab-paths-map
-              {"mbg-small" "/home/enrique/cleebo-dep/indices/blacklab/mbg-index-small/"}}}
+              :corpora
+              [{:name "mbg-small"
+                :type :blacklab-server
+                :args {:index "mbg-small"
+                       :server "localhost:8080"
+                       :service "blacklab-server-1.3.4"}}
+               {:name "mbg-small-local"
+                :type :blacklab
+                :args {:path "/home/enrique/cleebo-dep/indices/blacklab/mbg-index-small/"}}]}}
  :uberjar {:source-paths ["env/prod/clj"]
            :hooks [leiningen.cljsbuild]
            :prep-tasks ["compile" ["cljsbuild" "once"]]
-           :env {:prod? true
-                 :database-url "mongodb://127.0.0.1:27017/cleebo"
+           :env {:database-url "mongodb://127.0.0.1:27017/cleebo"
                  :port 3000
-                 :session-expires 90    ;in minutes
-                 :corpora ["brown"]
-                 :blacklab-paths-map {}}
+                 :session-expires 90}
            :omit-source true
            :aot :all
            :cljsbuild {:jar true

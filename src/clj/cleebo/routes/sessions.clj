@@ -4,7 +4,7 @@
             [cleebo.components.ws :refer [get-active-users]]
             [cleebo.db.users :refer [user-info users-info]]
             [cleebo.db.projects :refer [get-projects]]
-            [environ.core :refer [env]]
+            [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
 (defn add-active-info [user active-users]

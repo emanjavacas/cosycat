@@ -2,7 +2,7 @@
   (:require [clojure.java.io :as io]
             [schema.core :as s]
             [cleebo.schemas.user-schemas :refer [avatar-schema]]
-            [environ.core :refer [env]]
+            [config.core :refer [env]]
             [taoensso.timbre :as timbre])
   (:import [org.hackrslab.avatar RandomAvatarBuilder RandomAvatar RandomAvatar$Extra]
            [javax.imageio ImageIO ImageReader]

@@ -222,7 +222,7 @@
               new-hit (merge-annotations-hit hit anns-in-range)]]
     (assoc hit-map :hit new-hit)))
 
-;; (defonce db (.start (new-db (:database-url environ.core/env))))
+;; (defonce db (.start (new-db (:database-url config.core/env))))
 ;; (fetch-anns-in-range db ["user-playground"] 417 418) 417
 ;; (first (find-ann-ids-in-range db ["user-playground"] 410 420))
 

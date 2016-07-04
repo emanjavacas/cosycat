@@ -10,7 +10,7 @@
             [cleebo.components.db :refer [new-db colls clear-dbs]]
             [cleebo.db.users :refer [new-user is-user? lookup-user remove-user]]
             [cleebo.db.annotations :as anns]
-            [environ.core :refer [env]]))
+            [config.core :refer [env]]))
 
 (defonce db (component/start (new-db (:database-url env))))
 ;; (do (clear-dbs db))
