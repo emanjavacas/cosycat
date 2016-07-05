@@ -29,9 +29,8 @@
                  #(= (:type %) "IOB")   iob-span-schema))
 
 (def annotation-schema
-  {:id s/Any                            ;version-overarching unique identifier
-   :ann {:key s/Str
-         :value s/Str}
+  {:_id s/Any                            ;version-overarching unique identifier
+   :ann {:key s/Str :value s/Str}
    :username s/Str
    :timestamp s/Int
    :span span-schema
@@ -41,4 +40,5 @@
 (def cpos-anns-schema
   {:anns [{:key s/Str :ann-id s/Int}]
    (s/optional-key :_id) cpos-schema})
+
 

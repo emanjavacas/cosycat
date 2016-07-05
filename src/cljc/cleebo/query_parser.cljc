@@ -24,12 +24,13 @@
     (make-pattern re-str)))
 
 (defn make-end-pattern [anchor qs]
+  (print qs)
   (let [re-str (str "^[^" (all-but qs anchor) "]+?" anchor)]
     (make-pattern re-str)))
 
 (defn missing-quotes
   "finds missing matching quotes in a FSA fashion"
-  [s & {:keys [qs] :or {qs "\""}}]
+  [s & {:keys [qs] :or {qs "\"'"}}]
   (letfn [(find-start [s idx]
             (if-let [{group :group start :start end :end :as match}
                      (re-pos (make-start-pattern qs) s)]
@@ -41,3 +42,4 @@
               (find-start (subs s end) (+ end idx))
               {:status :mismatch :at idx}))]
     (trampoline find-start s -1)))
+
