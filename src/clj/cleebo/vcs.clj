@@ -1,5 +1,6 @@
-(ns cleebo.vcs
-  (:refer-clojure :exclude [sort find update])
+(ns #^{:doc "Version control updates to monger documents. Wraps (some) monger API functions."}
+  cleebo.vcs 
+  (:refer-clojure :exclude [sort find update remove])
   (:require [cleebo.components.db :refer [new-db]]
             [monger.collection :as mc]
             [monger.query :refer :all]
@@ -7,6 +8,10 @@
   (:import org.bson.types.ObjectId))
 
 (def ^:dynamic *hist-coll-name* "_vcs")
+
+(defmacro with-hist-coll [hist-coll & body]
+  (binding [*hist-coll-name* ~hist-coll]
+    ~@body))
 
 (defn new-vcs-coll-name [coll-name]
   (str coll-name *hist-coll-name*))
@@ -20,30 +25,33 @@
 ;;; find-*
 (defn merge-history
   "construct the output vcs doc"
-  [doc vcs-history merge-field]
+  [doc merge-field vcs-history]
   (assoc doc merge-field vcs-history))
 
 (defn find-history
   "retrieves document history from the backup collection"
-  [db doc-id]
-  (with-collection db *hist-coll-name*
-    (find {:doc-id doc-id})
-    (sort (array-map :_version (if reverse 1 -1)))))
+  [db doc-id & {:keys [reverse] :or {reverse false}}]
+  (not-empty
+   (with-collection db *hist-coll-name*
+     (find {:docId doc-id})
+     (sort (array-map :_version (if reverse 1 -1))))))
 
-(defn history
-  "seq of version history maps sorted in version order"
-  [db {:keys [_id] :as doc} & {:keys [reverse merge-docs] :or {reverse false merge-field :history}}]
-  (if-let [vcs-history (find-history db _id)]
-    (merge-history doc vcs-history merge-docs)))
+(defn with-history
+  "appends vcs history in a given document by document field `merge-field`"
+  [db {:keys [_id] :as doc} & {:keys [reverse merge-field] :or {reverse false merge-field :history}}]
+  (if-let [vcs-history (find-history db _id :reverse reverse)]
+    (merge-history doc merge-field vcs-history)
+    doc))
 
 ;;; modify operations:
-;;; insert; insert-*; remove; save; save-and-return; update; update-*; upsert
+;;; insert; insert-*; remove; update; update-*; upsert
 (defn ex-version
   "exception for not-matching version updates"
   [{last-vcs-version :_version} {new-doc-version :_version}]
-  (ex-info "Claimed version not in sync with collection version"
-           {:last-vcs-version last-vcs-version
-            :claimed-version new-doc-version}))
+  (ex-info
+   "Claimed version not in sync with collection version"
+   {:last-vcs-version last-vcs-version
+    :claimed-version new-doc-version}))
 
 (defn ex-id
   "exception for not-matching document ids"
@@ -52,86 +60,112 @@
 
 (defn update-version
   "increase version of a document in a vcs-collection"
-  [db coll {:keys [_id]}]
-  (mc/update db coll {:_id _id} {$inc {:_version 1}}))
+  [db coll id]
+  (mc/update db coll {:docId id} {$inc {:_version 1}}))
 
-(defn insert-new-version
+(defn with-doc-id
+  "rearranges last doc version before inserting it into the vcs coll"
+  [{id :_id :as doc}]
+  (assert id "Attempt to insert vcs version without reference doc id")
+  (-> doc (assoc :docId id) (dissoc :_id)))
+
+(defn insert-version
   "inserts the last modified version of a document into the vcs collection"
-  [db {:keys [_version] :as doc}
-   & {:keys [merge-field] :as args :or {merge-field :history}}]
-  {:pre [(and _version)]}
-  (let [{vcs-history merge-field :as vcs-doc} (history db doc :reverse false)]
+  [db {:keys [_version _id] :as doc} & {:keys [merge-field] :as args :or {merge-field :history}}]
+  (assert _version "Document is not vcs-controled")
+  (when-let [vcs-history (find-history db _id :reverse false)]
     (if-not (= _version (inc (:_version (first vcs-history))))
-      (throw (ex-version (first vcs-history) doc))
-      (mc/insert db *hist-coll-name* doc))))
+      (throw (ex-version (first vcs-history) doc))))
+  (mc/ensure-index db *hist-coll-name* (array-map :_version 1 :docId 1) {:unique true})
+  (mc/insert db *hist-coll-name* (with-doc-id doc)))
+
+(defn doc-version-setter [doc]
+  (assoc doc :_version 0))
+
+(defn wrap-insert
+  "function wrapper for native monger fns that perform inserts"
+  ([f] (wrap-insert f doc-version-setter))
+  ([f version-setter]
+   (fn [db coll doc & args]
+     (apply f db coll (version-setter doc) args))))
 
 (defn wrap-modify
-  "function wrapper for native monger fns"
-  [f id-getter version-setter]
+  "function wrapper for native monger fns that perform updates"
+  [f id-getter version-setter & [check-fn]]
   (fn wrapped-func [db coll & args]
+    (assert (apply (or check-fn identity) f db coll args) "Failed args check")
     (let [id (apply id-getter db coll args)]
-      (if-let [doc (mc/find-one-as-map db coll {:_id id})] ;1 search
-        (insert-new-version db doc)     ;1 insert (& 1 search: for safety reasons)
-        (throw (ex-id id))))
-    (apply version-setter f db coll args)))
+      (if-let [doc (mc/find-one-as-map db coll {:_id id})]  ;1 search
+        (insert-version db doc)         ;1 insert & 1 (history) search (for safety reasons)
+        (throw (ex-id id))))            ;couldn't find doc by id
+    (apply version-setter f db coll args)))  ;applies monger f with appropriate version num
 
 ;;; id getters
 (defn first-id-getter
   "id getter for fn signatures with doc/condition argument in first position (after db, coll).
-   Fns: insert, insert-and-return, save, save-and-return, find-and-modify, remove, update, upsert"
+   target fns: find-and-modify, remove, update, upsert"
   [db coll {:keys [_id] :as doc} & args]
-  (assert _id "Couldn't find id in document")
+  (assert _id "Only queries by id are allowed")
   _id)
 
 (defn by-id-getter
   "doc getter for fn signatures with id argument in first position (after db, coll).
-   Fns: remove-by-id, update-by-id"
+   target fns: remove-by-id, update-by-id"
   [db coll id & args]
   id)
 
 ;;; version setters
-(defn doc-version-setter
-  "version setter for document inserts. Fns: insert, insert-and-return"
-  [f db coll doc & args]
-  (apply f db coll (assoc doc :_version 0) args))
-
-(defn save-version-setter
-  "version setter for ambiguous ops which might insert or update. Fns: save, save-and-return"
-  [f db coll {:keys [_id] :as doc} & args]
-  (assert _id "Couldn't find id in document")
-  (apply f db coll doc args)
-  (update-version db coll doc))
-
 (defn update-version-setter
-  "version setter for document updates with mongodb operators.
-   Fns: update, update-by-id, upsert"
+  "version setter for document updates with mongodb operators. Target fns: update, update-by-id, upsert"
   [f db coll conditions-or-id doc & args]
-  (apply f db coll conditions-or-id (assoc doc $inc {:_version 1}) args))
+  (assert (not (contains? conditions-or-id :_version)) "Condition by doc version is not allowed")
+  (let [new-doc (merge-with merge doc {$inc {:_version 1}})]
+    (apply f db coll conditions-or-id new-doc args)))
 
-(defn no-version-setter
-  "version setter for ops removing the document from db.
-   Fns: remove, remove-by-id"
+(defn last-version-setter
+  "version setter for ops removing the document from db, which do not need version update.
+   target fns: remove, remove-by-id"
   [f db coll & args]
   (apply f db coll args))
 
+;;; checkers
+(defn merge-check-fns [& check-fns]
+  (fn [& args] (every? identity (apply (apply juxt check-fns) args))))
+
+(defn check-not-upsert [f db coll conditions opts & args]
+  (not (= (:upsert opts) true)))
+
+(defn check-not-multi [f db coll conditions opts & args]
+  (not (= (:multi opts) true)))
+
+(def not-upsert-not-multi (merge-check-fns check-not-upsert check-not-multi))
+
 ;;; public wrapper api
-(def find-and-modify (wrap-modify mc/find-and-modify first-id-getter update-version-setter))
-(def insert (wrap-modify mc/insert-and-return first-id-getter doc-version-setter))
-(def insert-and-return (wrap-modify mc/insert-and-return first-id-getter doc-version-setter))
-(def remove (wrap-modify mc/remove first-id-getter no-version-setter))
-(def remove-by-id (wrap-modify mc/remove-by-id by-id-getter no-version-setter))
-(def save (wrap-modify mc/save first-id-getter save-version-setter))
-(def save-and-return (wrap-modify mc/save-and-return first-id-getter save-version-setter))
-(def update (wrap-modify mc/update first-id-getter update-version-setter))
-(def update-by-id (wrap-modify mc/update-by-id by-id-getter update-version-setter))
-(def upsert (wrap-modify mc/upsert first-id-getter update-version-setter))
+(def find-and-modify (wrap-modify mc/find-and-modify first-id-getter update-version-setter not-upsert-not-multi))
+(def remove (wrap-modify mc/remove first-id-getter last-version-setter))
+(def remove-by-id (wrap-modify mc/remove-by-id by-id-getter last-version-setter))
+(def update (wrap-modify mc/update first-id-getter update-version-setter not-upsert-not-multi))
+(def update-by-id (wrap-modify mc/update-by-id by-id-getter update-version-setter not-upsert-not-multi))
+(def insert (wrap-insert mc/insert))
+(def insert-and-return (wrap-insert mc/insert-and-return))
+;;; save, save-and-return: might insert new document or update
+;; (def save (wrap-modify mc/save first-id-getter save-version-setter))
+;; (def save-and-return (wrap-modify mc/save-and-return first-id-getter save-version-setter))
+;;; upsert: might insert or update
+;; (def upsert (wrap-modify mc/upsert first-id-getter update-version-setter))
 
 ;;; utility functions
 (defn make-collection [args]            ;TODO
   ;; add indices and stuff on vcs collection to speed-up searching
   )
 
-(comment (mc/insert-and-return (:db db) "test" {:hello "true"})
-         (mc/update (:db db) "test" {:hello "true"} {$set {:bye "bye"}})
-         (mc/find-maps (:db db) "test" {})
-         (def db (.start (new-db "mongodb://127.0.0.1:27017/cleeboDev"))))
+(defn drop-vcs
+  "drops vcs source collection. use carefully."
+  [db]
+  (mc/drop db *hist-coll-name*))
+
+(comment (def db (.start (new-db "mongodb://127.0.0.1:27017/cleeboDev")))
+         (def doc (insert-and-return (:db db) "test" {:hello "true"}))
+         (update (:db db) "test" (dissoc doc :_version) {$set {:stoff 0}})
+         (update (:db db) "test" (dissoc doc :_version) {$inc {:stoff 1}})
+         (with-history (:db db) (first (mc/find-maps (:db db) "test" {:_id (:_id doc)}))))
