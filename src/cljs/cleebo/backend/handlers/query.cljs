@@ -1,6 +1,8 @@
 (ns cleebo.backend.handlers.query
   (:require [re-frame.core :as re-frame]
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
+            [cleebo.query-backends.core :refer [ensure-corpus]]
+            [cleebo.query-backends.protocols :refer [query query-sort snippet]]
             [cleebo.utils :refer [filter-marked-hits]]
             [ajax.core :refer [GET]]
             [taoensso.timbre :as timbre]))
@@ -43,83 +45,42 @@
          (assoc-in (path-fn :results) (map :id results))
          (update-in (path-fn :results-by-id) merge-old-results)))))
 
-;;; query backend handlers
-(defn results-handler
-  "general success handler for query routes
-  (:query, :query-range :query-sort :query-refresh).
-  Accepts additional callbacks `extra-work` that are passed the incoming data."
-  [source-component]
-  (fn [payload]
-    (re-frame/dispatch [:set-query-results payload])
-    (re-frame/dispatch [:stop-throbbing source-component])))
+(defn find-corpus-config [db corpus-name]
+  (some #(when (= corpus-name (:name %)) %) (db :corpora)))
 
-(defn error-handler
-  [source-component]
-  (fn [{:keys [status content]}]
-    (re-frame/dispatch [:stop-throbbing source-component])
-    (re-frame/dispatch [:set-project-session [:query :status] {:status status :content content}])))
+(defn current-project-results [db]
+  (let [active-project (get-in db [:session :active-project])
+        project (get-in db [:projects active-project])]
+    (get-in project [:session :query :results-summary])))
 
 (re-frame/register-handler
  :query
- (fn [db [_ query-str source-component]]
-   (let [query-settings (get-in db [:session :settings :query])
-         {query-opts :query-opts corpus :corpus} query-settings]
-     (re-frame/dispatch [:start-throbbing source-component]) ;todo
+ (fn [db [_ query-str]]
+   (let [{query-opts :query-opts corpus-name :corpus} (get-in db [:session :settings :query])
+         corpus-config (find-corpus-config db corpus-name)]
+     (query (ensure-corpus corpus-config) query-str query-opts)
      db)))
 
 (re-frame/register-handler
  :query-range
- (fn [db [_ direction source-component]]
-   (let [{{:keys [corpus context size]} :query-opts
-          {:keys [from to query-size]}  :query-results} (:session db)
+ (fn [db [_ direction]]
+   (let [query-settings (get-in db [:session :settings :query])
+         {{page-size :page-size :as query-opts} :query-opts corpus-name :corpus} query-settings
+         {query-str :query-str query-size :query-size {from :from to :to} :page} (current-project-results db)
+         corpus-config (find-corpus-config db corpus-name)
          [from to] (case direction
-                     :next (pager-next query-size size to)
-                     :prev (pager-prev query-size size from))]
-     (when (and (pos? (inc from)) (<= to query-size))
-       (re-frame/dispatch [:start-throbbing source-component])
-       (GET "/blacklab"
-            {:handler (results-handler source-component)
-             :error-handler (error-handler source-component)
-             :params {:corpus corpus
-                      :context context
-                      :from from
-                      :to to
-                      :route :query-range}}))
-     db)))
-
-(re-frame/register-handler
- :query-refresh
- (fn [db [_ source-component]]
-   (let [{{:keys [corpus context size]} :query-opts
-          {:keys [from to query-size]}  :query-results} (:session db)
-         to (min query-size (+ from size))]
-     (re-frame/dispatch [:start-throbbing source-component])
-     (GET "/blacklab"
-          {:handler (results-handler source-component)
-           :error-handler (error-handler source-component)
-           :params {:corpus corpus
-                    :context context
-                    :from from
-                    :to to
-                    :route :query-range}})
+                     :next (pager-next query-size query-size to)
+                     :prev (pager-prev query-size query-size from))]
+     (query (ensure-corpus corpus-config) query-str (assoc query-opts :from from))
      db)))
 
 (re-frame/register-handler
  :query-sort
- (fn [db [_ route source-component]]
-   (let [{{:keys [corpus context size criterion attribute]} :query-opts
-          {:keys [from]} :query-results} (:session db)]
-     (re-frame/dispatch [:start-throbbing source-component])
-     (GET "/blacklab"
-          {:handler (results-handler source-component)
-           :error-handler (error-handler source-component)
-           :params {:corpus corpus
-                    :context context
-                    :from from
-                    :to (+ from size)
-                    :route route
-                    :sort-map {:criterion criterion
-                               :attribute attribute}}})
+ (fn [db _]
+   (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:session :settings :query])
+         {query-str :query-str query-size :query-size {from :from to :to} :page} (current-project-results db)
+         corpus-config (find-corpus-config db corpus)]
+     ;; (query-sort (ensure-corpus corpus-config) query-str)
      db)))
 
 (defn snippet-error-handler
@@ -138,12 +99,7 @@
       (re-frame/dispatch [:open-modal :snippet payload]))))
 
 (defn fetch-snippet [hit-idx snippet-size & {:keys [context]}]
-  (GET "/blacklab"
-       {:handler (snippet-result-handler context)
-        :error-handler snippet-error-handler 
-        :params {:hit-idx hit-idx
-                 :snippet-size snippet-size
-                 :route :snippet}}))
+)
 
 (re-frame/register-handler
  :fetch-snippet

@@ -32,7 +32,6 @@
 (defn handle-query
   "wrapper for ajax/jsonp queries that simplifies protocol implementations"
   [corpus url params & {:keys [method] :or {method GET}}]
-  (method url {:params params :handler (fn [data] (handler (handler-data corpus data)))}))
-
-(defn fetch-corpus [{:keys [name type args]}]
-  )
+  (method url {:params params
+               :handler (fn [data] (handler (handler-data corpus data)))
+               :error-handler (fn [data] (error-handler (error-handler-data corpus data)))}))

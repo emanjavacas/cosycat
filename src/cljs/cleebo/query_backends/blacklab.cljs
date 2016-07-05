@@ -41,5 +41,8 @@
   (handler-data [corpus data] (identity data))
   (error-handler-data [corpus data] (identity data)))
 
+(defn make-blacklab-corpus [corpus-name]
+  (->BlacklabCorpus corpus-name))
+
 ;; (def new-corpus (->BlacklabCorpus "mbg-small"))
 ;; (query new-corpus "\"a\"" {:context 10 :from 0 :page-size 5})

@@ -4,8 +4,7 @@
             [ajax.core :refer [POST]]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
             [cleebo.utils :refer [->int format get-msg]]
-            [cleebo.backend.middleware
-             :refer [standard-middleware no-debug-middleware]]
+            [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))
 
 (defn has-marked?

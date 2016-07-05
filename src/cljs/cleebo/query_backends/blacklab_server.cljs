@@ -121,8 +121,11 @@
   (p/error-handler-data [corpus data]
     (identity data)))
 
-;; (def mbg-corpus (BlacklabServerCorpus. "mbg-index-small" "localhost:8080" "blacklab-server-1.3.4"))
+(defn make-blacklab-server-corpus [index server web-service]
+  (->BlacklabServerCorpus index server web-service))
+
+(def mbg-corpus (BlacklabServerCorpus. "mbg-index-small" "localhost:8080" "blacklab-server-1.3.4"))
 ;; (def brown-corpus (BlacklabServerCorpus. "brown-tei" "localhost:8080" "blacklab-server-1.3.4"))
-;; (p/query brown-corpus "[word=\"was\"] [word=\"s.*t\"] [word=\"\\.\"]"
-;;          {:context 5 :from 0 :page-size 15})
+(p/query mbg-corpus "[word=\"was\"]" {:context 5 :from 0 :page-size 35})
+
 

@@ -46,7 +46,8 @@
 (defn open-annotation-component [hit project-name open-hits]
   (fn [hit project-name open-hits]
     [bs/table
-     {:id "table-annotation"}
+     {:id "table-annotation"
+      :responsive true}
      [:thead]
      (into
       [:tbody]
