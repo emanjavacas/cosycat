@@ -134,7 +134,7 @@
           (reagent/as-component [user-thumb href {:height "20px" :width "20px"}])]]))))
 
 (defn filter-annotation-buttons []
-  (let [filtered-users (re-frame/subscribe [:session :active-project :filtered-users])
+  (let [filtered-users (re-frame/subscribe [:active-project :filtered-users])
         active-project-users (re-frame/subscribe [:active-project-users])]
     (fn []
       [bs/button-toolbar

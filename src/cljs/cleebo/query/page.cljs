@@ -2,7 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
-            [cleebo.utils :refer [format]]
+            [cleebo.utils :refer [format ->int]]
             [cleebo.query.components.highlight-error :refer [highlight-error]]
             [cleebo.query.components.query-toolbar :refer [query-toolbar]]
             [cleebo.query.components.results-table :refer [results-table]]
@@ -14,59 +14,44 @@
              [error-panel throbbing-panel minimize-panel filter-annotation-buttons]]
             [taoensso.timbre :as timbre]))
 
-(defn internal-error-panel [content]
-  (fn [{:keys [message code]}]
-    [error-panel
-     :status code
-     :content [:div message]]))
+(defn parse-query-error-msg [message]
+  (let [re #"Query: (.+) ; has error at position: (\d+)"
+        [_ query-str at] (first (re-seq re message))]
+    [query-str (->int at)]))
 
-(defn query-error-panel [content]
-  (fn [content]
-    [error-panel
-     :status (str "Query misquoted starting at position " (inc (:at content)))
-     :content (highlight-error content)]))
+(defn error-panel-by-type [content]
+  (fn [{:keys [message code]}]
+    (if (= code "Query string error")
+      (let [[query-str at] (parse-query-error-msg message)]
+        [error-panel
+         :status (str "Query misquoted starting at position " at)
+         :content (highlight-error query-str at)])
+      [error-panel
+       :status code
+       :content [:div message]])))
 
 (defn no-results-panel [query-str]
   (fn [query-str]
-    [error-panel :status (format "No matches found for query: %s" @query-str)]))
-
-(defn do-research-panel []
-  [error-panel :status "No hits to be shown... Go do some research!"])
-
-(defn has-error [status]
-  (= status :error))
-
-(defn has-query-error [status]
-  (= status :query-str-error))
-
-(defn no-results [query-str query-size]
-  (and (not (= "" query-str)) (zero? query-size)))
-
-(defn has-results [query-size]
-  (not (zero? query-size)))
-
-(defn has-marked-hits [marked-hits]
-  (not (zero? (count marked-hits))))
+    [error-panel :status (format "Ooops! No matches found for query: %s" query-str)]))
 
 (defn results-frame []
   (let [status (re-frame/subscribe [:project-session :status])
-        query-size (re-frame/subscribe [:project-session :query :results-summery :query-size])
+        query-size (re-frame/subscribe [:project-session :query :results-summary :query-size])
         query-str (re-frame/subscribe [:project-session :query :results-summary :query-str])
         throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
     (fn []
       (let [{:keys [status content]} @status]
         (cond
-          @throbbing?                         [throbbing-panel]
-          (has-error status)                  [internal-error-panel content]
-          (has-query-error status)            [query-error-panel content]
-          (no-results @query-str @query-size) [no-results-panel query-str]
-          (has-results @query-size)           [results-table])))))
+          @throbbing?         [throbbing-panel]
+          (= :error status)   [error-panel-by-type content]
+          (zero? @query-size) [no-results-panel @query-str]
+          :else               [results-table])))))
 
 (defn query-frame-spacer []
   [:div.row {:style {:margin-top "5px"}}])
 
 (defn query-frame []
-  (let [has-query? (re-frame/subscribe [:has-query?])]
+  (let [has-query? (re-frame/subscribe [:has-query-results?])]
     (fn []
       [:div.container-fluid
        [query-toolbar]
@@ -107,9 +92,8 @@
   (fn []
     [:div.container-fluid
      [:div.row
-      [:div.col-lg-2.pull-left [filter-annotation-buttons]]
-      [:div.col-lg-2]
-      [:div.col-lg-3.pull-right [unmark-all-hits-btn]]]]))
+      [:div.col-lg-7.col-sm-5 [:div.pull-left [filter-annotation-buttons]]]
+      [:div.col-lg-4.col-sm-5 [:div.pull-right [unmark-all-hits-btn]]]]]))
 
 (defn query-panel []
   (let [query-size (re-frame/subscribe [:session :query-results :query-size])
@@ -122,7 +106,7 @@
                   {:child query-frame
                    :open-header (label-closed-header "Query Panel")
                    :closed-header query-panel-closed-header}]]
-       (when (has-marked-hits @marked-hits)
+       (when-not (zero? (count @marked-hits))
          [:div.row [minimize-panel
                     {:child annotation-panel
                      :closed-header annotation-closed-header

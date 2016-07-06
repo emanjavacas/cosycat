@@ -3,6 +3,7 @@
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [cleebo.query-backends.core :refer [ensure-corpus]]
             [cleebo.query-backends.protocols :refer [query query-sort snippet]]
+            [cleebo.query-parser :refer [missing-quotes]]
             [cleebo.utils :refer [filter-marked-hits]]
             [ajax.core :refer [GET]]
             [taoensso.timbre :as timbre]))
@@ -36,6 +37,7 @@
  :set-query-results
  standard-middleware
  (fn [db [_ {:keys [results-summary results status]}]]
+   (re-frame/dispatch [:stop-throbbing :results-frame])
    (let [active-project (get-in db [:session :active-project])
          path-fn (fn [k] [:projects active-project :session :query k])
          merge-old-results (merge-fn results :has-marked? true)]
@@ -49,6 +51,7 @@
  :query-error
  standard-middleware
  (fn [db [_ {:keys [message code] :as args}]]
+   (re-frame/dispatch [:stop-throbbing :results-frame])
    (let [active-project (get-in db [:session :active-project])]
      (-> db
          (assoc-in [:projects active-project :session :status :status] :error)
@@ -62,12 +65,26 @@
         project (get-in db [:projects active-project])]
     (get-in project [:session :query :results-summary])))
 
+(defn empty-before [s n]
+  (count (filter #(= % " ")  (subs s n))))
+
+(defn trigger-query [corpus query-str & args]
+  (let [{status :status at :at} (missing-quotes query-str)
+        at (+ at (empty-before query-str at))]
+    (case status
+      :mismatch (re-frame/dispatch
+                 [:query-error
+                  {:code "Query string error"
+                   :message (str "Query: " query-str " ; has error at position: " at ".")}])
+      :finished (apply query corpus query-str args))))
+
 (re-frame/register-handler
  :query
  (fn [db [_ query-str]]
    (let [{query-opts :query-opts corpus-name :corpus} (get-in db [:session :settings :query])
          corpus-config (find-corpus-config db corpus-name)]
-     (query (ensure-corpus corpus-config) query-str query-opts)
+     (re-frame/dispatch [:start-throbbing :results-frame])
+     (trigger-query (ensure-corpus corpus-config) query-str query-opts)
      db)))
 
 (re-frame/register-handler
@@ -78,9 +95,10 @@
          {query-str :query-str query-size :query-size {from :from to :to} :page} (current-project-results db)
          corpus-config (find-corpus-config db corpus-name)
          [from to] (case direction
-                     :next (pager-next query-size query-size to)
-                     :prev (pager-prev query-size query-size from))]
-     (query (ensure-corpus corpus-config) query-str (assoc query-opts :from from))
+                     :next (pager-next query-size page-size to)
+                     :prev (pager-prev query-size page-size from))]
+     (re-frame/dispatch [:start-throbbing :results-frame])
+     (query (ensure-corpus corpus-config) query-str (assoc query-opts :from from :page-size (- to from)))
      db)))
 
 (re-frame/register-handler

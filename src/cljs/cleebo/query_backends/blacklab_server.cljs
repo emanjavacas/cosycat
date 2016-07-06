@@ -57,10 +57,9 @@
      :meta (normalize-meta num doc)}))
 
 (defn ->results-summary
-  [{{from :first corpus :indexname query-str :patt} :searchParam
-    num-hits :numberOfHitsRetrieved query-size :numberOfHits
-    query-time :searchTime has-next :windowHasNext}]
-  {:page {:from (->int from) :to (+ (->int from) num-hits)}
+  [{{from :first corpus :indexname query-str :patt num-hits :number} :searchParam
+    query-size :numberOfHits query-time :searchTime has-next :windowHasNext}]
+  {:page {:from (->int from) :to (+ (->int from) (->int num-hits))}
    :query-size query-size
    :query-str query-str
    :query-time query-time
@@ -118,16 +117,17 @@
        :method jsonp)))
   
   (p/handler-data [corpus data]
-    (let [{:keys [error] :as cljs-data} (js->clj data :keywordize-keys true)]
-      (if error
-        error
+    (let [{{:keys [message code] :as error} :error :as cljs-data} (js->clj data :keywordize-keys true)]
+      (.log js/console cljs-data)
+      (if-not error
         (let [{summary :summary hits :hits doc-infos :docInfos} cljs-data
               {{from :first} :searchParam} summary
               results-summary (->results-summary summary)
               results (->results doc-infos hits from)]
           {:results-summary results-summary
            :results results
-           :status {:status :ok}}))))
+           :status {:status :ok}})
+        {:message message :code code})))
  
   (p/error-handler-data [corpus data]
     (identity data)))
@@ -135,5 +135,6 @@
 (defn make-blacklab-server-corpus [{:keys [index server web-service] :as args}]
   (->BlacklabServerCorpus index server web-service))
 
-;; (def mbg-corpus (BlacklabServerCorpus. "mbg-index-small" "localhost:8080" "blacklab-server-1.4-SNAPSHOT"))
-;; (p/query mbg-corpus "[word=\"was\"]" {:context 5 :from 0 :page-size 35})
+;; (def mbg-corpus (BlacklabServerCorpus.
+;;                  "mbg-index-small" "mbgserver.uantwerpen.be:8080" "blacklab-server-1.4-SNAPSHOT"))
+;; (p/query mbg-corpus "[word=\"was\"]" {:context 5 :from 5 :page-size 5})

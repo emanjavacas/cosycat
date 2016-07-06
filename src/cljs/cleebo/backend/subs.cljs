@@ -79,8 +79,16 @@
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))
-         query-size (reaction (get-in @project [:session :query :results-summary :query-size]))]
-     (reaction (not (or (not (number? @query-size)) (zero? @query-size)))))))
+         results-summary (reaction (get-in @project [:session :query :results-summary]))]
+     (reaction (not (empty? @results-summary))))))
+
+(re-frame/register-sub
+ :has-query-results?
+ (fn [db _]
+   (let [active-project (reaction (get-in @db [:session :active-project]))
+         project (reaction (get-in @db [:projects @active-project]))
+         size (reaction (get-in @project [:session :query :results-summary :query-size]))]
+     (reaction (and (number? @size) (not (zero? @size)))))))
 
 (re-frame/register-sub
  :results
@@ -96,7 +104,7 @@
  (fn [db [_ {:keys [has-marked?]}]]
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))
-         results-by-id (reaction (get-in @project [:session :results-by-id]))]
+         results-by-id (reaction (get-in @project [:session :query :results-by-id]))]
      (reaction (vals (filter-marked-hits @results-by-id :has-marked? has-marked?))))))
 
 (re-frame/register-sub
@@ -139,17 +147,18 @@
 (re-frame/register-sub                  ;{username user-map) for each user in project
  :active-project-users
  (fn [db _]
-   (let [active-project-name (reaction (get-in @db [:session :active-project]))
-         active-project (get-in @db [:projects @active-project-name])
+   (let [active-project (reaction (get-in @db [:session :active-project]))
+         project (reaction (get-in @db [:projects @active-project]))
          users (reaction (get-users @db))
-         users-map (reaction (zipmap (map :name @users) @users))]
-     (reaction (map #(get @users-map %) (map :username (:users @active-project)))))))
+         users-map (reaction (zipmap (map :username @users) @users))]
+     (.log js/console (:users @project))
+     (reaction (map #(get @users-map %) (map :username (:users @project)))))))
 
 (re-frame/register-sub
  :filtered-users-colors
  (fn [db _]
    (let [active-project-name (reaction (get-in @db [:session :active-project]))
-         active-project (get-in @db [:projects @active-project-name])
+         active-project (reaction (get-in @db [:projects @active-project-name]))
          filtered-users (reaction (get-in @active-project [:session :filtered-users]))
          filtered-users-info (reaction (get-users @db @filtered-users))]
      (reaction (zipmap (map :username @filtered-users-info)

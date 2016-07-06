@@ -4,7 +4,6 @@
             [clojure.string :as str]
             [react-bootstrap.components :as bs]
             [cleebo.utils :refer [->map by-id]]
-            [cleebo.query-parser :refer [missing-quotes]]
             [cleebo.components :refer [dropdown-select]]
             [taoensso.timbre :as timbre]))
 
@@ -57,31 +56,18 @@
        [context-select context :has-query? has-query?]
        [size-select page-size :has-query? has-query?]])))
 
-(defn empty-before [s n]
-  (count (filter #(= % " ")  (subs s n))))
-
 (defn normalize-str [s]
   (str/replace s #"[ ]+" " "))
-
-(defn trigger-query [query-str]
-  (let [{status :status at :at} (missing-quotes query-str)
-        at (+ at (empty-before query-str at))]
-    (case status
-      :mismatch (re-frame/dispatch
-                 [:set-project-session [:query :results-summary :status]
-                  {:status :query-str-error
-                   :content {:query-str query-str :at at}}])
-      :finished (re-frame/dispatch [:query query-str :results-frame]))))
 
 (defn on-key-press [k]
   (let [query-str (normalize-str (by-id "query-str"))]
     (when (and (not (zero? (count query-str))) (= (.-charCode k) 13))
-      (trigger-query query-str))))
+      (re-frame/dispatch [:query query-str]))))
 
 (defn on-click-search []
   (let [query-str (normalize-str (by-id "query-str"))]
     (when-not (zero? (count query-str))
-      (trigger-query query-str))))
+      (re-frame/dispatch [:query query-str]))))
 
 (defn query-toolbar []
   (let [query-str (re-frame/subscribe [:project-session :query :results-summary :query-str])

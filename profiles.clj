@@ -10,8 +10,8 @@
              [{:name "mbg-small"
                :type :blacklab-server
                :args {:index "mbg-index-small"
-                      :server "localhost:8080"
-                      :web-service "blacklab-server-1.3.4"}}
+                      :server "mbgserver.uantwerpen.be:8080"
+                      :web-service "blacklab-server-1.4-SNAPSHOT"}}
               {:name "mbg-small-local"
                :type :blacklab
                :args {:path "/home/enrique/cleebo-dep/indices/blacklab/mbg-index-small/"}}]}}
@@ -20,8 +20,8 @@
               [{:name "mbg-small"
                 :type :blacklab-server
                 :args {:index "mbg-index-small"
-                       :server "localhost:8080"
-                       :web-service "blacklab-server-1.3.4"}}
+                       :server "mbgserver.uantwerpen.be:8080"
+                       :web-service "blacklab-server-1.4-SNAPSHOT"}}
                {:name "mbg-small-local"
                 :type :blacklab
                 :args {:path "/home/enrique/cleebo-dep/indices/blacklab/mbg-index-small/"}}]}}

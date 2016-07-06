@@ -13,6 +13,13 @@ table#table-annotation {
     box-sizing: border-box;
     table-layout: fixed; /* same cell widths (avoid wierd resizing) */
     width: 100%;
+    text-align: center;
+}
+
+table#table-annotation td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 table#table-annotation tr td {

@@ -15,7 +15,7 @@
         post (subs s (inc n))]
     (str pre replacement post)))
 
-(defn highlight-error [{query-str :query-str at :at}]
+(defn highlight-error [query-str at]
   [:div
    {:style {:display "inline-block"}}
    [:div.alert.alert-danger
