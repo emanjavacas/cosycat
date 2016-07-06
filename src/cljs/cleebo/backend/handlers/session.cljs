@@ -38,13 +38,22 @@
        (assoc :session (default-session :corpora corpora) :history default-history)
        (assoc :projects (normalize-projects projects)))))
 
+(re-frame/register-handler              ;load error
+ :session-error
+ standard-middleware
+ (fn [db [_ {:keys [code message] :as args}]]
+   (-> db
+       (assoc-in [:session :active-panel] :error-panel)
+       (assoc-in [:session :session-error] (select-keys args [:code :message])))))
+
 (defn initialize-session-handler [payload]
   (re-frame/dispatch [:initialize-db payload]))
 
 (defn initialize-session-error-handler [payload]
-  (re-frame/dispatch [:session-error
-                      {:error "initialisation error"
-                       :message "Couldn't load user session :-S"}]))
+  (re-frame/dispatch
+   [:session-error
+    {:code "initialisation error"
+     :message "Couldn't load user session :-S"}]))
 
 (re-frame/register-handler
  :initialize-session
@@ -53,11 +62,3 @@
         {:handler initialize-session-handler
          :error-handler initialize-session-error-handler})
    db))
-
-(re-frame/register-handler              ;load error
- :session-error
- standard-middleware
- (fn [db [_ {:keys [error message] :as args}]]
-   (-> db
-       (assoc-in [:session :active-panel] :error-panel)
-       (assoc-in [:session :session-error] args))))

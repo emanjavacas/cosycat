@@ -41,7 +41,7 @@
   (handler-data [corpus data] (identity data))
   (error-handler-data [corpus data] (identity data)))
 
-(defn make-blacklab-corpus [corpus-name]
+(defn make-blacklab-corpus [{:keys [corpus-name]}]
   (->BlacklabCorpus corpus-name))
 
 ;; (def new-corpus (->BlacklabCorpus "mbg-small"))

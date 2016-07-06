@@ -9,9 +9,9 @@
              :corpora
              [{:name "mbg-small"
                :type :blacklab-server
-               :args {:index "mbg-small"
+               :args {:index "mbg-index-small"
                       :server "localhost:8080"
-                      :service "blacklab-server-1.3.4"}}
+                      :web-service "blacklab-server-1.3.4"}}
               {:name "mbg-small-local"
                :type :blacklab
                :args {:path "/home/enrique/cleebo-dep/indices/blacklab/mbg-index-small/"}}]}}
@@ -19,9 +19,9 @@
               :corpora
               [{:name "mbg-small"
                 :type :blacklab-server
-                :args {:index "mbg-small"
+                :args {:index "mbg-index-small"
                        :server "localhost:8080"
-                       :service "blacklab-server-1.3.4"}}
+                       :web-service "blacklab-server-1.3.4"}}
                {:name "mbg-small-local"
                 :type :blacklab
                 :args {:path "/home/enrique/cleebo-dep/indices/blacklab/mbg-index-small/"}}]}}

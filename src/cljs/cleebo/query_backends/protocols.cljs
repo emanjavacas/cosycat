@@ -21,13 +21,19 @@
 
 (defn handler
   "general handler called with normalized corpus query data"
-  [{:keys [results results-summary] :as payload}]
-  (re-frame/dispatch [:set-query-results payload]))
+  [{:keys [results results-summary error] :as payload}]
+  (.log js/console error)
+  (if error
+    (re-frame/dispatch [:query-error error])
+    (re-frame/dispatch [:set-query-results payload])))
 
 (defn error-handler
   "general error handler called with normalized query error data"
   [data]
-  (.log js/console "ERROR!" data))
+  (re-frame/dispatch
+   [:query-error
+    {:message "A Jsonp timeout error occurred. This can have various causes."
+     :code "Unrecognized query error"}]))
 
 (defn handle-query
   "wrapper for ajax/jsonp queries that simplifies protocol implementations"

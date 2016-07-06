@@ -33,7 +33,7 @@
         (if-not (some #{project-name} (keys projects))
           (do (re-frame/dispatch
                [:session-error
-                {:error "Project not found!"
+                {:code "Project not found!"
                  :message "These are not the projects you are looking for."}])
               db)
           (handler db args))))))

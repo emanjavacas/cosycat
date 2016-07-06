@@ -5,7 +5,7 @@
 (defn error-panel []
   (let [error-data (re-frame/subscribe [:session :session-error])]
     (fn []
-      (let [{:keys [error message]} @error-data]
+      (let [{:keys [code message]} @error-data]
         [:div.container
          [:div.row
           [:div.jumbotron
@@ -14,7 +14,7 @@
             [:div.row {:style {:height "50px"}}]
             [:div.row
              [:p            
-              error
+              code
               [:span.text-muted
                {:style {:padding "50px"}}
                message]]]]]]]))))

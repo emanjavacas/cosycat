@@ -50,11 +50,15 @@
     :has-next s/Bool
     :corpus s/Any}))
 
+(def status-schema
+  {:status (s/enum :ok :error)
+   (s/optional-key :content) {:message s/Str (s/optional-key :code) s/Str}})
+
 (def project-session-schema
   {:query {:results-summary results-summary-schema ;info about last query
            :results (s/conditional empty? [] :else results-schema) ;current hits ids
            :results-by-id (s/conditional empty? {} :else results-by-id-schema)} ;hits by id
-   :status (s/conditional empty? {} :else {:status (s/enum :ok :error) :content s/Str})
+   :status (s/conditional empty? {} :else status-schema)
    :filtered-users #{s/Str}             ;filter out annotations by other users
 })
 
@@ -85,18 +89,13 @@
                            (s/optional-key :status)  (s/enum :ok :error :info)
                            (s/optional-key :date)    s/Any}})
 
-(def session-error-schema
-  {:error s/Str
-   :message s/Str
-   (s/optional-key s/Any) s/Any})
-
 (def session-schema
   {:active-panel s/Keyword
    :active-project s/Any
    :settings settings-schema            ;mutable global session-settings (in case outside project)
    (s/optional-key :notifications) {s/Any notification-schema}
    (s/optional-key :modals)     {s/Keyword s/Any}
-   (s/optional-key :session-error) session-error-schema
+   (s/optional-key :session-error) {:message s/Str (s/optional-key :code) s/Str}
    (s/optional-key :throbbing?) {s/Any s/Bool}
    (s/optional-key :component-error?) {s/Keyword s/Any}})
 

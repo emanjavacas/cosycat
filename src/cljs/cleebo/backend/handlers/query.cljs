@@ -45,6 +45,15 @@
          (assoc-in (path-fn :results) (map :id results))
          (update-in (path-fn :results-by-id) merge-old-results)))))
 
+(re-frame/register-handler
+ :query-error
+ standard-middleware
+ (fn [db [_ {:keys [message code] :as args}]]
+   (let [active-project (get-in db [:session :active-project])]
+     (-> db
+         (assoc-in [:projects active-project :session :status :status] :error)
+         (assoc-in [:projects active-project :session :status :content] {:message message :code code})))))
+
 (defn find-corpus-config [db corpus-name]
   (some #(when (= corpus-name (:name %)) %) (db :corpora)))
 

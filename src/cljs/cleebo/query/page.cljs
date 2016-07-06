@@ -15,10 +15,10 @@
             [taoensso.timbre :as timbre]))
 
 (defn internal-error-panel [content]
-  (fn [content]
+  (fn [{:keys [message code]}]
     [error-panel
-     :status "Oops! something bad happened"
-     :content [:div content]]))
+     :status code
+     :content [:div message]]))
 
 (defn query-error-panel [content]
   (fn [content]

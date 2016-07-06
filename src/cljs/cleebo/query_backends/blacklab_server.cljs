@@ -56,6 +56,26 @@
      :id (apply str (interpose "." [doc-id start end]))
      :meta (normalize-meta num doc)}))
 
+(defn ->results-summary
+  [{{from :first corpus :indexname query-str :patt} :searchParam
+    num-hits :numberOfHitsRetrieved query-size :numberOfHits
+    query-time :searchTime has-next :windowHasNext}]
+  {:page {:from (->int from) :to (+ (->int from) num-hits)}
+   :query-size query-size
+   :query-str query-str
+   :query-time query-time
+   :has-next has-next
+   :corpus corpus})
+
+(defn ->results
+  [doc-infos hits from]
+  (vec (map-indexed
+        (fn [idx {doc-id :docPid :as hit}]
+          (let [num (+ idx (->int from))
+                doc (get doc-infos (keyword doc-id))]
+            (normalize-bl-hit hit num doc)))
+        hits)))
+
 (def bl-default-params
   {:maxcount 100000
    :waitfortotal "yes"})
@@ -98,34 +118,22 @@
        :method jsonp)))
   
   (p/handler-data [corpus data]
-    (let [{summary :summary hits :hits doc-infos :docInfos} (js->clj data :keywordize-keys true)
-          {{from :first corpus :indexname query-str :patt} :searchParam
-           num-hits :numberOfHitsRetrieved query-size :numberOfHits
-           query-time :searchTime has-next :windowHasNext} summary
-          results-summary {:page {:from (->int from) :to (+ (->int from) num-hits)}
-                           :query-size query-size
-                           :query-str query-str
-                           :query-time query-time
-                           :has-next has-next
-                           :corpus corpus}
-          results (map-indexed
-                   (fn [idx {doc-id :docPid :as hit}]
-                     (let [num (+ idx (->int from))
-                           doc (get doc-infos (keyword doc-id))]
-                       (normalize-bl-hit hit num doc)))
-                   hits)]
-      {:results-summary results-summary
-       :results (vec results)
-       :status {:status :ok :content "Hi"}}))
+    (let [{:keys [error] :as cljs-data} (js->clj data :keywordize-keys true)]
+      (if error
+        error
+        (let [{summary :summary hits :hits doc-infos :docInfos} cljs-data
+              {{from :first} :searchParam} summary
+              results-summary (->results-summary summary)
+              results (->results doc-infos hits from)]
+          {:results-summary results-summary
+           :results results
+           :status {:status :ok}}))))
  
   (p/error-handler-data [corpus data]
     (identity data)))
 
-(defn make-blacklab-server-corpus [index server web-service]
+(defn make-blacklab-server-corpus [{:keys [index server web-service] :as args}]
   (->BlacklabServerCorpus index server web-service))
 
-(def mbg-corpus (BlacklabServerCorpus. "mbg-index-small" "localhost:8080" "blacklab-server-1.3.4"))
-;; (def brown-corpus (BlacklabServerCorpus. "brown-tei" "localhost:8080" "blacklab-server-1.3.4"))
-(p/query mbg-corpus "[word=\"was\"]" {:context 5 :from 0 :page-size 35})
-
-
+;; (def mbg-corpus (BlacklabServerCorpus. "mbg-index-small" "localhost:8080" "blacklab-server-1.4-SNAPSHOT"))
+;; (p/query mbg-corpus "[word=\"was\"]" {:context 5 :from 0 :page-size 35})
