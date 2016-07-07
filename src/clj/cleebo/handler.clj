@@ -27,7 +27,7 @@
                                         login-route logout-route signup-route]]
             [cleebo.components.ws :refer [ws-handler-http-kit send-clients]]
             [cleebo.routes.blacklab :refer [blacklab-router]]
-            [cleebo.routes.sessions :refer [session-route]]
+            [cleebo.routes.session :refer [session-route]]
             [cleebo.routes.projects :refer [project-route]]
             [cleebo.routes.settings :refer [settings-route]]
             [cleebo.routes.annotations :refer [annotation-route]]))

@@ -6,7 +6,7 @@
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
             [cleebo.components.ws :refer [send-clients]]
             [cleebo.components.blacklab :refer [remove-hits!]]
-            [cleebo.db.users :refer [lookup-user is-user? new-user postprocess-user]]
+            [cleebo.db.users :refer [lookup-user is-user? new-user normalize-user]]
             [cleebo.db.projects :refer [new-project]]
             [cleebo.views.error :refer [error-page]]
             [cleebo.views.login :refer [login-page]]
@@ -32,21 +32,17 @@
 
 (defn signup-route
   [{{username :username firstname :firstname lastname :lastname email :email
-     password :password repeatpassword :repeatpassword} :params
+     password :password repeatpassword :repeatpassword :as user} :params
     {db :db ws :ws} :components
     {next-url :next} :session :as req}]
-  (let [user {:username username :password password
-              :firstname firstname :lastname lastname :email email}
-        is-user (is-user? db user)
-        password-match? (= password repeatpassword)]
+  (let [user (dissoc user :repeatpassword)]
     (cond
-      (not password-match?) (on-signup-failure req "Password mismatch")
-      is-user               (on-signup-failure req "User already exists")
+      (not (= password repeatpassword)) (on-signup-failure req "Password mismatch")
+      (is-user? db user)                (on-signup-failure req "User already exists")
       :else (let [user (-> (new-user db user) (assoc :active true))]
               (new-project db username) ;create default project
-              (send-clients ws {:type :signup :data (postprocess-user user :projects)})
-              (-> (redirect (or next-url "/"))
-                  (assoc-in [:session :identity] user))))))
+              (send-clients ws {:type :signup :data (normalize-user user :projects)})
+              (-> (redirect (or next-url "/")) (assoc-in [:session :identity] user))))))
 
 (defn login-route
  [{{username :username password :password} :params
@@ -58,7 +54,7 @@
         user {:username username :password password}]
     (if-let [user (lookup-user db user)]
       (let [user (assoc user :active true)]
-        (send-clients ws {:type :login :data (postprocess-user user :project)})
+        (send-clients ws {:type :login :data (normalize-user user :project)})
         (-> (redirect (or next-url "/"))
             (assoc-in [:session :identity] user)))
       (on-login-failure req))))

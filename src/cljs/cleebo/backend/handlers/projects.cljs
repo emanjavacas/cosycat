@@ -7,12 +7,18 @@
             [cleebo.schemas.project-schemas :refer [project-schema update-schema]]
             [taoensso.timbre :as timbre]))
 
-(defn normalize-projects [projects]
-  (reduce (fn [acc {:keys [name] :as project}]
-            (let [project {:project project :session default-project-session}]
-              (assoc acc name project)))
-          {}
-          projects))
+(defn normalize-projects
+  "transforms server project schema to client project schema"
+  [projects user]
+  (reduce
+   (fn [acc {:keys [name] :as project}]
+     (let [{:keys [history settings]} (some #(when (= name (:name %)) %) (:projects user))]
+       (assoc acc name (-> project
+                           (assoc :session default-project-session)
+                           (cond-> history (assoc :history history))
+                           (cond-> settings (assoc :settings settings))))))
+   {}
+   projects))
 
 (re-frame/register-handler
  :set-active-project
@@ -28,15 +34,18 @@
  :add-project
  standard-middleware
  (fn [db [_ project]]
-   (update db [:projects] merge (normalize-projects [project]))))
+   (update db [:projects] merge (normalize-projects [project] (:me db)))))
 
-(defn new-project-handler [project]   ;should navigate to project
+(defn new-project-handler [project]
   (re-frame/dispatch [:add-project project])
   (re-frame/dispatch [:set-active-project {:project-name (:name project)}]))
 
 (defn new-project-error-handler [{:keys [message data]}]
   (re-frame/dispatch
    [:notify {:message (str "Couldn't create project: [" data "]" ) :status :error}]))
+
+(defn user->project-user [{:keys [username]}]
+  {:username username :role "creator"})
 
 (re-frame/register-handler
  :new-project
@@ -46,15 +55,56 @@
          {:params {:route :new-project
                    :name name
                    :description description
-                   :users users}
+                   :users (conj users (user->project-user (:me db)))}
           :handler new-project-handler
           :error-handler new-project-error-handler})
    db))
 
 (re-frame/register-handler
- :update-filtered-users
+ :add-project-update
  standard-middleware
- (fn [db [_ username flag]]
-   (let [active-project (:active-project db)
-         action (if flag conj disj)]
-     (update-in db [:projects active-project :session :filtered-users] action username))))
+ (fn [db [_ [{:keys [payload project]}]]]
+   (update-in db [:projects project :updates] conj payload)))
+
+(re-frame/register-handler
+ :project-update
+ standard-middleware
+ (fn [db [_ {:keys [payload project]}]]
+   (POST "/project"
+         {:params {:route :project-update :project project :payload payload}
+          :handler #(re-frame/dispatch [:add-project-update %])
+          :error-handler #(timbre/info "Error while sending project update to server")})
+   db))
+
+(re-frame/register-handler
+ :add-project-user
+ standard-middleware
+ (fn [db [_ [{:keys [user project]}]]]
+   (update-in db [:projects project :users] conj user)))
+
+(re-frame/register-handler
+ :project-add-user
+ standard-middleware
+ (fn [db [_ {:keys [user project]}]]
+   (POST "/project"
+         {:params {:route :add-user :user user :project project}
+          :handler #(re-frame/dispatch [:add-project-user %])
+          :error-handler #(re-frame/dispatch [:notify "Couldn't add user to project" :data %])})
+   db))
+
+(re-frame/register-handler
+ :remove-project-user
+ standard-middleware
+ (fn [db [_ [{:keys [user project]}]]]
+   (update-in
+    db [:projects project :users]
+    (fn [users] (vec (remove #(= (:username %) (:username user)) users))))))
+
+(re-frame/register-handler
+ :project-remove-user
+ (fn [db [_ {:keys [project]}]]
+   (POST "/project"
+         {:params {:route :remove-user :project project}
+          :handler #(re-frame/dispatch [:notify "Goodbye from project " project])
+          :error-handler #(re-frame/dispatch [:notify "Couldn't leave project" :data %])})
+   db))

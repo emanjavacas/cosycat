@@ -10,6 +10,14 @@
             [cleebo.utils :refer [format]]
             [taoensso.timbre :as timbre]))
 
+(re-frame/register-handler
+ :update-filtered-users
+ standard-middleware
+ (fn [db [_ username flag]]
+   (let [active-project (:active-project db)
+         action (if flag conj disj)]
+     (update-in db [:projects active-project :session :filtered-users] action username))))
+
 (re-frame/register-handler              ;set session data to given path
  :set-session
  standard-middleware
@@ -36,7 +44,7 @@
  (fn [_ [_ {:keys [me users corpora projects] :as payload}]]
    (-> payload
        (assoc :session (default-session :corpora corpora) :history default-history)
-       (assoc :projects (normalize-projects projects)))))
+       (assoc :projects (normalize-projects projects me)))))
 
 (re-frame/register-handler              ;load error
  :session-error

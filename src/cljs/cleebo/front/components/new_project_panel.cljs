@@ -2,6 +2,8 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
+            [schema.core :as s]
+            [cleebo.schemas.project-schemas :refer [project-users-schema]]
             [cleebo.utils :refer [by-id parse-time human-time]]
             [cleebo.roles :refer [project-user-roles]]
             [cleebo.components :refer [user-selection-component css-transition-group]]
@@ -103,6 +105,10 @@
 (defn is-selected? [selected-users username]
   (contains? selected-users username))
 
+(s/defn get-selected-users [selected-users]
+  :- (s/conditional empty? {} :else project-users-schema)
+  (vec (vals @selected-users)))
+
 (defn swap-selected [selected-users username]
   (if (is-selected? selected-users username)
     (dissoc selected-users username)
@@ -190,7 +196,7 @@
           (submit-project
            {:name name
             :description desc
-            :users (vals @selected-users)
+            :users (get-selected-users selected-users)
             :user-projects user-projects}))))))
 
 (defn project-btn [open? selected-users user-projects name-input-error desc-input-error]

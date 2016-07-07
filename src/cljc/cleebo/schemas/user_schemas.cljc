@@ -17,19 +17,31 @@
   {:notifications {:delay s/Int} ;overridable by project-setts
    :query query-opts-schema})
 
-(def user-project-schema
+(def project-history-schema
+  {:query [{:query-str s/Str :timestamp s/Int}]})
+
+(def user-project-schema   ;server-only (get merged with project in the client)
   {:name s/Str
-   :settings settings-schema  ;user specific project-settings
-   :history {:query [{:query-str s/Str :timestamp s/Int}]}})
+   :settings settings-schema
+   :history project-history-schema})
 
 (def user-schema
-  {:username s/Str
-   :firstname s/Str
-   :lastname s/Str
-   :email s/Str
-   :avatar avatar-schema
-   :roles #{s/Str}
-   :created s/Int
-   :last-active s/Int
-   (s/optional-key :projects) [user-project-schema]
-   (s/optional-key :settings) settings-schema}) ;saved global-settings
+  #?(:clj {:username s/Str
+           :firstname s/Str
+           :lastname s/Str
+           :email s/Str
+           :avatar avatar-schema
+           :roles #{s/Str}
+           :created s/Int
+           :last-active s/Int
+           (s/optional-key :settings) settings-schema ;saved global-settings
+           (s/optional-key :projects) [user-project-schema]}
+     :cljs  {:username s/Str
+             :firstname s/Str
+             :lastname s/Str
+             :email s/Str
+             :avatar avatar-schema
+             :roles #{s/Str}
+             :created s/Int
+             :last-active s/Int
+             (s/optional-key :settings) settings-schema}))

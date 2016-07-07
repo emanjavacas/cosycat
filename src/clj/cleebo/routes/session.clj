@@ -1,4 +1,4 @@
-(ns cleebo.routes.sessions
+(ns cleebo.routes.session
   (:require [buddy.auth :refer [authenticated?]]
             [cleebo.routes.auth :refer [safe]]
             [cleebo.components.ws :refer [get-active-users]]
