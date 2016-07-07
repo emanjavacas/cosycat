@@ -2,7 +2,7 @@
   (:require [com.stuartsierra.component :as component]
             [taoensso.timbre :as timbre]
             [config.core :refer [env]]
-            [compojure.core :refer [GET POST ANY HEAD defroutes wrap-routes]]
+            [compojure.core :refer [GET POST ANY HEAD defroutes wrap-routes routes]]
             [compojure.route :as route]
             [prone.middleware :refer [wrap-exceptions]]
             [cleebo.views.error :refer [error-page]]
@@ -30,7 +30,7 @@
             [cleebo.routes.session :refer [session-route]]
             [cleebo.routes.projects :refer [project-route]]
             [cleebo.routes.settings :refer [settings-route]]
-            [cleebo.routes.annotations :refer [annotation-route]]))
+            [cleebo.routes.annotations :refer [annotation-routes]]))
 
 (def about-route
   (safe
@@ -43,23 +43,28 @@
      (cleebo-page :csrf *anti-forgery-token*))
    {:login-uri "/login" :is-ok? authenticated?}))
 
-(defroutes app-routes
+(defroutes static-routes
   (GET "/" req (landing-page :logged? (is-logged? req)))
   (GET "/login" [] (login-page :csrf *anti-forgery-token*))
   (POST "/login" [] login-route)
   (POST "/signup" [] signup-route)
+  (ANY "/logout" [] logout-route)
   (GET "/about" [] about-route)
   (GET "/cleebo" [] cleebo-route)
-  (GET "/session" [] session-route)
-  (POST "/settings" [] settings-route)
-  (POST "/annotation" [] annotation-route)
-  (POST "/project" [] project-route)
-  (ANY "/logout" [] logout-route)
-  (GET "/blacklab" [] blacklab-router)
-  (GET "/ws" [] ws-handler-http-kit)
   (route/resources "/")
   (route/files "/" {:root (:dynamic-resource-path env)})
   (route/not-found (error-page :status 404 :title "Page not found!!")))
+
+(defroutes web-app-routes
+  (GET "/session" [] session-route)
+  (POST "/settings" [] settings-route)
+  (POST "/project" [] project-route)
+  (GET "/ws" [] ws-handler-http-kit))
+
+(defroutes blacklab-routes
+  (GET "/blacklab" [] blacklab-router))
+
+(def app-routes (routes static-routes web-app-routes blacklab-routes annotation-routes))
 
 (defn is-ajax
   "not sure how robust this is"
@@ -98,8 +103,6 @@
       (wrap-transit-response {:encoding :json-verbose})
       wrap-exceptions
       wrap-internal-error))
-
-(def web-app (wrap-routes #'app-routes wrap-base))
 
 (defn wrap-app-component [handler components]
   (fn [req]

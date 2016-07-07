@@ -1,9 +1,10 @@
 (ns cleebo.routes.annotations
   (:require [schema.core :as s]
             [buddy.auth :refer [authenticated?]]
+            [compojure.core :refer [defroutes context POST GET]]
             [cleebo.app-utils :refer [map-vals transpose]]
             [cleebo.routes.auth :refer [safe]]
-            [cleebo.db.annotations :refer [new-token-annotation]]
+            [cleebo.db.annotations :refer [new-token-annotation fetch-annotations]]
             [cleebo.components.ws :refer [send-clients]]
             [taoensso.timbre :as timbre]))
 
@@ -22,17 +23,17 @@
        (catch Exception e
          {:status :error :span span :reason :internal-error :e (str (class e))})))
 
-(defmulti annotation-router
+(defmulti new-annotation
   (fn [{{:keys [hit-id ann-map]} :params}]
     (type ann-map)))
 
-(defmethod annotation-router clojure.lang.PersistentArrayMap
+(defmethod new-annotation clojure.lang.PersistentArrayMap
   [{{hit-id :hit-id {span :span :as ann-map} :ann-map} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (handle-annotation db ws username ann-map hit-id))
 
-(defmethod annotation-router clojure.lang.PersistentVector
+(defmethod new-annotation clojure.lang.PersistentVector
   [{{hit-ids :hit-id ann-maps :ann-map} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
@@ -40,7 +41,18 @@
           (handle-annotation db ws username ann-map hit-id))
         ann-maps hit-ids))
 
-(def annotation-route 
-  (safe (fn [req] {:status 200 :body (annotation-router req)})
-        {:login-uri "/login" :is-ok? authenticated?}))
+(defn annotation-range
+  [{{project-name :project from :from size :size} :params
+    {{username :username} :identity} :session
+    {db :db} :components}]
+  (fetch-annotations db username project-name from size))
 
+(defn make-safe-route [router & {:keys [is-ok?] :or {is-ok? authenticated?}}]
+  (safe (fn [req] {:status 200 :body (router req)})
+        {:login-uri "/login" :is-ok? is-ok?}))
+
+(defroutes annotation-routes
+  (context "/annotation" []
+           (POST "/new"  [] (make-safe-route new-annotation))
+           (GET "/range" [] (make-safe-route annotation-range))
+           (GET "/test" [] {:status 200 :body "Hello"})))

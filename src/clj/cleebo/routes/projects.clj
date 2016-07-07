@@ -43,7 +43,7 @@
      :target-clients (conj (mapv :username users) (:username user)))
     data))
 
-(defmethod project-route :remove-user
+(defmethod project-router :remove-user
   [{{project-name :project} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]

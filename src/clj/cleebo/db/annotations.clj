@@ -3,13 +3,20 @@
             [monger.operators :refer :all]
             [taoensso.timbre :as timbre]
             [schema.core :as s]
-            [cleebo.utils :refer [get-token-id ->int deep-merge-with]]
+            [cleebo.utils :refer [get-token-id deep-merge-with]]
+            [cleebo.vcs :as vcs]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema cpos-anns-schema]]
             [cleebo.components.db :refer [new-db colls]]
             [cleebo.db.projects :refer [new-project find-project-by-name]]
-            [cleebo.roles :refer [check-annotation-update-role]]
+            [cleebo.roles :refer [check-annotation-role]]
             [schema.coerce :as coerce]))
 
+;;; EXCEPTIONS
+(defn ex-user [username project-name]
+  (ex-info "Read not authorized"
+           {:message :user-not-in-project
+            :data {:username username :project project-name}}))
+;;; SETTERS
 (defn check-span-overlap
   "checks if two span annotations overlap returning false if there is overlap"
   [{{{new-B :B new-O :O} :scope} :span :as new-ann}
@@ -156,9 +163,8 @@
 (defn attempt-annotation-update
   "update authorization middleware to prevent update attempts by non-authorized users"
   [db {username :username project-name :project :as ann-map} ann-id]
-  (let [{project-creator :creator project-users :users} (find-project-by-name db project-name)
-        role (if (= username project-creator) "creator" (find-role project-users username))]
-    (if (check-annotation-update-role :update role)
+  (let [{project-creator :creator project-users :users} (find-project-by-name db project-name)]
+    (if (check-annotation-role :update (find-role project-users username))
       (update-annotation db ann-map ann-id)
       (throw (ex-info "Unauthorized update attempt" {:reason :not-authorized})))))
 
@@ -169,7 +175,8 @@
         (insert-annotation db ann-map))
       (dissoc :_id)))
 
-(s/defn ^:always-validate fetch-anns :- (s/maybe {s/Int {s/Str {s/Str annotation-schema}}})
+;;; FETCHERS
+(s/defn  fetch-anns :- (s/maybe {s/Int {s/Str {s/Str annotation-schema}}})
   "{token-id {ann-key1 ann ann-key2 ann} token-id2 ...}.
    [enhance] a single span annotation will be fetched as many times as tokens it spans"
   [db ann-ids]
@@ -223,6 +230,19 @@
     (assoc hit-map :hit new-hit)))
 
 ;; (defonce db (.start (new-db (:database-url config.core/env))))
+(defn check-user-annotations [{db-conn :db :as db} username project-name]
+  (let [{users :users} (find-project-by-name db project-name)
+        {role :role} (some #(when (= username (:username %)) %) users)]
+    (when-not (check-annotation-role :read role)
+      (throw (ex-user username project-name)))))
+
+(defn fetch-annotations [{db-conn :db :as db} username project-name from size]
+  (check-user-annotations db username project-name)
+  (->> (mc/find-maps
+        db-conn project-name
+        {$or [{$and [{"span.scope" {$gte from}} {"span.scope" {$lt (+ from size)}}]}
+              {$or  [{"span.scope.O" {$gte from}} {"span.scope.B" {$lt (+ from size)}}]}]})
+       (mapv (partial vcs/with-history db))))
+
 ;; (fetch-anns-in-range db ["user-playground"] 417 418) 417
 ;; (first (find-ann-ids-in-range db ["user-playground"] 410 420))
-

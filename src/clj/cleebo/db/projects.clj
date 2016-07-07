@@ -2,7 +2,8 @@
   (:require [monger.collection :as mc]
             [monger.operators :refer :all]
             [schema.core :as s]
-            [cleebo.schemas.project-schemas :refer [project-schema update-schema project-user-schema]]
+            [cleebo.schemas.project-schemas
+             :refer [project-schema update-schema project-user-schema]]
             [cleebo.roles :refer [check-project-role]]
             [cleebo.db.users :refer [is-user?]]
             [cleebo.components.db :refer [new-db colls]]

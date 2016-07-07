@@ -8,6 +8,10 @@
 
 (def cpos-schema s/Int)
 
+(def cpos-anns-schema
+  {:anns [{:key s/Str :ann-id s/Int}]
+   (s/optional-key :_id) cpos-schema})
+
 (def history-schema
   [{:ann {:key s/Str
           :value s/Str}
@@ -29,16 +33,13 @@
                  #(= (:type %) "IOB")   iob-span-schema))
 
 (def annotation-schema
-  {:_id s/Any                            ;version-overarching unique identifier
-   :ann {:key s/Str :value s/Str}
+  {:ann {:key s/Str :value s/Str}
    :username s/Str
    :timestamp s/Int
    :span span-schema
-   :project s/Str
-   (s/optional-key :history) history-schema})
-
-(def cpos-anns-schema
-  {:anns [{:key s/Str :ann-id s/Int}]
-   (s/optional-key :_id) cpos-schema})
-
-
+   :_id s/Any                           ;version-overarching unique identifier
+   (s/optional-key :history)            ;this is the same except history
+   {:ann {:key s/Str :value s/Str}
+    :username s/Str
+    :timestamp s/Int
+    :span span-schema}})
