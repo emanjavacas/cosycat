@@ -22,7 +22,7 @@
   [{{update-payload :payload project-name :project :as payload} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [project (get-project db username project-name)]
+  (let [project (proj/get-project db username project-name)]
     (proj/update-project db username project-name update-payload)
     (send-clients
      ws {:type :project-update :data payload}
@@ -34,7 +34,7 @@
   [{{user :user project-name :project} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [{:keys [users] :as project} (get-project db username project-name)
+  (let [{:keys [users] :as project} (proj/get-project db username project-name)
         data {:user user :project project-name}]
     (proj/add-user db username project-name user)
     (send-clients
@@ -47,7 +47,7 @@
   [{{project-name :project} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [project (get-project db username project-name)]
+  (let [project (proj/get-project db username project-name)]
     (proj/remove-user db username project-name)
     (send-clients
      ws {:type :project-remove-user :data {:username username :project project-name}}

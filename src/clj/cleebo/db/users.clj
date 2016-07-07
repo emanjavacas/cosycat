@@ -8,6 +8,9 @@
             [cleebo.components.db :refer [new-db colls]]
             [cleebo.avatar :refer [user-avatar]]))
 
+(defn ex-user-exists [reason]
+  (ex-info "User already exist" {:reason reason}))
+
 (defn normalize-user
   "transforms db user doc into public user (no private info)"
   [user & ks] 
@@ -31,12 +34,11 @@
 
 (defn ex-user-exists
   "throws proper exception in case user exists"
-  [{old-username :username old-email :email} {new-username :username new-email :email}]
-  (let [ex (fn [reason] (ex-info "User already exist" {:reason reason}))]
-    (cond
-      (and (= new-username old-username) (= new-email old-email) (ex [:username :email]))
-      (= new-username old-username) (ex :username)
-      (= new-email old-email) (ex :email))))
+  [{old-name :username old-email :email} {new-name :username new-email :email}]
+  (cond
+    (and (= new-name old-name) (= new-email old-email)) (ex-user-exists [:username :email])
+    (= new-name old-name) (ex-user-exists :username)
+    (= new-email old-email) (ex-user-exists :email)))
 
 (defn is-user?
   "user check. returns nil or ex-info (in case a exception has to be thrown)"

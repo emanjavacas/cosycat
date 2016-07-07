@@ -23,15 +23,18 @@
 (defn normalize-project [project]
   (dissoc project :_id))
 
-(defn is-project? [{db-conn :db} project-name]
-  (boolean (mc/find-one-as-map db-conn (:projects colls) {:name project-name})))
+(defn find-project-by-name [{db-conn :db} project-name]
+  (mc/find-one-as-map db-conn (:projects colls) {:name project-name}))
+
+(defn is-project? [db project-name]
+  (boolean (find-project-by-name db project-name)))
 
 (defn is-authorized?
   ([{users :users :as project} username action]
   (if-let [{role :role} (first (filter #(= username (:username %)) users))]
     (check-project-role action role)))
   ([{db-conn :db :as db} project-name username action]
-   (let [project (mc/find-one-as-map db-conn (:projects colls) {:name project-name})]
+   (let [project (find-project-by-name db project-name)]
      (is-authorized? project username action))))
 
 (defn check-new-project [db project-name & [users]]

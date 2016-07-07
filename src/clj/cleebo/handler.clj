@@ -23,8 +23,9 @@
             [ring-ttl-session.core :refer [ttl-memory-store]]
             [buddy.auth :refer [authenticated?]]
             [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
-            [cleebo.routes.auth :refer [is-logged? safe auth-backend token-backend
-                                        login-route logout-route signup-route]]
+            [cleebo.routes.auth
+             :refer [is-logged? safe auth-backend token-backend
+                     login-route logout-route signup-route]]
             [cleebo.components.ws :refer [ws-handler-http-kit send-clients]]
             [cleebo.routes.blacklab :refer [blacklab-router]]
             [cleebo.routes.session :refer [session-route]]
