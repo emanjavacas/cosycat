@@ -1,11 +1,46 @@
 (ns cleebo.backend.handlers.annotations
   (:require [re-frame.core :as re-frame]
             [schema.core :as s]
-            [ajax.core :refer [POST]]
+            [ajax.core :refer [POST GET]]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
             [cleebo.utils :refer [->int format get-msg]]
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))
+
+(GET "/annotation/range"
+     {:params {:project "deathstar" :from 19365240 :size 19365257}
+      :handler #(.log js/console "SUCCESS" %)
+      :error-handler #(.log js/console "ERROR" %)})
+
+(defn get-token-id [token]              ;this should always be an integer
+  (let [id (:id token)]
+    (try (js/parseInt id)
+         (catch :default e -1))))
+
+(defn merge-annotations-hit
+  [hit anns-in-range]
+  (map (fn [token]
+         (let [id (get-token-id token)]
+           (if-let [anns (get anns-in-range id)]
+             (assoc token :anns anns)
+             token)))
+       hit))
+
+(defn find-first-id
+  "finds first non-dummy token (token with non negative id)"
+  [hit]
+  (first (drop-while #(neg? %) (map get-token-id hit))))
+
+(defn merge-annotations
+  "collect stored annotations for a given span of hits. Annotations are 
+  collected at once for a given hit, since we know the token-id range of its
+  tokens `from`: `to`"
+  [db results anns-in-range]
+  (for [{:keys [hit] :as hit-map} results
+        :let [from (find-first-id hit)
+              to   (find-first-id (reverse hit))
+              new-hit (merge-annotations-hit hit anns-in-range)]]
+    (assoc hit-map :hit new-hit)))
 
 (defn has-marked?
   "for a given hit-map we look if the current (un)marking update
@@ -205,10 +240,10 @@
     {{B :B O :O :as scope} :scope type :type} :span reason :reason e :e}]
   (case status
     :ok (re-frame/dispatch [:add-annotation {:hit-id hit-id :ann-map ann-map}])
-    :error (re-frame/dispatch
-            [:notify {:message (case type
-                                 "token" (get-msg [:annotation :error :token] scope reason)
-                                 "IOB" (get-msg [:annotation :error :IOB] B O reason))}])))
+    :error (let [msg (case type
+                       "token" (get-msg [:annotation :error :token] scope reason)
+                       "IOB" (get-msg [:annotation :error :IOB] B O reason))]
+             (re-frame/dispatch [:notify {:message msg}]))))
 
 (defmethod handler cljs.core/PersistentVector
   [payloads]

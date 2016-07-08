@@ -36,13 +36,12 @@
  (fn [db [_ project]]
    (update db [:projects] merge (normalize-projects [project] (:me db)))))
 
+(defn error-handler [{:keys [message data]}]
+  (re-frame/dispatch [:notify {:message message :meta data :status :error}]))
+
 (defn new-project-handler [project]
   (re-frame/dispatch [:add-project project])
   (re-frame/dispatch [:set-active-project {:project-name (:name project)}]))
-
-(defn new-project-error-handler [{:keys [message data]}]
-  (re-frame/dispatch
-   [:notify {:message (str "Couldn't create project: [" data "]" ) :status :error}]))
 
 (defn user->project-user [{:keys [username]}]
   {:username username :role "creator"})
@@ -57,8 +56,10 @@
                    :description description
                    :users (conj users (user->project-user (:me db)))}
           :handler new-project-handler
-          :error-handler new-project-error-handler})
+          :error-handler error-handler})
    db))
+
+(defn project-update-error-handler [{:keys [message data]}])
 
 (re-frame/register-handler
  :add-project-update
@@ -89,7 +90,7 @@
    (POST "/project"
          {:params {:route :add-user :user user :project project}
           :handler #(re-frame/dispatch [:add-project-user %])
-          :error-handler #(re-frame/dispatch [:notify "Couldn't add user to project" :data %])})
+          :error-handler error-handler})
    db))
 
 (re-frame/register-handler
@@ -106,5 +107,5 @@
    (POST "/project"
          {:params {:route :remove-user :project project}
           :handler #(re-frame/dispatch [:notify "Goodbye from project " project])
-          :error-handler #(re-frame/dispatch [:notify "Couldn't leave project" :data %])})
+          :error-handler error-handler})
    db))

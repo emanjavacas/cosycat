@@ -1,7 +1,7 @@
 (ns cleebo.routes.blacklab
-  (:require [cleebo.utils :refer [->int ->keyword]]
-            [cleebo.routes.auth :refer [safe]]
-            [buddy.auth :refer [authenticated?]]
+  (:require [compojure.core :refer [routes GET]]
+            [cleebo.utils :refer [->int ->keyword]]
+            [cleebo.routes.utils :refer [safe]]
             [cleebo.db.annotations :as ann-db]
             [cleebo.db.projects :as proj-db]
             [cleebo.components.blacklab :refer
@@ -66,29 +66,28 @@
   (let [{:keys [results] :as out} body]
     (assoc body :results (ann-db/merge-annotations db results project-name))))
 
-(defmulti blacklab-routes
+(defmulti blacklab-router
   (fn [{{route :route} :params :as req}]
     (->keyword route)))
 
-(defmethod blacklab-routes :query
+(defmethod blacklab-router :query
   [{{db :db} :components {{username :username} :identity} :session :as req}]
   (with-results-annotations (bl-query-route req) db username))
 
-(defmethod blacklab-routes :query-range
+(defmethod blacklab-router :query-range
   [{{db :db} :components {{username :username} :identity} :session :as req}]
   (with-results-annotations (bl-query-range-route req) db username))
 
-(defmethod blacklab-routes :sort-query
+(defmethod blacklab-router :sort-query
   [{{db :db} :components {{username :username} :identity} :session :as req}]  
   (with-results-annotations (bl-sort-query-route req) db username))
 
-(defmethod blacklab-routes :sort-range 
+(defmethod blacklab-router :sort-range 
   [{{db :db} :components {{username :username} :identity} :session :as req}]
   (with-results-annotations (bl-sort-range-route req) db username))
 
-(defmethod blacklab-routes :snippet [req]
+(defmethod blacklab-router :snippet [req]
   (bl-snippet-route req))
 
-(def blacklab-router
-  (safe (fn [req] {:status 200 :body (blacklab-routes req)})
-        {:login-uri "/login" :is-ok? authenticated?}))
+(defn blacklab-routes []
+  (routes (GET "/blacklab" [] (safe (fn [req] {:status 200 :body (blacklab-routes req)})))))

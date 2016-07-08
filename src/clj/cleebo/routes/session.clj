@@ -1,6 +1,5 @@
 (ns cleebo.routes.session
-  (:require [buddy.auth :refer [authenticated?]]
-            [cleebo.routes.auth :refer [safe]]
+  (:require [cleebo.routes.utils :refer [safe]]
             [cleebo.components.ws :refer [get-active-users]]
             [cleebo.db.users :refer [user-info users-info]]
             [cleebo.db.projects :refer [get-projects]]
@@ -27,5 +26,4 @@
      :corpora (env :corpora)}))
 
 (def session-route
-  (safe (fn [req] {:status 200 :body (fetch-init-session req)})
-        {:login-uri "/login" :is-ok? authenticated?}))
+  (safe (fn [req] {:status 200 :body (fetch-init-session req)}) {:login-uri "/login"}))

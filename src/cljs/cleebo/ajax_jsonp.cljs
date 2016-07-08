@@ -30,7 +30,7 @@
 (defn jsonp
   "straight-forward goog-based jsonp implementation"
   [uri {:keys [handler error-handler params timeout json-callback-str]
-        :or {timeout 100 json-callback-str "callback"}}]
+        :or {timeout 5000 json-callback-str "callback"}}]
   (let [url (build-uri uri params)
         req (goog.net.Jsonp. (Uri. url json-callback-str))]
     (.log js/console url)

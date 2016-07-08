@@ -93,13 +93,5 @@
 (def token-backend
   (jws-backend {:secret secret}))
 
-(defn safe [handler rule-map]
-  (fn [req]
-    (let [{:keys [login-uri is-ok?]} rule-map]
-      (if (is-ok? req)
-        (handler req)
-        (-> (redirect login-uri)
-            (assoc-in [:session :next] (:uri req)))))))
-
 (defn is-logged? [req]
   (get-in req [:session :identity]))

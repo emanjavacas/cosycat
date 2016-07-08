@@ -10,14 +10,14 @@
             [taoensso.timbre :as timbre]))
 
 (defn ex-user [username]
-  (ex-info "User doesn't exist" {:message :missing-user :data {:username username}}))
+  (ex-info :missing-user {:message "User doesn't exist" :data {:username username}}))
 
 (defn ex-project [project-name]
-  (ex-info "Project already exist" {:message :project-exists :data {:project project-name}}))
+  (ex-info :project-exists {:message "Project already exist" :data {:project project-name}}))
 
 (defn ex-user-project [username project-name]
-  (ex-info "User is not in project"
-           {:message :user-not-in-project
+  (ex-info :user-not-in-project
+           {:message "User is not in project"
             :data {:username username :project project-name}}))
 
 (defn normalize-project [project]

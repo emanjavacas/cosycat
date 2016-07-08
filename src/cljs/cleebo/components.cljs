@@ -89,8 +89,8 @@
   [siblings {:keys [key child opts]}]
   (vec (cons ^{:key k} (apply merge [child] opts) siblings)))
 
-(defn notification-child
-  [message date status href]
+(defn notification-child                ;add a button to display notification meta
+  [message date status href meta]
   [:div.notification
    {:class "success"}
    [:div.illustration
@@ -100,11 +100,11 @@
     [:div.text (.toLocaleString date "en-US")]]])
 
 (defn notification
-  [{id :id {message :message date :date {href :href} :by status :status} :data}]
-  (fn [{id :id {message :message date :date by :by status :status} :data}]
+  [{id :id {message :message date :date {href :href} :by status :status meta :meta} :data}]
+  (fn [{id :id {message :message date :date by :by status :status meta :meta} :data}]
     [:li#notification
      {:on-click #(re-frame/dispatch [:drop-notification id])}
-     [notification-child message date (or status :info) href]]))
+     [notification-child message date (or status :info) href meta]]))
 
 (defn notification-container []
   (let [notifications (re-frame/subscribe [:notifications])]

@@ -1,6 +1,5 @@
 (ns cleebo.routes.projects
-  (:require [buddy.auth :refer [authenticated?]]
-            [cleebo.routes.auth :refer [safe]]
+  (:require [cleebo.routes.utils :refer [make-default-route]]
             [cleebo.db.projects :as proj]
             [cleebo.components.ws :refer [send-clients]]
             [taoensso.timbre :as timbre]))
@@ -54,17 +53,4 @@
      :source-client username
      :target-clients (mapv :username (:users project)))))
 
-(def project-route
-  (safe (fn [req]
-          (try {:status 200 :body (project-router req)}
-               (catch clojure.lang.ExceptionInfo e
-                 ;; eventually condition this
-                 (let [{:keys [message data]} (ex-data e)]
-                   {:status 500
-                    :body {:message message :data data}}))
-               (catch Exception e       ;extralogical exception
-                 (let [{message :message ex-class :class} (bean e)]
-                   {:status 500
-                    :body {:message message
-                           :data {:exception (str ex-class) :type :internal-error}}}))))
-        {:login-uri "/login" :is-ok? authenticated?}))
+(def project-route (make-default-route project-router))

@@ -8,7 +8,7 @@
 (re-frame/register-handler
  :add-notification
  standard-middleware
- (fn [db [_ {:keys [data id] :as notification}]]
+ (fn [db [_ {:keys [data meta id] :as notification}]]
    (->> (assoc-in notification [:data :date] (js/Date.))
         (assoc-in db [:session :notifications id]))))
 

@@ -9,14 +9,22 @@
 
 (def ^:dynamic *hist-coll-name* "_vcs")
 
-(defmacro with-hist-coll [hist-coll & body]
+(defmacro assert-ex-info
+  "Evaluates expr and throws an exception if it does not evaluate to logical true."
+  [x & args]
+  (when *assert*
+    `(when-not ~x
+       (throw (ex-info ~@args)))))
+
+(defmacro with-hist-coll
+  "a macro to avoid referring to lib-config dynamic vars directly"
+  [hist-coll & body]
   (binding [*hist-coll-name* ~hist-coll]
     ~@body))
 
-(defn new-vcs-coll-name [coll-name]
-  (str coll-name *hist-coll-name*))
-
-(defn new-uuid []
+(defn new-uuid
+  "Computes a random id which can be used as a uuid for a new document"
+  []
   (str (java.util.UUID/randomUUID))
   ;; (ObjectId.) ;or just use mongodb's id
   )
@@ -66,13 +74,13 @@
 (defn with-doc-id
   "rearranges last doc version before inserting it into the vcs coll"
   [{id :_id :as doc}]
-  (assert id "Attempt to insert vcs version without reference doc id")
+  (assert-ex-info id "Attempt to insert vcs version without reference doc id" {:doc doc})
   (-> doc (assoc :docId id) (dissoc :_id)))
 
 (defn insert-version
   "inserts the last modified version of a document into the vcs collection"
   [db {:keys [_version _id] :as doc} & {:keys [merge-field] :as args :or {merge-field :history}}]
-  (assert _version "Document is not vcs-controled")
+  (assert-ex-info _version "Document is not vcs-controled: _version missing" doc)
   (when-let [vcs-history (find-history db _id :reverse false)]
     (if-not (= _version (inc (:_version (first vcs-history))))
       (throw (ex-version (first vcs-history) doc))))
@@ -89,11 +97,17 @@
    (fn [db coll doc & args]
      (apply f db coll (version-setter doc) args))))
 
+(defn apply-check-fns [f db coll args check-fns]
+  (doseq [check-fn check-fns
+          :let [result (apply check-fn f db coll args)]
+          :when result]
+    (throw (ex-info "Bad input argument" {:reason result}))))
+
 (defn wrap-modify
   "function wrapper for native monger fns that perform updates"
-  [f id-getter version-setter & [check-fn]]
+  [f id-getter version-setter & check-fns]
   (fn wrapped-func [db coll & args]
-    (assert (apply (or check-fn identity) f db coll args) "Failed args check")
+    (apply-check-fns f db coll args check-fns)
     (let [id (apply id-getter db coll args)]
       (if-let [doc (mc/find-one-as-map db coll {:_id id})]  ;1 search
         (insert-version db doc)         ;1 insert & 1 (history) search (for safety reasons)
@@ -105,7 +119,7 @@
   "id getter for fn signatures with doc/condition argument in first position (after db, coll).
    target fns: find-and-modify, remove, update, upsert"
   [db coll {:keys [_id] :as doc} & args]
-  (assert _id "Only queries by id are allowed")
+  (assert-ex-info _id "Only queries by id are allowed. Missing _id" doc)
   _id)
 
 (defn by-id-getter
@@ -116,7 +130,7 @@
 
 ;;; version setters
 (defn update-version-setter
-  "version setter for document updates with mongodb operators. Target fns: update, update-by-id, upsert"
+  "version setter for document updates with mongodb operators; fns: update, update-by-id, upsert"
   [f db coll conditions-or-id doc & args]
   (assert (not (contains? conditions-or-id :_version)) "Condition by doc version is not allowed")
   (let [new-doc (merge-with merge doc {$inc {:_version 1}})]
@@ -129,25 +143,23 @@
   (apply f db coll args))
 
 ;;; checkers
-(defn merge-check-fns [& check-fns]
-  (fn [& args] (every? identity (apply (apply juxt check-fns) args))))
+(defn check-upsert [f db coll conditions opts & args]
+  (if (= (:upsert opts) true) ":upsert is not allowed"))
 
-(defn check-not-upsert [f db coll conditions opts & args]
-  (not (= (:upsert opts) true)))
-
-(defn check-not-multi [f db coll conditions opts & args]
-  (not (= (:multi opts) true)))
-
-(def not-upsert-not-multi (merge-check-fns check-not-upsert check-not-multi))
+(defn check-multi [f db coll conditions opts & args]
+  (if (= (:multi opts) true) ":multi is not allowed"))
 
 ;;; public wrapper api
-(def find-and-modify (wrap-modify mc/find-and-modify first-id-getter update-version-setter not-upsert-not-multi))
+(def find-and-modify
+  (wrap-modify mc/find-and-modify first-id-getter update-version-setter check-upsert check-multi))
 (def remove (wrap-modify mc/remove first-id-getter last-version-setter))
 (def remove-by-id (wrap-modify mc/remove-by-id by-id-getter last-version-setter))
-(def update (wrap-modify mc/update first-id-getter update-version-setter not-upsert-not-multi))
-(def update-by-id (wrap-modify mc/update-by-id by-id-getter update-version-setter not-upsert-not-multi))
+(def update (wrap-modify mc/update first-id-getter update-version-setter check-upsert check-multi))
+(def update-by-id
+  (wrap-modify mc/update-by-id by-id-getter update-version-setter check-upsert check-multi))
 (def insert (wrap-insert mc/insert))
 (def insert-and-return (wrap-insert mc/insert-and-return))
+
 ;;; save, save-and-return: might insert new document or update
 ;; (def save (wrap-modify mc/save first-id-getter save-version-setter))
 ;; (def save-and-return (wrap-modify mc/save-and-return first-id-getter save-version-setter))

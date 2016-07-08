@@ -2,8 +2,8 @@
   (:require [com.stuartsierra.component :as component]
             [taoensso.timbre :as timbre]
             [config.core :refer [env]]
-            [compojure.core :refer [GET POST ANY HEAD defroutes wrap-routes routes]]
-            [compojure.route :as route]
+            [compojure.core :refer [GET POST ANY routes wrap-routes]]
+            [compojure.route :refer [resources files not-found]]
             [prone.middleware :refer [wrap-exceptions]]
             [cleebo.views.error :refer [error-page]]
             [cleebo.views.cleebo :refer [cleebo-page]]
@@ -12,8 +12,7 @@
             [cleebo.views.login :refer [login-page]]
             [ring.util.response :refer [redirect]]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
-            [ring.middleware.anti-forgery
-             :refer [wrap-anti-forgery *anti-forgery-token*]]
+            [ring.middleware.anti-forgery :refer [wrap-anti-forgery *anti-forgery-token*]]
             [ring.middleware.transit :refer [wrap-transit-response wrap-transit-params]]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.nested-params :refer [wrap-nested-params]]
@@ -21,72 +20,56 @@
             [ring.middleware.session :refer [wrap-session]]
             [ring.middleware.reload :refer [wrap-reload]]
             [ring-ttl-session.core :refer [ttl-memory-store]]
-            [buddy.auth :refer [authenticated?]]
             [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
             [cleebo.routes.auth
-             :refer [is-logged? safe auth-backend token-backend
-                     login-route logout-route signup-route]]
+             :refer [is-logged? auth-backend token-backend login-route logout-route signup-route]]
+            [cleebo.routes.utils :refer [safe]]
             [cleebo.components.ws :refer [ws-handler-http-kit send-clients]]
-            [cleebo.routes.blacklab :refer [blacklab-router]]
+            [cleebo.routes.blacklab :refer [blacklab-routes]]
             [cleebo.routes.session :refer [session-route]]
             [cleebo.routes.projects :refer [project-route]]
             [cleebo.routes.settings :refer [settings-route]]
             [cleebo.routes.annotations :refer [annotation-routes]]))
 
-(def about-route
-  (safe
-   (fn [req] (about-page :logged? (is-logged? req)))
-   {:login-uri "/login" :is-ok? authenticated?}))
+(defn static-routes []
+  (routes
+   (GET "/" req (landing-page :logged? (is-logged? req)))
+   (GET "/login" [] (login-page :csrf *anti-forgery-token*))
+   (POST "/login" [] login-route)
+   (POST "/signup" [] signup-route)
+   (ANY "/logout" [] logout-route)
+   (GET "/about" [] (safe (fn [req] (about-page :logged? (is-logged? req)))))
+   (GET "/cleebo" [] (safe (fn [req] (cleebo-page :csrf *anti-forgery-token*))))))
 
-(def cleebo-route
-  (safe
-   (fn [req]
-     (cleebo-page :csrf *anti-forgery-token*))
-   {:login-uri "/login" :is-ok? authenticated?}))
+(defn web-app-routes []
+  (routes
+   (GET "/session" [] session-route)
+   (POST "/settings" [] settings-route)
+   (POST "/project" [] project-route)
+   (GET "/ws" [] ws-handler-http-kit)))
 
-(defroutes static-routes
-  (GET "/" req (landing-page :logged? (is-logged? req)))
-  (GET "/login" [] (login-page :csrf *anti-forgery-token*))
-  (POST "/login" [] login-route)
-  (POST "/signup" [] signup-route)
-  (ANY "/logout" [] logout-route)
-  (GET "/about" [] about-route)
-  (GET "/cleebo" [] cleebo-route)
-  (route/resources "/")
-  (route/files "/" {:root (:dynamic-resource-path env)})
-  (route/not-found (error-page :status 404 :title "Page not found!!")))
+(defn base-routes []
+  (routes
+   (resources "/")
+   (files "/" {:root (:dynamic-resource-path env)})
+   (not-found (error-page :status 404 :title "Page not found!!"))))
 
-(defroutes web-app-routes
-  (GET "/session" [] session-route)
-  (POST "/settings" [] settings-route)
-  (POST "/project" [] project-route)
-  (GET "/ws" [] ws-handler-http-kit))
-
-(defroutes blacklab-routes
-  (GET "/blacklab" [] blacklab-router))
-
-(def app-routes (routes static-routes web-app-routes blacklab-routes annotation-routes))
-
+;;; middleware
 (defn is-ajax
   "not sure how robust this is"
   [{headers :headers :as req}]
-  ;; (timbre/debug headers)
   (boolean (= "XMLHttpRequest" (get headers "X-Requested-With"))))
 
-;;; middleware
 (defn wrap-internal-error [handler]
   (fn [req]
     (try
       (handler req)
       (catch Throwable t
-        (if (is-ajax req)
-          {:status 500
-           :body {:message "Oops! Something bad happened!"
-                  :data {:exception (str (class t)) :type :internal-error}}}
-          (error-page
-           {:status 500
-            :title "Something very bad happened!"
-            :message (str (class t))}))))))
+        (let [msg "Oops! Something bad happened!"
+              ex-msg (str (class t))]
+          (if (is-ajax req)
+            {:status 500 :body {:message msg :data {:exception ex-msg :type :internal-error}}}
+            (error-page {:status 500 :title "Something very bad happened!" :message ex-msg})))))))
 
 (defn wrap-base [handler]
   (-> handler   
@@ -109,8 +92,15 @@
   (fn [req]
     (handler (assoc req :components components))))
 
+;;; handler
+(defn app-routes
+  "utility function to avoid global route definitions. Routes are defined as functions and
+   only called inside the web-server component. This allows the redefinition of routes during dev"
+  [& route-fns]
+  (apply routes (map #(%) route-fns)))
+
 (defn make-handler [component]
   (let [components (select-keys component (:components component))]
-    (-> app-routes
+    (-> (app-routes static-routes web-app-routes blacklab-routes annotation-routes base-routes)
         (wrap-app-component components)
         (wrap-routes wrap-base))))
