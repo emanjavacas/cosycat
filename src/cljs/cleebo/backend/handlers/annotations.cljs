@@ -7,8 +7,19 @@
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))
 
+(POST "/annotation/update"
+     {:params {:project "beat"
+               :update-map {:_id "2eea61e3-8e40-491e-a730-ad25afb7c578"
+                            :_version 6
+                            :query "\"a\""
+                            :corpus "mbg-small"
+                            :ann {:value "no"}}
+               :hit-id "0"}
+      :handler #(.log js/console "SUCCESS" %)
+      :error-handler #(.log js/console "ERROR" %)})
+
 (GET "/annotation/range"
-     {:params {:project "deathstar" :from 19365240 :size 19365257}
+     {:params {:project "beat" :from 0 :size 20}
       :handler #(.log js/console "SUCCESS" %)
       :error-handler #(.log js/console "ERROR" %)})
 

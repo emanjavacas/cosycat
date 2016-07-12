@@ -62,9 +62,12 @@
         snippet-size (->int snippet-size)]
     (bl-snippet blacklab hit-idx snippet-size query-id)))
 
+;; (defn with-results-annotations [body db username project-name]
+;;   (let [{:keys [results] :as out} body]
+;;     (assoc body :results (ann-db/merge-annotations db results project-name))))
+
 (defn with-results-annotations [body db username project-name]
-  (let [{:keys [results] :as out} body]
-    (assoc body :results (ann-db/merge-annotations db results project-name))))
+  body)
 
 (defmulti blacklab-router
   (fn [{{route :route} :params :as req}]

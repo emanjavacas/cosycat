@@ -33,13 +33,18 @@
                  #(= (:type %) "IOB")   iob-span-schema))
 
 (def annotation-schema
-  {:ann {:key s/Str :value s/Str}
-   :username s/Str
-   :timestamp s/Int
-   :span span-schema
-   :_id s/Any                           ;version-overarching unique identifier
-   (s/optional-key :history)            ;this is the same except history
-   {:ann {:key s/Str :value s/Str}
-    :username s/Str
-    :timestamp s/Int
-    :span span-schema}})
+  #?(:clj {:ann {:key s/Str :value s/Str}
+           :username s/Str
+           :timestamp s/Int
+           :span span-schema
+           :_id s/Any}
+     :cljs {:ann {:key s/Str :value s/Str}
+            :username s/Str
+            :timestamp s/Int
+            :span span-schema
+            :_id s/Any
+            (s/optional-key :history) [{:ann {:key s/Str :value s/Str}
+                                        :username s/Str
+                                        :timestamp s/Int
+                                        :span span-schema
+                                        :_id s/Any}]})) ;     this is the same except history

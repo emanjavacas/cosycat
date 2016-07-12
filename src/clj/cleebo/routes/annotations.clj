@@ -41,26 +41,26 @@
         ann-maps hit-ids))
 
 (defn update-annotation-handler
-  [{{hit-id :hit-id {id :_id :as update-map} :update-map project :project} :params
+  [{{hit-id :hit-id project :project {id :_id :as update-map} :update-map} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (try (let [new-ann (update-annotation db project update-map)
+  (try (let [new-ann (update-annotation db project (assoc update-map :username username)) ;ensure username
              data {:ann-map new-ann :project project :hit-id hit-id}
              users (->> (find-project-by-name db project) :users (map :username))]
          (send-clients ws {:type :annotation :data data} :source-client username :target-clients users)
          {:status :ok :data data})
        (catch clojure.lang.ExceptionInfo e
          (let [{:keys [message data]} (ex-data e)]
-           {:status :error :message message :data data}))
+           {:status :error :message message :data data :e (str e)}))
        (catch Exception e
          (let [{message :message ex :class} (bean e)]
            {:status :error :message message :data {:id id :exception ex}}))))
 
 (defn fetch-annotations-handler
-  [{{project-name :project from :from size :size} :params
+  [{{project-name :project from :from size :size :as params} :params
     {{username :username} :identity} :session
     {db :db} :components}]
-  (fetch-annotations db username project-name (->int from) (->int size)))
+  (fetch-annotations db project-name (->int from) (->int size)))
 
 (defn annotation-routes []
   (routes

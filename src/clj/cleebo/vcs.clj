@@ -1,13 +1,24 @@
 (ns #^{:doc "Version control updates to monger documents. Wraps (some) monger API functions."}
-  cleebo.vcs 
+  cleebo.vcs
   (:refer-clojure :exclude [sort find update remove])
   (:require [cleebo.components.db :refer [new-db]]
+            [monger.core :as mg]
             [monger.collection :as mc]
             [monger.query :refer :all]
-            [monger.operators :refer :all])
+            [monger.operators :refer :all]
+            [taoensso.timbre :as timbre])
   (:import org.bson.types.ObjectId))
 
+;;; Config vars
 (def ^:dynamic *hist-coll-name* "_vcs")
+
+;;; Util funcs
+(defn deep-merge
+   "Recursively merges maps. If keys are not maps, the last value wins."
+   [& vals]
+   (if (every? map? vals)
+     (apply merge-with deep-merge vals)
+     (last vals)))
 
 (defmacro assert-ex-info
   "Evaluates expr and throws an exception if it does not evaluate to logical true."
@@ -29,6 +40,28 @@
   ;; (ObjectId.) ;or just use mongodb's id
   )
 
+;;; Exceptions
+(defn ex-internal [e]
+  (let [{:keys [message :message ex :class]} (bean e)
+        stacktrace (mapv str (.getStackTrace e))]
+    (ex-info "Internal Exception"
+             {:reason :internal :data {:exception (str ex) :stacktrace stacktrace}})))
+
+(defn ex-insert [doc]
+  (ex-info "Couldn't insert vcs version" {:reason :insert-error :data doc}))
+
+(defn ex-version
+  "exception for not-matching version updates"
+  [{last-vcs-version :_version} {new-doc-version :_version}]
+  (ex-info
+   "Claimed version not in sync with collection version"
+   {:reason :unsync-version :data {:last-vcs-version last-vcs-version :claimed-version new-doc-version}}))
+
+(defn ex-id
+  "exception for not-matching document ids"
+  [id]
+  (ex-info "Couldn't find document by id" {:reason :doc-not-found :data {:id id}}))
+
 ;;; find operations:
 ;;; find-*
 (defn merge-history
@@ -46,46 +79,28 @@
 
 (defn with-history
   "appends vcs history in a given document by document field `merge-field`"
-  [db {:keys [_id] :as doc} & {:keys [reverse merge-field] :or {reverse false merge-field :history}}]
+  [db {:keys [_id] :as doc}
+   & {:keys [reverse merge-field on-history-doc] :or {reverse false merge-field :history}}]
   (if-let [vcs-history (find-history db _id :reverse reverse)]
-    (merge-history doc merge-field vcs-history)
+    (merge-history doc merge-field (cond->> vcs-history on-history-doc (mapv on-history-doc)))
     doc))
 
 ;;; modify operations:
 ;;; insert; insert-*; remove; update; update-*; upsert
-(defn ex-version
-  "exception for not-matching version updates"
-  [{last-vcs-version :_version} {new-doc-version :_version}]
-  (ex-info
-   "Claimed version not in sync with collection version"
-   {:last-vcs-version last-vcs-version
-    :claimed-version new-doc-version}))
-
-(defn ex-id
-  "exception for not-matching document ids"
-  [id]
-  (ex-info "Couldn't find document by id" {:id id}))
-
-(defn update-version
-  "increase version of a document in a vcs-collection"
-  [db coll id]
-  (mc/update db coll {:docId id} {$inc {:_version 1}}))
 
 (defn with-doc-id
   "rearranges last doc version before inserting it into the vcs coll"
   [{id :_id :as doc}]
-  (assert-ex-info id "Attempt to insert vcs version without reference doc id" {:doc doc})
   (-> doc (assoc :docId id) (dissoc :_id)))
 
 (defn insert-version
   "inserts the last modified version of a document into the vcs collection"
   [db {:keys [_version _id] :as doc} & {:keys [merge-field] :as args :or {merge-field :history}}]
-  (assert-ex-info _version "Document is not vcs-controled: _version missing" doc)
-  (when-let [vcs-history (find-history db _id :reverse false)]
-    (if-not (= _version (inc (:_version (first vcs-history))))
-      (throw (ex-version (first vcs-history) doc))))
   (mc/ensure-index db *hist-coll-name* (array-map :_version 1 :docId 1) {:unique true})
-  (mc/insert db *hist-coll-name* (with-doc-id doc)))
+  (timbre/info "Inserting document version" _version "of doc id" _id)
+  (try (mc/insert db *hist-coll-name* (with-doc-id doc))
+       (catch Throwable t
+         (throw (ex-insert doc)))))
 
 (defn doc-version-setter [doc]
   (assoc doc :_version 0))
@@ -95,7 +110,9 @@
   ([f] (wrap-insert f doc-version-setter))
   ([f version-setter]
    (fn [db coll doc & args]
-     (apply f db coll (version-setter doc) args))))
+     (let [{version :_version :as new-doc} (version-setter doc)]
+       (assert-ex-info "Version missing from insert" {:reason :missing-version :data new-doc})
+       (apply f db coll new-doc args)))))
 
 (defn apply-check-fns [f db coll args check-fns]
   (doseq [check-fn check-fns
@@ -103,23 +120,45 @@
           :when result]
     (throw (ex-info "Bad input argument" {:reason result}))))
 
+(defn unroll-update [db coll id doc]
+  (timbre/info "Unrolling update of doc" id "to" doc)
+  (mc/update-by-id db coll id doc))
+
 (defn wrap-modify
-  "function wrapper for native monger fns that perform updates"
-  [f id-getter version-setter & check-fns]
-  (fn wrapped-func [db coll & args]
+  "Function wrapper for native monger fns that perform updates.
+   The wrapped version introduces `version` as an extra argument to the original
+   monger f signature in third position, which works as a lock.
+   `id-getter` is a function that retrieves the document id from the user monger call,
+   `version-setter` is a function that run a modified version of the user moger call,
+   which takes care of updating the resulting document version"
+  [f {:keys [id-getter version-setter]} & check-fns]
+  (fn wrapped-func [db coll version & args]
+    (timbre/debug args)
     (apply-check-fns f db coll args check-fns)
     (let [id (apply id-getter db coll args)]
-      (if-let [doc (mc/find-one-as-map db coll {:_id id})]  ;1 search
-        (insert-version db doc)         ;1 insert & 1 (history) search (for safety reasons)
-        (throw (ex-id id))))            ;couldn't find doc by id
-    (apply version-setter f db coll args)))  ;applies monger f with appropriate version num
+      (if-let [{db-version :_version :as doc} (mc/find-one-as-map db coll {:_id id})] ;1 search
+        (do (assert-ex-info
+             db-version "Document is not vcs-controled"
+             {:reason :missing-version :data doc})
+            (assert-ex-info
+             (= db-version version) "Version mismatch"
+             {:reason :version-mismatch :data {:db db-version :user version}})
+            (try (let [res (apply version-setter f db coll args)] ;applies monger f with appropriate version num
+                   (insert-version db doc)
+                   res)
+                 (catch clojure.lang.ExceptionInfo e
+                   (let [{reason :reason doc :data} (ex-data e)]
+                     (if (= reason :insert-error)
+                       (unroll-update db coll id doc)
+                       (throw e)))))) ;1 insert & 1 (history) search (for safety reasons)
+        (throw (ex-id id))))))  ;couldn't find doc by id
 
 ;;; id getters
 (defn first-id-getter
   "id getter for fn signatures with doc/condition argument in first position (after db, coll).
    target fns: find-and-modify, remove, update, upsert"
   [db coll {:keys [_id] :as doc} & args]
-  (assert-ex-info _id "Only queries by id are allowed. Missing _id" doc)
+  (assert-ex-info _id "Query by id needed. Missing id" {:reason :missing-id :data doc})
   _id)
 
 (defn by-id-getter
@@ -130,34 +169,61 @@
 
 ;;; version setters
 (defn update-version-setter
-  "version setter for document updates with mongodb operators; fns: update, update-by-id, upsert"
-  [f db coll conditions-or-id doc & args]
-  (assert (not (contains? conditions-or-id :_version)) "Condition by doc version is not allowed")
-  (let [new-doc (merge-with merge doc {$inc {:_version 1}})]
-    (apply f db coll conditions-or-id new-doc args)))
+  "version setter for document updates with mongodb operators; fns: update, update-by-id, find-and-modify"
+  [f db coll conditions-or-id doc opts & _]
+  (let [new-doc (deep-merge doc {$inc {:_version 1}})]
+    (timbre/info "Applying update-map" new-doc)
+    (f db coll conditions-or-id new-doc opts)))
 
 (defn last-version-setter
   "version setter for ops removing the document from db, which do not need version update.
    target fns: remove, remove-by-id"
-  [f db coll & args]
-  (apply f db coll args))
+  [f db coll conditions-or-id & _]
+  (f db coll conditions-or-id))
 
 ;;; checkers
-(defn check-upsert [f db coll conditions opts & args]
-  (if (= (:upsert opts) true) ":upsert is not allowed"))
+(defn check-upsert [f db coll conditions doc & [opts]]
+  (if (= (:upsert opts) true) :upsert-not-allowed))
 
-(defn check-multi [f db coll conditions opts & args]
-  (if (= (:multi opts) true) ":multi is not allowed"))
+(defn check-multi [f db coll conditions doc & [opts]]
+  (if (= (:multi opts) true) :multi-not-allowed))
 
 ;;; public wrapper api
 (def find-and-modify
-  (wrap-modify mc/find-and-modify first-id-getter update-version-setter check-upsert check-multi))
-(def remove (wrap-modify mc/remove first-id-getter last-version-setter))
-(def remove-by-id (wrap-modify mc/remove-by-id by-id-getter last-version-setter))
-(def update (wrap-modify mc/update first-id-getter update-version-setter check-upsert check-multi))
+  (wrap-modify
+   mc/find-and-modify
+   {:id-getter first-id-getter :version-setter update-version-setter}
+   check-upsert check-multi))
+
+(def remove
+  (wrap-modify
+   mc/remove
+   {:id-getter first-id-getter
+    :version-setter last-version-setter}))
+
+(def remove-by-id
+  (wrap-modify
+   mc/remove-by-id
+   {:id-getter by-id-getter
+    :version-setter last-version-setter}))
+
+(def update
+  (wrap-modify
+   mc/update
+   {:id-getter first-id-getter
+    :version-setter update-version-setter}
+   check-upsert check-multi))
+
 (def update-by-id
-  (wrap-modify mc/update-by-id by-id-getter update-version-setter check-upsert check-multi))
+  (wrap-modify
+   mc/update-by-id
+   {:id-getter by-id-getter
+    :version-setter update-version-setter}
+   check-upsert
+   check-multi))
+
 (def insert (wrap-insert mc/insert))
+
 (def insert-and-return (wrap-insert mc/insert-and-return))
 
 ;;; save, save-and-return: might insert new document or update
@@ -181,3 +247,4 @@
          (update (:db db) "test" (dissoc doc :_version) {$set {:stoff 0}})
          (update (:db db) "test" (dissoc doc :_version) {$inc {:stoff 1}})
          (with-history (:db db) (first (mc/find-maps (:db db) "test" {:_id (:_id doc)}))))
+

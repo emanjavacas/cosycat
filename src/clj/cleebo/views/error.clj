@@ -3,8 +3,7 @@
             [cleebo.views.layout :refer [bootstrap-css]]))
 
 (defn error-page
-  [& {:keys [status title message] :or
-      {:status "404" :title "Error!" :message "Walk three times around the table!"}}]
+  [{:keys [status title message] :or {status "404" title "Error!"}}]
   (html
    [:html
     [:head

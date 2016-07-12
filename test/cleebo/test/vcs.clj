@@ -46,9 +46,9 @@
   (let [doc (-> data (assoc-in [:ann :key] "inanimacy"))]
     (testing "upsert not allowed"
         (try (vcs/update (:db db) coll {:_id "asd"} {:upsert true})
-             (catch AssertionError e
-               (is (= java.lang.AssertionError (:class (bean e)))))))
+             (catch clojure.lang.ExceptionInfo e
+               (is (= :upsert-not-allowed (:reason (ex-data e)))))))
     (testing "multi not allowed"
-        (try (vcs/update (:db db) coll {:_id "asd"} {:upsert true})
-             (catch AssertionError e
-               (is (= java.lang.AssertionError (:class (bean e)))))))))
+        (try (vcs/update (:db db) coll {:_id "asd"} {:multi true})
+             (catch clojure.lang.ExceptionInfo e
+               (is (= :multi-not-allowed (:reason (ex-data e)))))))))

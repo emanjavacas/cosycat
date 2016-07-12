@@ -52,12 +52,13 @@
   (routes
    (resources "/")
    (files "/" {:root (:dynamic-resource-path env)})
-   (not-found (error-page :status 404 :title "Page not found!!"))))
+   (not-found (error-page {:status 404 :title "Page not found!!"}))))
 
 ;;; middleware
 (defn is-ajax
   "not sure how robust this is"
   [{headers :headers :as req}]
+  (println headers)
   (boolean (= "XMLHttpRequest" (get headers "X-Requested-With"))))
 
 (defn wrap-internal-error [handler]
@@ -69,7 +70,7 @@
               ex-msg (str (class t))]
           (if (is-ajax req)
             {:status 500 :body {:message msg :data {:exception ex-msg :type :internal-error}}}
-            (error-page {:status 500 :title "Something very bad happened!" :message ex-msg})))))))
+            (error-page :status 500 :title "Something very bad happened!" :message ex-msg)))))))
 
 (defn wrap-base [handler]
   (-> handler   

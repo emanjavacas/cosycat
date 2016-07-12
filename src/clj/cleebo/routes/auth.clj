@@ -8,7 +8,6 @@
             [cleebo.components.blacklab :refer [remove-hits!]]
             [cleebo.db.users :refer [lookup-user is-user? new-user normalize-user]]
             [cleebo.db.projects :refer [new-project]]
-            [cleebo.views.error :refer [error-page]]
             [cleebo.views.login :refer [login-page]]
             [buddy.auth.backends.session :refer [session-backend]]
             [buddy.sign.jws :as jws]

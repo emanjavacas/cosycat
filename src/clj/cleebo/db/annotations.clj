@@ -11,7 +11,7 @@
             [cleebo.roles :refer [check-annotation-role]]
             [schema.coerce :as coerce]))
 
-;;; EXCEPTIONS
+;;; Exceptions
 (defn ex-user [username project-name action]
   (ex-info "Action not authorized"
            {:message :not-authorized
@@ -30,7 +30,7 @@
            {:message :wrong-update
             :data {:source-scope source-scope :scope scope}}))
 
-;;; CHECKERS
+;;; Checkers
 (defn check-user-annotations [{db-conn :db :as db} username project-name action]
   (let [{users :users} (find-project-by-name db project-name)
         {role :role} (some #(when (= username (:username %)) %) users)]
@@ -46,7 +46,21 @@
     (and (<= new-B old-O) (<= old-B new-O)) false
     :else true))
 
-;;; FETCHERS
+(defmulti check-insert (fn [db project {{type :type} :span}] type))
+
+(defmethod check-insert "token"
+  [{db-conn :db :as db} project {{scope :scope :as span} :span {key :key} :ann}]
+  (when-let [existing-span-annotation (fetch-span-annotation-by-key db project key span)]
+    (throw (ex-overwrite-span scope))))
+
+(defmethod check-insert "IOB"
+  [{db-conn :db :as db} project {{{B :B O :O} :scope :as span} :span {key :key} :ann}]
+  (when-let [existing-token-annotation (fetch-token-annotation-by-key db project key span)]
+    (throw (ex-overwrite-token span)))
+  (when-let [existing-span-annotation (fetch-span-annotation-by-key db project key span)]
+    (throw (ex-overwrite-span span))))
+
+;;; Fetchers
 (defn fetch-annotation-by-id [{db-conn :db} project id]
   (mc/find-one-as-map db-conn project {:_id id}))
 
@@ -78,33 +92,25 @@
    db-conn project
    {"ann.key" key "span.scope" {$in (range B (inc O))}}))
 
+(defn with-history
+  "aux func to avoid sending bson-objectids to the client"
+  [db doc]
+  (vcs/with-history db doc :on-history-doc #(dissoc % :_id :docId)))
+
 (defn fetch-annotations
   [{db-conn :db :as db} project-name from size & {:keys [history] :or {history true} :as opts}]
   (cond->> (mc/find-maps
             db-conn project-name
             {$or [{$and [{"span.scope" {$gte from}} {"span.scope" {$lt (+ from size)}}]}
                   {$or  [{"span.scope.O" {$gte from}} {"span.scope.B" {$lt (+ from size)}}]}]})
-    history (mapv (partial vcs/with-history db))))
+    history (mapv (partial with-history db-conn))))
 
-;;; SETTERS
-(defmulti check-insert (fn [db project {{type :type} :span}] type))
-
-(defmethod check-insert "token"
-  [{db-conn :db :as db} project {{scope :scope :as span} :span {key :key} :ann}]
-  (when-let [existing-span-annotation (fetch-span-annotation-by-key db project key span)]
-    (throw (ex-overwrite-span scope))))
-
-(defmethod check-insert "IOB"
-  [{db-conn :db :as db} project {{{B :B O :O} :scope :as span} :span {key :key} :ann}]
-  (when-let [existing-token-annotation (fetch-token-annotation-by-key db project key span)]
-    (throw (ex-overwrite-token span)))
-  (when-let [existing-span-annotation (fetch-span-annotation-by-key db project key span)]
-    (throw (ex-overwrite-span span))))
-
-(defn insert-annotation [{db-conn :db :as db} project {username :username :as ann}]
+;;; Setters
+(defn insert-annotation
+  [{db-conn :db :as db} project {username :username :as ann}]
   (check-user-annotations db username project :write)
   (check-insert db project ann)
-  (vcs/insert-and-return db-conn project (assoc ann :_id vcs/new-uuid)))
+  (vcs/insert-and-return db-conn project (assoc ann :_id (vcs/new-uuid))))
 
 (defn update-annotation
   [{db-conn :db :as db} project
@@ -115,16 +121,39 @@
     version :_version id :_id  :as ann}
    & {:keys [history] :or {history true}}]
   (check-user-annotations db username project :update)
-  (assert-ex-info (and version id) "annotation update requires annotation id" {:reason :missing-id})
+  (assert-ex-info
+   (and version id) "annotation update requires annotation id/version"
+   {:message :missing-id-or-version :data ann})
   (cond->> (vcs/find-and-modify
-            db-conn project
-            {:_id id :_version version}
-            {$set {"ann.key" ann-key "ann.value" ann-value
+            db-conn project version              
+            {:_id id}    ;conditions
+            {$set {      ;; "ann.key" ann-key    ;ann-keys are not updatable
+                   "ann.value" ann-value
                    "timestamp" timestamp "username" username
                    "query" query "corpus" corpus}}
-            {:return-new true})
-    history (partial vcs/with-history db)))
+            {})
+    history (with-history db-conn)))
 
 ;; (defonce db (.start (new-db (:database-url config.core/env))))
-;; (fetch-anns-in-range db ["user-playground"] 417 418) 417
-;; (first (find-ann-ids-in-range db ["user-playground"] 410 420))
+;; (def test-ann
+;;   {:ann {:key "test2" :value "test2"}
+;;    :username "user"
+;;    :timestamp 123312213112
+;;    :span {:type "token" :scope 11}
+;;    :query "\"a\""
+;;    :corpus "sample-corpus"})
+
+;; (def update-ann
+;;   {:ann {:key "test2" :value "test3"}
+;;    :username "user"
+;;    :timestamp 12312523412
+;;    :span {:type "token" :scope 11}
+;;    :_id "2eea61e3-8e40-491e-a730-ad25afb7c578"
+;;    :_version 5
+;;    :query "\"g\""
+;;    :corpus "sample-corpus"})
+
+;; (insert-annotation db "beat" test-ann)
+;; (update-annotation db "beat" update-ann)
+;; (:_id (first (fetch-annotations db "beat" 0 20)))
+
