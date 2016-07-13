@@ -29,10 +29,9 @@
         (swap! mouse-down? not)
         (reset! highlighted? (gclass/has e "highlighted"))
         (re-frame/dispatch
-         [:mark-token
+         [(if @highlighted? :mark-token :unmark-token)
           {:hit-id (get-hit-id e)
-           :token-id (gdataset/get e "id")
-           :flag @highlighted?}])))))
+           :token-id (gdataset/get e "id")}])))))
 
 (defn on-mouse-over [mouse-down? highlighted?]
   (fn [event]
@@ -44,10 +43,9 @@
                  (not (is-in-checked-hit e)))
         (gclass/enable e "highlighted" @highlighted?)
         (re-frame/dispatch
-         [:mark-token
+         [(if @highlighted? :mark-token :unmark-token)
           {:hit-id (get-hit-id e)
-           :token-id (gdataset/get e "id")
-           :flag @highlighted?}])))))
+           :token-id (gdataset/get e "id")}])))))
 
 (defn on-mouse-up [mouse-down? highlighted?]
   (fn [event]

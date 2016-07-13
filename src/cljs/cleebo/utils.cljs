@@ -26,7 +26,7 @@
       (coll? m) (vec (map keywordify m))
       :else m)))
 
-;;; TIME
+;;; Time
 (defn timestamp []
   (-> (js/Date.)
       (.getTime)))
@@ -48,7 +48,7 @@
 (defn date-str->locale [date-str]
   (.toLocaleString (js/Date. date-str) "en-US"))
 
-;;; RESOURCES
+;;; Resources
 (def color-codes
   {:info "#72a0e5"
    :error "#ff0000"
@@ -77,17 +77,38 @@
           (string? fmt) (apply format fmt args))))
 
 
-;;; COMPONENT UTILITIES
-(defn nbsp [& {:keys [n] :or {n 1}}]
+;;; Component utilities
+(defn nbsp
+  "computes a html entity blankspace string of given length"
+  [& {:keys [n] :or {n 1}}]
   (apply str (repeat n (gstr/unescapeEntities "&nbsp;"))))
 
-(defn ->map [k l]
+(defn ->map
+  "returns a normalized map with named key and label"
+  [k l]
   {:key k :label l})
 
-(defn ->default-map [coll]
+(defn ->default-map
+  "index coll as a seq of key-label maps where key equals label"
+  [coll]
   (map #(->map % %) coll))
 
-;;; HIT-RELATED
+;;; Hit-related
+(defn has-marked?
+  "for a given `hit-map` we look if the current marke update leaves marked tokens behind."
+  [{:keys [hit meta] :as hit-map} token-id]
+  (let [marked-tokens (filter :marked hit)]
+    (> (count marked-tokens) 1)))
+
+(defn update-token
+  "applies `token-fn` at token with given `token-id`"
+  [{:keys [hit meta] :as hit-map} token-id token-fn]
+  (assoc hit-map :hit (map (fn [{:keys [id] :as token}]
+                             (if (= token-id id)
+                               (token-fn token)
+                               token))
+                           hit)))
+
 (defn filter-marked-hits
   "filter hits according to whether are tick-checked, optionally
   include those containing marked tokens but not tick-cheked"
@@ -97,19 +118,28 @@
               (or (:marked meta) (and has-marked? (:has-marked meta))))
             results-by-id)))
 
+(defn get-token-id
+  "returns a token id in integer form defaulting to -1 in case of dummy token"
+  [{id :id :as token}]
+  (try (js/parseInt id)
+       (catch :default e -1)))
+
 (defn filter-dummy-tokens
+  "removes dummy tokens from hit"
   [hit]
-  (filter #(not (.startsWith (:id %) "dummy")) hit))
+  (filter (fn [token] (pos? (get-token-id token))) hit))
 
 ;;; ANNOTATIONS
 (defn ->box [color] (str "0 -1.5px " color " inset"))
 
-(defn parse-annotation [s]
+(defn parse-annotation
+  "transforms annotation string into a vec of annotation key and value"
+  [s]
   (let [[k v] (gstr/splitLimit s "=" 2)]
     (if (and k v)
       [k v])))
 
-;;; ELSE
+;;; Else
 (defn dominant-color
   "http://stackoverflow.com/a/2541680"
   [img-href & {:keys [block-size] :or {block-size 5}}]

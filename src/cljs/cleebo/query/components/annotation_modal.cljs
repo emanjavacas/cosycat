@@ -9,13 +9,13 @@
 
 (defn dispatch-annotations
   [marked-tokens]
-  (if-let [[k v] (-> (by-id "token-ann-key") parse-annotation)]
+  (if-let [[key value] (-> (by-id "token-ann-key") parse-annotation)]
     (let [filtered-tokens (remove #(-> (:id %) js/parseInt js/isNaN) @marked-tokens)
           token-ids (map :id filtered-tokens)
           hit-ids (map :hit-id filtered-tokens)]
       (re-frame/dispatch
        [:dispatch-annotation
-        {:key k :value v}               ;ann-map
+        {:key key :value value}         ;ann-map
         (mapv ->int hit-ids)            ;hit-ids
         (mapv ->int token-ids)]))))     ;token-ids
 
@@ -85,10 +85,9 @@
           :onClick #(do (when @deselect-on-close
                           (doseq [{:keys [hit-id id]} @marked-tokens]
                             (re-frame/dispatch
-                             [:mark-token
+                             [:unmark-token
                               {:hit-id hit-id
-                               :token-id id
-                               :flag false}])))
+                               :token-id id}])))
                         (swap! annotation-modal-show not)
                         (dispatch-annotations marked-tokens))}
          "Submit"]]])))

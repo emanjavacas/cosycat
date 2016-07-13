@@ -9,6 +9,17 @@
      (apply merge-with deep-merge vals)
      (last vals)))
 
+(defn deep-merge-with
+  "Like merge-with, but merges maps recursively, applying the given fn
+  only when there's a non-map at a particular level."
+  [f & maps]
+  (apply
+    (fn m [& maps]
+      (if (every? map? maps)
+        (apply merge-with m maps)
+        (apply f maps)))
+    maps))
+
 (defn select-values [m ks]
   (reduce #(conj %1 (m %2)) [] ks))
 

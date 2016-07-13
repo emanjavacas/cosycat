@@ -39,10 +39,10 @@
         :merge   (swap! chans merge data))
       (recur))))
 
-(defn handle-span-dispatch [ann hit-id token-ids]
+(defn handle-span-dispatch [ann-map hit-id token-ids]
   (let [from (apply min token-ids)
         to (apply max token-ids)]
-    (re-frame/dispatch [:dispatch-annotation ann hit-id from to])))
+    (re-frame/dispatch [:dispatch-annotation ann-map hit-id from to])))
 
 (defn on-key-down
   [hit-id token-ids]

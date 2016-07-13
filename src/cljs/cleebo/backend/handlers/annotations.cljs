@@ -3,275 +3,158 @@
             [schema.core :as s]
             [ajax.core :refer [POST GET]]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
-            [cleebo.utils :refer [->int format get-msg]]
+            [cleebo.app-utils :refer [deep-merge]]
+            [cleebo.utils :refer [->int format get-msg get-token-id]]
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))
 
-(POST "/annotation/update"
-     {:params {:project "beat"
-               :update-map {:_id "2eea61e3-8e40-491e-a730-ad25afb7c578"
-                            :_version 6
-                            :query "\"a\""
-                            :corpus "mbg-small"
-                            :ann {:value "no"}}
-               :hit-id "0"}
-      :handler #(.log js/console "SUCCESS" %)
-      :error-handler #(.log js/console "ERROR" %)})
+;; (POST "/annotation/update"
+;;      {:params {:project "beat"
+;;                :update-map {:_id "2eea61e3-8e40-491e-a730-ad25afb7c578"
+;;                             :_version 6
+;;                             :query "\"a\""
+;;                             :corpus "mbg-small"
+;;                             :ann {:value "no"}}
+;;                :hit-id "0"}
+;;       :handler #(.log js/console "SUCCESS" %)
+;;       :error-handler #(.log js/console "ERROR" %)})
 
-(GET "/annotation/range"
-     {:params {:project "beat" :from 0 :size 20}
-      :handler #(.log js/console "SUCCESS" %)
-      :error-handler #(.log js/console "ERROR" %)})
+;; (GET "/annotation/range"
+;;      {:params {:project "beat" :from 0 :size 20}
+;;       :handler #(.log js/console (merge-anns-by-token-id %))
+;;       :error-handler #(.log js/console "ERROR" %)})
 
-(defn get-token-id [token]              ;this should always be an integer
-  (let [id (:id token)]
-    (try (js/parseInt id)
-         (catch :default e -1))))
+;;; Incoming annotations
+(defn update-hit [hit anns]
+  (mapv (fn [{token-id :id :as token}]
+          (if (contains? anns token-id)
+            (update token :anns deep-merge (get anns token-id))
+            token))
+        hit))
 
-(defn merge-annotations-hit
-  [hit anns-in-range]
-  (map (fn [token]
-         (let [id (get-token-id token)]
-           (if-let [anns (get anns-in-range id)]
-             (assoc token :anns anns)
-             token)))
-       hit))
-
-(defn find-first-id
-  "finds first non-dummy token (token with non negative id)"
-  [hit]
-  (first (drop-while #(neg? %) (map get-token-id hit))))
-
-(defn merge-annotations
-  "collect stored annotations for a given span of hits. Annotations are 
-  collected at once for a given hit, since we know the token-id range of its
-  tokens `from`: `to`"
-  [db results anns-in-range]
-  (for [{:keys [hit] :as hit-map} results
-        :let [from (find-first-id hit)
-              to   (find-first-id (reverse hit))
-              new-hit (merge-annotations-hit hit anns-in-range)]]
-    (assoc hit-map :hit new-hit)))
-
-(defn has-marked?
-  "for a given hit-map we look if the current (un)marking update
-  leaves marked tokens behind. Returns false if no marked
-  tokens remain or the token-id of the marked token otherwise"
-  [{:keys [hit meta] :as hit-map} flag token-id]
-  (if flag
-    true
-    (let [marked-tokens (filter :marked hit)
-          first-id (:id (first marked-tokens))]
-      (case (count marked-tokens)
-        0 (do (timbre/debug "Trying to unmark a token, but no marked tokens found") false)
-        1 (do (timbre/debug  (str token-id " should equal " first-id)) false)
-        (some #(= token-id %) (map :id marked-tokens))))))
-
-(re-frame/register-handler
- :mark-hit
- standard-middleware
- (fn [db [_ {:keys [hit-id flag]}]]
-   (let [active-project (get-in db [:session :active-project])
-         path [:projects active-project :session :query :results-by-id hit-id :meta :marked]]
-     (assoc-in db path (boolean flag)))))
-
-(re-frame/register-handler
- :mark-all-hits
- standard-middleware
- (fn [db _]
-   (let [active-project (get-in db [:session :active-project])
-         path-to-results [:projects active-project :session :query :results-by-id]]
-     (reduce (fn [acc hit-id]
-               (assoc-in acc (into path-to-results [hit-id :meta :marked]) true))
-             db
-             (get-in db [:projects active-project :session :query :results]))))) ;hit-ids
-
-(re-frame/register-handler
- :unmark-all-hits
- standard-middleware
- (fn [db _]
-   (let [active-project (:active-project db)
-         path-to-results [:projects active-project :session :query :results-by-id]]
-     (reduce (fn [acc hit-id]
-               (assoc-in acc (into path-to-results [hit-id :meta :marked]) false))
-             db
-             (keys (get-in db [:projects active-project :session :query :results-by-id]))))))
-
-(defn update-token
-  "apply token-fn where due"
-  [{:keys [hit meta] :as hit-map} token-pred token-fn]
-  (assoc hit-map :hit (map (fn [{:keys [id] :as token}]
-                             (if (token-pred id)
-                               (token-fn token)
-                               token))
-                           hit)))
-
-(re-frame/register-handler
- :mark-token
- standard-middleware
- (fn [db [_ {:keys [hit-id token-id flag]}]]
-   (let [active-project (get-in db [:session :active-project])
-         project (get-in db [:projects active-project])
-         hit-map (get-in project [:session :query :results-by-id hit-id])
-         has-marked (has-marked? hit-map flag token-id)
-         hit-map (assoc-in hit-map [:meta :has-marked] (boolean has-marked))
-         token-pred (fn [id] (= token-id id))
-         token-fn (fn [token] (if flag (assoc token :marked true) (dissoc token :marked)))
-         path [:projects active-project :session :query :results-by-id hit-id]]
-     (assoc-in db path (update-token hit-map token-pred token-fn)))))
-
-(defmulti update-token-anns
-  "inserts incoming annotation into the corresponding hit map"
-  (fn [hit-map {{scope :scope t :type} :span}] t))
-(defmethod update-token-anns "token"
-  [hit-map {{scope :scope} :span project-name :project {k :key} :ann :as ann-map}]
-  (let [token-fn (fn [token] (assoc-in token [:anns project-name k] ann-map))
-        token-pred (fn [id] (= (str scope) id))]
-    (update-token hit-map token-pred token-fn)))
-(defmethod update-token-anns "IOB"
-  [hit-map {{scope :scope} :span project-name :project {k :key} :ann :as ann-map}]
-  (let [{B :B O :O} scope
-        token-fn (fn [token] (assoc-in token [:anns project-name k] ann-map))
-        token-pred (fn [id] (contains? (apply hash-set (range B (inc O))) (->int id)))]
-    (update-token hit-map token-pred token-fn)))
-
-(defn- find-ann-hit-id*
-  [pred hit-maps]
-  (some (fn [{:keys [hit id meta]}]
-          (when (some pred (map :id hit)) id))
+(defn find-hit-id
+  "find the hid id for a continuous span given `token-ids`"
+  [token-ids hit-maps]
+  (some (fn [{:keys [id hit]}]
+          (let [{from :id} (first hit)
+                {to :id} (last hit)]
+            (when (some #(and (>= % from) (<= % to)) token-ids)
+              id)))
         hit-maps))
 
-(defmulti find-ann-hit-id (fn [{{type :type} :span} hit-id] type))
-(defmethod find-ann-hit-id "token"
-  [{{scope :scope} :span} hit-maps]
-  (find-ann-hit-id* #{(str scope)} hit-maps))
-(defmethod find-ann-hit-id "IOB"
-  [{{{B :B O :O} :scope} :span} hit-maps]
-  (find-ann-hit-id* (into #{} (map str (range B (inc O)))) hit-maps))
+(defmulti add-annotations
+  "generic reducer function for incoming annotation data"
+  (fn [db map-or-maps] (type map-or-maps)))
 
-(defmulti compute-notification-data     ;TODO: shortcut if not in project
-  (fn [{:keys [ann-map hit-id]} me] (type ann-map)))
-(defmethod compute-notification-data cljs.core/PersistentArrayMap
-  [{{{{B :B O :B :as scope} :scope type :type} :span
-     project :project user :username} :ann-map} me]
-  (let [by (if (= me user) :me :other)]
-    {:message (case [type user]
-                ["token" me] (get-msg [:annotation :ok by :token] scope)
-                ["IOB" me] (get-msg [:annotation :ok by :IOB] B O)
-                ["token" user] (get-msg [:annotation :ok by :token] user scope)
-                ["IOB" user] (get-msg [:annotation :ok by :IOB] user B O))
-     :by user}))
-(defmethod compute-notification-data cljs.core/PersistentVector
-  [{:keys [ann-map]} me]
-  (let [username (:username (first ann-map))] ;assumes all anns were made by same user
-    {:message (if (= me username)
-                (get-msg [:annotation :ok :me :mult] (count ann-map))
-                (get-msg [:annotation :ok :other :mult] username (count ann-map)))
-     :by username}))
+(defmethod add-annotations cljs.core/PersistentArrayMap
+  [db {project :project hit-id :hit-id anns :anns}]
+  (let [results-by-id (get-in db [:projects project :session :results-by-id])]
+    (if (contains? results-by-id hit-id)
+      (update-in db [:project project :session :results-by-id hit-id :hit] update-hit anns)
+      (if-let [hit-id (find-hit-id (keys anns) (vals results-by-id))]
+        (update-in db [:project project :session :results-by-id hit-id :hit] update-hit anns)
+        db))))
 
-(re-frame/register-handler
+(defmethod add-annotations cljs.core/PersistentVector
+  [db ms]
+  (reduce (fn [db m] (add-annotations db m)) db ms))
+
+(re-frame/register-handler              ;generic handler
  :add-annotation
  standard-middleware
- (fn [{active-project :active-project :as db} [_ {:keys [hit-id ann-map] :as data}]]
-   (let [me (get-in db [:me :username])
-         {:keys [message by]} (compute-notification-data data me)
-         results-by-id (get-in db [:projects active-project :session :results-by-id])
-         hit-id (if (contains? results-by-id hit-id) hit-id
-                    (find-ann-hit-id ann-map (vals results-by-id)))]
-     (if-let [hit-map (get results-by-id hit-id)]
-       (do (re-frame/dispatch [:notify {:message message :by by}])
-           (assoc-in
-            db
-            [:project active-project :session :results-by-id hit-id]
-            (update-token-anns hit-map ann-map)))
-       (do (timbre/debug "couldn't find hit") db)))))
+ (fn [db [_ map-or-maps]] (add-annotations db map-or-maps)))
 
+(re-frame/register-handler
+ :fetch-annotations
+ (fn [db [_ {:keys [starts ends hit-ids] :as params}]]
+   (let [project (get-in db [:session :active-project])]
+     (GET "/annotation/page"
+          {:params (assoc params :project project)
+           :handler (partial add-annotations db)
+           :error-handler #(.log js/console "Couldn't fetch anns" %)}))))
+
+;;; Outgoing annotations
 (s/defn ^:always-validate make-annotation :- annotation-schema
-  ([username project ann token-id]
-   {:ann ann
-    :username username
-    :project project
-    :span {:type "token"
-           :scope token-id}
-    :timestamp (.now js/Date)})
-  ([username project ann token-from :- s/Int token-to :- s/Int]
+  ([ann-map token-id :- s/Int]
+   (assoc ann-map :span {:type "token" :scope token-id} :timestamp (.now js/Date)))
+  ([ann-map token-from :- s/Int token-to :- s/Int]
    {:pre [(>= token-to token-from)]}
-   {:ann ann
-    :username username
-    :project project
-    :span {:type "IOB"
-           :scope {:B token-from
-                   :O token-to}}
-    :timestamp (.now js/Date)}))
+   (assoc ann-map :span {:type "IOB" :scope {:B token-from :O token-to}} :timestamp (.now js/Date))))
 
 (defmulti package-annotation
-  "packages annotation data for sending it to server. It only supports bulk payloads
-  for token annotations"
-  (fn [username project ann hit-id token-id & [token-to]]
-    [(type ann) (type token-id)]))
+  "packages annotation data for the server. It only supports bulk payloads for token annotations"
+  (fn [ann-map-or-maps project hit-id token-id & [token-to]]
+    [(type ann-map-or-maps) (type token-id)]))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentArrayMap js/Number]
-  ([username project ann hit-id :- s/Int token-id :- s/Int]
-   (let [ann-map (make-annotation username project ann token-id)]
+  ([ann-map project hit-id :- s/Int token-id :- s/Int]
+   (let [ann-map (make-annotation ann-map token-id)]
      {:hit-id hit-id
+      :project project
       :ann-map ann-map}))
-  ([username project ann hit-id :- s/Int token-from :- s/Int token-to :- s/Int]
-   (let [ann-map (make-annotation username project ann token-from token-to)]
+  ([ann-map project hit-id :- s/Int token-from :- s/Int token-to :- s/Int]
+   (let [ann-map (make-annotation ann-map token-from token-to)]
      {:hit-id hit-id
+      :project project
       :ann-map ann-map})))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentArrayMap cljs.core/PersistentVector]
-  [username project ann hit-ids :- [s/Int] token-ids :- [s/Int]]
-  (let [ann-maps (mapv (fn [token-id]
-                         (make-annotation username project ann token-id))
-                       token-ids)]
+  [ann-map project hit-ids :- [s/Int] token-ids :- [s/Int]]
+  (let [ann-maps (mapv (fn [token-id] (make-annotation ann-map token-id)) token-ids)]
     {:hit-id hit-ids
+     :project project
      :ann-map ann-maps}))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentVector cljs.core/PersistentVector]
-  [username project anns hit-ids :- [s/Int] token-ids :- [s/Int]]
+  [anns project hit-ids :- [s/Int] token-ids :- [s/Int]]
   {:pre [(apply = (map count [anns hit-ids]))]}
-  (let [ann-maps (mapv (fn [ann token-id]
-                         (make-annotation username project ann token-id))
-                       anns
-                       token-ids)]
+  (let [ann-maps (mapv (fn [ann token-id] (make-annotation ann token-id)) anns token-ids)]
     {:hit-id hit-ids
+     :project project
      :ann-map ann-maps}))
 
-(defmulti handler
+(defmulti dispatch-annotation-handler
   "Variadic handler for successful annotations. Dispatches are based on whether
   ann-map is a vector (bulk annotation payload) or a map (single annotation payload)"
   type)
 
-(defmethod handler cljs.core/PersistentArrayMap
-  [{status :status {hit-id :hit-id ann-map :ann-map :as data} :data
-    {{B :B O :O :as scope} :scope type :type} :span reason :reason e :e}]
+(defmethod dispatch-annotation-handler cljs.core/PersistentArrayMap
+  [{status :status
+    message :message                    ;error message in case of error
+    {project :project hit-id :hit-id anns :anns ;success payload
+     {{B :B O :O :as scope} :scope type :type} :span ;error payload
+     :as m} :data :as data}]
+  (.log js/console data)
   (case status
-    :ok (re-frame/dispatch [:add-annotation {:hit-id hit-id :ann-map ann-map}])
-    :error (let [msg (case type
-                       "token" (get-msg [:annotation :error :token] scope reason)
-                       "IOB" (get-msg [:annotation :error :IOB] B O reason))]
-             (re-frame/dispatch [:notify {:message msg}]))))
+    :ok (re-frame/dispatch [:add-annotation m])
+    :error (re-frame/dispatch
+            [:notify {:message (case type
+                                 "token" (get-msg [:annotation :error :token] scope message)
+                                 "IOB" (get-msg [:annotation :error :IOB] B O message))}])))
 
-(defmethod handler cljs.core/PersistentVector
-  [payloads]
-  (doseq [payload payloads] (handler payload)))
+(defmethod dispatch-annotation-handler cljs.core/PersistentVector
+  [ms]
+  (doseq [m ms] (dispatch-annotation-handler m)))
 
 (defn error-handler [& args]
   (re-frame/dispatch [:notify {:message "Unrecognized internal error"}]))
 
 (re-frame/register-handler
  :dispatch-annotation
- (fn [db [_ & args]]
-   (let [{project-name :name} (get-in db [:session :active-project])
-         username (get-in db [:session :user-info :username])]
-     (try (POST "/annotation"
-                {:params (apply package-annotation username project-name args)
-                 :handler handler
-                 :error-handler error-handler})
+ (fn [db [_ ann & args]]
+   (let [project (get-in db [:session :active-project])
+         username (get-in db [:me :username])
+         corpus (get-in db [:projects project :session :query :results-summary :corpus])
+         query (get-in db [:projects project :session :query :results-summary :query-str])         
+         ann-map {:ann ann :username username :corpus corpus :query query}]
+     (.log js/console (apply package-annotation ann-map project args))
+     (try (POST "/annotation/new"
+                {:params (apply package-annotation ann-map project args)
+                 :handler dispatch-annotation-handler
+                 :error-handler dispatch-annotation-handler})
           (catch :default e
             (re-frame/dispatch
              [:notify {:message (format "Couldn't dispatch annotation: %s" (str e))}])))

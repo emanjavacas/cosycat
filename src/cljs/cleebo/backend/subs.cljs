@@ -112,11 +112,9 @@
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))
-         results-by-id (reaction (get-in @project [:session :results-by-id]))]
+         results-by-id (reaction (get-in @project [:session :query :results-by-id]))]
      (reaction (mapcat (fn [[_ {:keys [hit id meta]}]]
-                         (->> hit
-                              (filter :marked)
-                              (map #(assoc % :hit-id id))))
+                         (->> hit (filter :marked) (map #(assoc % :hit-id id))))
                        @results-by-id)))))
 
 (defn get-users

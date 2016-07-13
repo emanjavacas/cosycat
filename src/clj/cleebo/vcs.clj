@@ -1,4 +1,7 @@
-(ns #^{:doc "Version control updates to monger documents. Wraps (some) monger API functions."}
+(ns #^{:doc "Version control updates to monger documents. Wraps (some) monger API functions.
+             Available wrapped functions have an extra argument `version` in third position
+             (after db and coll), which is used to ensure consistency of updates (similarly
+             to timestamp vectors)."}
   cleebo.vcs
   (:refer-clojure :exclude [sort find update remove])
   (:require [cleebo.components.db :refer [new-db]]
@@ -45,22 +48,22 @@
   (let [{:keys [message :message ex :class]} (bean e)
         stacktrace (mapv str (.getStackTrace e))]
     (ex-info "Internal Exception"
-             {:reason :internal :data {:exception (str ex) :stacktrace stacktrace}})))
+             {:message :internal :data {:exception (str ex) :stacktrace stacktrace}})))
 
 (defn ex-insert [doc]
-  (ex-info "Couldn't insert vcs version" {:reason :insert-error :data doc}))
+  (ex-info "Couldn't insert vcs version" {:message :insert-error :data doc}))
 
 (defn ex-version
   "exception for not-matching version updates"
   [{last-vcs-version :_version} {new-doc-version :_version}]
   (ex-info
    "Claimed version not in sync with collection version"
-   {:reason :unsync-version :data {:last-vcs-version last-vcs-version :claimed-version new-doc-version}}))
+   {:message :unsync-version :data {:last-vcs-version last-vcs-version :claimed-version new-doc-version}}))
 
 (defn ex-id
   "exception for not-matching document ids"
   [id]
-  (ex-info "Couldn't find document by id" {:reason :doc-not-found :data {:id id}}))
+  (ex-info "Couldn't find document by id" {:message :doc-not-found :data {:id id}}))
 
 ;;; find operations:
 ;;; find-*
@@ -87,7 +90,6 @@
 
 ;;; modify operations:
 ;;; insert; insert-*; remove; update; update-*; upsert
-
 (defn with-doc-id
   "rearranges last doc version before inserting it into the vcs coll"
   [{id :_id :as doc}]
@@ -111,14 +113,14 @@
   ([f version-setter]
    (fn [db coll doc & args]
      (let [{version :_version :as new-doc} (version-setter doc)]
-       (assert-ex-info "Version missing from insert" {:reason :missing-version :data new-doc})
+       (assert-ex-info "Version missing from insert" {:message :missing-version :data new-doc})
        (apply f db coll new-doc args)))))
 
 (defn apply-check-fns [f db coll args check-fns]
   (doseq [check-fn check-fns
           :let [result (apply check-fn f db coll args)]
           :when result]
-    (throw (ex-info "Bad input argument" {:reason result}))))
+    (throw (ex-info "Bad input argument" {:message result}))))
 
 (defn unroll-update [db coll id doc]
   (timbre/info "Unrolling update of doc" id "to" doc)
@@ -139,16 +141,16 @@
       (if-let [{db-version :_version :as doc} (mc/find-one-as-map db coll {:_id id})] ;1 search
         (do (assert-ex-info
              db-version "Document is not vcs-controled"
-             {:reason :missing-version :data doc})
+             {:message :missing-version :data doc})
             (assert-ex-info
              (= db-version version) "Version mismatch"
-             {:reason :version-mismatch :data {:db db-version :user version}})
-            (try (let [res (apply version-setter f db coll args)] ;applies monger f with appropriate version num
+             {:message :version-mismatch :data {:db db-version :user version}})
+            (try (let [res (apply version-setter f db coll args)] ;applies monger-f with right version
                    (insert-version db doc)
-                   res)
+                   res)                 ;return updated document
                  (catch clojure.lang.ExceptionInfo e
-                   (let [{reason :reason doc :data} (ex-data e)]
-                     (if (= reason :insert-error)
+                   (let [{message :message doc :data} (ex-data e)]
+                     (if (= message :insert-error)
                        (unroll-update db coll id doc)
                        (throw e)))))) ;1 insert & 1 (history) search (for safety reasons)
         (throw (ex-id id))))))  ;couldn't find doc by id
@@ -158,7 +160,7 @@
   "id getter for fn signatures with doc/condition argument in first position (after db, coll).
    target fns: find-and-modify, remove, update, upsert"
   [db coll {:keys [_id] :as doc} & args]
-  (assert-ex-info _id "Query by id needed. Missing id" {:reason :missing-id :data doc})
+  (assert-ex-info _id "Query by id needed. Missing id" {:message :missing-id :data doc})
   _id)
 
 (defn by-id-getter
@@ -212,7 +214,8 @@
    mc/update
    {:id-getter first-id-getter
     :version-setter update-version-setter}
-   check-upsert check-multi))
+   check-upsert
+   check-multi))
 
 (def update-by-id
   (wrap-modify

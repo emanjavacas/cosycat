@@ -3,20 +3,13 @@
             [monger.operators :refer :all]
             [taoensso.timbre :as timbre]
             [schema.core :as s]
-            [cleebo.utils :refer [get-token-id deep-merge-with]]
-            [cleebo.vcs :as vcs :refer [assert-ex-info]]
-            [cleebo.schemas.annotation-schemas :refer [annotation-schema cpos-anns-schema]]
-            [cleebo.components.db :refer [new-db colls]]
-            [cleebo.db.projects :refer [new-project find-project-by-name]]
-            [cleebo.roles :refer [check-annotation-role]]
+            [cleebo.app-utils :refer [deep-merge-with]]
+            [cleebo.utils :refer [get-token-id assert-ex-info]]
+            [cleebo.vcs :as vcs]
+            [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
             [schema.coerce :as coerce]))
 
 ;;; Exceptions
-(defn ex-user [username project-name action]
-  (ex-info "Action not authorized"
-           {:message :not-authorized
-            :data {:username username :action action :project project-name}}))
-
 (defn ex-overwrite-span [scope]
   (ex-info "Attempt to overwrite span ann with token ann"
            {:message :wrong-update :data {:scope scope}}))
@@ -31,11 +24,7 @@
             :data {:source-scope source-scope :scope scope}}))
 
 ;;; Checkers
-(defn check-user-annotations [{db-conn :db :as db} username project-name action]
-  (let [{users :users} (find-project-by-name db project-name)
-        {role :role} (some #(when (= username (:username %)) %) users)]
-    (when-not (check-annotation-role action role)
-      (throw (ex-user username project-name action)))))
+(declare fetch-span-annotation-by-key fetch-token-annotation-by-key)
 
 (defn check-span-overlap
   "checks if two span annotations overlap returning false if there is overlap"
@@ -108,7 +97,6 @@
 ;;; Setters
 (defn insert-annotation
   [{db-conn :db :as db} project {username :username :as ann}]
-  (check-user-annotations db username project :write)
   (check-insert db project ann)
   (vcs/insert-and-return db-conn project (assoc ann :_id (vcs/new-uuid))))
 
@@ -120,7 +108,6 @@
     query :query corpus :corpus
     version :_version id :_id  :as ann}
    & {:keys [history] :or {history true}}]
-  (check-user-annotations db username project :update)
   (assert-ex-info
    (and version id) "annotation update requires annotation id/version"
    {:message :missing-id-or-version :data ann})
@@ -134,24 +121,24 @@
             {})
     history (with-history db-conn)))
 
-;; (defonce db (.start (new-db (:database-url config.core/env))))
+;; (defonce db (.start (cleebo.components.db/new-db (:database-url config.core/env))))
 ;; (def test-ann
-;;   {:ann {:key "test2" :value "test2"}
+;;   {:ann {:key "test" :value "test2"}
 ;;    :username "user"
 ;;    :timestamp 123312213112
-;;    :span {:type "token" :scope 11}
+;;    :span {:type "token" :scope 12}
 ;;    :query "\"a\""
 ;;    :corpus "sample-corpus"})
 
-;; (def update-ann
-;;   {:ann {:key "test2" :value "test3"}
-;;    :username "user"
-;;    :timestamp 12312523412
-;;    :span {:type "token" :scope 11}
-;;    :_id "2eea61e3-8e40-491e-a730-ad25afb7c578"
-;;    :_version 5
-;;    :query "\"g\""
-;;    :corpus "sample-corpus"})
+(def update-ann
+  {:ann {:key "test2" :value "test3"}
+   :username "user"
+   :timestamp 12312523412
+   :span {:type "token" :scope 11}
+   :_id "2eea61e3-8e40-491e-a730-ad25afb7c578"
+   :_version 7
+   :query "\"g\""
+   :corpus "sample-corpus"})
 
 ;; (insert-annotation db "beat" test-ann)
 ;; (update-annotation db "beat" update-ann)

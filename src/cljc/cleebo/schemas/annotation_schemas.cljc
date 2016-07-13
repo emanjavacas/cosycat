@@ -1,23 +1,9 @@
 (ns cleebo.schemas.annotation-schemas
   (:require [schema.core :as s]
             [schema.coerce :as coerce]
-            [taoensso.timbre :as timbre]
-            #?(:clj [clojure.core.match :refer [match]]
-               :cljs [cljs.core.match :refer-macros [match]])))
-
+            [taoensso.timbre :as timbre]))
 
 (def cpos-schema s/Int)
-
-(def cpos-anns-schema
-  {:anns [{:key s/Str :ann-id s/Int}]
-   (s/optional-key :_id) cpos-schema})
-
-(def history-schema
-  [{:ann {:key s/Str
-          :value s/Str}
-    :username s/Str
-    :project s/Str
-    :timestamp s/Int}])
 
 (def token-span-schema
   {:type (s/enum "token")
@@ -25,26 +11,26 @@
 
 (def iob-span-schema
   {:type (s/enum "IOB")
-   :scope {:B cpos-schema
-           :O cpos-schema}})
+   :scope {:B cpos-schema :O cpos-schema}})
 
 (def span-schema
   (s/conditional #(= (:type %) "token") token-span-schema
                  #(= (:type %) "IOB")   iob-span-schema))
 
+(def history-schema
+  [{:ann {:key s/Str :value s/Str}
+    :username s/Str
+    :timestamp s/Int
+    :corpus s/Str
+    :query s/Str
+    :span span-schema}])
+
 (def annotation-schema
-  #?(:clj {:ann {:key s/Str :value s/Str}
-           :username s/Str
-           :timestamp s/Int
-           :span span-schema
-           :_id s/Any}
-     :cljs {:ann {:key s/Str :value s/Str}
-            :username s/Str
-            :timestamp s/Int
-            :span span-schema
-            :_id s/Any
-            (s/optional-key :history) [{:ann {:key s/Str :value s/Str}
-                                        :username s/Str
-                                        :timestamp s/Int
-                                        :span span-schema
-                                        :_id s/Any}]})) ;     this is the same except history
+  {:ann {:key s/Str :value s/Str}
+   :username s/Str
+   :timestamp s/Int
+   :span span-schema
+   :corpus s/Str
+   :query s/Str
+   #?(:clj :_id :cljs (s/optional-key :_id)) s/Any ;outgoing annotations do not have an id yet
+   (s/optional-key :history) history-schema}) ;     this is the same except history and _id
