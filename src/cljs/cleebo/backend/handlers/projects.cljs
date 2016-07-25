@@ -14,7 +14,7 @@
    (fn [acc {:keys [name] :as project}]
      (let [{:keys [history settings]} (some #(when (= name (:name %)) %) (:projects user))]
        (assoc acc name (-> project
-                           (assoc :session default-project-session)
+                           (assoc :session (default-project-session project))
                            (cond-> history (assoc :history history))
                            (cond-> settings (assoc :settings settings))))))
    {}
@@ -34,7 +34,7 @@
  :add-project
  standard-middleware
  (fn [db [_ project]]
-   (update db [:projects] merge (normalize-projects [project] (:me db)))))
+   (update db :projects merge (normalize-projects [project] (:me db)))))
 
 (defn error-handler [{:keys [message data]}]
   (re-frame/dispatch [:notify {:message message :meta data :status :error}]))

@@ -56,14 +56,6 @@
     (if (vector? coll) (vec s) s)))
 
 ;;; LOGIC
-(defn default-project-name [username]
-  (str username "-playground"))
-
 (defn invalid-project-name [s]
   #?(:clj  (re-find #"[ ^\W+]" s)
      :cljs (gpattern/matchStringOrRegex (js/RegExp "[ ^\\W+]") s)))
-
-
-
-
-

@@ -10,7 +10,7 @@
 (defn on-select [query-opt & {:keys [has-query?]}]
   (fn [v]
     (re-frame/dispatch [:set-settings [:query :query-opts query-opt] v])
-    (when @has-query?
+    (when (and has-query? @has-query?)
       (re-frame/dispatch [:query-refresh :results-frame]))))
 
 (defn corpus-select [corpus & {:keys [corpora] :as args}]

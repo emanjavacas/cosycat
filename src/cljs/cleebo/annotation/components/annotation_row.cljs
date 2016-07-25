@@ -98,14 +98,14 @@
 
 (defn ann-key-cell [ann-key] [:td ann-key])
 
-(defn annotation-row [hit ann-key project-name]
+(defn annotation-row [hit ann-key]
   (let [color-map (re-frame/subscribe [:filtered-users-colors])]
-    (fn [{hit-id :id hit :hit} ann-key project-name]
+    (fn [{hit-id :id hit :hit} ann-key]
       (into
        [:tr.ann-row]
        (-> (for [{token-id :id anns :anns} (filter-dummy-tokens hit)]
              ^{:key (str ann-key hit-id token-id)}
-             [annotation-cell {:ann-map   (get-in anns [project-name ann-key])
-                               :token-id  token-id
+             [annotation-cell {:ann-map (get anns ann-key)
+                               :token-id token-id
                                :color-map color-map}])
            (prepend-cell {:key (str ann-key) :child ann-key-cell :opts [ann-key]}))))))

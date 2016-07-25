@@ -12,13 +12,10 @@
   [{{key :key} :ann {type :type} :span}]
   {:key key :type type})
 
-(defn get-anns-in-project [anns project-name]
-  (-> anns (get project-name) vals))
-
 (defn ann-types
   "extracts the unique annotation keys in a given hit"
-  [{hit :hit} project-name]
-  (->> (mapcat (fn [{anns :anns :as token}] (get-anns-in-project anns project-name)) hit)
+  [{hit :hit}]
+  (->> (mapcat (comp vals :anns) hit)
        (map parse-ann-type)
        (map :key)
        (into (hash-set))))
@@ -43,8 +40,8 @@
            ^{:key (str "hit" hit-id id)} [hit-cell token])
          (prepend-cell {:key (str hit-id) :child hit-id-cell :opts [hit-id]})))))
 
-(defn open-annotation-component [hit project-name open-hits]
-  (fn [hit project-name open-hits]
+(defn open-annotation-component [hit open-hits]
+  (fn [hit open-hits]
     [bs/table
      {:id "table-annotation"
       :responsive true}
@@ -54,29 +51,28 @@
       (concat
        [[hit-row hit open-hits]]
        [[input-row hit]]
-       (for [ann-key (sort-by (juxt :type :key) > (ann-types hit project-name))]
-         [annotation-row hit ann-key project-name])))]))
+       (for [ann-key (sort-by (juxt :type :key) > (ann-types hit))]
+         [annotation-row hit ann-key])))]))
 
 (defn closed-annotation-component []
-  (fn [hit project-name open-hits]
+  (fn [hit open-hits]
     [bs/table
      {:id "table-annotation"}
      [:thead]
      [:tbody
       [hit-row hit open-hits]]]))
 
-(defn annotation-component [hit project-name open-hits]
-  (fn [hit project-name open-hits]
+(defn annotation-component [hit open-hits]
+  (fn [hit open-hits]
     (if (contains? @open-hits (:id hit))
-      [open-annotation-component hit project-name open-hits]
-      [closed-annotation-component hit project-name open-hits])))
+      [open-annotation-component hit open-hits]
+      [closed-annotation-component hit open-hits])))
 
 (defn annotation-panel []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])
-        active-project (re-frame/subscribe [:session :active-project])
         open-hits (reagent/atom #{})]
     (fn []
       [:div.container-fluid
        (doall (for [{hit-id :id :as hit} @marked-hits]
                 ^{:key (str hit-id)}
-                [:div.row [annotation-component hit @active-project open-hits]]))])))
+                [:div.row [annotation-component hit open-hits]]))])))

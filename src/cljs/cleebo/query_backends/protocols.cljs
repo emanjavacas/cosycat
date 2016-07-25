@@ -21,7 +21,9 @@
 
 (defn handler
   "general handler called with normalized corpus query data"
-  [{results :results results-summary :results-summary message :message code :code :as payload}]
+  [{results :results results-summary :results-summary ;success data
+    message :message code :code         ;error data
+    :as payload}]
   (if (or message code)
     (re-frame/dispatch [:query-error {:message message :code code}])
     (re-frame/dispatch [:set-query-results (dissoc payload :message :code)])))
@@ -37,8 +39,7 @@
 (defn handle-query
   "wrapper for ajax/jsonp queries that simplifies protocol implementations"
   [corpus url params & {:keys [method] :or {method GET}}]
+  (.log js/console params)
   (method url {:params params
-               :handler (fn [data] (.log js/console "Success") (handler (handler-data corpus data)))
-               :error-handler (fn [data]
-                                (.log js/console "Error")
-                                (error-handler (error-handler-data corpus data)))}))
+               :handler (fn [data] (handler (handler-data corpus data)))
+               :error-handler (fn [data] (error-handler (error-handler-data corpus data)))}))

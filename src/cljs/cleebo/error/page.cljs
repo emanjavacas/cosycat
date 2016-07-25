@@ -3,7 +3,7 @@
             [re-frame.core :as re-frame]))
 
 (defn error-panel []
-  (let [error-data (re-frame/subscribe [:session :session-error])]
+  (let [error-data (re-frame/subscribe [:session :session-has-error?])]
     (fn []
       (let [{:keys [code message]} @error-data]
         [:div.container

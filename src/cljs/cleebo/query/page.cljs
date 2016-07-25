@@ -73,8 +73,8 @@
     [:div.container-fluid [:div.row [:div.col-lg-10 [:div label]]]]))
 
 (defn query-panel-closed-header []
-  (let [query-str (re-frame/subscribe [:session :query-results :query-str])
-        query-size (re-frame/subscribe [:session :query-results :query-size])]
+  (let [query-str (re-frame/subscribe [:project-session :query :results-summary :query-str])
+        query-size (re-frame/subscribe [:project-session :query :results-summary :query-size])]
     (fn []
       [:div.container-fluid
        [:div.row

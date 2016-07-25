@@ -30,6 +30,7 @@
    (s/required-key :data) {(s/required-key :message) s/Any
                            (s/optional-key :by)      s/Any
                            (s/optional-key :status)  (s/enum :ok :error :info)
+                           (s/optional-key :meta)    s/Any
                            (s/optional-key :date)    s/Any}})
 
 (def session-schema
@@ -40,7 +41,7 @@
    (s/optional-key :modals)     {s/Keyword s/Any}
    (s/optional-key :session-error) {:message s/Str (s/optional-key :code) s/Str}
    (s/optional-key :throbbing?) {s/Any s/Bool}
-   (s/optional-key :component-error?) {s/Keyword s/Any}})
+   (s/optional-key :component-error) {s/Keyword s/Any}})
 
 ;;; full db-schema
 (def db-schema

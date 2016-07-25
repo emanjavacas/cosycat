@@ -2,11 +2,10 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [ajax.core :refer [GET]]
-            [cleebo.backend.db
-             :refer [default-history default-session default-project-session]]
+            [cleebo.backend.db :refer [default-history default-session]]
             [cleebo.backend.middleware :refer [standard-middleware]]
             [cleebo.backend.handlers.projects :refer [normalize-projects]]
-            [cleebo.app-utils :refer [default-project-name update-coll]]
+            [cleebo.app-utils :refer [update-coll]]
             [cleebo.utils :refer [format]]
             [taoensso.timbre :as timbre]))
 
@@ -47,19 +46,24 @@
        (assoc :projects (normalize-projects projects me)))))
 
 (re-frame/register-handler              ;load error
- :session-error
+ :register-session-error
  standard-middleware
  (fn [db [_ {:keys [code message] :as args}]]
    (-> db
        (assoc-in [:session :active-panel] :error-panel)
        (assoc-in [:session :session-error] (select-keys args [:code :message])))))
 
+(re-frame/register-handler              ;load error
+ :drop-session-error
+ standard-middleware
+ (fn [db _] (-> db (assoc-in [:session :session-error] nil))))
+
 (defn initialize-session-handler [payload]
   (re-frame/dispatch [:initialize-db payload]))
 
 (defn initialize-session-error-handler [payload]
   (re-frame/dispatch
-   [:session-error
+   [:register-session-error
     {:code "initialisation error"
      :message "Couldn't load user session :-S"}]))
 

@@ -1,7 +1,7 @@
 (ns cleebo.schemas.route-schemas
   (:require [schema.core :as s]
             [schema.coerce :as coerce]
-            [cleebo.schemas.annotation-schemas :refer [annotation-schema span-schema]]
+            [cleebo.schemas.annotation-schemas :refer [annotation-schema span-schema cpos-schema]]
             [cleebo.schemas.project-schemas
              :refer [project-schema update-schema project-user-schema]]
             [cleebo.schemas.user-schemas :refer [avatar-schema]]
@@ -18,15 +18,13 @@
   "multiple anns implies multiple hit-ids"
   (deep-merge blueprint-from-server
               {:data {:hit-id  (s/if vector? [hit-id-schema] hit-id-schema)
-                      :ann-map (s/if vector? [annotation-schema] annotation-schema)}}))
+                      :anns {cpos-schema {s/Str annotation-schema}}
+                      :project s/Str}}))
 
 (def ann-error-from-server-schema
   (deep-merge blueprint-from-server
-              {:data {:span (s/if vector? [span-schema] span-schema)
-                      :hit-id (s/if vector? [hit-id-schema] hit-id-schema)
-                      :reason   s/Keyword
-                      (s/optional-key :e) s/Str
-                      (s/optional-key :username) s/Str}}))
+              {:data {(s/required-key :span) (s/if vector? [span-schema] span-schema)
+                      (s/required-key :hit-id) (s/if vector? [hit-id-schema] hit-id-schema)}}))
 
 (def info-from-server-schema
   (deep-merge blueprint-from-server {:data {:message s/Str}}))

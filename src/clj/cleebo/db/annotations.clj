@@ -114,8 +114,7 @@
   (cond->> (vcs/find-and-modify
             db-conn project version              
             {:_id id}    ;conditions
-            {$set {      ;; "ann.key" ann-key    ;ann-keys are not updatable
-                   "ann.value" ann-value
+            {$set {"ann.value" ann-value
                    "timestamp" timestamp "username" username
                    "query" query "corpus" corpus}}
             {})
@@ -130,15 +129,15 @@
 ;;    :query "\"a\""
 ;;    :corpus "sample-corpus"})
 
-(def update-ann
-  {:ann {:key "test2" :value "test3"}
-   :username "user"
-   :timestamp 12312523412
-   :span {:type "token" :scope 11}
-   :_id "2eea61e3-8e40-491e-a730-ad25afb7c578"
-   :_version 7
-   :query "\"g\""
-   :corpus "sample-corpus"})
+;; (def update-ann
+;;   {:ann {:key "test2" :value "test3"}
+;;    :username "user"
+;;    :timestamp 12312523412
+;;    :span {:type "token" :scope 11}
+;;    :_id "2eea61e3-8e40-491e-a730-ad25afb7c578"
+;;    :_version 7
+;;    :query "\"g\""
+;;    :corpus "sample-corpus"})
 
 ;; (insert-annotation db "beat" test-ann)
 ;; (update-annotation db "beat" update-ann)

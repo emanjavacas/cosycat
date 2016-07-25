@@ -42,10 +42,8 @@
             tags (case target
                    :keys (keys annotation-keys)
                    :vals (annotation-keys "pos"))]
-        (timbre/info (find-tags term tags))
         (res (clj->js (find-tags term tags))))
       (catch :default e
-        (timbre/info "Error")
         (res (clj->js {}))))))
 
 (defn get-source-fn [source & [target]]
@@ -54,11 +52,11 @@
     :simple-source (simple-source target)
     (throw (js/Error. "Unknown autocomplete target"))))
 
-(defn autocomplete-jq [{:keys [id source target] :as args-map}]
+(defn autocomplete-jq [{:keys [id source target] :as args}]
   (reagent/create-class
    {:reagent-render
-    (fn [args-map]
-      [:div [:input (dissoc args-map :source :target)]])
+    (fn [args]
+      [:div [:input (dissoc args :source :target)]])
     :component-did-mount
     (fn []
       (js/$

@@ -21,12 +21,12 @@
    :active-project nil
    :settings (default-settings :corpora corpora)})
 
-(def default-project-session
+(defn default-project-session [project]
   {:query {:results-summary {}
            :results []
            :results-by-id {}}
    :status {}
-   :filtered-users #{}})
+   :filtered-users (into #{} (map :username (:users project)))})
 
 (def default-project-history
   {:query []})

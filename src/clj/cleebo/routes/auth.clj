@@ -7,7 +7,6 @@
             [cleebo.components.ws :refer [send-clients]]
             [cleebo.components.blacklab :refer [remove-hits!]]
             [cleebo.db.users :refer [lookup-user is-user? new-user normalize-user]]
-            [cleebo.db.projects :refer [new-project]]
             [cleebo.views.login :refer [login-page]]
             [buddy.auth.backends.session :refer [session-backend]]
             [buddy.sign.jws :as jws]
@@ -39,7 +38,6 @@
       (not (= password repeatpassword)) (on-signup-failure req "Password mismatch")
       (is-user? db user)                (on-signup-failure req "User already exists")
       :else (let [user (-> (new-user db user) (assoc :active true))]
-              (new-project db username) ;create default project
               (send-clients ws {:type :signup :data (normalize-user user :projects)})
               (-> (redirect (or next-url "/")) (assoc-in [:session :identity] user))))))
 

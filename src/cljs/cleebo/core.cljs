@@ -58,8 +58,9 @@
 (defn user-brand-span [username active-project]
   (fn [username active-project]
     [:div (str/capitalize username)
-     [:span {:style {:white-space "nowrap"}}
-      (str "@" @active-project)]]))
+     (when @active-project
+       [:span {:style {:white-space "nowrap"}}
+        (str "@" @active-project)])]))
 
 (defn user-brand [active-project]
   (let [user (re-frame/subscribe [:me])]

@@ -30,7 +30,7 @@
     "token" {scope {key ann}}
     "IOB" (zipmap (range B (inc O)) (repeat {key ann}))))
 
-(defn merge-anns-by-token-id
+(defn normalize-anns
   "converts incoming annotations into a map of token-ids to ann-keys to anns"
   [& anns]
   (->> anns (map ann->maps) (apply deep-merge-with merge)))
@@ -41,16 +41,17 @@
   [db ws username project {span :span :as ann-map} hit-id]
   (try (check-user-rights db username project :write)
        (let [new-ann (insert-annotation db project ann-map)
-             data {:anns (merge-anns-by-token-id new-ann) :project project :hit-id hit-id}
+             data {:anns (normalize-anns new-ann) :project project :hit-id hit-id}
              users (->> (find-project-by-name db project) :users (map :username))]
          (send-clients ws {:type :annotation :data data} :source-client username :target-clients users)
          {:status :ok :data data})
        (catch clojure.lang.ExceptionInfo e
          (let [{:keys [message data]} (ex-data e)]
-           {:status :error :message message :data data}))
+           (clojure.pprint/pprint (ex-data e))
+           {:status :error :message message :data (assoc data :hit-id hit-id :span span)}))
        (catch Exception e
          (let [{message :message ex :class} (bean e)]
-           {:status :error :message message :data {:span span :exception ex}}))))
+           {:status :error :message message :data {:exception ex :hit-id hit-id :span span}}))))
 
 (defmulti insert-annotation-handler (fn [{{:keys [ann-map]} :params}] (type ann-map)))
 
@@ -61,7 +62,7 @@
   (insert-annotation-handler* db ws username project ann hit-id))
 
 (defmethod insert-annotation-handler clojure.lang.PersistentVector
-  [{{hit-ids :hit-id anns :ann-map project :project} :params
+  [{{hit-ids :hit-id anns :ann-map project :project :as data} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (mapv (fn [ann hit-id]
@@ -73,8 +74,8 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (try (check-user-rights db username project :update)
-       (let [new-ann (update-annotation db project (assoc update-map :username username)) ;ensure username
-             data {:anns (merge-anns-by-token-id new-ann) :project project :hit-id hit-id}
+       (let [new-ann (update-annotation db project (assoc update-map :username username))
+             data {:anns (normalize-anns new-ann) :project project :hit-id hit-id}
              users (->> (find-project-by-name db project) :users (map :username))]
          (send-clients ws {:type :annotation :data data} :source-client username :target-clients users)
          {:status :ok :data data})
@@ -92,7 +93,7 @@
   (check-user-rights db username project :read)
   {:hit-id hit-id
    :project project
-   :anns (->> (fetch-annotations db project from size) (apply merge-anns-by-token-id))})
+   :anns (->> (fetch-annotations db project from size) (apply normalize-anns))})
 
 (defn fetch-annotation-page-handler
   [{{project :project starts :starts ends :ends hit-ids :hit-ids} :params
@@ -107,7 +108,7 @@
                 size (- (->int end) from)]
             {:hit-id hit-id
              :project project
-             :anns (->> (fetch-annotations db project from size) (apply merge-anns-by-token-id))}))
+             :anns (->> (fetch-annotations db project from size) (apply normalize-anns))}))
         starts ends hit-ids))
 
 ;;; Routes

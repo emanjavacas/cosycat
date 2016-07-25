@@ -8,8 +8,14 @@
             [cleebo.components.db :refer [new-db colls]]
             [cleebo.avatar :refer [user-avatar]]))
 
-(defn ex-user-exists [reason]
-  (ex-info "User already exist" {:reason reason}))
+(defn ex-user-exists
+  "returns a exception to be thrown in case user exists"
+  ([data] (ex-info "User already exist" {:message :user-exists :data data}))
+  ([{old-name :username old-email :email} {new-name :username new-email :email}]
+   (cond
+     (and (= new-name old-name) (= new-email old-email)) (ex-user-exists [:username :email])
+     (= new-name old-name) (ex-user-exists :username)
+     (= new-email old-email) (ex-user-exists :email))))
 
 (defn normalize-user
   "transforms db user doc into public user (no private info)"
@@ -22,31 +28,24 @@
   [{:keys [username password roles] :as user-payload}]
   (let [now (System/currentTimeMillis)]
     (-> user-payload
+        (dissoc :csrf)
         (assoc :password (hashers/encrypt password {:alg :bcrypt+blake2b-512}))
         (assoc :roles roles :created now :last-active now :avatar (user-avatar username)))))
 
 (defn new-user
-  "insert user into "
+  "insert user into db"
   [{db-conn :db :as db} {:keys [username password firstname lastname email] :as user}
    & {:keys [roles] :or {roles ["user"]}}] ;app-roles
   (if (not (mc/find-one-as-map db-conn (:users colls) {:username username}))
     (-> (mc/insert-and-return db-conn (:users colls) (create-new-user user)) normalize-user)))
 
-(defn ex-user-exists
-  "throws proper exception in case user exists"
-  [{old-name :username old-email :email} {new-name :username new-email :email}]
-  (cond
-    (and (= new-name old-name) (= new-email old-email)) (ex-user-exists [:username :email])
-    (= new-name old-name) (ex-user-exists :username)
-    (= new-email old-email) (ex-user-exists :email)))
-
 (defn is-user?
   "user check. returns nil or ex-info (in case a exception has to be thrown)"
-  [{db-conn :db :as db} {:keys [username password firstname lastname email]}]
-  (-> (mc/find-one-as-map
-       db-conn (:users colls)
-       {$or [{:username username} {:email email}]})
-      ex-user-exists))
+  [{db-conn :db :as db} {:keys [username password firstname lastname email] :as new-user}]
+  (if-let [old-user (mc/find-one-as-map
+                     db-conn (:users colls)
+                     {$or [{:username username} {:email email}]})]
+    (ex-user-exists old-user new-user)))
 
 (s/defn lookup-user
   "user authentication logic"

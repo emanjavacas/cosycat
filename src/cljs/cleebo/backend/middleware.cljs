@@ -32,7 +32,7 @@
       (let [projects (get-in db [:projects])]
         (if-not (some #{project-name} (keys projects))
           (do (re-frame/dispatch
-               [:session-error
+               [:register-session-error
                 {:code "Project not found!"
                  :message "These are not the projects you are looking for."}])
               db)

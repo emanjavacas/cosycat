@@ -16,8 +16,18 @@
       (re-frame/dispatch
        [:dispatch-annotation
         {:key key :value value}         ;ann-map
-        (mapv ->int hit-ids)            ;hit-ids
+        hit-ids            ;hit-ids
         (mapv ->int token-ids)]))))     ;token-ids
+
+(defn trigger-dispatch [marked-tokens deselect-on-close annotation-modal-show]
+  (when @deselect-on-close
+     (doseq [{:keys [hit-id id]} @marked-tokens]
+       (re-frame/dispatch
+        [:unmark-token
+         {:hit-id hit-id
+          :token-id id}])))
+  (swap! annotation-modal-show not)
+  (dispatch-annotations marked-tokens))
 
 (defn inner-thead [k1 k2]
   [:thead
@@ -25,8 +35,8 @@
     [:th {:style {:padding-bottom "10px" :text-align "left"}}  k1]
     [:th {:style {:padding-bottom "10px" :text-align "right"}} k2]]])
 
-(defn token-annotation-table [marked-tokens]
-  (fn [marked-tokens]
+(defn token-annotation-table [marked-tokens & args]
+  (fn [marked-tokens & args]
     [:table
      {:width "100%"}
      [:tbody
@@ -36,7 +46,10 @@
         [autocomplete-jq
          {:source :complex-source
           :class "form-control form-control-no-border"
-          :id "token-ann-key"}]]]]]))
+          :id "token-ann-key"
+          :on-key-press (fn [target]
+                          (when (= 13 (.-charCode target))
+                            (apply trigger-dispatch marked-tokens args)))}]]]]]))
 
 (defn token-counts-table [marked-tokens]
   (fn [marked-tokens]
@@ -67,7 +80,8 @@
        [bs/modal-body
         [:div.container-fluid
          [:div.row
-          ^{:key "ann-table"} [token-annotation-table marked-tokens]
+          ^{:key "ann-table"} [token-annotation-table
+                               marked-tokens deselect-on-close annotation-modal-show]
           [:hr]
           ^{:key "cnt-table"} [token-counts-table marked-tokens]]]]
        [bs/modal-footer
@@ -82,14 +96,7 @@
         [bs/button
          {:className "pull-right"
           :bsStyle "info"
-          :onClick #(do (when @deselect-on-close
-                          (doseq [{:keys [hit-id id]} @marked-tokens]
-                            (re-frame/dispatch
-                             [:unmark-token
-                              {:hit-id hit-id
-                               :token-id id}])))
-                        (swap! annotation-modal-show not)
-                        (dispatch-annotations marked-tokens))}
+          :onClick #(trigger-dispatch marked-tokens deselect-on-close annotation-modal-show)}
          "Submit"]]])))
 
 (defn annotation-modal-button []

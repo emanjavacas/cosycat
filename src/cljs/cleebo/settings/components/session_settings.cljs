@@ -26,8 +26,8 @@
 
 (defn query-opts-controller []
   (let [corpus (re-frame/subscribe [:settings :query :corpus])
-        context (re-frame/subscribe [:settings :query :context])
-        page-size (re-frame/subscribe [:settings :query :page-size])
+        context (re-frame/subscribe [:settings :query :query-opts :context])
+        page-size (re-frame/subscribe [:settings :query :query-opts :page-size])
         corpora (re-frame/subscribe [:corpora])
         query-opts-help (reagent/atom "")]
     (fn []

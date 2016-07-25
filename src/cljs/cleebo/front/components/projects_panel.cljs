@@ -23,9 +23,10 @@
     [:table [:tbody [:tr (doall (for [{username :username :as user} users]
                                   ^{:key username} [user-cell user]))]]]))
 
-(defn project-row [{:keys [name description creator users]}]
-  (let [creator-info (re-frame/subscribe [:user creator])]
-    (fn [{:keys [name description creator users]}]
+(defn project-row [{:keys [name description users]}]
+  (let [creator (first (filter #(= "creator" (:role %)) users))
+        creator-info (re-frame/subscribe [:user (:username creator)])]
+    (fn [{:keys [name description users]}]
       [bs/list-group-item
        {:onClick #(nav! (str "/project/" name))}
        (reagent/as-component

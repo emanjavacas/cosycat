@@ -57,32 +57,30 @@
 (defn highlight-annotation
   "if a given token has annotations it computes a color for the user with the most
   annotations in that token"
-  [{anns :anns :as token} project-name color-map]
-  (let [filt-anns (filter #(contains? color-map (:username %)) (vals (anns project-name)))
+  [{anns :anns :as token} color-map]
+  (let [filt-anns (filter #(contains? color-map (:username %)) (vals anns))
         [user _] (first (sort-by second > (frequencies (map :username filt-anns))))]
     (if-let [color (get color-map user)]
       (->box color))))
 
-(defn hit-token [{:keys [id word match marked anns]}]
-  (let [color-map (re-frame/subscribe [:filtered-users-colors])
-        active-project (re-frame/subscribe [:session :active-project])]
-    (fn [{:keys [id word match marked anns] :as token}]
-      (let [highlighted (if marked "highlighted " "")
-            color (when anns (highlight-annotation token @active-project @color-map))
-            is-match (when match "info")]
-        [:td
-         {:class (str highlighted is-match)
-          :style {:box-shadow color}
-          :data-id id}
-         word]))))
+(defn hit-token [{:keys [id word match marked anns]} color-map]
+  (fn [{:keys [id word match marked anns] :as token} color-map]
+    (let [highlighted (if marked "highlighted " "")
+          color (when anns (highlight-annotation token @color-map))
+          is-match (when match "info")]
+      [:td
+       {:class (str highlighted is-match)
+        :style {:box-shadow color}
+        :data-id id}
+       word])))
 
 (defn on-double-click [hit-idx]
   (fn [event]
     (aset event "cancelBubble" true)
     (re-frame/dispatch [:fetch-snippet hit-idx])))
 
-(defn results-row [hit-num tabindex  {:keys [hit id meta]}]
-  (fn [hit-num tabindex {:keys [hit id meta]}]
+(defn results-row [hit-num {:keys [hit id meta]} color-map]
+  (fn [hit-num {:keys [hit id meta]} color-map]
     [:tr {:data-hit id :style {:opacity (if (:marked meta) 0.6 1)}}
      (concat
       ;; checkbox
@@ -102,13 +100,14 @@
          (inc hit-num)]]]
       ;; hit
       (for [token hit]
-        ^{:key (str hit-num "-" (:id token))} [hit-token token]))]))
+        ^{:key (str hit-num "-" (:id token))} [hit-token token color-map]))]))
 
 (defn results-table []
   (let [results (re-frame/subscribe [:results])
         from (re-frame/subscribe [:project-session :query :results-summary :from])
         mouse-down? (reagent/atom false)
-        highlighted? (reagent/atom false)]
+        highlighted? (reagent/atom false)
+        color-map (re-frame/subscribe [:filtered-users-colors])]
     (fn []
       [bs/table
        {:responsive true
@@ -125,4 +124,4 @@
         (doall
          (for [[idx {:keys [hit meta id] :as hit-map}] (map-indexed vector @results)
                :let [hit-num (+ idx @from)]]
-           ^{:key hit-num} [results-row hit-num idx hit-map]))]])))
+           ^{:key hit-num} [results-row hit-num hit-map color-map]))]])))

@@ -16,9 +16,14 @@
    (reaction (get-in @db [:session :modals modal]))))
 
 (re-frame/register-sub
- :has-error?
+ :session-has-error?
+ (fn [db _]
+   (reaction (get-in @db [:session :session-error]))))
+
+(re-frame/register-sub
+ :component-has-error?
  (fn [db [_ component-id]]
-   (reaction (get-in @db [:session :has-error? component-id]))))
+   (reaction (get-in @db [:session :component-error component-id]))))
 
 (re-frame/register-sub
  :active-panel
@@ -50,7 +55,6 @@
  (fn [db [_ & path]]
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))]
-
      (reaction (get-in @project (into [:session] path))))))
 
 (re-frame/register-sub
@@ -149,7 +153,6 @@
          project (reaction (get-in @db [:projects @active-project]))
          users (reaction (get-users @db))
          users-map (reaction (zipmap (map :username @users) @users))]
-     (.log js/console (:users @project))
      (reaction (map #(get @users-map %) (map :username (:users @project)))))))
 
 (re-frame/register-sub

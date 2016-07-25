@@ -77,6 +77,6 @@
   [{clients :clients :as ws} payload &
    {:keys [source-client target-clients] :or {source-client "server"}}]
   (doseq [[target-client _] (seq @clients)
-          :when (or (and target-clients (some #{target-client} target-clients))
-                    (not= source-client target-client))]
+          :when (and (not (= source-client target-client))
+                     (if-not target-clients true (some #{target-client} target-clients)))]
     (send-client ws target-client payload)))

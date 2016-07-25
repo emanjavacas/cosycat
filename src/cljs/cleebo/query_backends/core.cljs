@@ -6,15 +6,15 @@
   {:blacklab make-blacklab-corpus
    :blacklab-server make-blacklab-server-corpus})
 
-(defn instantiate-corpus [corpus-type args-map]
+(defn instantiate-corpus [corpus-type args]
   (if-let [ctor (get ctors corpus-type)]
-    (ctor args-map)
+    (ctor args)
     (throw (js/Error. (str "Couldn't find corpus type" corpus-type)))))
 
-(defn maybe-get-corpus [mem corpus-name corpus-type args-map]
+(defn get-corpus [mem corpus-name corpus-type args]
   (if-let [corpus (get @mem corpus-name)]      
     corpus
-    (instantiate-corpus corpus-type args-map)))
+    (instantiate-corpus corpus-type args)))
 
 (let [mem (atom {})]
   (defn ensure-corpus
@@ -22,7 +22,7 @@
     [{:keys [name type args] :as corpus-config} & {:keys [force] :or {force false}}]
     (->> (if force
            (instantiate-corpus type args)
-           (maybe-get-corpus mem name type args))
+           (get-corpus mem name type args))
          (swap! mem assoc name)
          first
          val)))

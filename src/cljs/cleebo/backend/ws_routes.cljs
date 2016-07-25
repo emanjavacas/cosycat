@@ -63,5 +63,5 @@
  :ws
  standard-middleware
  (fn [db [_ payload]]
-   (re-frame/dispatch [:register-history [:ws] payload])
+   (re-frame/dispatch [:register-history [:ws-events] payload])
    (ws-handler db payload)))

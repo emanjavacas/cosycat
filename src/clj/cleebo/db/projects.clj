@@ -10,15 +10,14 @@
             [taoensso.timbre :as timbre]))
 
 (defn ex-user [username]
-  (ex-info :missing-user {:message "User doesn't exist" :data {:username username}}))
+  (ex-info "User doesn't exist" {:message :missing-user :data {:username username}}))
 
 (defn ex-project [project-name]
-  (ex-info :project-exists {:message "Project already exist" :data {:project project-name}}))
+  (ex-info "Project already exist" {:message :project-exists :data {:project project-name}}))
 
 (defn ex-user-project [username project-name]
-  (ex-info :user-not-in-project
-           {:message "User is not in project"
-            :data {:username username :project project-name}}))
+  (ex-info "User is not in project" {:message :user-not-in-project
+                                     :data {:username username :project project-name}}))
 
 (defn normalize-project [project]
   (dissoc project :_id))
@@ -41,7 +40,7 @@
   (let [missing-username (some #(when (not (is-user? db {:username %})) %) (map :username users))]
     (cond
       missing-username (throw (ex-user missing-username))
-      (not (is-project? db project-name)) (throw (ex-project project-name)))))
+      (is-project? db project-name) (throw (ex-project project-name)))))
 
 (s/defn new-project :- project-schema
   [{db-conn :db :as db} creator project-name description & [users]]

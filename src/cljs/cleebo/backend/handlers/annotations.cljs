@@ -27,8 +27,8 @@
 ;;; Incoming annotations
 (defn update-hit [hit anns]
   (mapv (fn [{token-id :id :as token}]
-          (if (contains? anns token-id)
-            (update token :anns deep-merge (get anns token-id))
+          (if-let [ann (get anns (->int token-id))]
+            (update token :anns deep-merge ann)
             token))
         hit))
 
@@ -48,11 +48,12 @@
 
 (defmethod add-annotations cljs.core/PersistentArrayMap
   [db {project :project hit-id :hit-id anns :anns}]
-  (let [results-by-id (get-in db [:projects project :session :results-by-id])]
+  (let [results-by-id (get-in db [:projects project :session :query :results-by-id])
+        path [:projects project :session :query :results-by-id hit-id :hit]]
     (if (contains? results-by-id hit-id)
-      (update-in db [:project project :session :results-by-id hit-id :hit] update-hit anns)
+      (update-in db path update-hit anns)
       (if-let [hit-id (find-hit-id (keys anns) (vals results-by-id))]
-        (update-in db [:project project :session :results-by-id hit-id :hit] update-hit anns)
+        (update-in db path update-hit anns)
         db))))
 
 (defmethod add-annotations cljs.core/PersistentVector
@@ -150,7 +151,6 @@
          corpus (get-in db [:projects project :session :query :results-summary :corpus])
          query (get-in db [:projects project :session :query :results-summary :query-str])         
          ann-map {:ann ann :username username :corpus corpus :query query}]
-     (.log js/console (apply package-annotation ann-map project args))
      (try (POST "/annotation/new"
                 {:params (apply package-annotation ann-map project args)
                  :handler dispatch-annotation-handler

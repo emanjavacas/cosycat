@@ -66,8 +66,7 @@
    :has-next has-next
    :corpus corpus})
 
-(defn ->results
-  [doc-infos hits from]
+(defn ->results [doc-infos hits from]
   (vec (map-indexed
         (fn [idx {doc-id :docPid :as hit}]
           (let [num (+ idx (->int from))
@@ -79,9 +78,18 @@
   {:maxcount 100000
    :waitfortotal "yes"})
 
-(deftype BlacklabServerCorpus [index server web-service]
+(declare on-counting)
+
+(defn clear-timeout [timeout-atom]
+  (.log js/console "Clearing" @timeout-atom)
+  (doseq [timeout-id @timeout-atom]
+    (js/clearTimeout timeout-id))
+  (reset! timeout-atom []))
+
+(deftype BlacklabServerCorpus [index server web-service on-counting-callback timeout-atom]
   p/Corpus
   (p/query [this query-str {:keys [context from page-size] :as query-opts}]
+    (clear-timeout timeout-atom)        ;if data is received, forget about counting timeout
     (p/handle-query
      this (bl-server-url server web-service index)
      (merge {:patt query-str
@@ -117,24 +125,51 @@
        :method jsonp)))
   
   (p/handler-data [corpus data]
-    (let [{{:keys [message code] :as error} :error :as cljs-data} (js->clj data :keywordize-keys true)]
+    (let [{{:keys [message code] :as error}
+           :error :as cljs-data} (js->clj data :keywordize-keys true)]
       (.log js/console cljs-data)
-      (if-not error
+      (if error
+        {:message message :code code}
         (let [{summary :summary hits :hits doc-infos :docInfos} cljs-data
-              {{from :first} :searchParam} summary
-              results-summary (->results-summary summary)
-              results (->results doc-infos hits from)]
-          {:results-summary results-summary
-           :results results
-           :status {:status :ok}})
-        {:message message :code code})))
+              {{from :first :as params} :searchParam counting? :stillCounting} summary]
+          (when counting?
+            (->> (on-counting {:uri (bl-server-url server web-service index)
+                               :params params
+                               :callback on-counting-callback})
+                 (swap! timeout-atom conj)))
+          {:results-summary (->results-summary summary)
+           :results (->results doc-infos hits from)
+           :status {:status :ok}}))))
  
   (p/error-handler-data [corpus data]
     (identity data)))
 
-(defn make-blacklab-server-corpus [{:keys [index server web-service] :as args}]
-  (->BlacklabServerCorpus index server web-service))
+(defn on-counting
+  [{:keys [uri params callback retry-count retried-count]
+    :or {retry-count 5 retried-count 0} :as opts}]
+  (when (< retried-count retry-count)
+    (js/setTimeout
+     (fn []
+       (jsonp uri
+              {:params (assoc params :number 0 :jsonp "callback")
+               :error-handler identity
+               :handler 
+               #(let [{error :error :as data} (js->clj % :keywordize-keys true)]
+                  (if-not error
+                    (let [{{counted-hits :numberOfHits counting? :stillCounting} :summary} data]
+                      (timbre/debug counting? counted-hits)
+                      (callback counted-hits)
+                      (when counting? (on-counting (update opts :retried-count inc))))
+                    (.log js/console "Error occurred when requesting counted hits")))}))
+     (+ 750 (* 500 retried-count)))))
 
-;; (def mbg-corpus (BlacklabServerCorpus.
-;;                  "mbg-index-small" "mbgserver.uantwerpen.be:8080" "blacklab-server-1.4-SNAPSHOT"))
-;; (p/query mbg-corpus "[word=\"was\"]" {:context 5 :from 5 :page-size 5})
+(defn make-blacklab-server-corpus
+  [{:keys [index server web-service on-counting-callback]
+    :or {on-counting-callback #(.log js/console %)}}]
+  (let [timeout-atom (atom [])]
+    (->BlacklabServerCorpus index server web-service on-counting-callback timeout-atom)))
+
+;; (def mbg-corpus
+;;   (BlacklabServerCorpus.
+;;    "mbg-index-small" "mbgserver.uantwerpen.be:8080" "blacklab-server-1.4-SNAPSHOT"))
+;; (p/query mbg-corpus "[word=\"was\"]" {:context 5 :from 0 :page-size 15})

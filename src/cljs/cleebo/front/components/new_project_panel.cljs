@@ -220,8 +220,8 @@
   (let [open? (reagent/atom false)
         users (re-frame/subscribe [:session :users])
         selected-users (reagent/atom {})
-        name-input-error (re-frame/subscribe [:has-error? name-input-id])
-        desc-input-error (re-frame/subscribe [:has-error? desc-input-id])
+        name-input-error (re-frame/subscribe [:component-has-error? name-input-id])
+        desc-input-error (re-frame/subscribe [:component-has-error? desc-input-id])
         user-projects (re-frame/subscribe [:session :user-info :projects])]
     (fn []
       [:div

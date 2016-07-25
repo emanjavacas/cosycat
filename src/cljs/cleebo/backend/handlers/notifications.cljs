@@ -23,7 +23,7 @@
  :notify
  (fn [db [_ {:keys [message by] :as data}]]
    (let [id (time-id)
-         delay (get-in db [:settings :notifications :delay])
+         delay (get-in db [:session :settings :notifications :delay])
          href (or (get-in (get-user db by) [:avatar :href]) "img/avatars/server.png")
          notification-payload {:data (assoc data :by {:href href}) :id id}]
      (js/setTimeout #(re-frame/dispatch [:drop-notification id]) delay)
