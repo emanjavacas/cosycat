@@ -16,9 +16,10 @@
 (def desc-input-id :new-project-desc-input)
 
 (defn label-component [title]
-  [:div.text-muted.pull-right
-   {:style {:padding-right "15px" :padding-top "5px"}}
-   [:label title]])
+  (fn [title]
+    [:div.text-muted.pull-right
+     {:style {:padding-right "15px" :padding-top "5px"}}
+     [:label title]]))
 
 (defn spacer []
   [:div.row {:style {:height "35px"}}])
@@ -50,20 +51,22 @@
      [label-component "Project Name"]]))
 
 (defn desc-input-component [desc-input-error]
-  (fn [desc-input-error]
-    [:div.row
-     {:style {:padding "0 15px 0 15px"}}
-     [:div.input-group
-      {:class (when @desc-input-error "has-error")
-       :style {:width "100%"}}
-      [:textarea.form-control
-       {:id "desc-input"
-        :placeholder "Write a nice description about your project. Seriously."
-        :rows "5"
-        :on-change (on-input-change desc-input-error desc-input-id)
-        :style {:resize "vertical"}}]]
-     [error-label desc-input-error]
-     [label-component "Add a Description"]]))
+  (let [chars (atom 0)]
+    (fn [desc-input-error]
+      [:div.row
+       {:style {:padding "0 15px 0 15px"}}
+       [:div.input-group
+        {:class (when @desc-input-error "has-error")
+         :style {:width "100%"}}
+        [:textarea.form-control
+         {:id "desc-input"
+          :placeholder "Write a nice description about your project. Seriously."
+          :rows "5"
+          :on-key-press #(reset! chars (count (by-id "desc-input")))
+          :on-change (on-input-change desc-input-error desc-input-id)
+          :style {:resize "vertical"}}]]
+       [error-label desc-input-error]
+       [label-component (str "Add a Description (" @chars " characters left)")]])))
 
 (defn move-cursor [dir els]
   (fn [idx]

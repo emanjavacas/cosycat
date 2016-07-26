@@ -24,7 +24,7 @@
             [cleebo.updates.page :refer [updates-panel]]
             [cleebo.debug.page :refer [debug-panel]]
             [cleebo.front.page :refer [front-panel]]
-            [cleebo.error.page :refer [error-panel]]            
+            [cleebo.error.page :refer [error-panel]]
             [cleebo.utils :refer [nbsp]]
             [cleebo.ajax-interceptors
              :refer [add-interceptor csrf-interceptor ajax-header-interceptor debug-interceptor]]
@@ -157,6 +157,8 @@
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])
+        session-error (re-frame/subscribe [:session-has-error?])
+        session-init (re-frame/subscribe [:session :init])
         ls-modal? (re-frame/subscribe [:modals :localstorage])]
     (fn []
       [:div
@@ -165,7 +167,12 @@
        [load-from-ls-modal ls-modal?]
        [:div.container-fluid
         {:style {:padding "75px 50px 0 50px"}}
-        (panels (or @active-panel :loading-panel))]])))
+        (timbre/debug @session-error)
+        (panels
+         (cond
+           @session-error :error-panel
+           (not @session-init) :loading-panel
+           :else @active-panel))]])))
 
 (defn mount-root []
   (reagent/render [main-panel] (.getElementById js/document "app")))

@@ -1,9 +1,11 @@
 (ns cleebo.error.page
   (:require [reagent.core :as reagent]
-            [re-frame.core :as re-frame]))
+            [re-frame.core :as re-frame]
+            [cleebo.routes :refer [nav!]]))
 
 (defn error-panel []
-  (let [error-data (re-frame/subscribe [:session :session-has-error?])]
+  (let [error-data (re-frame/subscribe [:session-has-error?])]
+    (.log js/console @error-data)
     (fn []
       (let [{:keys [code message]} @error-data]
         [:div.container
@@ -17,5 +19,6 @@
               code
               [:span.text-muted
                {:style {:padding "50px"}}
-               message]]]]]]]))))
+               message]]]
+            [:div.row.pull-right [:button {:on-click #(nav! "/")} "back to home"]]]]]]))))
 

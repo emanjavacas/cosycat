@@ -43,6 +43,7 @@
  (fn [_ [_ {:keys [me users corpora projects] :as payload}]]
    (-> payload
        (assoc :session (default-session :corpora corpora) :history default-history)
+       (assoc-in [:session :init] true)
        (assoc :projects (normalize-projects projects me)))))
 
 (re-frame/register-handler              ;load error
@@ -73,4 +74,4 @@
    (GET "/session"
         {:handler initialize-session-handler
          :error-handler initialize-session-error-handler})
-   db))
+   {:session {:init false}}))

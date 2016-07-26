@@ -21,6 +21,12 @@
    projects))
 
 (re-frame/register-handler
+ :remove-active-project
+ standard-middleware
+ (fn [db _]
+   (assoc-in db [:session :active-project] nil)))
+
+(re-frame/register-handler
  :set-active-project
  (conj standard-middleware check-project-exists)
  (fn [db [_ {:keys [project-name]}]]

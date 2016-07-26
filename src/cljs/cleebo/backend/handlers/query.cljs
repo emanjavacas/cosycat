@@ -4,8 +4,7 @@
             [cleebo.query-backends.core :refer [ensure-corpus]]
             [cleebo.query-backends.protocols :refer [query query-sort snippet]]
             [cleebo.query-parser :refer [missing-quotes]]
-            [cleebo.utils :refer [filter-marked-hits]]
-            [ajax.core :refer [GET]]
+            [cleebo.utils :refer [filter-marked-hits ->int]]
             [taoensso.timbre :as timbre]))
 
 (defn pager-next
@@ -33,13 +32,23 @@
     (merge (zipmap (map :id results) results) ;normalize results
            (filter-marked-hits old-results :has-marked? has-marked?))))
 
+(defn fetch-annotations-params [results]
+  (let [res (->> (for [{hit :hit id :id} results]
+                   [(->int (:id (first hit))) (->int (:id (last hit))) id])
+                 (apply map vector)
+                 (zipmap [:starts :ends :hit-ids]))]
+    (.log js/console (first (:starts res)) (number? (first (:starts res))))
+    res))
+
 (re-frame/register-handler
  :set-query-results
  standard-middleware
  (fn [db [_ {:keys [results-summary results status]}]]
+   (re-frame/dispatch [:fetch-annotations (fetch-annotations-params results)])
    (re-frame/dispatch [:stop-throbbing :results-frame])
+   (.log js/console (fetch-annotations-params results))
    (let [active-project (get-in db [:session :active-project])
-         path-fn (fn [k] [:projects active-project :session :query k])
+         path-fn (fn [key] [:projects active-project :session :query key])
          merge-old-results (merge-fn results :has-marked? true)]
      (-> db
          (assoc-in [:projects active-project :session :status] status)

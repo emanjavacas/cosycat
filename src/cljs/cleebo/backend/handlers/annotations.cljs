@@ -20,8 +20,8 @@
 ;;       :error-handler #(.log js/console "ERROR" %)})
 
 ;; (GET "/annotation/range"
-;;      {:params {:project "beat" :from 0 :size 20}
-;;       :handler #(.log js/console (merge-anns-by-token-id %))
+;;      {:params {:project "project3" :from 0 :size 20 :hit-id "Hi!"}
+;;       :handler #(.log js/console %)
 ;;       :error-handler #(.log js/console "ERROR" %)})
 
 ;;; Incoming annotations
@@ -71,8 +71,9 @@
    (let [project (get-in db [:session :active-project])]
      (GET "/annotation/page"
           {:params (assoc params :project project)
-           :handler (partial add-annotations db)
-           :error-handler #(.log js/console "Couldn't fetch anns" %)}))))
+           :handler #(re-frame/dispatch [:add-annotation %])
+           :error-handler #(.log js/console "Couldn't fetch anns" %)}))
+   db))
 
 ;;; Outgoing annotations
 (s/defn ^:always-validate make-annotation :- annotation-schema

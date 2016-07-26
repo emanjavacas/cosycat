@@ -39,7 +39,6 @@
 (defn handle-query
   "wrapper for ajax/jsonp queries that simplifies protocol implementations"
   [corpus url params & {:keys [method] :or {method GET}}]
-  (.log js/console params)
   (method url {:params params
                :handler (fn [data] (handler (handler-data corpus data)))
                :error-handler (fn [data] (error-handler (error-handler-data corpus data)))}))

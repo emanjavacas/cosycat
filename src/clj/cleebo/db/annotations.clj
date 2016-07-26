@@ -10,18 +10,17 @@
             [schema.coerce :as coerce]))
 
 ;;; Exceptions
-(defn ex-overwrite-span [scope]
+(defn ex-overwrite-span [source-scope scope]
   (ex-info "Attempt to overwrite span ann with token ann"
-           {:message :wrong-update :data {:scope scope}}))
+           {:message :wrong-update :data {:source-scope source-scope :scope scope}}))
 
-(defn ex-overwrite-token [scope]
+(defn ex-overwrite-token [source-scope scope]
   (ex-info "Attempt to overwrite token ann with span ann"
-           {:message :wrong-update :data {:scope scope}}))
+           {:message :wrong-update :data {:source-scope source-scope :scope scope}}))
 
 (defn ex-overlapping-span [source-scope scope]
   (ex-info "Overlapping span"
-           {:message :wrong-update
-            :data {:source-scope source-scope :scope scope}}))
+           {:message :wrong-update :data {:source-scope source-scope :scope scope}}))
 
 ;;; Checkers
 (declare fetch-span-annotation-by-key fetch-token-annotation-by-key)
@@ -39,15 +38,17 @@
 
 (defmethod check-insert "token"
   [{db-conn :db :as db} project {{scope :scope :as span} :span {key :key} :ann}]
+  (when-let [existing-token-annotation (fetch-token-annotation-by-key db project key span)]
+    (throw (ex-overwrite-token (get-in existing-token-annotation [:span :scope]) (:scope span))))
   (when-let [existing-span-annotation (fetch-span-annotation-by-key db project key span)]
-    (throw (ex-overwrite-span scope))))
+    (throw (ex-overwrite-span (get-in existing-span-annotation [:span :scope]) scope))))
 
 (defmethod check-insert "IOB"
   [{db-conn :db :as db} project {{{B :B O :O} :scope :as span} :span {key :key} :ann}]
   (when-let [existing-token-annotation (fetch-token-annotation-by-key db project key span)]
-    (throw (ex-overwrite-token span)))
+    (throw (ex-overwrite-token (get-in existing-token-annotation [:span :scope]) (:scope span))))
   (when-let [existing-span-annotation (fetch-span-annotation-by-key db project key span)]
-    (throw (ex-overwrite-span span))))
+    (throw (ex-overlapping-span (get-in existing-span-annotation [:span :scope]) (:scope span)))))
 
 ;;; Fetchers
 (defn fetch-annotation-by-id [{db-conn :db} project id]

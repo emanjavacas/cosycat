@@ -8,137 +8,141 @@
             [schema-generators.generators :as g]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
             [cleebo.components.db :refer [new-db colls clear-dbs]]
-            [cleebo.db.users :refer [new-user is-user? lookup-user remove-user]]
+            [cleebo.db.users :as users]
             [cleebo.db.annotations :as anns]
             [config.core :refer [env]]))
 
 (defonce db (component/start (new-db (:database-url env))))
-;; (do (clear-dbs db))
-(def force-int ((g/fmap inc) check-generators/int))
-
-(defn create-dummy-annotation [username & [n]]
-  (let [anns (map (fn [m] (assoc m :username username))
-                  (g/sample (+ 5 (or n 0)) annotation-schema {s/Int force-int}))]
-    (if n
-      (vec (take n anns))
-      (peek (vec anns)))))
-
+(def project "_test_project")
 (def payload
   {:hit-id  [5377 9569],
    :ann-map [{:ann      {:key "a", :value "a"},
               :username "user",
-              :project  "user-playground",
-              :span     {:type "token", :scope 166}, :timestamp 1461920859355}
+              :span     {:type "token", :scope 166}
+              :corpus "my-corpus"
+              :query "my-query"
+              :timestamp 1461920859355}
              {:ann {:key "a", :value "a"},
               :username "user",
-              :project "user-playground",
-              :span {:type "token", :scope 297},
+              :span {:type "token", :scope 297}
+              :corpus "my-corpus"
+              :query "my-query"
               :timestamp 1461920859357}]})
 
 (def token-ann
   {:ann {:key "a", :value "a"},
    :username "user",
-   :project  "user-playground",
    :span     {:type "token", :scope 166},
+   :corpus "my-corpus"
+   :query "my-query"
    :timestamp 1461920859355})
 
 (def IOB-ann
   {:ann {:key "a", :value "a"},
    :username "user",
-   :project  "user-playground",
    :span     {:type "IOB", :scope {:B 160 :O 165}}
+   :corpus "my-corpus"
+   :query "my-query"   
    :timestamp 1461920859355})
 
 (def overlapping-IOB-IOB-ann
   {:ann {:key "a", :value "a"},
    :username "user",
-   :project  "user-playground",
    :span     {:type "IOB", :scope {:B 159 :O 162}}
-   :timestamp 1461920859355})
-
-(def overlapping-IOB-token-ann
-  {:ann {:key "a", :value "a"},
-   :username "user",
-   :project  "user-playground",
-   :span     {:type "IOB", :scope {:B 164 :O 168}}
+   :corpus "my-corpus"
+   :query "my-query" 
    :timestamp 1461920859355})
 
 (def overlapping-token-IOB-ann
   {:ann {:key "a", :value "a"},
    :username "user",
-   :project  "user-playground",
-   :span     {:type "token", :scope 164},
+   :span     {:type "IOB", :scope {:B 164 :O 168}}
+   :corpus "my-corpus"
+   :query "my-query"     
    :timestamp 1461920859355})
 
-(deftest annotations-db-test
+(def overlapping-IOB-token-ann
+  {:ann {:key "a", :value "a"},
+   :username "user",
+   :span     {:type "token", :scope 164},
+   :corpus "my-corpus"
+   :query "my-query"  
+   :timestamp 1461920859355})
+
+(deftest insert-annotation-test
   (testing "insert token annotation"
-    (let [ann-out (anns/new-token-annotation db token-ann)]
+    (let [ann-out (anns/insert-annotation db project token-ann)]
       (is (nil? (s/check annotation-schema ann-out)))))
   (testing "find token annotation"
-    (is (let [{ann-id :ann-id} (anns/find-ann-id db token-ann)
-              retrieved-ann (anns/find-ann-by-id db ann-id)]
-          (nil? (s/check annotation-schema retrieved-ann)))))
+    (is (let [k (get-in token-ann [:ann :key]) 
+              span (:span token-ann)
+              ann (anns/fetch-token-annotation-by-key db project k span)]
+          (nil? (s/check annotation-schema ann)))))
   (testing "insert IOB annotation"
-    (let [ann-out (anns/new-token-annotation db IOB-ann)]
-      (is (nil? (s/check annotation-schema ann-out)))))
+    (let [k (get-in IOB-ann [:ann :key])
+          span (:span IOB-ann)]
+      (is (nil? (s/check annotation-schema (anns/insert-annotation db project IOB-ann))))))
   (testing "find IOB annotation"
-    (is (let [{ann-id :ann-id} (anns/find-ann-id db IOB-ann)
-              retrieved-ann (anns/find-ann-by-id db ann-id)]
-          (nil? (s/check annotation-schema retrieved-ann)))))
+    (is (let [k (get-in IOB-ann [:ann :key]) 
+              span (:span IOB-ann)
+              ann (anns/fetch-span-annotation-by-key db project k span)]
+          (nil? (s/check annotation-schema ann)))))
   (testing "attempt IOB overlapping IOB annotation"
-    (is (= (-> (try (anns/new-token-annotation db overlapping-IOB-IOB-ann)
+    (is (= (-> (try (anns/insert-annotation db project overlapping-IOB-IOB-ann)
                     (catch clojure.lang.ExceptionInfo e
                       (ex-data e)))
-               (select-keys [:old-scope :new-scope]))
-           {:old-scope (get-in IOB-ann [:span :scope])
-            :new-scope (get-in overlapping-IOB-IOB-ann [:span :scope])})))
+              :data
+              (select-keys [:source-scope :scope]))
+           {:source-scope (get-in IOB-ann [:span :scope])
+            :scope (get-in overlapping-IOB-IOB-ann [:span :scope])})))
   (testing "attempt token overlapping IOB annotation"
-    (is (= (-> (try (anns/new-token-annotation db overlapping-token-IOB-ann)
+    (is (= (-> (try (anns/insert-annotation db project overlapping-token-IOB-ann)
                     (catch clojure.lang.ExceptionInfo e
                       (ex-data e)))
-               (select-keys [:scope]))
-           {:scope (get-in IOB-ann [:span :scope])})))
+               :data
+               (select-keys [:scope :source-scope]))
+           {:source-scope (get-in token-ann [:span :scope])
+            :scope (get-in overlapping-token-IOB-ann [:span :scope])})))
   (testing "attempt IOB overlapping token annotation"
-    (is (= (-> (try (anns/new-token-annotation db overlapping-IOB-token-ann)
+    (is (= (-> (try (anns/insert-annotation db project overlapping-IOB-token-ann)
                     (catch clojure.lang.ExceptionInfo e
                       (ex-data e)))
-               (select-keys [:span :scope]))
-           {:scope (get-in token-ann [:span :scope])}))))
+               :data               
+               (select-keys [:source-scope :scope]))
+           {:source-scope (get-in IOB-ann [:span :scope])
+            :scope (get-in overlapping-IOB-token-ann [:span :scope])}))))
 
 (def sample-user
   {:username "foo-user" :password "pass"
    :firstname "FOO" :lastname "USER" :email "foo@bar.com"})
 
 (deftest users-db-test
-  (let [new-user-out (new-user db sample-user)
-        new-user-exisiting-out (new-user db sample-user)
-        is-user?-out (is-user? db sample-user)
-        lookup-user-out (lookup-user db {:username "foo@bar.com" :password "pass"})
-        remove-user-existing-out (remove-user db "foo-user")
-        remove-user-out (remove-user db "foo-user")
-        new-user-roles-out (new-user db sample-user :roles ["admin"])
-        _ (remove-user db "foo-user")
-        new-user-multiple-roles-out (new-user db sample-user :roles ["admin" "user"])
-        _ (remove-user db "foo-user")]
-    (testing "adding new user"
-      (is (= (select-keys new-user-out [:username :roles])
-             {:username "foo-user" :roles #{"user"}})))
-    (testing "adding existin user"
-      (is (= new-user-exisiting-out
-             nil)))
-    (testing "existing user"
-      (is (= is-user?-out
-             true)))
-    (testing "user lookup"
-      (is (= (select-keys lookup-user-out [:username :roles])
-             {:username "foo-user" :roles #{"user"}})))
-    (testing "remove existing user"
-      (is (not (nil? remove-user-existing-out))))
-    (testing "remove non-existing user"
-      (is (nil? remove-user-out)))
-    (testing "user with admin role"
-      (is (= (select-keys new-user-roles-out [:username :roles])
-             {:username "foo-user" :roles #{"admin"}})))
-    (testing "user with multiple roles"
-      (is (= (select-keys new-user-multiple-roles-out [:username :roles])
-             {:username "foo-user" :roles #{"admin" "user"}})))))
+  (testing "adding new user"
+    (is (= (-> (users/new-user db sample-user)
+               (select-keys [:username :roles]))
+           {:username "foo-user" :roles #{"user"}})))
+  (testing "adding existing user"
+    (is (= (-> (try (users/new-user db sample-user)
+                    (catch clojure.lang.ExceptionInfo e
+                      (ex-data e)))
+               :message)           
+           :user-exists)))
+  (testing "existing user"
+    (is (= (boolean (users/is-user? db sample-user)) true)))
+  (testing "user lookup"
+    (is (= (-> (users/lookup-user db sample-user)
+               (select-keys [:username :roles]))
+           {:username "foo-user" :roles #{"user"}})))
+  (testing "remove existing user"
+    (is (not (nil? (users/remove-user db "foo-user")))))
+  (testing "remove non-existing user"
+    (is (nil? (do (users/remove-user db "foo-user") (users/is-user? db {:username "username"})))))
+  (testing "user with admin role"
+    (is (= (-> (users/new-user db (assoc sample-user :roles ["admin"]))
+               (select-keys [:username :roles]))
+           {:username "foo-user" :roles #{"admin"}})))
+  (users/remove-user db "foo-user")
+  (testing "user with multiple roles"
+    (is (= (-> (users/new-user db (assoc sample-user :roles ["admin" "user"]))
+               (select-keys [:username :roles]))
+           {:username "foo-user" :roles #{"admin" "user"}}))))

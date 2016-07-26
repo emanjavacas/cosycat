@@ -17,6 +17,17 @@
      (= new-name old-name) (ex-user-exists :username)
      (= new-email old-email) (ex-user-exists :email))))
 
+(defn is-user?
+  [{db-conn :db :as db} {:keys [username firstname lastname email]}]
+  (some-> (mc/find-one-as-map db-conn (:users colls) {$or [{:username username} {:email email}]})
+          normalize-user))
+
+(defn check-user-exists
+  "user check. returns nil or ex-info (in case a exception has to be thrown)"
+  [{db-conn :db :as db} {:keys [username email] :as new-user}]
+  (if-let [old-user (is-user? db new-user)]
+    (throw (ex-user-exists old-user new-user))))
+
 (defn normalize-user
   "transforms db user doc into public user (no private info)"
   [user & ks] 
@@ -25,7 +36,7 @@
 
 (defn create-new-user
   "transforms client user payload into a db user doc"
-  [{:keys [username password roles] :as user-payload}]
+  [{:keys [username password roles] :as user-payload :or {roles ["user"]}}]
   (let [now (System/currentTimeMillis)]
     (-> user-payload
         (dissoc :csrf)
@@ -34,33 +45,21 @@
 
 (defn new-user
   "insert user into db"
-  [{db-conn :db :as db} {:keys [username password firstname lastname email] :as user}
-   & {:keys [roles] :or {roles ["user"]}}] ;app-roles
-  (if (not (mc/find-one-as-map db-conn (:users colls) {:username username}))
-    (-> (mc/insert-and-return db-conn (:users colls) (create-new-user user)) normalize-user)))
-
-(defn is-user?
-  "user check. returns nil or ex-info (in case a exception has to be thrown)"
-  [{db-conn :db :as db} {:keys [username password firstname lastname email] :as new-user}]
-  (if-let [old-user (mc/find-one-as-map
-                     db-conn (:users colls)
-                     {$or [{:username username} {:email email}]})]
-    (ex-user-exists old-user new-user)))
+  [{db-conn :db :as db} user]
+  (check-user-exists db user)
+  (-> (mc/insert-and-return db-conn (:users colls) (create-new-user user)) normalize-user))
 
 (s/defn lookup-user
   "user authentication logic"
-  [{db-conn :db :as db} {:keys [username password]}] :- (s/maybe user-schema)
-  (if-let [user (mc/find-one-as-map
-                 db-conn (:users colls)
-                 {$or [{:username username} {:email username}]})]
-    (if (hashers/check password (:password user))
-      (-> user normalize-user))))
+  [{db-conn :db :as db} {:keys [username email password] :as user}] :- (s/maybe user-schema)
+  (if-let [db-user (mc/find-one-as-map db-conn (:users colls) {$or [{:username username} {:email email}]})]
+    (if (hashers/check password (:password db-user))
+      (-> db-user normalize-user))))
 
 (defn remove-user
   "remove user from database"           ;TODO: remove all info related to user
   [{db-conn :db :as db} username]
-  (if (is-user? db {:username username})
-    (mc/remove db-conn (:users colls) {:username username})))
+  (mc/remove db-conn (:users colls) {:username username}))
 
 (defn user-logout
   "function called on user logout event"

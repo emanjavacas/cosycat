@@ -93,23 +93,28 @@
   (check-user-rights db username project :read)
   {:hit-id hit-id
    :project project
-   :anns (->> (fetch-annotations db project from size) (apply normalize-anns))})
+   :anns (->> (fetch-annotations db project (->int from) (->int size)) (apply normalize-anns))})
 
 (defn fetch-annotation-page-handler
-  [{{project :project starts :starts ends :ends hit-ids :hit-ids} :params
+  [{{project :project starts :starts ends :ends hit-ids :hit-ids :as params} :params
     {{username :username} :identity} :session
     {db :db} :components}]
   (assert-ex-info
    (= (count starts) (count ends)) "Wrong argument lengths"
    {:message :bad-argument :data {:starts (count starts) :ends (count ends)}})
   (check-user-rights db username project :read)
-  (mapv (fn [start end hit-id]
-          (let [from (->int start)
-                size (- (->int end) from)]
-            {:hit-id hit-id
-             :project project
-             :anns (->> (fetch-annotations db project from size) (apply normalize-anns))}))
-        starts ends hit-ids))
+  (clojure.pprint/pprint params)
+  (->> (map (fn [start end hit-id]
+              (let [from (->int start)
+                    size (- (->int end) from)
+                    anns (->> (fetch-annotations db project from size) (apply normalize-anns))]
+                (when anns
+                  {:hit-id hit-id
+                   :project project
+                   :anns anns})))
+            (vals starts) (vals ends) (vals hit-ids))
+       (filter identity)
+       vec))
 
 ;;; Routes
 (defn annotation-routes []

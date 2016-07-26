@@ -34,12 +34,13 @@
                            (s/optional-key :date)    s/Any}})
 
 (def session-schema
-  {:active-panel s/Keyword
+  {:init s/Bool
+   :active-panel s/Keyword
    :active-project s/Any
    :settings settings-schema            ;mutable global session-settings (in case outside project)
    (s/optional-key :notifications) {s/Any notification-schema}
    (s/optional-key :modals)     {s/Keyword s/Any}
-   (s/optional-key :session-error) {:message s/Str (s/optional-key :code) s/Str}
+   (s/optional-key :session-error) (s/maybe {:message s/Str (s/optional-key :code) s/Str})
    (s/optional-key :throbbing?) {s/Any s/Bool}
    (s/optional-key :component-error) {s/Keyword s/Any}})
 

@@ -2,7 +2,9 @@
   (:require [cleebo.ajax-jsonp :refer [jsonp]]
             [cleebo.query-backends.protocols :as p]
             [cleebo.utils :refer [->int]]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre]
+            [cljs.core.async :refer [chan >! <! put! close! timeout sliding-buffer take!]])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (defn bl-server-url
   "builds the blacklab server url"
@@ -80,16 +82,9 @@
 
 (declare on-counting)
 
-(defn clear-timeout [timeout-atom]
-  (.log js/console "Clearing" @timeout-atom)
-  (doseq [timeout-id @timeout-atom]
-    (js/clearTimeout timeout-id))
-  (reset! timeout-atom []))
-
-(deftype BlacklabServerCorpus [index server web-service on-counting-callback timeout-atom]
+(deftype BlacklabServerCorpus [index server web-service on-counting-callback c]
   p/Corpus
   (p/query [this query-str {:keys [context from page-size] :as query-opts}]
-    (clear-timeout timeout-atom)        ;if data is received, forget about counting timeout
     (p/handle-query
      this (bl-server-url server web-service index)
      (merge {:patt query-str
@@ -125,18 +120,14 @@
        :method jsonp)))
   
   (p/handler-data [corpus data]
-    (let [{{:keys [message code] :as error}
-           :error :as cljs-data} (js->clj data :keywordize-keys true)]
-      (.log js/console cljs-data)
+    (let [{{:keys [message code] :as error} :error :as cljs-data} (js->clj data :keywordize-keys true)
+          uri (bl-server-url server web-service index)]
+      ;; (put! c :kill)
       (if error
         {:message message :code code}
         (let [{summary :summary hits :hits doc-infos :docInfos} cljs-data
               {{from :first :as params} :searchParam counting? :stillCounting} summary]
-          (when counting?
-            (->> (on-counting {:uri (bl-server-url server web-service index)
-                               :params params
-                               :callback on-counting-callback})
-                 (swap! timeout-atom conj)))
+          ;; (when counting? (on-counting {:uri uri :params params :callback on-counting-callback}))
           {:results-summary (->results-summary summary)
            :results (->results doc-infos hits from)
            :status {:status :ok}}))))
@@ -144,30 +135,35 @@
   (p/error-handler-data [corpus data]
     (identity data)))
 
-(defn on-counting
-  [{:keys [uri params callback retry-count retried-count]
-    :or {retry-count 5 retried-count 0} :as opts}]
-  (when (< retried-count retry-count)
-    (js/setTimeout
-     (fn []
-       (jsonp uri
-              {:params (assoc params :number 0 :jsonp "callback")
-               :error-handler identity
-               :handler 
-               #(let [{error :error :as data} (js->clj % :keywordize-keys true)]
-                  (if-not error
-                    (let [{{counted-hits :numberOfHits counting? :stillCounting} :summary} data]
-                      (timbre/debug counting? counted-hits)
-                      (callback counted-hits)
-                      (when counting? (on-counting (update opts :retried-count inc))))
-                    (.log js/console "Error occurred when requesting counted hits")))}))
-     (+ 750 (* 500 retried-count)))))
+(defn on-counting-handler [c callback]
+  (fn [data]
+    (let [{error :error :as cljs-data} (js->clj data :keywordize-keys true)]
+      (if-not error
+        (let [{{query-size :numberOfHits counting? :stillCounting} :summary} cljs-data]
+          (callback query-size counting?)
+          (put! c {:query-size query-size :stillCounting counting?}))))))
+
+(defn empty-chan [c]
+  (loop []
+    (when-not (zero? (count (.-buf c)))
+      (take! c #(.log js/console "Droping element" %))
+      (recur))))
+
+(defn on-counting [c {:keys [uri params callback retry-count] :or {retry-count 5}}]
+  (go-loop [retried-count 0]
+    (when (< retried-count retry-count)
+      (when-let [{:keys [query-size counting?] :as payload} (<! c)]
+        (if (= payload :kill)
+          (empty-chan c)
+          (do (<! (timeout (+ 750 (* 500 retried-count))))
+              (jsonp uri {:params (assoc params :number 0 :jsonp "callback")
+                          :error-handler identity
+                          :handler (on-counting-handler c callback)})
+              (recur (inc retried-count))))))))
 
 (defn make-blacklab-server-corpus
-  [{:keys [index server web-service on-counting-callback]
-    :or {on-counting-callback #(.log js/console %)}}]
-  (let [timeout-atom (atom [])]
-    (->BlacklabServerCorpus index server web-service on-counting-callback timeout-atom)))
+  [{:keys [index server web-service on-counting-callback] :or {on-counting-callback #(.log js/console %)}}]
+  (->BlacklabServerCorpus index server web-service on-counting-callback (chan (sliding-buffer 2))))
 
 ;; (def mbg-corpus
 ;;   (BlacklabServerCorpus.
