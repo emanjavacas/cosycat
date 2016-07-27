@@ -76,13 +76,17 @@
             (normalize-bl-hit hit num doc)))
         hits)))
 
+(defn parse-info-data [data]
+  (let [parser (js/DOMParser.)]
+    (js->clj (.parseFromString parser data "text/xml"))))
+
 (def bl-default-params
   {:maxcount 100000
    :waitfortotal "no"})
 
 (declare on-counting clear-timeout maybe-reset-last-action set-last-action get-sort-params)
 
-(deftype BlacklabServerCorpus [index server web-service on-counting-callback last-action timeout-ids]
+(deftype BlacklabServerCorpus [index server web-service on-counting-cb last-action timeout-ids]
   p/Corpus
   (p/query [this query-str {:keys [context from page-size] :as query-opts}]
     (clear-timeout timeout-ids)
@@ -125,20 +129,26 @@
               bl-default-params)
        :method jsonp)))
   
-  (p/handler-data [corpus data]
+  (p/transform-data [corpus data]
     (let [{{:keys [message code] :as error} :error :as cljs-data} (js->clj data :keywordize-keys true)
           uri (bl-server-url server web-service index)]
       (if error
         {:message message :code code}
         (let [{summary :summary hits :hits doc-infos :docInfos} cljs-data
               {{from :first :as params} :searchParam counting? :stillCounting} summary]
-          (when counting? (on-counting timeout-ids {:uri uri :params params :callback on-counting-callback}))
+          (when counting? (on-counting timeout-ids {:uri uri :params params :callback on-counting-cb}))
           {:results-summary (->results-summary summary)
            :results (->results doc-infos hits from)
            :status {:status :ok}}))))
  
-  (p/error-handler-data [corpus data]
-    (identity data)))
+  (p/transform-error-data [corpus data]
+    (identity data))
+
+  (p/get-corpus-info [corpus]
+    (let [uri (bl-server-url server web-service index :resource "")]
+      (jsonp uri {:params {}
+                  :handler #(let [parsed-data (parse-info-data %)] (p/handle-info parsed-data))
+                  :error-handler #(.log js/console)}))))
 
 (defn clear-timeout [timeout-ids]
   (doseq [timeout-id @timeout-ids]
@@ -184,6 +194,8 @@
     (->BlacklabServerCorpus index server web-service on-counting-callback last-action timeout-ids)))
 
 ;; (def mbg-corpus
-;;   (BlacklabServerCorpus.
-;;    "mbg-index-small" "mbgserver.uantwerpen.be:8080" "blacklab-server-1.4-SNAPSHOT"))
+;;   (make-blacklab-server-corpus
+;;    {:index "mbg-index-small" :server "mbgserver.uantwerpen.be:8080" :web-service "blacklab-server-1.4-SNAPSHOT"}))
 ;; (p/query mbg-corpus "[word=\"was\"]" {:context 5 :from 0 :page-size 15})
+;(get-corpus-info mbg-corpus)
+

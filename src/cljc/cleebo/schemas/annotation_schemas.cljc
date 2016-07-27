@@ -27,7 +27,7 @@
 
 (def annotation-schema
   {:ann {:key s/Str :value s/Str}
-   :username s/Str
+   #?(:clj :username :cljs (s/optional-key :username)) s/Str ;we don't send username along
    :timestamp s/Int
    :span span-schema
    :corpus s/Str

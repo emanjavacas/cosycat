@@ -95,7 +95,7 @@
    {:class "success"}
    [:div.illustration
     [user-thumb href]]
-   [:div.text
+   [:div.text.pull-right
     {:style {:text-align "justify" :word-spacing "-2px"}}
     [:div.title message]
     [:div.text (.toLocaleString date "en-US")]]])
