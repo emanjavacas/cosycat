@@ -17,6 +17,12 @@
      (= new-name old-name) (ex-user-exists :username)
      (= new-email old-email) (ex-user-exists :email))))
 
+(defn normalize-user
+  "transforms db user doc into public user (no private info)"
+  [user & ks] 
+  (-> (apply dissoc user :password :_id ks)
+      (update-in [:roles] (partial apply hash-set))))
+
 (defn is-user?
   [{db-conn :db :as db} {:keys [username firstname lastname email]}]
   (some-> (mc/find-one-as-map db-conn (:users colls) {$or [{:username username} {:email email}]})
@@ -27,12 +33,6 @@
   [{db-conn :db :as db} {:keys [username email] :as new-user}]
   (if-let [old-user (is-user? db new-user)]
     (throw (ex-user-exists old-user new-user))))
-
-(defn normalize-user
-  "transforms db user doc into public user (no private info)"
-  [user & ks] 
-  (-> (apply dissoc user :password :_id ks)
-      (update-in [:roles] (partial apply hash-set))))
 
 (defn create-new-user
   "transforms client user payload into a db user doc"

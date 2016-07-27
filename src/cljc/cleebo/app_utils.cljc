@@ -55,6 +55,8 @@
               item))]
     (if (vector? coll) (vec s) s)))
 
+(defn atom? [o] (instance? #?(:clj clojure.lang.Atom :cljs cljs.core/Atom) o))
+
 ;;; LOGIC
 (defn invalid-project-name [s]
   #?(:clj  (re-find #"[ ^\W+]" s)
