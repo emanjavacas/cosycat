@@ -40,15 +40,14 @@
   "handles errors within the success callback to ease polymorphic payloads (bulk inserts)"
   [db ws username project {span :span :as ann-map} hit-id]
   (try (check-user-rights db username project :write)
-       (let [new-ann (insert-annotation db project ann-map)
-             data {:anns (normalize-anns new-ann) :project project :hit-id hit-id}
-             users (->> (find-project-by-name db project) :users (map :username))]
+       (let [users (->> (find-project-by-name db project) :users (map :username))
+             new-ann (insert-annotation db project (assoc ann-map :username username))
+             data {:anns (normalize-anns new-ann) :project project :hit-id hit-id}]
          (send-clients ws {:type :annotation :data data} :source-client username :target-clients users)
          {:status :ok :data data})
        (catch clojure.lang.ExceptionInfo e
-         (let [{:keys [message data]} (ex-data e)]
-           (clojure.pprint/pprint (ex-data e))
-           {:status :error :message message :data (assoc data :hit-id hit-id :span span)}))
+         (let [{:keys [message data]} (bean e)]
+           {:status :error :message message :data (assoc data :span span)}))
        (catch Exception e
          (let [{message :message ex :class} (bean e)]
            {:status :error :message message :data {:exception ex :hit-id hit-id :span span}}))))
@@ -74,14 +73,14 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (try (check-user-rights db username project :update)
-       (let [new-ann (update-annotation db project (assoc update-map :username username))
-             data {:anns (normalize-anns new-ann) :project project :hit-id hit-id}
-             users (->> (find-project-by-name db project) :users (map :username))]
+       (let [users (->> (find-project-by-name db project) :users (map :username))
+             new-ann (update-annotation db project (assoc update-map :username username))
+             data {:anns (normalize-anns new-ann) :project project :hit-id hit-id}]
          (send-clients ws {:type :annotation :data data} :source-client username :target-clients users)
          {:status :ok :data data})
        (catch clojure.lang.ExceptionInfo e
-         (let [{:keys [message data]} (ex-data e)]
-           {:status :error :message message :data data :e (str e)}))
+         (let [{:keys [message data]} (bean e)]
+           {:status :error :message message :data data}))
        (catch Exception e
          (let [{message :message ex :class} (bean e)]
            {:status :error :message message :data {:id id :exception ex}}))))

@@ -34,7 +34,7 @@
   (re-frame/dispatch
    [:query-error
     {:message "A Jsonp timeout error occurred. This can have various causes."
-     :code "Unrecognized query error"}]))
+     :code (str "Unrecognized query error" ": " data)}]))
 
 (defn handle-query
   "wrapper for ajax/jsonp queries that simplifies protocol implementations"

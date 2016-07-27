@@ -78,13 +78,16 @@
 
 (def bl-default-params
   {:maxcount 100000
-   :waitfortotal "yes"})
+   :waitfortotal "no"})
 
-(declare on-counting)
+(declare on-counting clear-timeout maybe-reset-last-action set-last-action get-sort-params)
 
-(deftype BlacklabServerCorpus [index server web-service on-counting-callback c]
+(deftype BlacklabServerCorpus [index server web-service on-counting-callback last-action timeout-ids]
   p/Corpus
   (p/query [this query-str {:keys [context from page-size] :as query-opts}]
+    (clear-timeout timeout-ids)
+    (maybe-reset-last-action last-action {:action-id query-str})
+    (.log js/console "last-action" @last-action)
     (p/handle-query
      this (bl-server-url server web-service index)
      (merge {:patt query-str
@@ -92,14 +95,17 @@
              :first from
              :number page-size
              :jsonp "callback"}
+            (when-let [sort-params (get-sort-params last-action)]
+              {:sort (apply bl-server-sort-str sort-params)})
             bl-default-params)
      :method jsonp))
 
   (p/query-sort [this query-str {:keys [context from page-size]} sort-opts filter-opts]
     (let [sort-str (bl-server-sort-str sort-opts filter-opts)]
+      (set-last-action last-action {:action-id query-str :action :sort :params [sort-opts filter-opts]})
       (p/handle-query
        this (bl-server-url server web-service index)
-       (merge {:patt (js/encodeURIComponent query-str)
+       (merge {:patt query-str
                :wordsaroundhit context
                :first from
                :number page-size
@@ -122,12 +128,11 @@
   (p/handler-data [corpus data]
     (let [{{:keys [message code] :as error} :error :as cljs-data} (js->clj data :keywordize-keys true)
           uri (bl-server-url server web-service index)]
-      ;; (put! c :kill)
       (if error
         {:message message :code code}
         (let [{summary :summary hits :hits doc-infos :docInfos} cljs-data
               {{from :first :as params} :searchParam counting? :stillCounting} summary]
-          ;; (when counting? (on-counting {:uri uri :params params :callback on-counting-callback}))
+          (when counting? (on-counting timeout-ids {:uri uri :params params :callback on-counting-callback}))
           {:results-summary (->results-summary summary)
            :results (->results doc-infos hits from)
            :status {:status :ok}}))))
@@ -135,35 +140,48 @@
   (p/error-handler-data [corpus data]
     (identity data)))
 
-(defn on-counting-handler [c callback]
-  (fn [data]
-    (let [{error :error :as cljs-data} (js->clj data :keywordize-keys true)]
-      (if-not error
-        (let [{{query-size :numberOfHits counting? :stillCounting} :summary} cljs-data]
-          (callback query-size counting?)
-          (put! c {:query-size query-size :stillCounting counting?}))))))
+(defn clear-timeout [timeout-ids]
+  (doseq [timeout-id @timeout-ids]
+    (js/clearTimeout timeout-id))
+  (reset! timeout-ids []))
 
-(defn empty-chan [c]
-  (loop []
-    (when-not (zero? (count (.-buf c)))
-      (take! c #(.log js/console "Droping element" %))
-      (recur))))
+(defn on-counting
+  [timeout-ids {:keys [uri params callback retry-count retried-count]
+                 :or {retry-count 5 retried-count 0} :as opts}]
+  (when (< retried-count retry-count)
+    (->> (js/setTimeout
+          (fn []
+            (jsonp uri
+                   {:params (assoc params :number 0 :jsonp "callback")
+                    :error-handler identity
+                    :handler 
+                    #(let [{error :error :as data} (js->clj % :keywordize-keys true)]
+                       (if-not error
+                         (let [{{query-size :numberOfHits counting? :stillCounting} :summary} data]
+                           (timbre/debug counting? query-size)
+                           (callback query-size)
+                           (when counting? (on-counting timeout-ids (update opts :retried-count inc))))
+                         (timbre/info "Error occurred when requesting counted hits")))}))
+          (+ 1000 (* 1500 retried-count)))
+         (swap! timeout-ids conj))))
 
-(defn on-counting [c {:keys [uri params callback retry-count] :or {retry-count 5}}]
-  (go-loop [retried-count 0]
-    (when (< retried-count retry-count)
-      (when-let [{:keys [query-size counting?] :as payload} (<! c)]
-        (if (= payload :kill)
-          (empty-chan c)
-          (do (<! (timeout (+ 750 (* 500 retried-count))))
-              (jsonp uri {:params (assoc params :number 0 :jsonp "callback")
-                          :error-handler identity
-                          :handler (on-counting-handler c callback)})
-              (recur (inc retried-count))))))))
+(defn maybe-reset-last-action [last-action {:keys [action-id]}]
+  (if-not (= action-id (:action-id @last-action))
+    (reset! last-action {})))
+
+(defn get-sort-params [last-action]
+  (let [{:keys [action params]} @last-action]
+    (when (= action :sort)
+      params)))
+
+(defn set-last-action [last-action {:keys [action-id action params]}]
+  (swap! last-action assoc :action action :params params :action-id action-id))
 
 (defn make-blacklab-server-corpus
-  [{:keys [index server web-service on-counting-callback] :or {on-counting-callback #(.log js/console %)}}]
-  (->BlacklabServerCorpus index server web-service on-counting-callback (chan (sliding-buffer 2))))
+  [{:keys [index server web-service on-counting-callback] :or {on-counting-callback identity} :as args}]
+  (let [last-action (atom {})
+        timeout-ids (atom [])]
+    (->BlacklabServerCorpus index server web-service on-counting-callback last-action timeout-ids)))
 
 ;; (def mbg-corpus
 ;;   (BlacklabServerCorpus.

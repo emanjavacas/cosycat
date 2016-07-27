@@ -5,17 +5,16 @@
             [cleebo.backend.db :refer [default-history default-session]]
             [cleebo.backend.middleware :refer [standard-middleware]]
             [cleebo.backend.handlers.projects :refer [normalize-projects]]
-            [cleebo.app-utils :refer [update-coll]]
+            [cleebo.app-utils :refer [update-coll disjconj]]
             [cleebo.utils :refer [format]]
             [taoensso.timbre :as timbre]))
 
 (re-frame/register-handler
  :update-filtered-users
  standard-middleware
- (fn [db [_ username flag]]
-   (let [active-project (:active-project db)
-         action (if flag conj disj)]
-     (update-in db [:projects active-project :session :filtered-users] action username))))
+ (fn [db [_ username]]
+   (let [active-project (get-in db [:session :active-project])]
+     (update-in db [:projects active-project :session :filtered-users] disjconj username))))
 
 (re-frame/register-handler              ;set session data to given path
  :set-session

@@ -44,7 +44,8 @@
   (fn [hit open-hits]
     [bs/table
      {:id "table-annotation"
-      :responsive true}
+      :responsive true
+      :style {:width "99%"}}
      [:thead]
      (into
       [:tbody]

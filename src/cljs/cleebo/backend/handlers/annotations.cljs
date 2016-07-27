@@ -83,6 +83,73 @@
    {:pre [(>= token-to token-from)]}
    (assoc ann-map :span {:type "IOB" :scope {:B token-from :O token-to}} :timestamp (.now js/Date))))
 
+(defmulti dispatch-annotation-handler
+  "Variadic handler for successful annotations. Dispatches are based on whether
+  ann-map is a vector (bulk annotation payload) or a map (single annotation payload)"
+  type)
+
+(defn notification-message
+  [{{B :B O :O :as scope} :scope {type :type} :span :as data} message]
+  (.log js/console data)
+  {:message (case type
+              "token" (get-msg [:annotation :error :token] scope message)
+              "IOB" (get-msg [:annotation :error :IOB] B O message))})
+
+(defmethod dispatch-annotation-handler cljs.core/PersistentArrayMap
+  [{status :status
+    message :message                    ;error message in case of error
+    {project :project hit-id :hit-id anns :anns ;success payload
+     {{B :B O :O :as scope} :scope type :type} :span ;error payload
+     :as data} :data}]
+  (case status
+    :ok (do (re-frame/dispatch [:add-annotation data])
+            (re-frame/dispatch [:notify {:message (str "Added 1 annotation")}]))
+    :error (re-frame/dispatch [:notify (notification-message data message)])))
+
+(defmethod dispatch-annotation-handler cljs.core/PersistentVector
+  [ms]
+  (let [{oks :ok errors :errors :as grouped} (group-by :status ms)
+        message (str "Added " (count oks) " annotations with " (count errors) " errors")]
+    (re-frame/dispatch [:add-annotation (mapv :data oks)])
+    (re-frame/dispatch [:notify {:message message}])
+    (doseq [{data :data message :message} errors]
+      (re-frame/dispatch [:notify (notification-message data message)]))))
+
+(defn error-handler [& args]
+  (re-frame/dispatch [:notify {:message "Unrecognized internal error"}]))
+
+(declare package-annotation)
+
+(re-frame/register-handler
+ :dispatch-annotation
+ (fn [db [_ ann & args]]
+   (let [project (get-in db [:session :active-project])
+         corpus (get-in db [:projects project :session :query :results-summary :corpus])
+         query (get-in db [:projects project :session :query :results-summary :query-str])         
+         ann-map {:ann ann :corpus corpus :query query}]
+     (try (POST "/annotation/new"
+                {:params (apply package-annotation ann-map project args)
+                 :handler dispatch-annotation-handler
+                 :error-handler error-handler})
+          (catch :default e
+            (re-frame/dispatch
+             [:notify {:message (format "Couldn't dispatch annotation: %s" (str e))}])))
+     db)))
+
+(re-frame/register-handler
+ :update-annotation
+ (fn [db [_ {{ann-id :_id ann-version :_version new-value :value :as update-map} :update-map hit-id :hit-id}]]
+   (let [project (get-in db [:session :active-project])
+         corpus (get-in db [:projects project :session :query :results-summary :corpus])
+         query (get-in db [:projects project :session :query :results-summary :query-str])
+         update-map (assoc update-map :timestamp (.now js/Date) :corpus corpus :query query)]
+     (POST "/annotation/update"
+           {:params {:update-map update-map
+                     :project project
+                     :hit-id hit-id}
+            :handler #(re-frame/dispatch [:add-annotation %])
+            :error-handler error-handler}))))
+
 (defmulti package-annotation
   "packages annotation data for the server. It only supports bulk payloads for token annotations"
   (fn [ann-map-or-maps project hit-id token-id & [token-to]]
@@ -117,47 +184,3 @@
     {:hit-id hit-ids
      :project project
      :ann-map ann-maps}))
-
-(defmulti dispatch-annotation-handler
-  "Variadic handler for successful annotations. Dispatches are based on whether
-  ann-map is a vector (bulk annotation payload) or a map (single annotation payload)"
-  type)
-
-(defmethod dispatch-annotation-handler cljs.core/PersistentArrayMap
-  [{status :status
-    message :message                    ;error message in case of error
-    {project :project hit-id :hit-id anns :anns ;success payload
-     {{B :B O :O :as scope} :scope type :type} :span ;error payload
-     :as m} :data :as data}]
-  (.log js/console data)
-  (case status
-    :ok (re-frame/dispatch [:add-annotation m])
-    :error (re-frame/dispatch
-            [:notify {:message (case type
-                                 "token" (get-msg [:annotation :error :token] scope message)
-                                 "IOB" (get-msg [:annotation :error :IOB] B O message))}])))
-
-(defmethod dispatch-annotation-handler cljs.core/PersistentVector
-  [ms]
-  (doseq [m ms] (dispatch-annotation-handler m)))
-
-(defn error-handler [& args]
-  (re-frame/dispatch [:notify {:message "Unrecognized internal error"}]))
-
-(re-frame/register-handler
- :dispatch-annotation
- (fn [db [_ ann & args]]
-   (let [project (get-in db [:session :active-project])
-         username (get-in db [:me :username])
-         corpus (get-in db [:projects project :session :query :results-summary :corpus])
-         query (get-in db [:projects project :session :query :results-summary :query-str])         
-         ann-map {:ann ann :username username :corpus corpus :query query}]
-     (try (POST "/annotation/new"
-                {:params (apply package-annotation ann-map project args)
-                 :handler dispatch-annotation-handler
-                 :error-handler dispatch-annotation-handler})
-          (catch :default e
-            (re-frame/dispatch
-             [:notify {:message (format "Couldn't dispatch annotation: %s" (str e))}])))
-     db)))
-

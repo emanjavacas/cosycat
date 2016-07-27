@@ -96,6 +96,7 @@
    [:div.illustration
     [user-thumb href]]
    [:div.text
+    {:style {:text-align "justify" :word-spacing "-2px"}}
     [:div.title message]
     [:div.text (.toLocaleString date "en-US")]]])
 
@@ -129,7 +130,7 @@
           (merge
            {:active (boolean filtered)
             :style {:max-height "40px"}
-            :onClick #(re-frame/dispatch [:update-filtered-users username (not filtered)])}
+            :onClick #(re-frame/dispatch [:update-filtered-users username])}
            opts)
           (reagent/as-component [user-thumb href {:height "20px" :width "20px"}])]]))))
 

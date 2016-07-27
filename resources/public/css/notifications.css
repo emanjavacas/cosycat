@@ -23,7 +23,7 @@ ul#notifications {
 
 .notification {
     color: black;
-    width: 360px;
+    width: 400px;
     min-height: 90px;
     z-index: 9000;
     cursor: pointer;

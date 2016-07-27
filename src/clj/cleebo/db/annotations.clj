@@ -11,16 +11,16 @@
 
 ;;; Exceptions
 (defn ex-overwrite-span [source-scope scope]
-  (ex-info "Attempt to overwrite span ann with token ann"
-           {:message :wrong-update :data {:source-scope source-scope :scope scope}}))
+  (ex-info "Attempt to overwrite span annotation with token annotation"
+           {:source-scope source-scope :scope scope}))
 
 (defn ex-overwrite-token [source-scope scope]
-  (ex-info "Attempt to overwrite token ann with span ann"
-           {:message :wrong-update :data {:source-scope source-scope :scope scope}}))
+  (ex-info "Attempt to overwrite token annotation with span annotation"
+           {:source-scope source-scope :scope scope}))
 
 (defn ex-overlapping-span [source-scope scope]
-  (ex-info "Overlapping span"
-           {:message :wrong-update :data {:source-scope source-scope :scope scope}}))
+  (ex-info "Attempt to overwrite overlapping span annotation"
+           {:source-scope source-scope :scope scope}))
 
 ;;; Checkers
 (declare fetch-span-annotation-by-key fetch-token-annotation-by-key)
@@ -103,19 +103,14 @@
 
 (defn update-annotation
   [{db-conn :db :as db} project
-   {timestamp :timestamp
-    username :username
-    {ann-key :key ann-value :value} :ann
-    query :query corpus :corpus
-    version :_version id :_id  :as ann}
+   {username :username timestamp :timestamp query :query corpus :corpus
+    value :value version :_version id :_id :as update-map}
    & {:keys [history] :or {history true}}]
-  (assert-ex-info
-   (and version id) "annotation update requires annotation id/version"
-   {:message :missing-id-or-version :data ann})
+  (assert-ex-info (and version id) "annotation update requires annotation id/version" update-map)
   (cond->> (vcs/find-and-modify
             db-conn project version              
             {:_id id}    ;conditions
-            {$set {"ann.value" ann-value
+            {$set {"ann.value" value
                    "timestamp" timestamp "username" username
                    "query" query "corpus" corpus}}
             {})

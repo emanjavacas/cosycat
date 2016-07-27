@@ -37,7 +37,6 @@
                    [(->int (:id (first hit))) (->int (:id (last hit))) id])
                  (apply map vector)
                  (zipmap [:starts :ends :hit-ids]))]
-    (.log js/console (first (:starts res)) (number? (first (:starts res))))
     res))
 
 (re-frame/register-handler
@@ -46,7 +45,6 @@
  (fn [db [_ {:keys [results-summary results status]}]]
    (re-frame/dispatch [:fetch-annotations (fetch-annotations-params results)])
    (re-frame/dispatch [:stop-throbbing :results-frame])
-   (.log js/console (fetch-annotations-params results))
    (let [active-project (get-in db [:session :active-project])
          path-fn (fn [key] [:projects active-project :session :query key])
          merge-old-results (merge-fn results :has-marked? true)]
@@ -75,9 +73,9 @@
     (get-in project [:session :query :results-summary])))
 
 (defn empty-before [s n]
-  (count (filter #(= % " ")  (subs s n))))
+  (count (filter #(= % " ") (subs s n))))
 
-(defn trigger-query [corpus query-str & args]
+(defn check-query [query-str]
   (let [{status :status at :at} (missing-quotes query-str)
         at (+ at (empty-before query-str at))]
     (case status
@@ -85,15 +83,16 @@
                  [:query-error
                   {:code "Query string error"
                    :message (str "Query: " query-str " ; has error at position: " at ".")}])
-      :finished (apply query corpus query-str args))))
+      :finished true)))
 
 (re-frame/register-handler
  :query
  (fn [db [_ query-str]]
    (let [{query-opts :query-opts corpus-name :corpus} (get-in db [:session :settings :query])
          corpus-config (find-corpus-config db corpus-name)]
-     (re-frame/dispatch [:start-throbbing :results-frame])
-     (trigger-query (ensure-corpus corpus-config) query-str query-opts)
+     (when (check-query query-str)
+       (do (re-frame/dispatch [:start-throbbing :results-frame])
+           (query (ensure-corpus corpus-config) query-str query-opts)))
      db)))
 
 (re-frame/register-handler
@@ -116,7 +115,8 @@
    (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:session :settings :query])
          {query-str :query-str query-size :query-size {from :from to :to} :page} (current-project-results db)
          corpus-config (find-corpus-config db corpus)]
-     ;; (query-sort (ensure-corpus corpus-config) query-str)
+     (re-frame/dispatch [:start-throbbing :results-frame])
+     (query-sort (ensure-corpus corpus-config) query-str query-opts sort-opts filter-opts)
      db)))
 
 (defn snippet-error-handler

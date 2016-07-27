@@ -12,6 +12,11 @@
                :args {:index "mbg-index-small"
                       :server "mbgserver.uantwerpen.be:8080"
                       :web-service "blacklab-server-1.4-SNAPSHOT"}}
+              {:name "brown-tei"
+               :type :blacklab-server
+               :args {:index "brown-tei"
+                      :server "mbgserver.uantwerpen.be:8080"
+                      :web-service "blacklab-server-1.4-SNAPSHOT"}}
               {:name "mbg-small-local"
                :type :blacklab
                :args {:path "/home/enrique/cleebo-dep/indices/blacklab/mbg-index-small/"}}]}}
