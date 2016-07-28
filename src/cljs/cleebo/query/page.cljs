@@ -56,7 +56,7 @@
       [:div.container-fluid
        [query-toolbar]
        [query-frame-spacer]
-       [sort-toolbar]
+       (when @has-query? [sort-toolbar])
        (when @has-query? [:hr])
        (when @has-query? [results-toolbar])
        [query-frame-spacer]

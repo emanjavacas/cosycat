@@ -22,10 +22,12 @@
     "retrieves corpus info with the following form:
       {:corpus-info {:corpus-name string
                      :word-count int
-                     :created string}
+                     :created string
+                     :last-modified string}
        :status (one-of :available :unavailable)
-       :sort-props {:sort-opts [{:facet bool :key string}] 
-                    :filter-opts [string]}}"))
+       :sort-props {:sort-opts {key {:facet bool}}
+                    :filter-opts [string]}}
+     given that corpus resources are static, this method can easily be cached"))
 
 (defn handler
   "general handler called with normalized corpus query data"
@@ -36,10 +38,6 @@
     (re-frame/dispatch [:query-error {:message message :code code}])
     (re-frame/dispatch [:set-query-results (dissoc payload :message :code)])))
 
-(defn handle-info
-  [{:keys [corpus-info status sort-props] :as info}]
-  (.log js/console info))
-
 (defn error-handler
   "general error handler called with normalized query error data"
   [data]
@@ -47,6 +45,10 @@
    [:query-error
     {:message "A network timeout error occurred. This can have various causes. Contact admin!"
      :code (str "Unrecognized query error" ": " data)}]))
+
+(defn handle-info
+  [{{corpus-name :corpus-name} :corpus-info :as corpus-info}]
+  (re-frame/dispatch [:set-corpus-info corpus-name corpus-info]))
 
 (defn handle-query
   "wrapper for ajax/jsonp queries that simplifies protocol implementations"

@@ -10,7 +10,7 @@
   (let [corpus (first (map :name corpora))]
     {:notifications {:delay 7500}
      :query {:query-opts {:context 5 :from 0 :page-size 10}
-             :sort-opts [(default-opts-map :sort-opts)]
+             :sort-opts []
              :filter-opts []
              :snippet-opts {:snippet-size 30 :snippet-delta 15}
              :corpus corpus}}))
@@ -32,5 +32,5 @@
   {:query []})
 
 (def default-history
-  {:ws-events []
+  {:server-events []
    :internal-events []})

@@ -10,12 +10,19 @@
             [schema.coerce :as coerce]))
 
 ;;; Exceptions
+(defn span-or-token [{B :B O :O :as scope}]
+  (cond (and B O)   "span"
+        (int scope) "token"
+        :else "undefined"))
+
 (defn ex-overwrite-span [source-scope scope]
-  (ex-info "Attempt to overwrite span annotation with token annotation"
+  (ex-info (str "Attempt to overwrite span annotation with "
+                (span-or-token source-scope) " annotation")
            {:source-scope source-scope :scope scope}))
 
 (defn ex-overwrite-token [source-scope scope]
-  (ex-info "Attempt to overwrite token annotation with span annotation"
+  (ex-info (str "Attempt to overwrite token annotation with "
+                (span-or-token source-scope) " annotation")
            {:source-scope source-scope :scope scope}))
 
 (defn ex-overlapping-span [source-scope scope]
@@ -88,10 +95,11 @@
   (vcs/with-history db doc :on-history-doc #(dissoc % :_id :docId)))
 
 (defn fetch-annotations
-  [{db-conn :db :as db} project-name from size & {:keys [history] :or {history true} :as opts}]
+  [{db-conn :db :as db} project corpus from size & {:keys [history] :or {history true} :as opts}]
   (cond->> (mc/find-maps
-            db-conn project-name
-            {$or [{$and [{"span.scope" {$gte from}} {"span.scope" {$lt (+ from size)}}]}
+            db-conn project
+            {"corpus" corpus
+             $or [{$and [{"span.scope" {$gte from}} {"span.scope" {$lt (+ from size)}}]}
                   {$or  [{"span.scope.O" {$gte from}} {"span.scope.B" {$lt (+ from size)}}]}]})
     history (mapv (partial with-history db-conn))))
 
@@ -103,17 +111,15 @@
 
 (defn update-annotation
   [{db-conn :db :as db} project
-   {username :username timestamp :timestamp query :query corpus :corpus
+   {username :username timestamp :timestamp query :query
     value :value version :_version id :_id :as update-map}
    & {:keys [history] :or {history true}}]
   (assert-ex-info (and version id) "annotation update requires annotation id/version" update-map)
   (cond->> (vcs/find-and-modify
             db-conn project version              
             {:_id id}    ;conditions
-            {$set {"ann.value" value
-                   "timestamp" timestamp "username" username
-                   "query" query "corpus" corpus}}
-            {})
+            {$set {"ann.value" value "timestamp" timestamp "username" username "query" query}}
+            {:return-new true})
     history (with-history db-conn)))
 
 ;; (defonce db (.start (cleebo.components.db/new-db (:database-url config.core/env))))
@@ -121,21 +127,17 @@
 ;;   {:ann {:key "test" :value "test2"}
 ;;    :username "user"
 ;;    :timestamp 123312213112
-;;    :span {:type "token" :scope 12}
+;;    :span {:type "token" :scope 13}
 ;;    :query "\"a\""
 ;;    :corpus "sample-corpus"})
 
 ;; (def update-ann
-;;   {:ann {:key "test2" :value "test3"}
+;;   {:value "test3"
 ;;    :username "user"
 ;;    :timestamp 12312523412
-;;    :span {:type "token" :scope 11}
-;;    :_id "2eea61e3-8e40-491e-a730-ad25afb7c578"
-;;    :_version 7
+;;    :_id (:_id a)
+;;    :_version 0
 ;;    :query "\"g\""
 ;;    :corpus "sample-corpus"})
-
-;; (insert-annotation db "beat" test-ann)
-;; (update-annotation db "beat" update-ann)
-;; (:_id (first (fetch-annotations db "beat" 0 20)))
-
+;; (def a (insert-annotation db "test" test-ann))
+;; (update-annotation db "test" update-ann)

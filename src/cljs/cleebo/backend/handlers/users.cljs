@@ -7,18 +7,18 @@
 (re-frame/register-handler              ;set client user info
  :set-user
  standard-middleware
- (fn [db [path value]]
+ (fn [db [_ path value]]
    (assoc-in db (into [:me] path) value)))
 
 (defn update-users
   [db [name path value]]
   (let [pred (fn [{username :username}] (= username name))]
-     (update-in db [:users :rest] update-coll pred assoc-in (into [:user] path) value)))
+     (update db :users update-coll pred assoc-in (into [:user] path) value)))
 
 (re-frame/register-handler              ;set other users info
  :set-users
  standard-middleware
- (fn [db [_ [name path value]]]
+ (fn [db [_ name path value]]
    (update-users db [name path value])))
 
 (re-frame/register-handler              ;add user to client (after new signup)

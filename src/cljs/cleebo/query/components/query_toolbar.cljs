@@ -20,7 +20,7 @@
              :header "Select a corpus"
              :options (mapv #(->map % %) corpora)
              :model @corpus
-             :select-fn #(re-frame/dispatch [:set-settings [:query :corpus] %])}
+             :select-fn #(re-frame/dispatch [:set-corpus %])}
             (dissoc args :corpora))]))
 
 (defn context-select [context & {:keys [has-query?] :as args}]

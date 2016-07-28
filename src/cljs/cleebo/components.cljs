@@ -2,7 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cleebo.utils :refer [color-codes date-str->locale]]
-            [cleebo.localstorage :as ls]
+            [cleebo.localstorage :refer [fetch-db get-backups]]
             [taoensso.timbre :as timbre]
             [goog.string :as gstr]
             [react-bootstrap.components :as bs]))
@@ -93,12 +93,14 @@
   [message date status href meta]
   [:div.notification
    {:class "success"}
-   [:div.illustration
-    [user-thumb href]]
-   [:div.text.pull-right
-    {:style {:text-align "justify" :word-spacing "-2px"}}
-    [:div.title message]
-    [:div.text (.toLocaleString date "en-US")]]])
+   [:p
+    {:style {:margin "0"}}
+    [:div.illustration
+     [user-thumb href]]
+    [:div.text
+     {:style {:text-align "justify" :word-spacing "-2px"}}
+     [:div.title message]
+     [:div.text (.toLocaleString date "en-US")]]]])
 
 (defn notification
   [{id :id {message :message date :date {href :href} :by status :status meta :meta} :data}]
@@ -172,7 +174,7 @@
   [:tr
    [:td
     {:style {:cursor "pointer"}
-     :on-click #(let [dump (ls/recover-db backup)]
+     :on-click #(let [dump (fetch-db backup)]
                   (re-frame/dispatch [:load-db dump])
                   (re-frame/dispatch [:close-modal :localstorage]))}
     (date-str->locale backup)]])
@@ -188,7 +190,7 @@
        [:div [:span {:style {:padding-right "20px"}} [:i.zmdi.zmdi-storage]]
         "Application history"]]]
      [bs/modal-body
-      (let [history (ls/recover-all-db-keys)]
+      (let [history (get-backups)]
         (if (empty? history)
           [:div.text-muted "No backups have been found"]
           [:div

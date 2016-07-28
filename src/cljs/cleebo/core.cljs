@@ -11,6 +11,7 @@
             [cleebo.backend.handlers.notifications]
             [cleebo.backend.handlers.session]
             [cleebo.backend.handlers.projects]
+            [cleebo.backend.handlers.corpora]
             [cleebo.backend.history]            
             [cleebo.backend.ws-routes]
             [cleebo.backend.subs]

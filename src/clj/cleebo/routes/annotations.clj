@@ -86,32 +86,32 @@
            {:status :error :message message :data {:id id :exception ex}}))))
 
 (defn fetch-annotation-range-handler
-  [{{project :project from :from size :size hit-id :hit-id} :params
+  [{{project :project corpus :corpus from :from size :size hit-id :hit-id} :params
     {{username :username} :identity} :session
     {db :db} :components}]
   (check-user-rights db username project :read)
   {:hit-id hit-id
    :project project
-   :anns (->> (fetch-annotations db project (->int from) (->int size)) (apply normalize-anns))})
+   :anns (->> (fetch-annotations db project corpus (->int from) (->int size))
+              (apply normalize-anns))})
 
 (defn fetch-annotation-page-handler
-  [{{project :project starts :starts ends :ends hit-ids :hit-ids :as params} :params
+  [{{project :project corpus :corpus starts :starts ends :ends hit-ids :hit-ids :as params} :params
     {{username :username} :identity} :session
     {db :db} :components}]
-  (assert-ex-info
-   (= (count starts) (count ends)) "Wrong argument lengths"
-   {:message :bad-argument :data {:starts (count starts) :ends (count ends)}})
+  (assert-ex-info (= (count starts) (count ends)) "Wrong argument lengths"
+                  {:message :bad-argument :data {:starts (count starts) :ends (count ends)}})
   (check-user-rights db username project :read)
-  (clojure.pprint/pprint params)
   (->> (map (fn [start end hit-id]
               (let [from (->int start)
                     size (- (->int end) from)
-                    anns (->> (fetch-annotations db project from size) (apply normalize-anns))]
+                    anns (->> (fetch-annotations db project corpus from size)
+                              (apply normalize-anns))]
                 (when anns
                   {:hit-id hit-id
                    :project project
                    :anns anns})))
-            (vals starts) (vals ends) (vals hit-ids))
+            (vals starts) (vals ends) (vals hit-ids)) ;quickfix needs to find out what's going on
        (filter identity)
        vec))
 

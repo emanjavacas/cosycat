@@ -23,6 +23,20 @@
 (defn select-values [m ks]
   (reduce #(conj %1 (m %2)) [] ks))
 
+(defn dissoc-in
+  "Dissociates an entry from a nested associative structure returning a new
+  nested structure. keys is a sequence of keys. Any empty maps that result
+  will not be present in the new structure."
+  [m [k & ks :as keys]]
+  (if ks
+    (if-let [nextmap (get m k)]
+      (let [newmap (dissoc-in nextmap ks)]
+        (if (seq newmap)
+          (assoc m k newmap)
+          (dissoc m k)))
+      m)
+    (dissoc m k)))
+
 (defn map-vals
   "applies a function `f` over the values of a map"
   [f m]
@@ -48,7 +62,11 @@
   [s1 & args]
   (reduce #(if (%1 %2) (disj %1 %2) (conj %1 %2)) s1 args))
 
-(defn update-coll [coll pred f & args]
+(defn update-coll
+  "updates a coll at the index where `pred` returns true.
+  Coerces output to vector if input coll was a vec. Update is done
+  by applying `f` over the matching element and any optionals `args`"
+  [coll pred f & args]
   (let [s (for [item coll]
             (if (pred item)
               (apply f item args)
@@ -56,6 +74,8 @@
     (if (vector? coll) (vec s) s)))
 
 (defn atom? [o] (instance? #?(:clj clojure.lang.Atom :cljs cljs.core/Atom) o))
+
+(defn dekeyword [k] (apply str (rest (str k))))
 
 ;;; LOGIC
 (defn invalid-project-name [s]

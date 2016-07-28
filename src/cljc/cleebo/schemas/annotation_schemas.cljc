@@ -23,6 +23,7 @@
     :timestamp s/Int
     :corpus s/Str
     :query s/Str
+    :_version s/Int
     :span span-schema}])
 
 (def annotation-schema

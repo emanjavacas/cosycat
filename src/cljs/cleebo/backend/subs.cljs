@@ -170,3 +170,11 @@
  (fn [db [_ path & {:keys [filter-fn] :or {filter-fn identity}}]]
    (let [ws-history (reaction (get-in @db (into [:history] path)))]
      (reaction (filter filter-fn @ws-history)))))
+
+(re-frame/register-sub
+ :corpus-info
+ (fn [db [_ & path]]
+   (let [corpora (reaction (:corpora @db))
+         corpus-name (reaction (get-in @db [:session :settings :query :corpus]))
+         corpus (reaction (some #(when (= @corpus-name (:name %)) %) @corpora))]
+     (reaction (get-in @corpus (into [:info] path))))))

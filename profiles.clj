@@ -7,7 +7,7 @@
              :port 3000
              :session-expires 900       ;in minutes
              :corpora
-             [{:name "mbg-small"
+             [{:name "mbg-index-small"
                :type :blacklab-server
                :args {:index "mbg-index-small"
                       :server "mbgserver.uantwerpen.be:8080"

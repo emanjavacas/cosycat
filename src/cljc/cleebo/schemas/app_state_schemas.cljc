@@ -6,7 +6,7 @@
             [cleebo.schemas.user-schemas :refer [user-schema settings-schema]]))
 
 ;;; history
-(def ws-event-history-schema
+(def server-events-history-schema
   [{:received s/Int
     :type s/Keyword
     :data {s/Any s/Any}}])
@@ -17,7 +17,7 @@
     :data {s/Any s/Any}}])
 
 (def history-schema
-  {:ws-events ws-event-history-schema
+  {:server-events server-events-history-schema
    :internal-events internal-event-history-schema})
 
 ;;; users

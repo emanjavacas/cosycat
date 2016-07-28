@@ -68,9 +68,10 @@
 (re-frame/register-handler
  :fetch-annotations
  (fn [db [_ {:keys [starts ends hit-ids] :as params}]]
-   (let [project (get-in db [:session :active-project])]
+   (let [project (get-in db [:session :active-project])
+         corpus (get-in db [:projects project :session :query :results-summary :corpus])]
      (GET "/annotation/page"
-          {:params (assoc params :project project)
+          {:params (assoc params :project project :corpus corpus)
            :handler #(re-frame/dispatch [:add-annotation %])
            :error-handler #(.log js/console "Couldn't fetch anns" %)}))
    db))
@@ -108,10 +109,11 @@
 
 (defmethod dispatch-annotation-handler cljs.core/PersistentVector
   [ms]
-  (let [{oks :ok errors :errors :as grouped} (group-by :status ms)
+  (let [{oks :ok errors :error :as grouped} (group-by :status ms)
         message (str "Added " (count oks) " annotations with " (count errors) " errors")]
-    (re-frame/dispatch [:add-annotation (mapv :data oks)])
-    (re-frame/dispatch [:notify {:message message}])
+    (when-not (empty? oks)
+      (do (re-frame/dispatch [:add-annotation (mapv :data oks)])
+          (re-frame/dispatch [:notify {:message message}])))
     (doseq [{data :data message :message} errors]
       (re-frame/dispatch [:notify (notification-message data message)]))))
 
@@ -136,9 +138,19 @@
              [:notify {:message (format "Couldn't dispatch annotation: %s" (str e))}])))
      db)))
 
+(defn update-annotation-handler
+  [{status :status message :message data :data}]
+  (condp = status
+    :ok (re-frame/dispatch [:add-annotation data])
+    :error (re-frame/dispatch
+            [:notify
+             {:message (format "Couldn't update annotation! Reason: [%s]" message)
+              :meta data}])))
+
 (re-frame/register-handler
  :update-annotation
- (fn [db [_ {{ann-id :_id ann-version :_version new-value :value :as update-map} :update-map hit-id :hit-id}]]
+ (fn [db [_ {{ann-id :_id ann-version :_version new-value :value :as update-map} :update-map
+             hit-id :hit-id}]]
    (let [project (get-in db [:session :active-project])
          corpus (get-in db [:projects project :session :query :results-summary :corpus])
          query (get-in db [:projects project :session :query :results-summary :query-str])
@@ -147,8 +159,9 @@
            {:params {:update-map update-map
                      :project project
                      :hit-id hit-id}
-            :handler #(re-frame/dispatch [:add-annotation %])
-            :error-handler error-handler}))))
+            :handler update-annotation-handler
+            :error-handler error-handler})
+     db)))
 
 (defmulti package-annotation
   "packages annotation data for the server. It only supports bulk payloads for token annotations"

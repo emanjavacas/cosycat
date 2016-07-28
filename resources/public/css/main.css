@@ -71,3 +71,12 @@ li.toolbar {
 div.well.selected:hover {
     background-color: white !important;
 }
+
+.input-as-div {
+    padding:0px 5px;
+    border:0.1px solid #e2e2e2;
+    float:right;
+    -moz-box-sizing:border-box;
+    -webkit-box-sizing:border-box;
+    box-sizing:border-box;
+}

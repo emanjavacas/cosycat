@@ -1,6 +1,7 @@
 (ns cleebo.backend.handlers.query
   (:require [re-frame.core :as re-frame]
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
+            [cleebo.backend.db :refer [default-project-session]]
             [cleebo.query-backends.core :refer [ensure-corpus]]
             [cleebo.query-backends.protocols :refer [query query-sort snippet]]
             [cleebo.query-parser :refer [missing-quotes]]
@@ -33,18 +34,17 @@
            (filter-marked-hits old-results :has-marked? has-marked?))))
 
 (defn fetch-annotations-params [results]
-  (let [res (->> (for [{hit :hit id :id} results]
-                   [(->int (:id (first hit))) (->int (:id (last hit))) id])
-                 (apply map vector)
-                 (zipmap [:starts :ends :hit-ids]))]
-    res))
+  (some->> (seq (for [{hit :hit id :id} results] ;seq; avoid empty seq
+                  [(->int (:id (first hit))) (->int (:id (last hit))) id]))
+           (apply map vector)
+           (zipmap [:starts :ends :hit-ids])))
 
 (re-frame/register-handler
  :set-query-results
  standard-middleware
  (fn [db [_ {:keys [results-summary results status]}]]
-   (re-frame/dispatch [:fetch-annotations (fetch-annotations-params results)])
    (re-frame/dispatch [:stop-throbbing :results-frame])
+   (re-frame/dispatch [:fetch-annotations (fetch-annotations-params results)])
    (let [active-project (get-in db [:session :active-project])
          path-fn (fn [key] [:projects active-project :session :query key])
          merge-old-results (merge-fn results :has-marked? true)]
@@ -55,6 +55,14 @@
          (update-in (path-fn :results-by-id) merge-old-results)))))
 
 (re-frame/register-handler
+ :unset-query-results
+ standard-middleware
+ (fn [db _]
+   (let [active-project (get-in db [:session :active-project])
+         project (get-in db [:projects active-project])]
+     (assoc-in db [:projects active-project :session] (default-project-session project)))))
+
+(re-frame/register-handler
  :query-error
  standard-middleware
  (fn [db [_ {:keys [message code] :as args}]]
@@ -62,7 +70,8 @@
    (let [active-project (get-in db [:session :active-project])]
      (-> db
          (assoc-in [:projects active-project :session :status :status] :error)
-         (assoc-in [:projects active-project :session :status :content] {:message message :code code})))))
+         (assoc-in [:projects active-project :session :status :content]
+                   {:message message :code code})))))
 
 (defn find-corpus-config [db corpus-name]
   (some #(when (= corpus-name (:name %)) %) (db :corpora)))
@@ -100,20 +109,24 @@
  (fn [db [_ direction]]
    (let [query-settings (get-in db [:session :settings :query])
          {{page-size :page-size :as query-opts} :query-opts corpus-name :corpus} query-settings
-         {query-str :query-str query-size :query-size {from :from to :to} :page} (current-project-results db)
+         {query-str :query-str query-size :query-size {from :from to :to} :page}
+         (current-project-results db)
          corpus-config (find-corpus-config db corpus-name)
          [from to] (case direction
                      :next (pager-next query-size page-size to)
                      :prev (pager-prev query-size page-size from))]
      (re-frame/dispatch [:start-throbbing :results-frame])
-     (query (ensure-corpus corpus-config) query-str (assoc query-opts :from from :page-size (- to from)))
+     (query (ensure-corpus corpus-config)
+            query-str
+            (assoc query-opts :from from :page-size (- to from)))
      db)))
 
 (re-frame/register-handler
  :query-sort
  (fn [db _]
    (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:session :settings :query])
-         {query-str :query-str query-size :query-size {from :from to :to} :page} (current-project-results db)
+         {query-str :query-str query-size :query-size {from :from to :to} :page}
+         (current-project-results db)
          corpus-config (find-corpus-config db corpus)]
      (re-frame/dispatch [:start-throbbing :results-frame])
      (query-sort (ensure-corpus corpus-config) query-str query-opts sort-opts filter-opts)

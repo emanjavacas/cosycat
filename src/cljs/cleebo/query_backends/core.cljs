@@ -1,6 +1,7 @@
 (ns cleebo.query-backends.core
   (:require [cleebo.query-backends.blacklab :refer [make-blacklab-corpus]]
-            [cleebo.query-backends.blacklab-server :refer [make-blacklab-server-corpus]]))
+            [cleebo.query-backends.blacklab-server :refer [make-blacklab-server-corpus]]
+            [cleebo.query-backends.protocols :refer [get-corpus-info]]))
 
 (def ctors
   {:blacklab make-blacklab-corpus
@@ -10,7 +11,9 @@
   (let [ctor (get ctors corpus-type)]
     (if-let [corpus (get @mem corpus-name)]      
       corpus
-      (ctor args))))
+      (let [corpus (ctor args)]
+        (get-corpus-info corpus)
+        corpus))))
 
 (let [mem (atom {})]
   (defn ensure-corpus

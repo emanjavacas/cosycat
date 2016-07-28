@@ -24,10 +24,10 @@
     span-type))
 
 (defmethod annotation-cell "token"
-  [{:keys [ann-map color-map token-id]}]
-  (fn [{{username :username :as ann-map} :ann-map color-map :color-map}]
+  [{:keys [ann-map color-map token-id hit-id]}]
+  (fn [{{username :username :as ann-map} :ann-map color-map :color-map hit-id :hit-id}]
     [bs/overlay-trigger
-     {:overlay (annotation-popover ann-map)
+     {:overlay (annotation-popover ann-map hit-id)
       :trigger "click"
       :rootClose true
       :placement "bottom"}
@@ -36,12 +36,13 @@
       [key-val ann-map]]]))
 
 (defmethod annotation-cell "IOB"
-  [{:keys [ann-map color-map token-id]}]
+  [{:keys [ann-map color-map token-id hit-id]}]
   (fn [{{{{B :B O :O} :scope} :span username :username anns :anns :as ann-map} :ann-map
         color-map :color-map
+        hit-id :hit-id
         token-id :token-id}]
     [bs/overlay-trigger
-     {:overlay (annotation-popover ann-map)
+     {:overlay (annotation-popover ann-map hit-id)
       :trigger "click"
       :rootClose true
       :placement "bottom"}
@@ -55,8 +56,9 @@
   (let [color-map (re-frame/subscribe [:filtered-users-colors])]
     (fn [{hit-id :id hit :hit} ann-key]
       (into
-       [:tr.ann-row]
+       [:tr.ann-row {:data-hitid hit-id}]
        (-> (for [{token-id :id anns :anns} (filter-dummy-tokens hit)]
              ^{:key (str ann-key hit-id token-id)}
-             [annotation-cell {:ann-map (get anns ann-key) :token-id token-id :color-map color-map}])
+             [annotation-cell {:ann-map (get anns ann-key)
+                               :hit-id hit-id :token-id token-id :color-map color-map}])
            (prepend-cell {:key (str ann-key) :child (fn [key] [:td key]) :opts [ann-key]}))))))

@@ -8,7 +8,7 @@
             [react-bootstrap.components :as bs]
             [cleebo.utils :refer [->box]]))
 
-(defn is-in-checked-hit
+(defn is-in-checked-hit?
   "is current cell child inside a checked hit row"
   [e]
   (gclass/has (gdom/getFirstElementChild (gdom/getParentElement e)) "checked"))
@@ -24,7 +24,7 @@
           btn (aget event "button")]
       (.log js/console (gclass/has e "ignore"))
       (.preventDefault event)
-      (when (and (zero? btn) (not (is-in-checked-hit e)) (not (gclass/has e "ignore")))
+      (when (and (zero? btn) (not (is-in-checked-hit? e)) (not (gclass/has e "ignore")))
         (gclass/toggle e "highlighted")
         (swap! mouse-down? not)
         (reset! highlighted? (gclass/has e "highlighted"))
@@ -40,7 +40,7 @@
       (when (and (zero? btn)
                  @mouse-down?
                  (not (gclass/has e "ignore"))
-                 (not (is-in-checked-hit e)))
+                 (not (is-in-checked-hit? e)))
         (gclass/enable e "highlighted" @highlighted?)
         (re-frame/dispatch
          [(if @highlighted? :mark-token :unmark-token)

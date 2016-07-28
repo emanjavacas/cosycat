@@ -4,7 +4,7 @@
             [taoensso.timbre :as timbre]))
 
 (defn history-panel []
-  (let [history (re-frame/subscribe [:read-history [:ws]])]
+  (let [history (re-frame/subscribe [:read-history [:server-events]])]
     (fn []
       [:div.container-fluid
        (doall (for [[idx item] (map-indexed vector (sort-by :timestamp > @history))]

@@ -23,9 +23,8 @@
  :dump-db
  standard-middleware
  (fn [db _]
-   (let [now (js/Date)]
-     (ls/put now db)
-     (re-frame/dispatch [:notify {:message "State succesfully backed-up" :status :ok}]))
+   (ls/store-db db)
+   (re-frame/dispatch [:notify {:message "State succesfully backed-up" :status :ok}])
    db))
 
 (re-frame/register-handler

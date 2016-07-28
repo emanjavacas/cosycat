@@ -12,6 +12,13 @@
    (let [settings (get-in db [:session :settings])]
      (assoc-in db [:session :settings] (assoc-in settings path value)))))
 
+(re-frame/register-handler
+ :set-corpus
+ standard-middleware
+ (fn [db [_ corpus-name]]
+   (re-frame/dispatch [:unset-query-results])
+   (assoc-in db [:session :settings :query :corpus] corpus-name)))
+
 (re-frame/register-handler              ;key is one of (:sort-opts, :filter-opts)
  :add-default-opts-map
  standard-middleware

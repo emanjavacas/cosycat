@@ -4,6 +4,7 @@
             [react-bootstrap.components :as bs]
             [cleebo.components :refer [dropdown-select]]
             [cleebo.utils :refer [->default-map]]
+            [cleebo.app-utils :refer [dekeyword]]
             [taoensso.timbre :as timbre]))
 
 (defn on-click-sort                     ;redo this
@@ -55,20 +56,22 @@
 
 (defn sort-toolbar []
   (let [sort-opts (re-frame/subscribe [:settings :query :sort-opts])
-        corpus (re-frame/subscribe [:settings :query :corpus])]
+        corpus (re-frame/subscribe [:settings :query :corpus])
+        sort-props (re-frame/subscribe [:corpus-info :sort-props])]
     (fn []
       [:div.row
        [:div.col-lg-12.pull-left
         (let [sort-opts-total (count @sort-opts)]
           [bs/button-toolbar
-           (doall (for [[idx opts] (map-indexed vector @sort-opts)]
-                    ^{:key (str "multi-" idx)}
-                    [multiple-dropdown
-                     {:model opts
-                      :options {:position (->default-map ["match" "left" "right"])
-                                :attribute (->default-map ["word" "pos" "lemma"])
-                                :facet (->default-map ["sensitive" "insensitive"])}
-                      :select-fn #(re-frame/dispatch [:set-settings [:query :sort-opts idx %] %2])}]))
+           (doall
+            (for [[idx opts] (map-indexed vector @sort-opts)]
+              ^{:key (str "multi-" idx)}
+              [multiple-dropdown
+               {:model opts
+                :options {:position (->default-map ["match" "left" "right"])
+                          :attribute (->default-map (mapv dekeyword (keys @sort-props)))
+                          :facet (->default-map ["sensitive" "insensitive"])} ;todo: depends on corpus
+                :select-fn #(re-frame/dispatch [:set-settings [:query :sort-opts idx %] %2])}]))
            [bs/button
             {:onClick #(re-frame/dispatch [:add-default-opts-map :sort-opts])
              :bsStyle "primary"}
