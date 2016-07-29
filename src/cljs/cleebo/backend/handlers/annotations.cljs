@@ -8,22 +8,6 @@
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))
 
-;; (POST "/annotation/update"
-;;      {:params {:project "beat"
-;;                :update-map {:_id "2eea61e3-8e40-491e-a730-ad25afb7c578"
-;;                             :_version 6
-;;                             :query "\"a\""
-;;                             :corpus "mbg-small"
-;;                             :ann {:value "no"}}
-;;                :hit-id "0"}
-;;       :handler #(.log js/console "SUCCESS" %)
-;;       :error-handler #(.log js/console "ERROR" %)})
-
-;; (GET "/annotation/range"
-;;      {:params {:project "project3" :from 0 :size 20 :hit-id "Hi!"}
-;;       :handler #(.log js/console %)
-;;       :error-handler #(.log js/console "ERROR" %)})
-
 ;;; Incoming annotations
 (defn update-hit [hit anns]
   (mapv (fn [{token-id :id :as token}]
@@ -51,10 +35,10 @@
   (let [results-by-id (get-in db [:projects project :session :query :results-by-id])
         path [:projects project :session :query :results-by-id hit-id :hit]]
     (if (contains? results-by-id hit-id)
-      (update-in db path update-hit anns)
+      (do (.log js/console "contains") (update-in db path update-hit anns))
       (if-let [hit-id (find-hit-id (keys anns) (vals results-by-id))]
-        (update-in db path update-hit anns)
-        db))))
+        (do (.log js/console "found") (update-in db path update-hit anns))
+        (do (.log js/console "didn't found") db)))))
 
 (defmethod add-annotations cljs.core/PersistentVector
   [db ms]
@@ -70,10 +54,13 @@
  (fn [db [_ {:keys [starts ends hit-ids] :as params}]]
    (let [project (get-in db [:session :active-project])
          corpus (get-in db [:projects project :session :query :results-summary :corpus])]
+     (re-frame/dispatch [:start-throbbing :fetch-annotations])
      (GET "/annotation/page"
           {:params (assoc params :project project :corpus corpus)
-           :handler #(re-frame/dispatch [:add-annotation %])
-           :error-handler #(.log js/console "Couldn't fetch anns" %)}))
+           :handler #(do (re-frame/dispatch [:add-annotation %])
+                         (re-frame/dispatch [:stop-throbbing :fetch-annotations]))
+           :error-handler #(do (re-frame/dispatch [:stop-throbbing :fetch-annotations])
+                               (.log js/console "Couldn't fetch anns" %))}))
    db))
 
 ;;; Outgoing annotations
@@ -163,6 +150,7 @@
             :error-handler error-handler})
      db)))
 
+;;; Utils
 (defmulti package-annotation
   "packages annotation data for the server. It only supports bulk payloads for token annotations"
   (fn [ann-map-or-maps project hit-id token-id & [token-to]]

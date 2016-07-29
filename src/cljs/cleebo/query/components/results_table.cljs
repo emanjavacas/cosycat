@@ -20,9 +20,7 @@
 
 (defn on-mouse-down [mouse-down? highlighted?]
   (fn [event]
-    (let [e   (aget event "target")
-          btn (aget event "button")]
-      (.log js/console (gclass/has e "ignore"))
+    (let [e (aget event "target"), btn (aget event "button")]
       (.preventDefault event)
       (when (and (zero? btn) (not (is-in-checked-hit? e)) (not (gclass/has e "ignore")))
         (gclass/toggle e "highlighted")
@@ -35,8 +33,7 @@
 
 (defn on-mouse-over [mouse-down? highlighted?]
   (fn [event]
-    (let [e   (aget event "target")
-          btn (aget event "button")]
+    (let [e (aget event "target"), btn (aget event "button")]
       (when (and (zero? btn)
                  @mouse-down?
                  (not (gclass/has e "ignore"))
@@ -49,8 +46,7 @@
 
 (defn on-mouse-up [mouse-down? highlighted?]
   (fn [event]
-    (let [btn (aget event "button")
-          e   (aget event "target")]
+    (let [btn (aget event "button"), e (aget event "target")]
       (when (and (zero? btn) (not (gclass/has e "ignore")))
         (swap! mouse-down? not)))))
 

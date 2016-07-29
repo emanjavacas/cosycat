@@ -101,6 +101,7 @@
          corpus-config (find-corpus-config db corpus-name)]
      (when (check-query query-str)
        (do (re-frame/dispatch [:start-throbbing :results-frame])
+           (re-frame/dispatch [:start-throbbing :fetch-annotations])
            (query (ensure-corpus corpus-config) query-str query-opts)))
      db)))
 

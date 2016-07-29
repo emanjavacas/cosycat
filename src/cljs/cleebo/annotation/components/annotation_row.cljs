@@ -18,39 +18,29 @@
     {:box-shadow (->box color)}
     {:opacity "0.25"}))
 
-(defmulti annotation-cell
-  "Variadic annotation cell dispatching on span type"
-  (fn [{{{span-type :type} :span} :ann-map token-id :token-id color-map :color-map}]
-    span-type))
-
-(defmethod annotation-cell "token"
-  [{:keys [ann-map color-map token-id hit-id]}]
-  (fn [{{username :username :as ann-map} :ann-map color-map :color-map hit-id :hit-id}]
-    [bs/overlay-trigger
-     {:overlay (annotation-popover ann-map hit-id)
-      :trigger "click"
-      :rootClose true
-      :placement "bottom"}
-     [:td.ann-cell       
-      {:style (annotation-cell-style @color-map username)}
-      [key-val ann-map]]]))
-
-(defmethod annotation-cell "IOB"
-  [{:keys [ann-map color-map token-id hit-id]}]
-  (fn [{{{{B :B O :O} :scope} :span username :username anns :anns :as ann-map} :ann-map
-        color-map :color-map
-        hit-id :hit-id
-        token-id :token-id}]
-    [bs/overlay-trigger
-     {:overlay (annotation-popover ann-map hit-id)
-      :trigger "click"
-      :rootClose true
-      :placement "bottom"}
-     [:td.ann-cell
-      {:style (annotation-cell-style @color-map username)}
-      [:span (when (= B (->int token-id)) [key-val ann-map])]]]))
-
-(defmethod annotation-cell :default [_] [:td ""])
+(defn annotation-cell [{:keys [ann-map color-map token-id hit-id]}]
+  (let [open? (reagent/atom false), target (reagent/atom nil)]
+    (fn [{{{{B :B O :O} :scope type :type} :span
+           username :username anns :anns :as ann-map} :ann-map
+          color-map :color-map hit-id :hit-id token-id :token-id}]
+      (if ann-map                       ;when ann is present
+        [:td.ann-cell
+         {:style (annotation-cell-style @color-map username)
+          :on-click #(do (reset! target (.-target %)) (swap! open? not))}
+         [:div (case type
+                 "IOB" [:span (when (= B (->int token-id)) [key-val ann-map])]
+                 "token" [key-val ann-map])
+          [bs/overlay
+           {:show @open?
+            :target (fn [] @target)     ;DOMNode
+            :rootClose true
+            :onHide #(swap! open? not)  ;called when rootClose triggers
+            :placement "right"}
+           (annotation-popover
+            {:ann-map ann-map
+             :hit-id hit-id
+             :on-dispatch #(swap! open? not)})]]]
+        [:td ""]))))
 
 (defn annotation-row [hit ann-key]
   (let [color-map (re-frame/subscribe [:filtered-users-colors])]

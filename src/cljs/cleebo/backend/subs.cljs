@@ -42,6 +42,7 @@
 (re-frame/register-sub
  :throbbing?
  (fn [db [_ panel]]
+   (.log js/console "Throbbing?" panel (get-in @db [:session :throbbing? panel] false))
    (reaction (get-in @db [:session :throbbing? panel] false))))
 
 (re-frame/register-sub
@@ -117,9 +118,9 @@
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))
          results-by-id (reaction (get-in @project [:session :query :results-by-id]))]
-     (reaction (mapcat (fn [[_ {:keys [hit id meta]}]]
+     (reaction (mapcat (fn [{:keys [hit id meta]}]
                          (->> hit (filter :marked) (map #(assoc % :hit-id id))))
-                       @results-by-id)))))
+                       (vals @results-by-id))))))
 
 (defn get-users
   ([db] (cons (:me db) (map :user (:users db))))
@@ -130,7 +131,11 @@
 
 (re-frame/register-sub
  :users
- (fn [db _] (reaction (get-users @db))))
+ (fn [db [_ & {:keys [exclude-me] :or {exclude-me false}}]]
+   (let [users (reaction (get-users @db))]
+     (if exclude-me
+       (reaction (remove #(= (:username %) (get-in @db [:me :username])) @users))
+       users))))
 
 (re-frame/register-sub
  :user

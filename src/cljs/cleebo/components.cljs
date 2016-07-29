@@ -93,14 +93,14 @@
   [message date status href meta]
   [:div.notification
    {:class "success"}
-   [:p
-    {:style {:margin "0"}}
-    [:div.illustration
-     [user-thumb href]]
+   [:div.illustration
+    [user-thumb href]]
+   [:div.text
+    {:style {:text-align "justify" :word-spacing "-2px"}}
+    [:div.title message]
     [:div.text
-     {:style {:text-align "justify" :word-spacing "-2px"}}
-     [:div.title message]
-     [:div.text (.toLocaleString date "en-US")]]]])
+     {:style {:text-align "right"}}
+     (.toLocaleString date "en-US")]]])
 
 (defn notification
   [{id :id {message :message date :date {href :href} :by status :status meta :meta} :data}]

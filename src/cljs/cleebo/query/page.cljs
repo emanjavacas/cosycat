@@ -50,14 +50,36 @@
 (defn query-frame-spacer []
   [:div.row {:style {:margin-top "5px"}}])
 
+(defn animate [throbbing? progress? value {:keys [max-val fps increase] :as opts}]
+  (if (< @value max-val)
+    (let [increase (if @throbbing? increase (* 2 increase))]
+      (.log js/console throbbing? progress? value)
+      (do (js/setTimeout
+           #(animate throbbing? progress? value (update-in opts :increase (partial * 2)))
+           fps)
+          (swap! value + increase)))
+    (do (reset! progress? false) (reset! value 0))))
+
+(defn progress-bar
+  [throbbing? & {:keys [fps max-val increase] :or {fps 15 max-val 100 increase 2}}]
+  (let [value (reagent/atom 0)]
+    (fn [throbbing? & opts]
+      (let [progress? (reagent/atom @throbbing?)]
+        (animate throbbing? progress? value opts)
+        (.log js/console "progress?" @progress? "throbbing?" @throbbing?)
+        (if-not @progress?
+          [:hr]
+          [:progress {:max (str max-val) :value (str @value)}])))))
+
 (defn query-frame []
-  (let [has-query? (re-frame/subscribe [:has-query-results?])]
+  (let [has-query? (re-frame/subscribe [:has-query-results?])
+        fetching-annotations? (re-frame/subscribe [:throbbing? :fetch-annotations])]
     (fn []
       [:div.container-fluid
        [query-toolbar]
        [query-frame-spacer]
        (when @has-query? [sort-toolbar])
-       (when @has-query? [:hr])
+       (when @has-query? [progress-bar fetching-annotations?]) ;still not quite working
        (when @has-query? [results-toolbar])
        [query-frame-spacer]
        [results-frame]])))
