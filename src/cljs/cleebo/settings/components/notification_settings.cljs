@@ -14,9 +14,9 @@
 
 (defn on-mouse-out [text-atom] (fn [e] (reset! text-atom "")))
 
-(defn on-click [v] (fn [] (re-frame/dispatch [:set-settings [:notifications :delay] v])))
+(defn on-click [v] (re-frame/dispatch [:set-settings [:notifications :delay] v]))
 
-(defn get-default [path] (fn [] (get-in (default-settings) path)))
+(defn get-default [path] (get-in (default-settings) path))
 
 (defn notification-controller []
   (let [notification-help (reagent/atom "")
@@ -32,17 +32,17 @@
                       [:span.input-group-btn
                        [:button.btn.btn-default
                         {:type "button"
-                         :on-click (on-click (fn [d] (max 0 (- d 250))))}
+                         :on-click #(on-click (max 0 (- @delay 250)))}
                         [bs/glyphicon {:glyph "minus"}]]]
                       [:span.form-control.input-number @delay]
                       [:span.input-group-btn
                        [:button.btn.btn-default
                         {:type "button"
-                         :on-click (on-click (fn [d] (+ d 250)))}
+                         :on-click #(on-click (+ @delay 250))}
                         [bs/glyphicon {:glyph "plus"}]]]]
                      [:button.btn.btn-default
                       {:type "button"
-                       :on-click (on-click (get-default [:notifications :delay]))}
+                       :on-click #(on-click (get-default [:notifications :delay]))}
                       "Set default"]]
        :help-text notification-help])))
 

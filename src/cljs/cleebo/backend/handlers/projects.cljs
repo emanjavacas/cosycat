@@ -33,7 +33,6 @@
    (let [project-settings (get-in db [:projects project-name :settings] {})]
      (-> db
          (assoc-in [:session :active-project] project-name)
-         (assoc-in [:session :active-panel] :query-panel)
          (update-in [:session :settings] merge project-settings)))))
 
 (re-frame/register-handler

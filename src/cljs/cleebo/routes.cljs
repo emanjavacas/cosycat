@@ -24,11 +24,15 @@
 (defn app-routes []
   (secretary/set-config! :prefix "#")
   (defroute "/" []
-    (re-frame/dispatch [:set-active-panel :front-panel])
     (re-frame/dispatch [:remove-active-project])
-    (re-frame/dispatch [:drop-session-error]))
+    (re-frame/dispatch [:drop-session-error])    
+    (re-frame/dispatch [:set-active-panel :front-panel]))
   (defroute "/project/:project-name" {project-name :project-name}
-    (re-frame/dispatch [:set-active-project {:project-name project-name}]))
+    (re-frame/dispatch [:set-active-project {:project-name project-name}])
+    (re-frame/dispatch [:set-active-panel :project-panel]))  
+  (defroute "/project/:project-name/query" {project-name :project-name}
+    (re-frame/dispatch [:set-active-project {:project-name project-name}])
+    (re-frame/dispatch [:set-active-panel :query-panel]))
   (defroute "/settings" []
     (re-frame/dispatch [:set-active-panel :settings-panel]))
   (defroute "/debug" []

@@ -27,16 +27,17 @@
 (defn check-project-exists
   [handler]
   (fn [db [_ {:keys [project-name]} :as args]]
-    (if-not project-name
-      (do (warn "Project middleware requires named :project-name but got" args) db)
-      (let [projects (get-in db [:projects])]
-        (if-not (some #{project-name} (keys projects))
-          (do (re-frame/dispatch
-               [:register-session-error
-                {:code "Project not found!"
-                 :message "These are not the projects you are looking for."}])
-              db)
-          (handler db args))))))
+    (let [new-db (handler db args)]
+      (if-not project-name
+        (do (warn "Project middleware requires named :project-name but got" args) new-db)
+        (let [projects (get-in new-db [:projects])]
+          (if-not (some #{project-name} (keys projects))
+            (do (re-frame/dispatch
+                 [:register-session-error
+                  {:code "Project not found!"
+                   :message "These are not the projects you are looking for."}])
+                new-db)
+            new-db))))))
 
 (def standard-middleware
   [(when ^boolean goog.DEBUG)
