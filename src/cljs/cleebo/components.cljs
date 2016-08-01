@@ -1,7 +1,7 @@
 (ns cleebo.components
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [color-codes date-str->locale]]
+            [cleebo.utils :refer [color-codes date-str->locale parse-time human-time]]
             [cleebo.localstorage :refer [fetch-db get-backups]]
             [taoensso.timbre :as timbre]
             [goog.string :as gstr]
@@ -75,6 +75,60 @@
      [:span
       {:style {:padding-left "10px"}}
       [user-thumb href {:height "25px" :width "25px"}]]]))
+
+(defn move-cursor [dir els]
+  (fn [idx]
+    (let [[f top] (case dir
+                    :next [inc (count els)]
+                    :prev [dec (count els)])]
+      (mod (f idx) top))))
+
+(defn get-nth-role [idx roles]
+  (first (nth (seq roles) idx)))
+
+(defn on-click-fn [dir roles current-idx-atom on-change]
+  (fn [e]
+    (.stopPropagation e)
+    (let [new-idx (swap! current-idx-atom (move-cursor dir roles))]
+      (on-change (get-nth-role new-idx roles)))))
+
+(defn select-role-btn [roles on-change]
+  (let [current-idx (reagent/atom 0)]
+    (fn [on-change]
+      (let [[role desc] (nth (seq roles) @current-idx)]
+        [:div
+         [:div.input-group
+          [:span.input-group-btn
+           [:button.btn.btn-default
+            {:type "button"
+             :on-click (on-click-fn :prev roles current-idx on-change)}
+            [bs/glyphicon {:glyph "chevron-left"}]]]
+          [bs/overlay-trigger
+           {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} desc])
+            :placement "bottom"}
+           [:span.form-control.text-center [bs/label role]]]
+          [:span.input-group-btn
+           [:button.btn.btn-default
+            {:type "button"
+             :on-click (on-click-fn :next roles current-idx on-change)}
+            [bs/glyphicon {:glyph "chevron-right"}]]]]]))))
+
+(defn user-profile-component [user roles & {:keys [on-select-role] :or {on-select-role identity}}]
+  (fn [{:keys [avatar username firstname lastname email created last-active] :as user} roles & opts]
+    [:div.container-fluid
+     [:div.row
+      [:div.col-sm-6.col-md-4
+       [:h4 [:img.img-rounded.img-responsive {:src (:href avatar)}]]]
+      [:div.col-sm-6.col-md-8
+       [:h4 username [:br] [:span [:small [:cite (str firstname " " lastname)]]]]]]
+     [:div.row {:style {:padding "0 15px"}}
+      [bs/table
+       [:tbody
+        [:tr [:td [bs/glyphicon {:glyph "envelope"}]] [:td email]]
+        [:tr [:td [:span (str "Created:")]] [:td (parse-time created)]]
+        [:tr [:td [:span (str "Last active:") ]] [:td (human-time last-active)]]]]]
+     [:div.row {:style {:padding "0 15px"}}
+      [select-role-btn roles on-select-role]]]))
 
 (defn number-cell [n]
   (fn [n]

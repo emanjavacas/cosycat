@@ -23,16 +23,17 @@
         clicked (reagent/atom false)]
     (fn [{{key :key value :value} :ann
           id :_id version :_version user :username time :timestamp} hit-id]
-      [:div key
-       [:span {:style {:text-align "right" :margin-left "7px"}}
+      [:div
+       [:span {:style {:padding-left "5px"}} key]
+       [:span {:style {:text-align "left" :margin-left "7px"}}
         (if-not @clicked
           [bs/overlay-trigger
-           {:overlay (reagent/as-component
-                      [bs/tooltip {:id "tooltip"} "Click to modify"])
+           {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} "Click to modify"])
             :placement "right"}
            [bs/label
             {:onClick #(swap! clicked not)
-             :style {:cursor "pointer" :float "right"}}
+             :bsStyle "primary"
+             :style {:cursor "pointer" :float "right" :font-size "100%"}}
             value]]
           [:input.input-as-div
            {:name "newannval"
@@ -53,6 +54,7 @@
             :placement "left"}
            [bs/label
             {:style {:cursor "pointer"}
+             :bsStyle "primary"
              :onClick #(dispatch-update id version value hit-id on-dispatch)}
             value]]]
      [:td {:style {:width "25px"}}]

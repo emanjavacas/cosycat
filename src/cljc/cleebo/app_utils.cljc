@@ -1,6 +1,10 @@
 (ns cleebo.app-utils
   #?(:cljs (:require [goog.dom.pattern :as gpattern])))
 
+;;; MATH
+(defn ceil [n]
+  #?(:clj (Math/ceil n) :cljs (.ceil js/Math n)))
+
 ;;; SYNTAX
 (defn deep-merge
    "Recursively merges maps. If keys are not maps, the last value wins."

@@ -10,7 +10,11 @@
 (defn key-val
   [{{k :key v :value} :ann user :username time :timestamp}]
   [:div
-   [:span {:style {:text-align "right" :margin-left "7px"}} [bs/label v]]])
+   [:span {:style {:text-align "right" :margin-left "7px"}}
+    [bs/label
+     {:bsStyle "primary"
+      :style {:font-size "85%"}}
+     v]]])
 
 (defn annotation-cell-style
   [color-map username]
@@ -42,6 +46,9 @@
              :on-dispatch #(swap! open? not)})]]]
         [:td ""]))))
 
+(defn annotation-key [key]
+  [:td [bs/label {:style {:font-size "85%"}} key]])
+
 (defn annotation-row [hit ann-key]
   (let [color-map (re-frame/subscribe [:filtered-users-colors])]
     (fn [{hit-id :id hit :hit} ann-key]
@@ -51,4 +58,4 @@
              ^{:key (str ann-key hit-id token-id)}
              [annotation-cell {:ann-map (get anns ann-key)
                                :hit-id hit-id :token-id token-id :color-map color-map}])
-           (prepend-cell {:key (str ann-key) :child (fn [key] [:td key]) :opts [ann-key]}))))))
+           (prepend-cell {:key (str ann-key) :child annotation-key :opts [ann-key]}))))))

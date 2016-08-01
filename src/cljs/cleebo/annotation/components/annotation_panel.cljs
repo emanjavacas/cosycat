@@ -51,6 +51,7 @@
       [:tbody]
       (concat
        [[hit-row hit open-hits]]
+       ;; [bs/collapse {:in (contains? @open-hits (:id hit))}]
        [[input-row hit]]
        (for [ann-key (sort-by (juxt :type :key) > (ann-types hit))]
          [annotation-row hit ann-key])))]))

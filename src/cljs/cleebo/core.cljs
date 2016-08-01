@@ -147,7 +147,7 @@
        [bs/navbar-header [user-brand active-project]]
        [bs/nav {:pullRight true}
         (when-not (= @active-panel :front-panel)
-          [navlink :query-panel (str "#/project/" @active-project)
+          [navlink :query-panel (str "#/project/" @active-project "/query")
            "Query" "zmdi-search"])
         (when-not (= @active-panel :front-panel)
           [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"])
