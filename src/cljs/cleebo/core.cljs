@@ -21,6 +21,7 @@
             [cleebo.components :refer
              [notification-container load-from-ls-modal user-thumb throbbing-panel]]
             [cleebo.query.page :refer [query-panel]]
+            [cleebo.project.page :refer [project-panel]]
             [cleebo.settings.page :refer [settings-panel]]
             [cleebo.updates.page :refer [updates-panel]]
             [cleebo.debug.page :refer [debug-panel]]
@@ -43,6 +44,7 @@
 (defmulti panels identity)
 (defmethod panels :front-panel [] [#'front-panel])
 (defmethod panels :query-panel [] [#'query-panel])
+(defmethod panels :project-panel [] [#'project-panel])
 (defmethod panels :settings-panel [] [#'settings-panel])
 (defmethod panels :debug-panel [] [#'debug-panel])
 (defmethod panels :updates-panel [] [#'updates-panel])
