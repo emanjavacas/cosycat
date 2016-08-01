@@ -6,15 +6,19 @@
             [cleebo.components :refer [user-thumb]]
             [taoensso.timbre :as timbre]))
 
-(defn trigger-update [id version new-value hit-id]
+(defn dispatch-update [id version new-value hit-id on-dispatch]
+  (re-frame/dispatch
+   [:update-annotation
+    {:update-map {:_id id :_version version :value new-value}
+     :hit-id hit-id}])
+  (on-dispatch))
+
+(defn trigger-update [id version new-value hit-id on-dispatch]
   (fn [e]
     (when (= 13 (.-charCode e))
-      (re-frame/dispatch
-       [:update-annotation
-        {:update-map {:_id id :_version version :value new-value}
-         :hit-id hit-id}]))))
+      (dispatch-update id version new-value hit-id on-dispatch))))
 
-(defn key-val [{{key :key value :value} :ann} hit-id]
+(defn new-value-input [{{key :key value :value} :ann} hit-id on-dispatch]
   (let [text-atom (reagent/atom value)
         clicked (reagent/atom false)]
     (fn [{{key :key value :value} :ann
@@ -22,50 +26,74 @@
       [:div key
        [:span {:style {:text-align "right" :margin-left "7px"}}
         (if-not @clicked
-          [bs/label
-           {:onClick #(swap! clicked not)
-            :style {:cursor "pointer" :text-align "right"}} value]
+          [bs/overlay-trigger
+           {:overlay (reagent/as-component
+                      [bs/tooltip {:id "tooltip"} "Click to modify"])
+            :placement "right"}
+           [bs/label
+            {:onClick #(swap! clicked not)
+             :style {:cursor "pointer" :float "right"}}
+            value]]
           [:input.input-as-div
            {:name "newannval"
             :type "text"
             :value  @text-atom
-            :on-key-press (trigger-update id version @text-atom hit-id)
+            :on-key-press (trigger-update id version @text-atom hit-id on-dispatch)
             :on-blur #(do (reset! text-atom value) (swap! clicked not))
-            :on-input #(reset! text-atom (.. % -target -value))}])]])))
+            :on-change #(reset! text-atom (.. % -target -value))}])]])))
 
-(defn history-body [history]
-  (fn [history]
+(defn history-row [ann current-ann hit-id on-dispatch]
+  (fn [{{value :value} :ann timestamp :timestamp username :username}
+       {version :_version id :_id :as current-ann}
+       hit-id on-dispatch]
+    [:tr
+     [:td [bs/overlay-trigger
+           {:overlay (reagent/as-component
+                      [bs/tooltip {:id "tooltip"} "Click to restore this version"])
+            :placement "left"}
+           [bs/label
+            {:style {:cursor "pointer"}
+             :onClick #(dispatch-update id version value hit-id on-dispatch)}
+            value]]]
+     [:td {:style {:width "25px"}}]
+     [:td
+      [:span.text-muted username]
+      [:span
+       {:style {:margin-left "10px"}}
+       (human-time timestamp)]]]))
+
+(defn spacer-row [] [:tr {:style {:height "5px"}} [:td ""]])
+
+(defn history-body [history current-ann hit-id on-dispatch]
+  (fn [history current-ann hit-id on-dispatch]
     [:tbody
      (doall
-      (for [{{value :value} :ann :as ann} (sort-by :timestamp > history)]
-        ^{:key (str value (:timestamp ann))}
-        [:tr {:style {:padding "50px"}}
-         [:td [bs/label value]]
-         [:td {:style {:width "25px"}}]
-         [:td
-          [:span.text-muted (:username ann)]
-          [:span
-           {:style {:margin-left "10px"}}
-           (human-time (:timestamp ann))]]]))]))
+      (for [{{value :value} :ann timestamp :timestamp :as ann}
+            (butlast (interleave (sort-by :timestamp > history) (range)))
+            :let [key (if value (str value timestamp) (str "spacer-" ann))]]
+        (if value
+          ^{:key key} [history-row ann current-ann hit-id on-dispatch]
+          ^{:key key} [spacer-row])))]))
 
 (defn annotation-popover
-  [{time :timestamp username :username history :history :as ann} hit-id]
+  [{{:keys [timestamp username history _version] :as ann} :ann-map
+    hit-id :hit-id on-dispatch :on-dispatch}]
   (let [user (re-frame/subscribe [:user username])]
-    (reagent/as-component
-     [bs/popover
-      {:id "popover"
-       :title (reagent/as-component
-               [:div.container-fluid
-                [:div.row
-                 [:div.col-sm-4
-                  {:style {:padding-left "0px"}}
-                  [user-thumb (get-in @user [:avatar :href])]]
-                 [:div.col-sm-8
-                  [:div.row.pull-right [:div.text-muted username]]
-                  [:br] [:br]
-                  [:div.row.pull-right (human-time time)]]]])
-       :style {:max-width "100%"}}
-      [:div.container-fluid
-       [:div.row [key-val ann hit-id]]
-       [:div.row ]
-       [:div.row [:table (when-not (empty? history) [history-body history])]]]])))
+    [bs/popover
+     {:id "popover"
+      :title (reagent/as-component
+              [:div.container-fluid
+               [:div.row
+                [:div.col-sm-4
+                 {:style {:padding-left "0px"}}
+                 [user-thumb (get-in @user [:avatar :href])]]
+                [:div.col-sm-8
+                 [:div.row.pull-right [:div.text-muted username]]
+                 [:br] [:br]
+                 [:div.row.pull-right (human-time timestamp)]]]])
+      :style {:max-width "100%"}}
+     [:div.container-fluid
+      [:div.row {:style {:background-color "#e2e2e2"}} [new-value-input ann hit-id on-dispatch]]
+      [:div.row {:style {:height "8px"}}]
+      [:div.row [:table (when-not (empty? history)
+                          [history-body history ann hit-id on-dispatch])]]]]))

@@ -85,12 +85,10 @@
            [select-role-btn (on-new-user-role selected-users username)]])]])))
 
 (defn users-input-component [selected-users]
-  (let [users (re-frame/subscribe [:session :users])]
+  (let [users (re-frame/subscribe [:users :exclude-me true])]
     (fn [selected-users]
-      (timbre/debug @users)
       (when-not (empty? @users)
         [:div (doall (for [row (partition-all 3 @users)
                            {:keys [username] :as user} row]
-                       (do (timbre/debug "USER" user)
-                           ^{:key username}
-                           [:div.col-lg-4 [user-profile user selected-users]])))]))))
+                       ^{:key username}
+                       [:div.col-lg-4 [user-profile user selected-users]]))]))))

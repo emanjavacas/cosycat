@@ -170,7 +170,6 @@
        [load-from-ls-modal ls-modal?]
        [:div.container-fluid
         {:style {:padding "75px 50px 0 50px"}}
-        (timbre/debug @session-error)
         (panels
          (cond
            @session-error :error-panel
