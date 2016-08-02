@@ -126,8 +126,8 @@
 
 (defn filter-dummy-tokens
   "removes dummy tokens from hit"
-  [hit]
-  (filter (fn [token] (pos? (get-token-id token))) hit))
+  [tokens]
+  (filter (fn [token] (pos? (get-token-id token))) tokens))
 
 ;;; ANNOTATIONS
 (defn ->box [color] (str "0 -1.5px " color " inset"))

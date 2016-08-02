@@ -15,11 +15,6 @@
             [cleebo.backend.history]            
             [cleebo.backend.ws-routes]
             [cleebo.backend.subs]
-            [cleebo.backend.ws :refer [open-ws-channel]]
-            [cleebo.routes :as routes]
-            [cleebo.localstorage :as ls]
-            [cleebo.components :refer
-             [notification-container load-from-ls-modal user-thumb throbbing-panel]]
             [cleebo.query.page :refer [query-panel]]
             [cleebo.project.page :refer [project-panel]]
             [cleebo.settings.page :refer [settings-panel]]
@@ -27,6 +22,12 @@
             [cleebo.debug.page :refer [debug-panel]]
             [cleebo.front.page :refer [front-panel]]
             [cleebo.error.page :refer [error-panel]]
+            [cleebo.backend.ws :refer [open-ws-channel]]
+            [cleebo.routes :as routes]
+            [cleebo.localstorage :as ls]
+            [cleebo.components :refer
+             [notification-container load-from-ls-modal user-thumb throbbing-panel]]
+            [cleebo.app-utils :refer [function?]]
             [cleebo.utils :refer [nbsp]]
             [cleebo.ajax-interceptors
              :refer [add-interceptor csrf-interceptor ajax-header-interceptor debug-interceptor]]
@@ -87,7 +88,7 @@
       [bs/nav-item
        {:eventKey target
         :class (if (= @active target) "active")
-        :href href}
+        :href (if (function? href) (href) href)}
        [icon-label icon label]])))
 
 (defn navdropdown [target label icon & {:keys [children]}]
@@ -147,8 +148,8 @@
        [bs/navbar-header [user-brand active-project]]
        [bs/nav {:pullRight true}
         (when-not (= @active-panel :front-panel)
-          [navlink :query-panel (str "#/project/" @active-project "/query")
-           "Query" "zmdi-search"])
+          (let [url #(str "#/project/" @active-project "/query")]
+            [navlink :query-panel url "Query" "zmdi-search"]))
         (when-not (= @active-panel :front-panel)
           [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"])
         (when-not (= @active-panel :front-panel)

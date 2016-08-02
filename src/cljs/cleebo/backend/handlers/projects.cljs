@@ -55,9 +55,8 @@
  :new-project
  standard-middleware
  (fn [db [_ {:keys [name description users] :as project}]]
-   (POST "/project"
-         {:params {:route :new-project
-                   :name name
+   (POST "/project/new"
+         {:params {:project-name name
                    :description description
                    :users (conj users (user->project-user (:me db)))}
           :handler new-project-handler
@@ -110,7 +109,7 @@
  :project-remove-user
  (fn [db [_ {:keys [project]}]]
    (POST "/project"
-         {:params {:route :remove-user :project project}
+         {:params {:project project}
           :handler #(re-frame/dispatch [:notify "Goodbye from project " project])
           :error-handler error-handler})
    db))

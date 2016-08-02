@@ -23,16 +23,21 @@
 (def project-users-schema
   [project-user-schema])
 
+(def project-meta-schema
+  {(s/optional-key :delete-project-agree) [s/Str]})
+
 (def project-schema
   #?(:clj {:name s/Str
-          :description s/Str
-          :created s/Int
-          :users project-users-schema
-          (s/optional-key :updates) [update-schema]}
+           :description s/Str
+           :created s/Int
+           :users project-users-schema
+           (s/optional-key :meta) project-meta-schema
+           (s/optional-key :updates) [update-schema]}
      :cljs {:name s/Str
             :description s/Str
             :created s/Int
             :users [{:username s/Str :role s/Str}]
+            (s/optional-key :meta) project-meta-schema
             (s/optional-key :updates) [update-schema]
             (s/optional-key :settings) settings-schema
             (s/optional-key :session) project-session-schema

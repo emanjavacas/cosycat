@@ -7,42 +7,73 @@
             [schema.core :as s]
             [react-bootstrap.components :as bs]))
 
-(defn dispatch-annotations [ann-map marked-tokens]
-  (let [filtered-tokens (-> @marked-tokens filter-dummy-tokens)
-                                        ;discard those with given ann for given key
-        token-ids (map :id filtered-tokens)
-        hit-ids (map :hit-id filtered-tokens)]
-    ;; for tokens with existing ann, trigger update (if old ann author is client, or check rights) 
-    (re-frame/dispatch
-     [:dispatch-annotation
-      ann-map                    ;ann-map
-      hit-ids                    ;hit-ids
-      (mapv ->int token-ids)]))) ;token-ids
+(defn classify-annotation
+  ([anns ann-key username] (classify-annotation (get anns ann-key) username))
+  ([ann username] (if-not ann
+                    :empty-annotation
+                    (if (= username (:username ann))
+                      :exisiting-annotation-owner
+                      :existing-annotation))))
 
-(defn deselect-tokens [marked-tokens]
-  (doseq [{:keys [hit-id id]} @marked-tokens]
+(defn group-tokens [tokens ann-key username]
+  (->> tokens filter-dummy-tokens (group-by #(classify-annotation (:anns %) ann-key username))))
+
+(defn dispatch-annotations [ann-map tokens]
+  (re-frame/dispatch
+   [:dispatch-annotation
+    ann-map                    ;ann-map
+    (->> tokens (map :hit-id))    ;hit-ids
+    (->> tokens (map :id) (mapv ->int))])) ;token-ids
+
+(defn update-annotations [ann-key new-value tokens]
+  (doseq [{hit-id :hit-id {ann ann-key} :anns} tokens
+          :let [{:keys [_id _version]} ann]]
+    (re-frame/dispatch
+     [:update-annotation
+      {:update-map {:_id _id :_version _version :value new-value}
+       :hit-id hit-id}])))
+
+(defn deselect-tokens [tokens]
+  (doseq [{:keys [hit-id id]} tokens]
     (re-frame/dispatch
      [:unmark-token
       {:hit-id hit-id
        :token-id id}])))
 
 (defn trigger-dispatch
-  [{:keys [marked-tokens deselect-on-close annotation-modal-show current-ann me]}]
+  [{:keys [marked-tokens annotation-modal-show current-ann me]}]
   (fn [target]
     (when (= 13 (.-charCode target))
       (if-let [[key value] (parse-annotation (by-id "token-ann-key"))]
-        (do (when @deselect-on-close (deselect-tokens marked-tokens))
-            (swap! annotation-modal-show not)
-            (dispatch-annotations {:key key :value value} marked-tokens))))))
+        (let [{:keys [empty-annotation existing-annotation-owner existing-annotation]}
+              (group-tokens @marked-tokens @current-ann @me)]
+          (dispatch-annotations {:key key :value value} empty-annotation)
+          (deselect-tokens empty-annotation)
+          (update-annotations key value existing-annotation-owner)
+          (deselect-tokens existing-annotation-owner)
+          (swap! annotation-modal-show not))))))
 
 (defn update-current-ann [current-ann]
   (fn [target]
     (let [input-data (by-id "token-ann-key")
-          [key] (re-find #"([^=]+)=?" input-data)]
+          [_ key] (re-find #"([^=]+)=?" input-data)]
       (reset! current-ann key))))
 
+(defn count-selected [marked-tokens current-ann me]
+  (->> @marked-tokens
+       (sort-by (juxt :word (fn [{:keys [anns]}] (classify-annotation anns @current-ann @me))))
+       (map (juxt :word (fn [token] (get-in token [:anns @current-ann]))))
+       frequencies))
+
+(defn background-color [ann me]
+  (let [danger  "#fbeded", success "#def0de"]
+    (cond
+      (not ann) "white"
+      (= (:username ann) me) success
+      :else danger)))
+
 (defn annotation-input [marked-tokens opts]
-  (fn [marked-tokens {:keys [deselect-on-close annotation-modal-show current-ann me]}]
+  (fn [marked-tokens {:keys [annotation-modal-show current-ann me]}]
     [:table
      {:width "100%"}
      [:tbody
@@ -57,29 +88,28 @@
           :on-key-press
           (trigger-dispatch
            {:marked-tokens marked-tokens
-            :deselect-on-close  deselect-on-close
             :current-ann current-ann
             :me me
             :annotation-modal-show annotation-modal-show})}]]]]]))
 
-(defn count-selected [marked-tokens current-ann]
-  (frequencies (map (juxt :word #(get-in % [:anns @current-ann])) @marked-tokens)))
+(defn existing-annotation-label [{username :username {val :value} :ann :as ann} me]
+  (case (classify-annotation ann me)
+    :empty-annotation (nbsp)
+    :exisiting-annotation-owner val
+    :existing-annotation
+    [bs/overlay-trigger
+     {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} (str "by: " username)])
+      :placement "right"}
+     val]))
 
-(defn background-color [ann me]
-  (let [danger  "#eca9a7", success "#addbad"]
-    (cond
-      (not ann) "white"
-      (= (:username ann) me) success
-      :else danger)))
-
-(defn token-row [[word ann] c me]
-  (fn [[word ann] c me]
+(defn token-counts-row [[word ann] c me]
+  (fn [[word {username :username {val :value} :ann :as ann}] c me]
     [:tr
-     {:style {:background-color (background-color ann me)}}
-     [:td word]
-     [:td (when ann (str (get-in ann [:ann :value]) " by: " (:username ann)))]
-     [:td {:style {:text-align "right"}}
-      [bs/label c]]]))
+     {:style {:background-color (background-color ann @me)}}
+     [:td {:style {:padding-bottom "5px"}} word]
+     [:td {:style {:padding-bottom "5px"}} (existing-annotation-label ann @me)]
+     [:td {:style {:padding-bottom "5px" :text-align "right"}}
+      [bs/label {:style {:vertical-align "-30%" :display "inline-block" :font-size "100%"}} c]]]))
 
 (defn token-counts-table [marked-tokens {:keys [current-ann me]}]
   (fn [marked-tokens {:keys [current-ann me]}]
@@ -92,19 +122,18 @@
        [:th {:style {:padding-bottom "10px" :text-align "right"}} "Count"]]]
      [:tbody
       {:style {:font-size "14px !important"}}
-      (for [[[word ann :as token] c] (count-selected marked-tokens current-ann)]
+      (for [[[word ann :as token] c] (count-selected marked-tokens current-ann me)]
         ^{:key (str word (:username ann) "pop")}
-        [token-row token c me])]]))
+        [token-counts-row token c me])]]))
 
 (defn annotation-modal [annotation-modal-show marked-tokens]
   (let [me (re-frame/subscribe [:me :username])
-        deselect-on-close (reagent/atom true)
         current-ann (reagent/atom "")]
     (fn [annotation-modal-show marked-tokens]
       [bs/modal
        {:class "large"
         :show @annotation-modal-show
-        :on-hide #(swap! annotation-modal-show not)}
+        :on-hide #(do (swap! annotation-modal-show not) (reset! current-ann ""))}
        [bs/modal-header
         {:closeButton true}
         [bs/modal-title
@@ -115,29 +144,19 @@
          [:div.row
           ^{:key "ann-table"}
           [annotation-input marked-tokens
-           {:deselect-on-close deselect-on-close
-            :annotation-modal-show annotation-modal-show
-            :me @me
+           {:annotation-modal-show annotation-modal-show
+            :me me
             :current-ann current-ann}]
           [:hr]
-          ^{:key "cnt-table"} [token-counts-table marked-tokens {:current-ann current-ann :me @me}]]]]
+          ^{:key "cnt-table"} [token-counts-table marked-tokens {:current-ann current-ann :me me}]]]]
        [bs/modal-footer
-        [:div.container-fluid.pull-left
-         {:style {:line-height "40px !important"}}
-         [:span.pull-left
-          [bs/input
-           {:type "checkbox"
-            :checked @deselect-on-close
-            :onClick #(swap! deselect-on-close not)}]]
-         "Deselect tokens after submit?"]
         [bs/button
          {:className "pull-right"
           :bsStyle "info"
           :onClick (trigger-dispatch
                     {:marked-tokens marked-tokens
-                     :deselect-on-close  deselect-on-close
                      :current-ann current-ann
-                     :me @me
+                     :me me
                      :annotation-modal-show annotation-modal-show})}
          "Submit"]]])))
 

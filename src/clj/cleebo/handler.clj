@@ -27,7 +27,7 @@
             [cleebo.components.ws :refer [ws-handler-http-kit send-clients]]
             [cleebo.routes.blacklab :refer [blacklab-routes]]
             [cleebo.routes.session :refer [session-route]]
-            [cleebo.routes.projects :refer [project-route]]
+            [cleebo.routes.projects :refer [project-routes]]
             [cleebo.routes.settings :refer [settings-route]]
             [cleebo.routes.annotations :refer [annotation-routes]]))
 
@@ -45,7 +45,6 @@
   (routes
    (GET "/session" [] session-route)
    (POST "/settings" [] settings-route)
-   (POST "/project" [] project-route)
    (GET "/ws" [] ws-handler-http-kit)))
 
 (defn base-routes []
@@ -102,6 +101,6 @@
 
 (defn make-handler [component]
   (let [components (select-keys component (:components component))]
-    (-> (app-routes static-routes web-app-routes blacklab-routes annotation-routes base-routes)
+    (-> (app-routes static-routes web-app-routes blacklab-routes annotation-routes project-routes base-routes)
         (wrap-app-component components)
         (wrap-routes wrap-base))))

@@ -3,7 +3,7 @@
             [monger.operators :refer :all]
             [taoensso.timbre :as timbre]
             [schema.core :as s]
-            [cleebo.app-utils :refer [deep-merge-with]]
+            [cleebo.app-utils :refer [deep-merge-with server-project-name]]
             [cleebo.utils :refer [get-token-id assert-ex-info]]
             [cleebo.vcs :as vcs]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
@@ -59,20 +59,20 @@
 
 ;;; Fetchers
 (defn fetch-annotation-by-id [{db-conn :db} project id]
-  (mc/find-one-as-map db-conn project {:_id id}))
+  (mc/find-one-as-map db-conn (server-project-name project) {:_id id}))
 
 (defmulti fetch-span-annotation-by-key (fn [db project ann-key {type :type}] type))
 
 (defmethod fetch-span-annotation-by-key "token"
   [{db-conn :db} project ann-key {scope :scope}]
   (mc/find-one-as-map
-   db-conn project
+   db-conn (server-project-name project)
    {"ann.key" ann-key $and [{"span.scope.B" {$lte scope}} {"span.scope.O" {$gte scope}}]}))
 
 (defmethod fetch-span-annotation-by-key "IOB"
   [{db-conn :db} project ann-key {{B :B O :O} :scope}]
   (mc/find-one-as-map
-   db-conn project
+   db-conn (server-project-name project)
    {"ann.key" ann-key $and [{"span.scope.B" {$lte O}} {"span.scope.O" {$gte B}}]}))
 
 (defmulti fetch-token-annotation-by-key (fn [db project ann-key {type :type}] type))
@@ -80,13 +80,13 @@
 (defmethod fetch-token-annotation-by-key "token"
   [{db-conn :db} project ann-key {scope :scope}]
   (mc/find-one-as-map
-   db-conn project
+   db-conn (server-project-name project)
    {"ann.key" ann-key "span.scope" scope}))
 
 (defmethod fetch-token-annotation-by-key "IOB"
   [{db-conn :db} project key {{B :B O :O} :scope}]
   (mc/find-one-as-map
-   db-conn project
+   db-conn (server-project-name project)
    {"ann.key" key "span.scope" {$in (range B (inc O))}}))
 
 (defn with-history
@@ -97,7 +97,7 @@
 (defn fetch-annotations
   [{db-conn :db :as db} project corpus from size & {:keys [history] :or {history true} :as opts}]
   (cond->> (mc/find-maps
-            db-conn project
+            db-conn (server-project-name project)
             {"corpus" corpus
              $or [{$and [{"span.scope" {$gte from}} {"span.scope" {$lt (+ from size)}}]}
                   {$or  [{"span.scope.O" {$gte from}} {"span.scope.B" {$lt (+ from size)}}]}]})
@@ -107,7 +107,7 @@
 (defn insert-annotation
   [{db-conn :db :as db} project {username :username :as ann}]
   (check-insert db project ann)
-  (vcs/insert-and-return db-conn project (assoc ann :_id (vcs/new-uuid))))
+  (vcs/insert-and-return db-conn (server-project-name project) (assoc ann :_id (vcs/new-uuid))))
 
 (defn update-annotation
   [{db-conn :db :as db} project
@@ -116,7 +116,8 @@
    & {:keys [history] :or {history true}}]
   (assert-ex-info (and version id) "annotation update requires annotation id/version" update-map)
   (cond->> (vcs/find-and-modify
-            db-conn project version              
+            db-conn (server-project-name project)
+            version              
             {:_id id}    ;conditions
             {$set {"ann.value" value "timestamp" timestamp "username" username "query" query}}
             {:return-new true})

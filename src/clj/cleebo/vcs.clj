@@ -135,7 +135,6 @@
    which takes care of updating the resulting document version"
   [f {:keys [id-getter version-setter]} & check-fns]
   (fn wrapped-func [db coll version & args]
-    (timbre/debug args)
     (apply-check-fns f db coll args check-fns)
     (let [id (apply id-getter db coll args)]
       (if-let [{db-version :_version :as doc} (mc/find-one-as-map db coll {:_id id})] ;1 search
@@ -172,10 +171,10 @@
 ;;; version setters
 (defn update-version-setter
   "version setter for document updates with mongodb operators; fns: update, update-by-id, find-and-modify"
-  [f db coll conditions-or-id doc opts & _]
+  [f db coll conditions-or-id doc & opts]
   (let [new-doc (deep-merge doc {$inc {:_version 1}})]
     (timbre/info "Applying update-map" new-doc)
-    (f db coll conditions-or-id new-doc opts)))
+    (apply f db coll conditions-or-id new-doc opts)))
 
 (defn last-version-setter
   "version setter for ops removing the document from db, which do not need version update.
@@ -245,9 +244,8 @@
   [db]
   (mc/drop db *hist-coll-name*))
 
-(comment (def db (.start (new-db "mongodb://127.0.0.1:27017/cleeboDev")))
+(comment (defonce db (.start (new-db "mongodb://127.0.0.1:27017/cleeboTest")))
          (def doc (insert-and-return (:db db) "test" {:hello "true"}))
-         (update (:db db) "test" (dissoc doc :_version) {$set {:stoff 0}})
-         (update (:db db) "test" (dissoc doc :_version) {$inc {:stoff 1}})
+         (update (:db db) "test" 0 (dissoc doc :_version) {$set {:stoff 0}})
+         (update (:db db) "test" 1 (dissoc doc :_version) {$inc {:stoff 1}})
          (with-history (:db db) (first (mc/find-maps (:db db) "test" {:_id (:_id doc)}))))
-

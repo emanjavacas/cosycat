@@ -1,19 +1,21 @@
-(ns cleebo.test.db
-  (:require [clojure.test :refer [deftest testing is]]
+(ns cleebo.test.annotations
+  (:require [clojure.test :refer [deftest testing is use-fixtures]]
             [clojure.test.check.generators :as check-generators]
             [monger.collection :as mc]
-            [monger.operators :refer :all]
-            [com.stuartsierra.component :as component]
             [schema.core :as s]
-            [schema-generators.generators :as g]
+            [cleebo.test.test-config :refer [db-fixture db]]
             [cleebo.schemas.annotation-schemas :refer [annotation-schema]]
-            [cleebo.components.db :refer [new-db colls clear-dbs]]
-            [cleebo.db.users :as users]
-            [cleebo.db.annotations :as anns]
-            [config.core :refer [env]]))
+            [cleebo.db.annotations :as anns]))
 
-(defonce db (component/start (new-db (:database-url env))))
 (def project "_test_project")
+(defn test-project-fixture [f]
+  (mc/drop (:db db) project)
+  (f)
+  (mc/drop (:db db) project))
+
+(use-fixtures :once db-fixture test-project-fixture)
+
+;;; Annotations
 (def payload
   {:hit-id  [5377 9569],
    :ann-map [{:ann      {:key "a", :value "a"},
@@ -91,15 +93,13 @@
     (is (= (-> (try (anns/insert-annotation db project overlapping-IOB-IOB-ann)
                     (catch clojure.lang.ExceptionInfo e
                       (ex-data e)))
-              :data
-              (select-keys [:source-scope :scope]))
+               (select-keys [:source-scope :scope]))
            {:source-scope (get-in IOB-ann [:span :scope])
             :scope (get-in overlapping-IOB-IOB-ann [:span :scope])})))
   (testing "attempt token overlapping IOB annotation"
     (is (= (-> (try (anns/insert-annotation db project overlapping-token-IOB-ann)
                     (catch clojure.lang.ExceptionInfo e
                       (ex-data e)))
-               :data
                (select-keys [:scope :source-scope]))
            {:source-scope (get-in token-ann [:span :scope])
             :scope (get-in overlapping-token-IOB-ann [:span :scope])})))
@@ -107,42 +107,6 @@
     (is (= (-> (try (anns/insert-annotation db project overlapping-IOB-token-ann)
                     (catch clojure.lang.ExceptionInfo e
                       (ex-data e)))
-               :data               
                (select-keys [:source-scope :scope]))
            {:source-scope (get-in IOB-ann [:span :scope])
             :scope (get-in overlapping-IOB-token-ann [:span :scope])}))))
-
-(def sample-user
-  {:username "foo-user" :password "pass"
-   :firstname "FOO" :lastname "USER" :email "foo@bar.com"})
-
-(deftest users-db-test
-  (testing "adding new user"
-    (is (= (-> (users/new-user db sample-user)
-               (select-keys [:username :roles]))
-           {:username "foo-user" :roles #{"user"}})))
-  (testing "adding existing user"
-    (is (= (-> (try (users/new-user db sample-user)
-                    (catch clojure.lang.ExceptionInfo e
-                      (ex-data e)))
-               :message)           
-           :user-exists)))
-  (testing "existing user"
-    (is (= (boolean (users/is-user? db sample-user)) true)))
-  (testing "user lookup"
-    (is (= (-> (users/lookup-user db sample-user)
-               (select-keys [:username :roles]))
-           {:username "foo-user" :roles #{"user"}})))
-  (testing "remove existing user"
-    (is (not (nil? (users/remove-user db "foo-user")))))
-  (testing "remove non-existing user"
-    (is (nil? (do (users/remove-user db "foo-user") (users/is-user? db {:username "username"})))))
-  (testing "user with admin role"
-    (is (= (-> (users/new-user db (assoc sample-user :roles ["admin"]))
-               (select-keys [:username :roles]))
-           {:username "foo-user" :roles #{"admin"}})))
-  (users/remove-user db "foo-user")
-  (testing "user with multiple roles"
-    (is (= (-> (users/new-user db (assoc sample-user :roles ["admin" "user"]))
-               (select-keys [:username :roles]))
-           {:username "foo-user" :roles #{"admin" "user"}}))))

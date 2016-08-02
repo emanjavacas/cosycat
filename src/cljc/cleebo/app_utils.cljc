@@ -1,5 +1,6 @@
 (ns cleebo.app-utils
-  #?(:cljs (:require [goog.dom.pattern :as gpattern])))
+  #?(:cljs (:require [goog.dom.pattern :as gpattern]
+                     [goog.dom.string :as gstring])))
 
 ;;; MATH
 (defn ceil [n]
@@ -79,9 +80,14 @@
 
 (defn atom? [o] (instance? #?(:clj clojure.lang.Atom :cljs cljs.core/Atom) o))
 
+(defn function? [o] #?(:clj clojure.test/function? :cljs (= (type inc) (type o))))
+
 (defn dekeyword [k] (apply str (rest (str k))))
 
 ;;; LOGIC
 (defn invalid-project-name [s]
-  #?(:clj  (re-find #"[ ^\W+]" s)
-     :cljs (gpattern/matchStringOrRegex (js/RegExp "[ ^\\W+]") s)))
+  (and #?(:clj  (re-find #"[ ^\W+]" s)
+          :cljs (gpattern/matchStringOrRegex (js/RegExp "[ ^\\W+]") s))
+       (= s "_vcs")))
+
+(defn server-project-name [s] (str "_" s))
