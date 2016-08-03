@@ -10,7 +10,6 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [project (proj/new-project db username project-name desc users)]
-    (proj/)
     (send-clients
      ws {:type :new-project :data project}
      :source-client username
@@ -22,7 +21,7 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [project (proj/get-project db username project-name)]
-    (proj/)
+    (proj/remove-project db username project-name)
     (send-clients ws {:type :remove-project :data {:project-name project-name}}
      :source-client username
      :target-clients (mapv :username (:users project)))))

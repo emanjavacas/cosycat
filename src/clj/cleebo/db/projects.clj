@@ -2,6 +2,7 @@
   (:require [monger.collection :as mc]
             [monger.operators :refer :all]
             [schema.core :as s]
+            [cleebo.vcs :as vcs]
             [cleebo.app-utils :refer [server-project-name]]
             [cleebo.schemas.project-schemas
              :refer [project-schema update-schema project-user-schema]]
@@ -55,7 +56,8 @@
       missing-username (throw (ex-user missing-username))
       (is-project? db project-name) (throw (ex-project project-name)))))
 
-(s/defn new-project :- project-schema
+(defn new-project
+  "creates a new project"
   [{db-conn :db :as db} creator project-name description & [users]]
   (check-new-project db project-name users)
   (-> (mc/insert-and-return
@@ -63,35 +65,48 @@
        {:name project-name
         :description description
         :created (System/currentTimeMillis)
-        :users (map #(select-keys % [:username :role]) users)})
+        :users (map #(select-keys % [:username :role]) (conj users {:username creator :role "creator"}))})
       normalize-project))
 
-(defn erase-project [{db-conn :db :as db} project-name users]
-  (mc/drop db-conn (server-project-name project-name))
-  (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}}))
+(defn erase-project
+  "drops the project annotations and removes the project info from users"
+  [{db-conn :db :as db} project-name users]
+  (vcs/drop db-conn (server-project-name project-name))
+  (mc/remove db-conn (:projects colls) {:name project-name})
+  (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}})
+  true)
 
-(defn user-agree-delete [{db-conn :db :as db} project-name username]
+(defn set-user-agree-delete
+  "adds user to project metadata delete-project-agree, meaning that he agrees to delete the project.
+   Returns the updated project"
+  [{db-conn :db :as db} project-name username]
   (mc/find-and-modify
    db-conn (:projects colls)
    {:name project-name}
-   {$push {"meta.delete-project-agree" username}}))
+   {$push {"meta.delete-project-agree" username}}
+   {:return-new true}))
 
-(defn remove-project [{db-conn :db :as db} username project-name]
+(defn remove-project
+  "drops the collections and removes project from users info (as per `erase-project`) if all users
+  agree to delete the project, otherwise adds user to agreeing (as per `set-user-agree-delete`)"
+  [{db-conn :db :as db} username project-name]
   (let [project (find-project-by-name db project-name)
         role (get-user-role project username)]
     (when-not (check-project-role :delete role)
       (throw (ex-rights username :delete role)))
-    (let [users (->> project :users (filter (fn [{:keys [role]}] (not= role "guest"))) (map :username))
+    (let [project (set-user-agree-delete db project-name username)
+          users (->> project :users (filter (fn [{:keys [role]}] (not= role "guest"))) (map :username))
           agrees (into (hash-set) (get-in project [:meta :delete-project-agree]))]
-      (if (every? agrees users)
-        (erase-project db project-name (:users project))
-        ))))
+      (println "agrees all?" (every? agrees users))
+      (when (every? agrees users)
+        (erase-project db project-name (:users project))))))
 
 (defn check-user-in-project [db username project-name]
   (if-not (is-authorized? db project-name username :read)
     (throw (ex-user-project username project-name))))
 
-(s/defn update-project
+(defn update-project
+  "adds a project update to `project.updates`"
   [{db-conn :db :as db} username project-name update-payload]
   (check-user-in-project db project-name username)
   (let [{:keys [creator users updates] :as payload}
@@ -102,27 +117,30 @@
          {:return-new true})]
     normalize-project))
 
-(s/defn add-user
-  [{db-conn :db :as db} username project-name user :- project-user-schema]
+(defn add-user
+  "adds user to project"
+  [{db-conn :db :as db} username project-name user]
   (check-user-in-project db username project-name)
-  (mc/find-and-modify db-conn (:projects colls) {"name" project-name} {$push {"users" user}}))
+  (mc/find-and-modify db-conn (:projects colls) {"name" project-name} {$push {"users" user}} {:return-new true}))
 
-(s/defn remove-user
+(defn remove-user
+  "removes user from project"
   [{db-conn :db :as db} username project-name]
   (check-user-in-project db username project-name)
   (mc/find-and-modify
    db-conn (:projects colls)
    {"name" project-name}
-   {$pull {"users" {"username" username}}}))
+   {$pull {"users" {"username" username}}}
+   {:return-new true}))
 
-(s/defn get-project :- project-schema
+(defn get-project
   "retrieves project by name"
   [{db-conn :db :as db} username project-name]
   (check-user-in-project db username project-name)
   (-> (mc/find-one-as-map db-conn (:projects colls) {"name" project-name})
       normalize-project))
 
-(s/defn get-projects :- [project-schema]
+(defn get-projects
   "retrieves data of projects in which `username` is involved"
   [{db-conn :db} username]
   (->> (mc/find-maps db-conn (:projects colls) {"users.username" username})

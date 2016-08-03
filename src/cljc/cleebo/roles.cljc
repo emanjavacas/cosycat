@@ -16,7 +16,7 @@
 
 (def project-roles
   "a map from project-related actions to required roles"
-  {:delete #{"creator"}                 ;remove project
+  {:delete #{"creator" "project-lead" "user"}  ;remove project (see cleebo.db.projects)
    :write  #{"creator" "project-lead"}  ;update metadata
    :update #{"creator" "project-lead" "user"}  ;push update
    :read   #{"creator" "project-lead" "user" "guest"} ;retrieve project

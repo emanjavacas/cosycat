@@ -8,7 +8,7 @@
             [cleebo.components.db :refer [new-db colls]]
             [cleebo.avatar :refer [user-avatar]]))
 
-(defn ex-user-exists
+(defn- ex-user-exists
   "returns a exception to be thrown in case user exists"
   ([data] (ex-info "User already exist" {:message :user-exists :data data}))
   ([{old-name :username old-email :email} {new-name :username new-email :email}]
@@ -17,24 +17,24 @@
      (= new-name old-name) (ex-user-exists :username)
      (= new-email old-email) (ex-user-exists :email))))
 
-(defn normalize-user
+(defn- normalize-user
   "transforms db user doc into public user (no private info)"
   [user & ks] 
   (-> (apply dissoc user :password :_id ks)
       (update-in [:roles] (partial apply hash-set))))
 
 (defn is-user?
-  [{db-conn :db :as db} {:keys [username firstname lastname email]}]
+  [{db-conn :db :as db} {:keys [username email]}]
   (some-> (mc/find-one-as-map db-conn (:users colls) {$or [{:username username} {:email email}]})
           normalize-user))
 
-(defn check-user-exists
+(defn- check-user-exists
   "user check. returns nil or ex-info (in case a exception has to be thrown)"
   [{db-conn :db :as db} {:keys [username email] :as new-user}]
   (if-let [old-user (is-user? db new-user)]
     (throw (ex-user-exists old-user new-user))))
 
-(defn create-new-user
+(defn- create-new-user
   "transforms client user payload into a db user doc"
   [{:keys [username password roles] :as user-payload :or {roles ["user"]}}]
   (let [now (System/currentTimeMillis)]
@@ -49,9 +49,9 @@
   (check-user-exists db user)
   (-> (mc/insert-and-return db-conn (:users colls) (create-new-user user)) normalize-user))
 
-(s/defn lookup-user
+(defn lookup-user
   "user authentication logic"
-  [{db-conn :db :as db} {:keys [username email password] :as user}] :- (s/maybe user-schema)
+  [{db-conn :db :as db} {:keys [username email password] :as user}]
   (if-let [db-user (mc/find-one-as-map db-conn (:users colls) {$or [{:username username} {:email email}]})]
     (if (hashers/check password (:password db-user))
       (-> db-user normalize-user))))
@@ -69,7 +69,7 @@
      db-conn (:users colls)
      {:username username}
      {$set {:last-active (System/currentTimeMillis)}}
-     {})))
+     {:return-new true})))
 
 (defn user-info
   "retrieve client info as public user (no private info)"
@@ -86,7 +86,7 @@
    db-conn (:users colls)
    {:username username}
    {$set update-map}
-   {}))
+   {:return-new true}))
 
 (defn users-info
   "retrieves all users processed as public users (no private info)"
