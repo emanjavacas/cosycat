@@ -1,4 +1,4 @@
-(ns cleebo.test.users
+(ns cleebo.test.users-test
   (:require [clojure.test :refer [deftest testing is use-fixtures]]
             [cleebo.test.test-config :refer [db-fixture db]]
             [cleebo.db.users :as users]))
@@ -7,8 +7,11 @@
 
 ;;; Users
 (def sample-user
-  {:username "foo-user" :password "pass"
-   :firstname "FOO" :lastname "USER" :email "foo@bar.com"})
+  {:username "foo-user"
+   :password "pass"
+   :firstname "FOO"
+   :lastname "USER"
+   :email "foo@bar.com"})
 
 (deftest users-db-test
   (testing "adding new user"

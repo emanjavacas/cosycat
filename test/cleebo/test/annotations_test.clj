@@ -1,4 +1,4 @@
-(ns cleebo.test.annotations
+(ns cleebo.test.annotations-test
   (:require [clojure.test :refer [deftest testing is use-fixtures]]
             [clojure.test.check.generators :as check-generators]
             [monger.collection :as mc]
