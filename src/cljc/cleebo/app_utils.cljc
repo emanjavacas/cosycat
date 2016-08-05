@@ -1,6 +1,8 @@
 (ns cleebo.app-utils
-  #?(:cljs (:require [goog.dom.pattern :as gpattern]
-                     [goog.dom.string :as gstring])))
+  #?(:clj (:require [clojure.test])
+     :cljs (:require [goog.dom.pattern :as gpattern]
+                     [clojure.set]
+                     [goog.string :as gstring])))
 
 ;;; MATH
 (defn ceil [n]

@@ -17,7 +17,7 @@
      (= new-name old-name) (ex-user-exists :username)
      (= new-email old-email) (ex-user-exists :email))))
 
-(defn- normalize-user
+(defn normalize-user
   "transforms db user doc into public user (no private info)"
   [user & ks] 
   (-> (apply dissoc user :password :_id ks)
