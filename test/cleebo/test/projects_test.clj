@@ -73,26 +73,29 @@
              :user-not-in-project)))))
 
 (deftest remove-project-test
-  (let [is-removed? (fn [] (let [user-projects (proj/get-projects db creator)]
-                             (and
-                              (empty? user-projects)
-                              (empty? (mc/find-maps (:db db) (server-project-name project-name) {})))))]
+  (let [removed? (fn [] (let [projects (proj/get-projects db creator)]
+                          (and
+                           (empty? projects)
+                           (empty? (mc/find-maps (:db db) (server-project-name project-name) {})))))]
     (testing "user remove rights"
       (is (= (-> (try (proj/remove-project db "hello" project-name)
                       (catch clojure.lang.ExceptionInfo e
                         (ex-data e)))
                  :message)
              :not-authorized)))
-    (testing "remove-project returns `nil` if not all users agree yet"
-      (let [res (proj/remove-project db "howdy" project-name)]
-        (is (nil? res))))
+    (testing "remove-project adds username to updates type delete-project-agree"
+      (let [{:keys [updates] :as project} (proj/remove-project db "howdy" project-name)]
+        (is (not (empty? updates)))
+        (is (some #{"howdy"} (->> updates (filter #(= "delete-project-agree" (:type %))) (map :username))))))
     (testing "project is not yet removed"
-      (is (not (is-removed?))))
-    (testing "all agree to remove, remove-project returns `true`"
+      (is (not (removed?))))
+    (testing "all agree to remove, remove-project returns nil"
       (let [_ (proj/remove-project db "whatssup" project-name)
             res (proj/remove-project db creator project-name)]
-        (is res)))
+        (is (nil? res))))
     (testing "actually removes; annotations are also removed"
-      (is (is-removed?)))
-    (testing "annotation history is still in vcs collection"
-      (is (not (empty? (mc/find-maps (:db db) vcs/*hist-coll-name* {})))))))
+      (is (removed?)))
+    (testing "annotation history is still in vcs collection with field _remove"
+      (let [hist (mc/find-maps (:db db) vcs/*hist-coll-name* {})]
+        (is (not (empty? hist)))
+        (is (every? :_remove hist))))))
