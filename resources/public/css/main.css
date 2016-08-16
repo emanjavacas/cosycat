@@ -8,6 +8,13 @@ body {
     outline: 0 !important;
 }
 
+/* overwrite lumen */
+.alert-danger {
+    background-color: #f2dede;
+    border-color: #ebccd1;
+    color: #a94442;
+}
+
 .form-control-gray:focus {
   border-color: #999;
   outline: 0;
@@ -80,3 +87,4 @@ div.well.selected:hover {
     -webkit-box-sizing:border-box;
     box-sizing:border-box;
 }
+
