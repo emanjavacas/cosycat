@@ -6,7 +6,9 @@
             [cleebo.schemas.results-schemas :refer [query-results-schema]]))
 
 (def update-schema
-  [{s/Any s/Any}])
+  [{:type s/Keyword
+    :timestamp s/Int
+    s/Any s/Any}])
 
 (def status-schema
   {:status (s/enum :ok :error)
