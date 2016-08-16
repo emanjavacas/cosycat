@@ -237,7 +237,7 @@
 (defn drop [db coll]
   (let [ids (->> (mc/find-maps db coll {}) (mapv :_id))]
     (mc/drop db coll)
-    (mc/update db *hist-coll-name* {:docId ids} {$push {:_remove true}} {:multi true})))
+    (mc/update db *hist-coll-name* {:docId {$in ids}} {$push {:_remove true}} {:multi true})))
 
 ;;; utility functions
 (defn make-collection [args]            ;TODO
