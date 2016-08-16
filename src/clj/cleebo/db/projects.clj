@@ -97,7 +97,6 @@
     (let [project (set-user-agree-delete db project-name username)
           users (->> project :users (filter (fn [{:keys [role]}] (not= role "guest"))) (map :username))
           agrees (into (hash-set) (get-in project [:meta :delete-project-agree]))]
-      (println "agrees all?" (every? agrees users))
       (when (every? agrees users)
         (erase-project db project-name (:users project))))))
 
