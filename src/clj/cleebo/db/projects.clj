@@ -68,38 +68,6 @@
         :users (map #(select-keys % [:username :role]) (conj users {:username creator :role "creator"}))})
       normalize-project))
 
-(defn erase-project
-  "drops the project annotations and removes the project info from users"
-  [{db-conn :db :as db} project-name users]
-  (vcs/drop db-conn (server-project-name project-name))
-  (mc/remove db-conn (:projects colls) {:name project-name})
-  (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}})
-  true)
-
-(defn set-user-agree-delete
-  "adds user to project metadata delete-project-agree, meaning that he agrees to delete the project.
-   Returns the updated project"
-  [{db-conn :db :as db} project-name username]
-  (mc/find-and-modify
-   db-conn (:projects colls)
-   {:name project-name}
-   {$push {"meta.delete-project-agree" username}}
-   {:return-new true}))
-
-(defn remove-project
-  "drops the collections and removes project from users info (as per `erase-project`) if all users
-  agree to delete the project, otherwise adds user to agreeing (as per `set-user-agree-delete`)"
-  [{db-conn :db :as db} username project-name]
-  (let [project (find-project-by-name db project-name)
-        role (get-user-role project username)]
-    (when-not (check-project-role :delete role)
-      (throw (ex-rights username :delete role)))
-    (let [project (set-user-agree-delete db project-name username)
-          users (->> project :users (filter (fn [{:keys [role]}] (not= role "guest"))) (map :username))
-          agrees (into (hash-set) (get-in project [:meta :delete-project-agree]))]
-      (when (every? agrees users)
-        (erase-project db project-name (:users project))))))
-
 (defn check-user-in-project [db username project-name]
   (if-not (is-authorized? db project-name username :read)
     (throw (ex-user-project username project-name))))
@@ -107,14 +75,13 @@
 (defn update-project
   "adds a project update to `project.updates`"
   [{db-conn :db :as db} username project-name update-payload]
-  (check-user-in-project db project-name username)
-  (let [{:keys [creator users updates] :as payload}
-        (mc/find-and-modify
-         db-conn (:projects colls)
-         {:name project-name}
-         {$push {:updates update-payload}}
-         {:return-new true})]
-    normalize-project))
+  (check-user-in-project db username project-name)
+  (-> (mc/find-and-modify
+       db-conn (:projects colls)
+       {:name project-name}
+       {$push {:updates update-payload}}
+       {:return-new true})
+      normalize-project))
 
 (defn add-user
   "adds user to project"
@@ -145,3 +112,30 @@
   (->> (mc/find-maps db-conn (:projects colls) {"users.username" username})
        (mapv normalize-project)))
 
+(defn erase-project
+  "drops the project annotations and removes the project info from users"
+  [{db-conn :db :as db} project-name users]
+  (vcs/drop db-conn (server-project-name project-name))
+  (mc/remove db-conn (:projects colls) {:name project-name})
+  (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}})
+  nil)
+
+(defn delete-payload [username]
+  {:type "delete-project-agree"
+   :username username
+   :timestamp (System/currentTimeMillis)})
+
+(defn remove-project
+  "drops the collections and removes project from users info (as per `erase-project`) if all users
+  agree to delete the project, otherwise adds user to agreeing"
+  [{db-conn :db :as db} username project-name]
+  (let [project (find-project-by-name db project-name)
+        role (get-user-role project username)]
+    (when-not (check-project-role :delete role)
+      (throw (ex-rights username :delete role)))
+    (let [{:keys [updates users] :as project} (update-project db username project-name (delete-payload username))
+          users (->> users (filter #(not= (:role %) "guest")) (map :username))
+          agrees (into (hash-set) (->> updates (filter #(= "delete-project-agree" (:type %))) (map :username)))]
+      (if (every? agrees users)
+        (erase-project db project-name (:users project))
+        project))))

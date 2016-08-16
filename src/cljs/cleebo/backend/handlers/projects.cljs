@@ -35,11 +35,17 @@
          (assoc-in [:session :active-project] project-name)
          (update-in [:session :settings] merge project-settings)))))
 
-(re-frame/register-handler
+(re-frame/register-handler              ;add project to client-db
  :add-project
  standard-middleware
  (fn [db [_ project]]
    (update db :projects merge (normalize-projects [project] (:me db)))))
+
+(re-frame/register-handler              ;remove project from client-db
+ :remove-project
+ standard-middleware
+ (fn [db [_ project-name]]
+   (update db :projects dissoc project-name)))
 
 (defn error-handler [{:keys [message data]}]
   (re-frame/dispatch [:notify {:message message :meta data :status :error}]))
@@ -65,7 +71,7 @@
 
 (defn project-update-error-handler [{:keys [message data]}])
 
-(re-frame/register-handler
+(re-frame/register-handler              ;add project update to client-db
  :add-project-update
  standard-middleware
  (fn [db [_ [{:keys [payload project]}]]]
@@ -75,13 +81,13 @@
  :project-update
  standard-middleware
  (fn [db [_ {:keys [payload project]}]]
-   (POST "/project"
-         {:params {:route :project-update :project project :payload payload}
+   (POST "/project/update"
+         {:params {:project project :payload payload}
           :handler #(re-frame/dispatch [:add-project-update %])
           :error-handler #(timbre/info "Error while sending project update to server")})
    db))
 
-(re-frame/register-handler
+(re-frame/register-handler              ;add user to project in client-db
  :add-project-user
  standard-middleware
  (fn [db [_ [{:keys [user project]}]]]
@@ -91,13 +97,13 @@
  :project-add-user
  standard-middleware
  (fn [db [_ {:keys [user project]}]]
-   (POST "/project"
-         {:params {:route :add-user :user user :project project}
+   (POST "/project/add-user"
+         {:params {:user user :project project}
           :handler #(re-frame/dispatch [:add-project-user %])
           :error-handler error-handler})
    db))
 
-(re-frame/register-handler
+(re-frame/register-handler              ;remove user from project in client-db
  :remove-project-user
  standard-middleware
  (fn [db [_ [{:keys [user project]}]]]
@@ -108,8 +114,30 @@
 (re-frame/register-handler
  :project-remove-user
  (fn [db [_ {:keys [project]}]]
-   (POST "/project"
+   (POST "/project/remove-user"
          {:params {:project project}
           :handler #(re-frame/dispatch [:notify "Goodbye from project " project])
+          :error-handler error-handler})
+   db))
+
+(defn pending-users [{:keys [updates users] :as project}]
+  (let [affected-users (into (hash-set) (->> users (filter #(not= "guest" (:role %))) (map :username)))]
+    (remove affected-users (->> updates (filter #(= "delete-project-agree" (:type %))) (map :username)))))
+
+(defn remove-project-handler [project-name]
+  (fn [payload]
+    (if-not payload                     ;project was successfully removed
+      (do (re-frame/dispatch [:remove-project project-name])
+          (re-frame/dispatch [:notify {:message (str "Project " project-name " was successfully deleted")}]))
+      (let [pending (pending-users payload)]                 ;still users
+        (re-frame/dispatch [:add-project payload])
+        (re-frame/dispatch [:notify {:message (str (count pending) " users pending to remove project")}])))))
+
+(re-frame/register-handler
+ :project-remove
+ (fn [db [_ {:keys [project-name]}]]
+   (POST "/project/remove-project"
+         {:params {:project-name project-name}
+          :handler (remove-project-handler project-name)
           :error-handler error-handler})
    db))

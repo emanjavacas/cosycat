@@ -16,16 +16,6 @@
      :target-clients (map :username users))
     project))
 
-(defn remove-project-route
-  [{{project-name :project-name} :params
-    {{username :username} :identity} :session
-    {db :db ws :ws} :components}]
-  (let [project (proj/get-project db username project-name)]
-    (proj/remove-project db username project-name)
-    (send-clients ws {:type :remove-project :data {:project-name project-name}}
-     :source-client username
-     :target-clients (mapv :username (:users project)))))
-
 (defn update-project-route
   [{{update-payload :payload project-name :project :as payload} :params
     {{username :username} :identity} :session
@@ -61,6 +51,16 @@
      ws {:type :project-remove-user :data {:username username :project project-name}}
      :source-client username
      :target-clients (mapv :username (:users project)))))
+
+(defn remove-project-route
+  [{{project-name :project-name} :params
+    {{username :username} :identity} :session
+    {db :db ws :ws} :components}]
+  (let [project (proj/remove-project db username project-name)]
+    (send-clients ws {:type :remove-project :data {:project-name project-name}}
+     :source-client username
+     :target-clients (mapv :username (:users project)))
+    project))
 
 (defn project-routes []
   (routes

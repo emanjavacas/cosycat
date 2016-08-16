@@ -5,7 +5,8 @@
             [cleebo.components :refer [user-profile-component]]
             [cleebo.roles :refer [project-user-roles]]
             [cleebo.utils :refer [human-time]]
-            [cleebo.app-utils :refer [ceil]]))
+            [cleebo.app-utils :refer [ceil]]
+            [taoensso.timbre :as timbre]))
 
 (def users-per-row 3)
 
@@ -33,21 +34,25 @@
 (defn trigger-remove-project [project-name project-name-atom]
   (fn [event]
     (when (and (= 13 (.-charCode event)) (= project-name @project-name-atom))
-      (.log js/console project-name))))
+      (do (timbre/info "removing project" project-name)
+          (re-frame/dispatch [:project-remove {:project-name project-name}])))))
 
 (defn compute-feedback [project-name project-name-atom]
-  (.log js/console (= project-name @project-name-atom) project-name @project-name-atom)
   (cond (empty? @project-name-atom) ""
         (not= @project-name-atom project-name) "has-error"
         :else "has-success"))
 
 (defn delete-project-modal [project-name delete-project-modal-show]
   (let [project-name-input-show (reagent/atom false)
-        project-name-atom (reagent/atom "")]
+        project-name-atom (reagent/atom "")
+        footer-alert-show (reagent/atom true)]
     (fn [project-name delete-project-modal-show]
       [bs/modal
        {:show @delete-project-modal-show
-        :onHide #(swap! delete-project-modal-show not)}
+        :onHide #(do (reset! project-name-atom "")
+                     (reset! project-name-input-show false)
+                     (js/setTimeout (fn [] (reset! footer-alert-show true)) 500)
+                     (swap! delete-project-modal-show not))}
        [bs/modal-header
         {:closeButton true}
         [bs/modal-title
@@ -74,7 +79,12 @@
              "Yes"]
             [bs/button
              {:onClick #(swap! delete-project-modal-show not)}
-             "No"]]]]]]])))
+             "No"]]]]]]
+       (when @footer-alert-show
+         [bs/modal-footer
+          [bs/alert
+           {:bsStyle "danger" :bsClass "alert" :onDismiss #(reset! footer-alert-show false)}
+           "Remember that this operation is non reversible!"]])])))
 
 (defn project-header [name]
   (let [delete-project-modal-show (reagent/atom false)]
