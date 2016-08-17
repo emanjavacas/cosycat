@@ -57,11 +57,11 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [project (proj/find-project-by-name db project-name)]
-    (if-let [{:keys [updates] :as removed-project} (proj/remove-project db username project-name)]
-      (do (send-clients ws {:type :project-update :by username :data (last (sort-by :timestamp updates))}
+    (if-let [project-update (proj/remove-project db username project-name)]
+      (do (send-clients ws {:type :project-update :by username :data project-update}
            :source-client username
-           :target-clients (mapv :username (:users removed-project)))
-          removed-project)
+           :target-clients (mapv :username (:users project)))
+          project-update)
       (do (send-clients ws {:type :project-remove :data {:project-name project-name}}
            :source-client username
            :target-clients (mapv :username (:users project)))))))

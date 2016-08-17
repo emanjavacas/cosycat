@@ -126,13 +126,13 @@
       (let [updated-project (update-in project [:updates] conj payload)
             {:keys [pending]} (pending-users updated-project)] ;still users
         (re-frame/dispatch [:notify {:message (str (count pending) " users pending to remove project")}])
-        (re-frame/dispatch [:add-project-update ])))))
+        (re-frame/dispatch [:add-project-update {:payload payload :project-name project-name}])))))
 
 (re-frame/register-handler
  :project-remove
  (fn [db [_ {:keys [project-name]}]]
    (POST "/project/remove-project"
          {:params {:project-name project-name}
-          :handler (remove-project-handler project-name)
+          :handler (remove-project-handler (get-in db [:projects project-name]))
           :error-handler error-handler})
    db))
