@@ -8,11 +8,8 @@
             [cleebo.app-utils :refer [ceil]]
             [taoensso.timbre :as timbre]))
 
-(defn is-selected? [selected-users username]
-  (contains? selected-users username))
-
 (defn swap-selected [selected-users username]
-  (if (is-selected? selected-users username)
+  (if (contains? selected-users username)
     (dissoc selected-users username)
     (assoc selected-users username {:username username :role (first project-user-roles)})))
 
@@ -21,18 +18,17 @@
 
 (defn on-new-user-role [selected-users username]
   (fn [role]
-    (timbre/debug
-     (swap! selected-users assoc-in [username :role] role))))
+    (timbre/debug (swap! selected-users assoc-in [username :role] role))))
 
 (defn user-profile [user selected-users]
   (fn [{:keys [username] :as user} selected-users]
-    (let [selected? (is-selected? @selected-users username)]
+    (let [selected? (contains? @selected-users username)]
       [:div.well.well-sm
        {:class (if-not selected? "selected")
         :style (merge {:cursor "pointer"} (when-not selected? unselected-style))
         :onClick #(swap! selected-users swap-selected username)}
        [user-profile-component user project-user-roles
-        :on-select-role (on-new-user-role selected-users username)]])))
+        :on-change (on-new-user-role selected-users username)]])))
 
 (defn users-input-component [selected-users & {:keys [users-per-row] :or {users-per-row 3}}]
   (let [users (re-frame/subscribe [:users :exclude-me true])]
@@ -42,5 +38,6 @@
                            {:keys [username] :as user} row]
                        ^{:key username}
                        [:div
-                        {:class (str "col-lg-" (int (ceil (/ 12 users-per-row))))}
+                        (let [col-num (int (ceil (/ 12 users-per-row)))]
+                          {:class (str "col-lg-" col-num)})
                         [user-profile user selected-users]]))]))))

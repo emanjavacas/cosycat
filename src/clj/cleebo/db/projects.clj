@@ -3,7 +3,7 @@
             [monger.operators :refer :all]
             [schema.core :as s]
             [cleebo.vcs :as vcs]
-            [cleebo.app-utils :refer [server-project-name]]
+            [cleebo.app-utils :refer [server-project-name pending-users]]
             [cleebo.schemas.project-schemas
              :refer [project-schema update-schema project-user-schema]]
             [cleebo.roles :refer [check-project-role]]
@@ -12,18 +12,21 @@
             [taoensso.timbre :as timbre]))
 
 (defn ex-user [username]
-  (ex-info "User doesn't exist" {:message :missing-user :data {:username username}}))
+  (ex-info "User doesn't exist" {:message "User doesn't exist" :data {:username username}}))
 
 (defn ex-project [project-name]
-  (ex-info "Project already exist" {:message :project-exists :data {:project project-name}}))
+  (ex-info "Project already exist" {:message "Project already exist" :data {:project project-name}}))
+
+(defn ex-non-existing-project [project-name]
+  (ex-info "Project doesn't exist" {:message "Project doesn't exist" :data {:project project-name}}))
 
 (defn ex-user-project [username project-name]
-  (ex-info "User is not in project" {:message :user-not-in-project
+  (ex-info "User is not in project" {:message "User is not in project"
                                      :data {:username username :project project-name}}))
 
 (defn ex-rights [username action role]
-  (ex-info "User doesn't have sufficient rights"
-           {:message :not-authorized
+  (ex-info (str username " doesn't have sufficient rights")
+           {:message (str username " doesn't have sufficient rights")
             :data {:username username :action action :role role}}))
 
 (defn normalize-project [project]
@@ -131,11 +134,13 @@
   [{db-conn :db :as db} username project-name]
   (let [project (find-project-by-name db project-name)
         role (get-user-role project username)]
+    (when-not project
+      (throw (ex-non-existing-project project-name)))
     (when-not (check-project-role :delete role)
       (throw (ex-rights username :delete role)))
     (let [{:keys [updates users] :as project} (update-project db username project-name (delete-payload username))
-          users (->> users (filter #(not= (:role %) "guest")) (map :username))
-          agrees (into (hash-set) (->> updates (filter #(= "delete-project-agree" (:type %))) (map :username)))]
-      (if (every? agrees users)
+          {:keys [pending non-app agreed-users] :as m} (pending-users project)]
+      (timbre/debug m)
+      (if (empty? pending)
         (erase-project db project-name (:users project))
         project))))

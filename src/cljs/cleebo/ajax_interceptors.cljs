@@ -11,7 +11,9 @@
 
 (defn debug-interceptor []
   (to-interceptor {:name "Debug interceptor"
-                   :response (fn [res] (.log js/console "Response:" (.getResponseJson res))
+                   :response (fn [res] (.log js/console "Response:" (try (.getResponseJson res)
+                                                                         (catch :default e
+                                                                           "couldn't parse response")))
                                res)
                    :request (fn [req] (.log js/console "Request" req) req)}))
 

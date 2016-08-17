@@ -2,6 +2,8 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [ajax.core :refer [POST]]
+            [cleebo.app-utils :refer [pending-users]]
+            [cleebo.routes :refer [nav!]]
             [cleebo.backend.middleware :refer [standard-middleware check-project-exists]]
             [cleebo.backend.db :refer [default-project-session default-project-history]]
             [cleebo.schemas.project-schemas :refer [project-schema update-schema]]
@@ -47,15 +49,12 @@
  (fn [db [_ project-name]]
    (update db :projects dissoc project-name)))
 
-(defn error-handler [{:keys [message data]}]
+(defn error-handler [{{:keys [message data]} :response}]
   (re-frame/dispatch [:notify {:message message :meta data :status :error}]))
 
-(defn new-project-handler [project]
+(defn new-project-handler [{project-name :name :as project}]
   (re-frame/dispatch [:add-project project])
-  (re-frame/dispatch [:set-active-project {:project-name (:name project)}]))
-
-(defn user->project-user [{:keys [username]}]
-  {:username username :role "creator"})
+  (nav! (str "/project/" project-name)))
 
 (re-frame/register-handler
  :new-project
@@ -64,41 +63,39 @@
    (POST "/project/new"
          {:params {:project-name name
                    :description description
-                   :users (conj users (user->project-user (:me db)))}
+                   :users users}
           :handler new-project-handler
           :error-handler error-handler})
    db))
 
-(defn project-update-error-handler [{:keys [message data]}])
-
 (re-frame/register-handler              ;add project update to client-db
  :add-project-update
  standard-middleware
- (fn [db [_ [{:keys [payload project]}]]]
-   (update-in db [:projects project :updates] conj payload)))
+ (fn [db [_ [{:keys [payload project-name]}]]]
+   (update-in db [:projects project-name :updates] conj payload)))
 
 (re-frame/register-handler
  :project-update
  standard-middleware
- (fn [db [_ {:keys [payload project]}]]
+ (fn [db [_ {:keys [payload project-name]}]]
    (POST "/project/update"
-         {:params {:project project :payload payload}
+         {:params {:project-name project-name :payload payload}
           :handler #(re-frame/dispatch [:add-project-update %])
-          :error-handler #(timbre/info "Error while sending project update to server")})
+          :error-handler error-handler})
    db))
 
 (re-frame/register-handler              ;add user to project in client-db
  :add-project-user
  standard-middleware
- (fn [db [_ [{:keys [user project]}]]]
-   (update-in db [:projects project :users] conj user)))
+ (fn [db [_ [{:keys [user project-name]}]]]
+   (update-in db [:projects project-name :users] conj user)))
 
 (re-frame/register-handler
  :project-add-user
  standard-middleware
- (fn [db [_ {:keys [user project]}]]
+ (fn [db [_ {:keys [user project-name]}]]
    (POST "/project/add-user"
-         {:params {:user user :project project}
+         {:params {:user user :project-name project-name}
           :handler #(re-frame/dispatch [:add-project-user %])
           :error-handler error-handler})
    db))
@@ -106,32 +103,30 @@
 (re-frame/register-handler              ;remove user from project in client-db
  :remove-project-user
  standard-middleware
- (fn [db [_ [{:keys [user project]}]]]
+ (fn [db [_ [{:keys [user project-name]}]]]
    (update-in
-    db [:projects project :users]
+    db [:projects project-name :users]
     (fn [users] (vec (remove #(= (:username %) (:username user)) users))))))
 
 (re-frame/register-handler
  :project-remove-user
- (fn [db [_ {:keys [project]}]]
+ (fn [db [_ {:keys [project-name]}]]
    (POST "/project/remove-user"
-         {:params {:project project}
-          :handler #(re-frame/dispatch [:notify "Goodbye from project " project])
+         {:params {:project-name project-name}
+          :handler #(re-frame/dispatch [:notify "Goodbye from project " project-name])
           :error-handler error-handler})
    db))
 
-(defn pending-users [{:keys [updates users] :as project}]
-  (let [affected-users (into (hash-set) (->> users (filter #(not= "guest" (:role %))) (map :username)))]
-    (remove affected-users (->> updates (filter #(= "delete-project-agree" (:type %))) (map :username)))))
-
-(defn remove-project-handler [project-name]
+(defn remove-project-handler [{project-name :name :as project}]
   (fn [payload]
-    (if-not payload                     ;project was successfully removed
+    (if-not payload
       (do (re-frame/dispatch [:remove-project project-name])
-          (re-frame/dispatch [:notify {:message (str "Project " project-name " was successfully deleted")}]))
-      (let [pending (pending-users payload)]                 ;still users
-        (re-frame/dispatch [:add-project payload])
-        (re-frame/dispatch [:notify {:message (str (count pending) " users pending to remove project")}])))))
+          (re-frame/dispatch [:notify {:message (str "Project " project-name " was successfully deleted")}])
+          (nav! "/"))
+      (let [updated-project (update-in project [:updates] conj payload)
+            {:keys [pending]} (pending-users updated-project)] ;still users
+        (re-frame/dispatch [:notify {:message (str (count pending) " users pending to remove project")}])
+        (re-frame/dispatch [:add-project-update ])))))
 
 (re-frame/register-handler
  :project-remove

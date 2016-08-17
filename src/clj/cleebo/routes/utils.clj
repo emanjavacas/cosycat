@@ -1,6 +1,7 @@
 (ns cleebo.routes.utils
   (:require [ring.util.response :refer [redirect]]
-            [buddy.auth :refer [authenticated?]]))
+            [buddy.auth :refer [authenticated?]]
+            [taoensso.timbre :as timbre]))
 
 (defn safe
   [handler & [rule-map]]
@@ -17,17 +18,18 @@
   (safe (fn [req] {:status 200 :body (router req)}) {:login-uri login-uri :is-ok? is-ok?}))
 
 (defn make-default-route
+  "a router that transform internal errors into proper responses"
   [route & {:keys [is-ok? login-uri] :as rule-map}]
   (safe (fn [req]
           (try {:status 200 :body (route req)}
                (catch clojure.lang.ExceptionInfo e
                  (let [{:keys [message data]} (ex-data e)]
-                   (clojure.pprint/pprint (ex-data e))
+                   (timbre/debug (ex-data e))
                    {:status 500 :body {:message message :data data}}))
                (catch Exception e
                  (let [{message :message ex :class} (bean e)
                        stacktrace (mapv str (.getStackTrace e))]
-                   (clojure.pprint/pprint (bean e))
+                   (timbre/debug (bean e))
                    {:status 500
                     :body {:message message :data {:e (str ex) :stacktrace stacktrace}}}))))
         rule-map))

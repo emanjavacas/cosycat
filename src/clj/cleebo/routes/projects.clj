@@ -17,7 +17,7 @@
     project))
 
 (defn update-project-route
-  [{{update-payload :payload project-name :project :as payload} :params
+  [{{update-payload :payload project-name :project-name :as payload} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [project (proj/get-project db username project-name)]
@@ -29,11 +29,11 @@
     payload))
 
 (defn add-user-route
-  [{{user :user project-name :project} :params
+  [{{user :user project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [{:keys [users] :as project} (proj/get-project db username project-name)
-        data {:user user :project project-name}]
+        data {:user user :project-name project-name}]
     (proj/add-user db username project-name user)
     (send-clients
      ws {:type :project-add-user :data data}
@@ -42,13 +42,13 @@
     data))
 
 (defn remove-user-route
-  [{{project-name :project} :params
+  [{{project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [project (proj/get-project db username project-name)]
     (proj/remove-user db username project-name)
     (send-clients
-     ws {:type :project-remove-user :data {:username username :project project-name}}
+     ws {:type :project-remove-user :data {:username username :project-name project-name}}
      :source-client username
      :target-clients (mapv :username (:users project)))))
 
@@ -56,11 +56,15 @@
   [{{project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [project (proj/remove-project db username project-name)]
-    (send-clients ws {:type :remove-project :data {:project-name project-name}}
-     :source-client username
-     :target-clients (mapv :username (:users project)))
-    project))
+  (let [project (proj/find-project-by-name db project-name)]
+    (if-let [{:keys [updates] :as removed-project} (proj/remove-project db username project-name)]
+      (do (send-clients ws {:type :project-update :by username :data (last (sort-by :timestamp updates))}
+           :source-client username
+           :target-clients (mapv :username (:users removed-project)))
+          removed-project)
+      (do (send-clients ws {:type :project-remove :data {:project-name project-name}}
+           :source-client username
+           :target-clients (mapv :username (:users project)))))))
 
 (defn project-routes []
   (routes

@@ -38,6 +38,9 @@
 (def new-project-from-server-schema
   (deep-merge blueprint-from-server {:data project-schema}))
 
+(def project-remove-from-server-schema
+  (deep-merge blueprint-from-server {:data {:project-name s/Str}}))
+
 (def new-user-avatar-from-server-schema
   (deep-merge blueprint-from-server {:data {:avatar avatar-schema :username s/Str}}))
 
@@ -59,6 +62,7 @@
     :logout              logout-from-server-schema
     :signup              login-from-server-schema
     :new-project         new-project-from-server-schema
+    :project-remove      project-remove-from-server-schema
     :project-update      project-update-from-server-schema
     :project-add-user    project-add-user-from-server-schema
     :project-remove-user project-remove-user-from-server-schema

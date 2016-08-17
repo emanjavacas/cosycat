@@ -1,6 +1,7 @@
 (ns cleebo.components
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
+            [cleebo.roles :refer [project-user-roles-descs]]
             [cleebo.utils :refer [color-codes date-str->locale parse-time human-time]]
             [cleebo.localstorage :refer [fetch-db get-backups]]
             [taoensso.timbre :as timbre]
@@ -84,7 +85,7 @@
       (mod (f idx) top))))
 
 (defn get-nth-role [idx roles]
-  (first (nth (seq roles) idx)))
+  (nth roles idx))
 
 (defn on-click-fn [dir roles current-idx-atom on-change]
   (fn [e]
@@ -92,29 +93,64 @@
     (let [new-idx (swap! current-idx-atom (move-cursor dir roles))]
       (on-change (get-nth-role new-idx roles)))))
 
-(defn select-role-btn [roles on-change]
+(defn editable-role-btn [roles editing {:keys [on-change on-submit]}]
   (let [current-idx (reagent/atom 0)]
-    (fn [on-change]
-      (let [[role desc] (nth (seq roles) @current-idx)]
-        [:div
-         [:div.input-group
-          [:span.input-group-btn
-           [:button.btn.btn-default
-            {:type "button"
-             :on-click (on-click-fn :prev roles current-idx on-change)}
-            [bs/glyphicon {:glyph "chevron-left"}]]]
+    (fn [roles editing {:keys [on-change on-submit]}] ;if on-change, then is not disabled
+      [:div
+       [:div.input-group
+        [:span.input-group-btn
+         [:button.btn.btn-default
+          {:type "button"
+           :on-click (on-click-fn :prev roles current-idx on-change)}
+          [bs/glyphicon {:glyph "chevron-left"}]]]
+        (let [current-role (get-nth-role @current-idx roles)
+              desc (project-user-roles-descs current-role)]
           [bs/overlay-trigger
            {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} desc])
-            :placement "bottom"}
-           [:span.form-control.text-center [bs/label role]]]
-          [:span.input-group-btn
-           [:button.btn.btn-default
-            {:type "button"
-             :on-click (on-click-fn :next roles current-idx on-change)}
-            [bs/glyphicon {:glyph "chevron-right"}]]]]]))))
+            :placement "top"}
+           [:span.form-control.text-center
+            {:style {:cursor "pointer"}
+             :on-click #(do (.stopPropagation %) (on-submit current-role) (swap! editing not))}
+            [bs/label current-role]]])
+        [:span.input-group-btn
+         [:button.btn.btn-default
+          {:type "button"
+           :on-click (on-click-fn :next roles current-idx on-change)}
+          [bs/glyphicon {:glyph "chevron-right"}]]]]])))
 
-(defn user-profile-component [user roles & {:keys [on-select-role] :or {on-select-role identity}}]
-  (fn [{:keys [avatar username firstname lastname email created last-active] :as user} roles & opts]
+(defn display-role-btn [editing role editable?]
+  (fn [editing role editable?]
+    [:div
+     [:div.input-group
+      (let [desc (project-user-roles-descs role)]
+        [bs/overlay-trigger
+         {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} desc])
+          :placement "top"}
+         [:span.form-control.text-center [bs/label role]]])
+      [bs/overlay-trigger
+       {:overlay (reagent/as-component
+                  [bs/tooltip {:id "tooltip"} (if editable? "Click to edit user role" "Can't edit user role")])
+        :placement "right"}
+       [:span.input-group-addon
+        {:style {:cursor (if editable? "pointer" "not-allowed") :opacity (if-not editable? 0.6)}
+         :onClick #(do (.stopPropagation %) (if editable? (swap! editing not)))}
+        [bs/glyphicon {:glyph "pencil"}]]]]]))
+
+(defn select-role-btn
+  [roles {:keys [role on-change on-submit displayable? editable?]
+          :or {on-change identity on-submit identity displayable? false editable? true}}]
+  (when displayable? (assert role "Role must be provide in displayable mode"))
+  (let [editing (reagent/atom (not role))]
+    (fn [roles {:keys [role on-change on-submit] :or {on-change identity on-submit identity}}]
+      (if (not displayable?)
+          [editable-role-btn roles editing {:on-change on-change :on-submit on-submit}]
+          (if @editing
+            [editable-role-btn roles editing {:role role :on-change on-change :on-submit on-submit}]
+            [display-role-btn editing role editable?])))))
+
+(defn user-profile-component [user roles & opts]
+  (fn [{:keys [avatar username firstname lastname email created last-active] :as user} roles
+       & {:keys [role on-change on-submit] :as opts}]
     [:div.container-fluid
      [:div.row
       [:div.col-sm-6.col-md-4
@@ -128,7 +164,7 @@
         [:tr [:td [:span (str "Created:")]] [:td (parse-time created)]]
         [:tr [:td [:span (str "Last active:") ]] [:td (human-time last-active)]]]]]
      [:div.row {:style {:padding "0 15px"}}
-      [select-role-btn roles on-select-role]]]))
+      [select-role-btn roles opts]]]))
 
 (defn number-cell [n]
   (fn [n]

@@ -9,3 +9,4 @@
     (do (println "Cleaning app-resources") (delete-directory root))
     (clear-dbs db)
     (.stop db)))
+

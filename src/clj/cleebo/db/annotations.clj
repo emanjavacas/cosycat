@@ -122,23 +122,3 @@
             {$set {"ann.value" value "timestamp" timestamp "username" username "query" query}}
             {:return-new true})
     history (with-history db-conn)))
-
-;; (defonce db (.start (cleebo.components.db/new-db (:database-url config.core/env))))
-;; (def test-ann
-;;   {:ann {:key "test" :value "test2"}
-;;    :username "user"
-;;    :timestamp 123312213112
-;;    :span {:type "token" :scope 13}
-;;    :query "\"a\""
-;;    :corpus "sample-corpus"})
-
-;; (def update-ann
-;;   {:value "test3"
-;;    :username "user"
-;;    :timestamp 12312523412
-;;    :_id (:_id a)
-;;    :_version 0
-;;    :query "\"g\""
-;;    :corpus "sample-corpus"})
-;; (def a (insert-annotation db "test" test-ann))
-;; (update-annotation db "test" update-ann)

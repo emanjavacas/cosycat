@@ -129,7 +129,7 @@
   [tokens]
   (filter (fn [token] (pos? (get-token-id token))) tokens))
 
-;;; ANNOTATIONS
+;;; annotations
 (defn ->box [color] (str "0 -1.5px " color " inset"))
 
 (defn parse-annotation

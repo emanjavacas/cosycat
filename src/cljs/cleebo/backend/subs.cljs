@@ -75,12 +75,6 @@
    (reaction (:projects @db))))
 
 (re-frame/register-sub
- :active-project
- (fn [db _]
-   (let [active-project-name (reaction (get @db :active-project))]
-     (reaction (get-in @db [:projects @active-project-name])))))
-
-(re-frame/register-sub
  :me
  (fn [db [_ & path]]
    (reaction (get-in @db (into [:me] path)))))

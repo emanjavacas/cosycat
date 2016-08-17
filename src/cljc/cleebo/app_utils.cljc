@@ -4,11 +4,11 @@
                      [clojure.set]
                      [goog.string :as gstring])))
 
-;;; MATH
+;;; math
 (defn ceil [n]
   #?(:clj (Math/ceil n) :cljs (.ceil js/Math n)))
 
-;;; SYNTAX
+;;; syntax
 (defn deep-merge
    "Recursively merges maps. If keys are not maps, the last value wins."
    [& vals]
@@ -86,10 +86,18 @@
 
 (defn dekeyword [k] (apply str (rest (str k))))
 
-;;; LOGIC
+;;; logic
 (defn invalid-project-name [s]
   (and #?(:clj  (re-find #"[ ^\W+]" s)
           :cljs (gpattern/matchStringOrRegex (js/RegExp "[ ^\\W+]") s))
        (= s "_vcs")))
 
 (defn server-project-name [s] (str "_" s))
+
+(defn pending-users [{:keys [updates users] :as project}]
+  (let [non-app (->> users (filter #(= "guest" (:role %))) (map :username))
+        rest-users (remove (apply hash-set non-app) (map :username users))
+        agreed-users (filter (apply hash-set rest-users)
+                             (->> updates (filter #(= "delete-project-agree" (:type %))) (map :username)))
+        pending (remove (apply hash-set agreed-users) rest-users)]
+    {:non-app non-app :agreed-users (vec (apply hash-set agreed-users)) :pending pending}))

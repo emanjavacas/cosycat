@@ -7,12 +7,14 @@
 
 (derive ::admin ::user)
 
-(def project-user-roles
+(def project-user-roles-descs
   {"guest" "Can read the annotations but nothing more."
    "user" "Can read the annotation and suggests changes, but not edit them."
    "project-lead" "Person in charge of the global research goals. Can edit but is not allowed to delete annotations."
-   ;; "creator" "Almighty creator of the project. Nothing lies beneath his/her power."
-   })
+   "creator" "Almighty creator of the project. Nothing lies beneath his/her power."})
+
+(def project-user-roles
+  ["guest" "user" "project-lead"])
 
 (def project-roles
   "a map from project-related actions to required roles"

@@ -2,6 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
+            [cleebo.project.components.delete-project-modal :refer [delete-project-modal]]
             [cleebo.components :refer [user-profile-component]]
             [cleebo.roles :refer [project-user-roles]]
             [cleebo.utils :refer [human-time]]
@@ -10,19 +11,30 @@
 
 (def users-per-row 3)
 
-(defn project-user [{:keys [username]}]
+(defn can-edit-role? [my-role target-role]
+  (cond (some #{target-role} ["project-lead" "creator"]) false
+        (some #{my-role} ["guest" "user"]) false
+        :else true))
+
+(defn project-user [{:keys [username]} project-role my-role]
   (let [user (re-frame/subscribe [:user username])]
     (fn [{:keys [username]}]
-      [user-profile-component @user project-user-roles])))
+      [user-profile-component @user project-user-roles
+       :role project-role
+       ;; :on-submit TODO: send edit to project
+       :displayable? true
+       :editable? (can-edit-role? my-role project-role)])))
 
 (defn project-users [users]
-  (fn [users]
-    [:div (doall (for [row (partition-all users-per-row users)
-                       {:keys [username] :as user} row]
-                   ^{:key username}
-                   [:div.col-md-12
-                    {:class (str "col-lg-" (int (ceil (/ 12 users-per-row))))}
-                    [:div.well [project-user user]]]))]))
+  (let [me (re-frame/subscribe [:me :username])]
+    (fn [users]
+      (let [my-role (->> users (filter #(= @me (:username %))) first :role)]
+        [:div (doall (for [row (partition-all users-per-row users)
+                           {:keys [username role] :as user} row]
+                       ^{:key username}
+                       [:div.col-md-12
+                        {:class (str "col-lg-" (int (ceil (/ 12 users-per-row))))}
+                        [:div.well [project-user user role my-role]]]))]))))
 
 (defn key-val-span [key val]
   (fn [key val]
@@ -30,61 +42,6 @@
      (str key ": ")
      [:h4.text-muted {:style {:display "inline-block"}}
       val]]))
-
-(defn trigger-remove-project [project-name project-name-atom]
-  (fn [event]
-    (when (and (= 13 (.-charCode event)) (= project-name @project-name-atom))
-      (do (timbre/info "removing project" project-name)
-          (re-frame/dispatch [:project-remove {:project-name project-name}])))))
-
-(defn compute-feedback [project-name project-name-atom]
-  (cond (empty? @project-name-atom) ""
-        (not= @project-name-atom project-name) "has-error"
-        :else "has-success"))
-
-(defn delete-project-modal [project-name delete-project-modal-show]
-  (let [project-name-input-show (reagent/atom false)
-        project-name-atom (reagent/atom "")
-        footer-alert-show (reagent/atom true)]
-    (fn [project-name delete-project-modal-show]
-      [bs/modal
-       {:show @delete-project-modal-show
-        :onHide #(do (reset! project-name-atom "")
-                     (reset! project-name-input-show false)
-                     (js/setTimeout (fn [] (reset! footer-alert-show true)) 500)
-                     (swap! delete-project-modal-show not))}
-       [bs/modal-header
-        {:closeButton true}
-        [bs/modal-title
-         {:style {:font-size "18px"}}
-         "Do you really want to delete this project?"]]
-       [bs/modal-body
-        [:div.container-fluid
-         (when @project-name-input-show
-           [:div.row
-            [:div.form-group
-             {:class (compute-feedback project-name project-name-atom)}
-             [:input.form-control
-              {:value @project-name-atom
-               :type "text"
-               :on-key-press (trigger-remove-project project-name project-name-atom)
-               :on-change #(reset! project-name-atom (.. % -target -value))}]]
-            [:hr]])
-         [:div.row
-          [:div.text-center
-           [bs/button-group
-            [bs/button
-             {:bsStyle "primary"
-              :onClick #(swap! project-name-input-show not)}
-             "Yes"]
-            [bs/button
-             {:onClick #(swap! delete-project-modal-show not)}
-             "No"]]]]]]
-       (when @footer-alert-show
-         [bs/modal-footer
-          [bs/alert
-           {:bsStyle "danger" :bsClass "alert" :onDismiss #(reset! footer-alert-show false)}
-           "Remember that this operation is non reversible!"]])])))
 
 (defn project-header [name]
   (let [delete-project-modal-show (reagent/atom false)]

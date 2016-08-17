@@ -51,6 +51,18 @@
     (re-frame/dispatch [:notify {:message message}])
     db))
 
+(defmethod ws-handler :project-remove
+  [db {{:keys [project-name]} :data}]
+  (re-frame/dispatch [:remove-project project-name])
+  (re-frame/dispatch [:notify {:message (format "Project [%s] was removed" project-name)}])
+  db)
+
+(defmethod ws-handler :project-update
+  [db {{project :project} :data by :by}]
+  (re-frame/dispatch [:add-project project])
+  (re-frame/dispatch [:notify {:message (format "Project [%s] has an update by [%s]" (:name project) by)}])
+  db)
+
 (defmethod ws-handler :new-user-avatar
   [db {{username :username avatar :avatar} :data}]
   (re-frame/dispatch [:new-user-avatar {:username username :avatar avatar}])

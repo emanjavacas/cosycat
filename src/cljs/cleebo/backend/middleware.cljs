@@ -62,7 +62,7 @@
 (def standard-middleware
   ;; []
   [(when ^boolean goog.DEBUG)
-   ;; (when ^boolean goog.DEBUG re-frame/debug)
+   (when ^boolean goog.DEBUG re-frame/debug)
    ;; (when ^boolean goog.DEBUG debug)
    (when ^boolean goog.DEBUG (re-frame/after validate-db-schema))])
 
