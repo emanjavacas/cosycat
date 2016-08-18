@@ -8,14 +8,35 @@
             [cleebo.app-utils :refer [ceil pending-users]]
             [taoensso.timbre :as timbre]))
 
+(defn pending-user-row [{:keys [label usernames]}]
+  (fn [{:keys [label usernames]}]
+    [:div.row
+     {:style {:margin-bottom "-10px"}}
+     [:span
+      {:style {:font-size "18px"}}
+      label
+      [:h4.text-muted
+       {:style {:display "inline-block" :margin-left "10px"}}
+       (if-not (empty? usernames)
+         (apply str (interpose ", " usernames))
+         "_")]]]))
+
+(def summary-help
+  "In order to remove a project all users have to agree. This summary shows the status of the collective decision.")
+
 (defn pending-users-table [project]
   (fn [project]
-    (let [{:keys [users]} @project
-          {:keys [pending non-app agreed-users]} (pending-users @project)]
+    (let [{:keys [users]} project
+          {:keys [pending non-app agreed-users]} (pending-users project)]
       [:div.container-fluid
-       [:h4 "Summary"]
-       [:div.row "Pending users: " (str pending)]
-       [:div.row "Agreeing users: " (str agreed-users)]])))
+       [:h4 "Summary"
+        [:span [bs/overlay-trigger
+                {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} summary-help])}
+                [bs/glyphicon
+                 {:glyph "question-sign"
+                  :style {:font-size "14px" :margin-left "7px"}}]]]]
+       [pending-user-row {:label "Pending users: " :usernames pending}]
+       [pending-user-row {:label "Agreeing users: " :usernames agreed-users}]])))
 
 (defn trigger-remove-project [project-name project-name-atom delete-project-modal-show]
   (fn [event]
@@ -37,14 +58,17 @@
       [:input.form-control
        {:value @project-name-atom
         :type "text"
-        :on-key-press (trigger-remove-project project-name project-name-atom delete-project-modal-show)
+        :on-key-press (trigger-remove-project
+                       project-name project-name-atom delete-project-modal-show)
         :on-change #(reset! project-name-atom (.. % -target -value))}]]]))
 
 (defn project-name-input-footer []
-  [:div.row [:div.text-center [:div.pull-right "Type in the name of the project you wish to delete"]]])
-
-(defn are-you-sure-button [delete-project-modal-show project-name-input-show]
   [:div.row
+   [:div.text-center
+    [:div.pull-right "Type in the name of the project you wish to delete"]]])
+
+(defn double-check-button [delete-project-modal-show project-name-input-show]
+  [:div.row.pull-right
    [:div.text-center
     [bs/button-group
      [bs/button
@@ -55,7 +79,8 @@
       {:onClick #(swap! delete-project-modal-show not)}
       "No"]]]])
 
-(defn on-hide [project-name-atom project-name-input-show footer-alert-show delete-project-modal-show]
+(defn on-hide
+  [project-name-atom project-name-input-show footer-alert-show delete-project-modal-show]
   (fn [e]
     (reset! project-name-atom "")
     (reset! project-name-input-show false)
@@ -69,26 +94,31 @@
      [bs/modal-title
       {:style {:font-size "18px"}}
       (if pending?
-        "Project will be deleted when all affected users agree."
-        "Do you really want to delete this project?")]]))
+        "Do you really want to delete this project?"
+        [:span "You have already agreed to remove this project"
+         [:p.text-muted
+          {:style {:font-size "15px"}}
+          "Project will be deleted when all affected users agree."]])]]))
 
 (defn delete-project-modal-footer [footer-alert-show]
   (fn [footer-alert-show]
     [bs/modal-footer
      [bs/alert
-      {:bsStyle "danger" :bsClass "alert" :onDismiss #(reset! footer-alert-show false)}
+      {:bsStyle "danger" :onDismiss #(reset! footer-alert-show false)}
       "Remember that this operation is non reversible!"]]))
 
 (defn delete-project-modal-body
-  [project-name project-name-atom delete-project-modal-show project-name-input-show project]
-  (fn [project-name project-name-atom delete-project-modal-show project-name-input-show project]
-    [bs/modal-body
-     [:div.container-fluid
-      (if-not @project-name-input-show [pending-users-table project])
-      (when @project-name-input-show [project-name-input project-name project-name-atom delete-project-modal-show])
-      (if @project-name-input-show
-        [project-name-input-footer]
-        [are-you-sure-button delete-project-modal-show project-name-input-show])]]))
+  [{:keys [project-name-atom delete-project-modal-show project-name-input-show project pending?]}]
+  (fn [{:keys [project-name-atom delete-project-modal-show project-name-input-show project pending?]}]
+    (let [{project-name :name :as project} @project]
+      [bs/modal-body
+       [:div.container-fluid
+        (when @project-name-input-show
+          [project-name-input project-name project-name-atom delete-project-modal-show])
+        (if-not @project-name-input-show [pending-users-table project])
+        (if @project-name-input-show
+          [project-name-input-footer]
+          (when pending? [double-check-button delete-project-modal-show project-name-input-show]))]])))
 
 (defn delete-project-modal [project-name delete-project-modal-show]
   (let [project-name-input-show (reagent/atom false)
@@ -101,9 +131,14 @@
             pending? (contains? (apply hash-set pending) @me)]
         [bs/modal
          {:show @delete-project-modal-show
-          :onHide (on-hide project-name-atom project-name-input-show footer-alert-show delete-project-modal-show)}
+          :onHide (on-hide project-name-atom project-name-input-show
+                           footer-alert-show delete-project-modal-show)}
          [delete-project-modal-header pending?]
          [delete-project-modal-body
-          project-name project-name-atom delete-project-modal-show project-name-input-show project]
+          {:project project
+           :project-name-atom project-name-atom
+           :delete-project-modal-show delete-project-modal-show
+           :project-name-input-show project-name-input-show
+           :pending? pending?}]
          (when (and @project-name-input-show @footer-alert-show)
            [delete-project-modal-footer footer-alert-show])]))))

@@ -58,13 +58,14 @@
     {db :db ws :ws} :components}]
   (let [project (proj/find-project-by-name db project-name)]
     (if-let [project-update (proj/remove-project db username project-name)]
-      (do (send-clients ws {:type :project-update :by username :data project-update}
-           :source-client username
-           :target-clients (mapv :username (:users project)))
-          project-update)
-      (do (send-clients ws {:type :project-remove :data {:project-name project-name}}
-           :source-client username
-           :target-clients (mapv :username (:users project)))))))
+      (let [update-payload (assoc project-update :by username)]
+        (send-clients ws {:type :project-update :data update-payload}
+         :source-client username
+         :target-clients (mapv :username (:users project)))
+        update-payload)
+      (send-clients ws {:type :project-remove :data {:project-name project-name}}
+       :source-client username
+       :target-clients (mapv :username (:users project))))))
 
 (defn project-routes []
   (routes

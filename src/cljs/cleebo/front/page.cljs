@@ -15,15 +15,19 @@
 
 (defn front-panel []
   (let [projects (re-frame/subscribe [:projects])
-        username (re-frame/subscribe [:me :username])]
+        username (re-frame/subscribe [:me :username])
+        open? (reagent/atom false)]
     (fn []
       [:div.container-fluid
        [:div.row
         [:div.col-lg-1]
         [:div.col-lg-10
          [bs/jumbotron
-          [:h2#projects {:style {:padding-bottom "30px"}} "Projects"]
-          (if (zero? (count @projects)) ;default project
-            [:div [no-projects username] [new-project-btn]]
-            [:div [projects-panel projects] [new-project-btn]])]]
+          (if-not @open?
+            [:div
+             [:h2#projects {:style {:padding-bottom "30px"}} "Projects"]
+             (if (zero? (count @projects))
+               [:div [no-projects username] [new-project-btn open?]]
+               [:div [projects-panel projects] [new-project-btn open?]])]
+            [new-project-btn open?])]]
         [:div.col-lg-1]]])))

@@ -293,3 +293,17 @@
              (for [backup history
                    :let [timestamp (.parse js/Date backup)]]
                ^{:key timestamp} [load-from-ls-row backup])]]]))]]))
+
+(defn session-message-modal [data]
+  (fn [data]
+    (let [{:keys [message]} @data]
+      [bs/modal
+       {:show (boolean @data)
+        :on-hide #(re-frame/dispatch [:close-modal :session-message])}
+       [bs/modal-header
+        {:closeButton true}
+        [bs/modal-title
+         [:div [:span {:style {:padding-right "20px"}} [:i.zmdi.zmdi-storage]]
+          "Session message"]]]
+       [bs/modal-body
+        [bs/alert {:bsStyle "danger"} message]]])))

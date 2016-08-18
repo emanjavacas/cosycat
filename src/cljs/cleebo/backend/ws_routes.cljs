@@ -1,5 +1,6 @@
 (ns cleebo.backend.ws-routes
   (:require [re-frame.core :as re-frame]
+            [cleebo.routes :refer [nav!]]
             [cleebo.backend.ws :refer [send-ws]]
             [cleebo.backend.middleware :refer [standard-middleware]]
             [cleebo.utils :refer [format get-msg]]
@@ -53,14 +54,21 @@
 
 (defmethod ws-handler :project-remove
   [db {{:keys [project-name]} :data}]
-  (re-frame/dispatch [:remove-project project-name])
-  (re-frame/dispatch [:notify {:message (format "Project [%s] was removed" project-name)}])
+  (let [active-project (get-in db [:session :active-project])
+        message (format "Project [%s] was removed" project-name)]
+    (re-frame/dispatch [:remove-project project-name])
+    (if (= project-name active-project)
+      (do (nav! "/")
+          (re-frame/dispatch [:open-modal :session-message {:message message}]))
+      ;; just a notification
+      (re-frame/dispatch [:notify {:message message}])))
   db)
 
 (defmethod ws-handler :project-update
-  [db {{project :project} :data by :by}]
-  (re-frame/dispatch [:add-project project])
-  (re-frame/dispatch [:notify {:message (format "Project [%s] has an update by [%s]" (:name project) by)}])
+  [db {{payload :payload project-name :project-name} :data by :by}]
+  (re-frame/dispatch [:add-project-update {:project-name project-name :payload payload}])
+  (re-frame/dispatch
+   [:notify {:message (format "Project [%s] has an update by [%s]" project-name by)}])
   db)
 
 (defmethod ws-handler :new-user-avatar

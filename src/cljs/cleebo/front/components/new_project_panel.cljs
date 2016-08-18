@@ -84,7 +84,8 @@
 
 (defn submit-project [{:keys [name description users user-projects]}]
   (let [project {:name name :description description :users users}]
-    (when (and (not (validate-name-input name user-projects)) (not (validate-desc-input description)))
+    (when (and (not (validate-name-input name user-projects))
+               (not (validate-desc-input description)))
       (re-frame/dispatch [:new-project project]))))
 
 (defn on-new-project [open? selected-users user-projects]
@@ -113,11 +114,10 @@
            :bsStyle "success"}
           "Close"])])))
 
-(defn new-project-btn []
-  (let [open? (reagent/atom false)
-        selected-users (reagent/atom {})
+(defn new-project-btn [open?]
+  (let [selected-users (reagent/atom {})
         users (re-frame/subscribe [:session :users])]
-    (fn []
+    (fn [open?]
       [:div
        [css-transition-group
         {:transition-name "notification"
@@ -125,6 +125,6 @@
          :transition-leave-timeout 0}
         (when @open?
           [:div
-           [:h2#new-project {:style {:padding "50px 0 30px 0"}} "New Project"]
+           [:h2#new-project {:style {:padding-bottom "30px"}} "New Project"]
            [new-project-form selected-users]])]
        [project-btn open? selected-users]])))

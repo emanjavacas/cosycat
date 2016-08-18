@@ -25,8 +25,9 @@
             [cleebo.backend.ws :refer [open-ws-channel]]
             [cleebo.routes :as routes]
             [cleebo.localstorage :as ls]
-            [cleebo.components :refer
-             [notification-container load-from-ls-modal user-thumb throbbing-panel]]
+            [cleebo.components
+             :refer [notification-container load-from-ls-modal session-message-modal
+                     user-thumb throbbing-panel]]
             [cleebo.app-utils :refer [function?]]
             [cleebo.utils :refer [nbsp]]
             [cleebo.ajax-interceptors
@@ -163,12 +164,14 @@
   (let [active-panel (re-frame/subscribe [:active-panel])
         session-error (re-frame/subscribe [:session-has-error?])
         session-init (re-frame/subscribe [:session :init])
+        session-message-modal? (re-frame/subscribe [:modals :session-message])
         ls-modal? (re-frame/subscribe [:modals :localstorage])]
     (fn []
       [:div
        [navbar active-panel]
        [notification-container]
        [load-from-ls-modal ls-modal?]
+       [session-message-modal session-message-modal?]
        [:div.container-fluid
         {:style {:padding "75px 50px 0 50px"}}
         (panels

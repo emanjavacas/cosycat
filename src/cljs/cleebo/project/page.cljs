@@ -16,6 +16,9 @@
         (some #{my-role} ["guest" "user"]) false
         :else true))
 
+(defn can-remove-project? [my-role]
+  (not= my-role "guest"))
+
 (defn project-user [{:keys [username]} project-role my-role]
   (let [user (re-frame/subscribe [:user username])]
     (fn [{:keys [username]}]
@@ -25,16 +28,19 @@
        :displayable? true
        :editable? (can-edit-role? my-role project-role)])))
 
-(defn project-users [users]
+(defn project-users [users my-role]
   (let [me (re-frame/subscribe [:me :username])]
-    (fn [users]
-      (let [my-role (->> users (filter #(= @me (:username %))) first :role)]
-        [:div (doall (for [row (partition-all users-per-row users)
-                           {:keys [username role] :as user} row]
-                       ^{:key username}
-                       [:div.col-md-12
-                        {:class (str "col-lg-" (int (ceil (/ 12 users-per-row))))}
-                        [:div.well [project-user user role my-role]]]))]))))
+    (fn [users my-role]
+      [:div (doall (for [row (partition-all users-per-row users)
+                         {:keys [username role] :as user} row]
+                     ^{:key username}
+                     [:div.col-md-12
+                      {:class (str "col-lg-" (int (ceil (/ 12 users-per-row))))}
+                      [:div.well
+                       {:style (when (= @me username)
+                                 {:border "1px solid #d1e8f1"
+                                  :background-color "#eff7fa"})}
+                       [project-user user role my-role]]]))])))
 
 (defn key-val-span [key val]
   (fn [key val]
@@ -43,38 +49,41 @@
      [:h4.text-muted {:style {:display "inline-block"}}
       val]]))
 
-(defn project-header [name]
+(defn project-header [name my-role]
   (let [delete-project-modal-show (reagent/atom false)]
-    (fn [name]
+    (fn [name my-role]
       [:div.text [:h2 name]
-       [:div.text.pull-right
-        [bs/overlay-trigger
-         {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} "Remove project"])
-          :placement "right"}
-         [bs/button
-          {:bsSize "small"
-           :onClick #(swap! delete-project-modal-show not)}
-          [bs/glyphicon {:glyph "remove-sign"}]]]]
+       (when (can-remove-project? my-role)
+         [:div.text.pull-right
+          [bs/overlay-trigger
+           {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} "Remove project"])
+            :placement "right"}
+           [bs/button
+            {:bsSize "small"
+             :onClick #(swap! delete-project-modal-show not)}
+            [bs/glyphicon {:glyph "remove-sign"}]]]])
        [delete-project-modal name delete-project-modal-show]])))
 
 (defn project-description []
-  (let [active-project (re-frame/subscribe [:active-project])]
+  (let [active-project (re-frame/subscribe [:active-project])
+        me (re-frame/subscribe [:me :username])]
     (fn []
-      (let [{:keys [users created description name session]} @active-project]
+      (let [{:keys [users created description name session]} @active-project
+            creator (-> (filter #(= "creator" (:role %)) users) first :username)
+            my-role (->> users (filter #(= @me (:username %))) first :role)]
         [:div.container-fluid         
          [:div.row
-          [project-header name]
+          [project-header name my-role]
           [:hr]
           [:div [key-val-span "description" description]]
           [:div [key-val-span "created" (human-time created)]]
-          [:div [key-val-span "creator" (-> (filter #(= "creator" (:role %)) users) first :username)]]]
+          [:div [key-val-span "creator" creator]]]
          [:div-row {:style {:margin "20px"}}
           [:div.text
            {:style {:margin "0 -15px"}}
            [:h4 "Users working in " [:span.text-muted name]]]]
-         [:div.row [project-users users]]]))))
+         [:div.row [project-users users my-role]]]))))
 
 (defn project-panel []
   [:div.container
    [project-description]])
-

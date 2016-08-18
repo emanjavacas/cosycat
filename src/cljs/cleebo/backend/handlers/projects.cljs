@@ -119,13 +119,15 @@
 
 (defn remove-project-handler [{project-name :name :as project}]
   (fn [payload]
-    (if-not payload
+    (if (empty? payload)
       (do (re-frame/dispatch [:remove-project project-name])
-          (re-frame/dispatch [:notify {:message (str "Project " project-name " was successfully deleted")}])
+          (re-frame/dispatch
+           [:notify {:message (str "Project " project-name " was successfully deleted")}])
           (nav! "/"))
       (let [updated-project (update-in project [:updates] conj payload)
             {:keys [pending]} (pending-users updated-project)] ;still users
-        (re-frame/dispatch [:notify {:message (str (count pending) " users pending to remove project")}])
+        (re-frame/dispatch
+         [:notify {:message (str (count pending) " users pending to remove project")}])
         (re-frame/dispatch [:add-project-update {:payload payload :project-name project-name}])))))
 
 (re-frame/register-handler
