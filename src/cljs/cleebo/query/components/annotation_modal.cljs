@@ -3,7 +3,7 @@
             [re-frame.core :as re-frame]
             [cleebo.utils :refer [by-id ->int parse-annotation filter-dummy-tokens nbsp]]
             [cleebo.components :refer [disabled-button-tooltip]]
-            [cleebo.autocomplete :refer [autocomplete-jq]]
+            [cleebo.autocomplete :refer [annotation-autocomplete]]
             [schema.core :as s]
             [react-bootstrap.components :as bs]))
 
@@ -80,7 +80,7 @@
       [:tr
        [:td [:i.zmdi.zmdi-edit]]
        [:td
-        [autocomplete-jq
+        [annotation-autocomplete
          {:source :complex-source
           :class "form-control form-control-no-border"
           :id "token-ann-key"

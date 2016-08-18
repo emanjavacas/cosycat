@@ -52,11 +52,9 @@
     :simple-source (simple-source target)
     (throw (js/Error. "Unknown autocomplete target"))))
 
-(defn autocomplete-jq [{:keys [id source target] :as args}]
+(defn annotation-autocomplete [{:keys [id source target] :as args}]
   (reagent/create-class
-   {:reagent-render
-    (fn [args]
-      [:div [:input (dissoc args :source :target)]])
+   {:reagent-render (fn [args] [:div [:input (dissoc args :source :target)]])
     :component-did-mount
     (fn []
       (js/$
@@ -64,3 +62,28 @@
          (.autocomplete
           (js/$ (str "#" id))
           (clj->js {:source (get-source-fn source target)})))))}))
+
+(defn find-user [term users]
+  (if (empty? term)
+    (map :username users)
+    (->> users
+         (filter (fn [{:keys [username firstname lastname email]}]
+                   (some #(gstr/caseInsensitiveStartsWith % term)
+                         [username firstname lastname email])))
+         (map :username))))
+
+(defn users-autocomplete [{:keys [id users]}]
+  (reagent/create-class
+   {:reagent-render (fn [args] [:div [:input (dissoc args :users)]])
+    :component-did-mount
+    (fn []
+      (js/$
+       (fn []
+         (.autocomplete
+          (js/$ (str "#" id))
+          (clj->js {:source (fn [req res]
+                              (try (let [term (.-term req)]
+                                     (res (clj->js (find-user term users))))
+                                   (catch :default e
+                                     (res (clj->js {})))))})))))}))
+

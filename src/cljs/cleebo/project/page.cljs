@@ -3,6 +3,7 @@
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
             [cleebo.project.components.delete-project-modal :refer [delete-project-modal]]
+            [cleebo.project.components.add-user-component :refer [add-user-component]]
             [cleebo.components :refer [user-profile-component]]
             [cleebo.roles :refer [project-user-roles]]
             [cleebo.utils :refer [human-time]]
@@ -19,6 +20,9 @@
 (defn can-remove-project? [my-role]
   (not= my-role "guest"))
 
+(defn can-add-users? [my-role]
+  (contains? #{"project-lead" "creator"} my-role))
+
 (defn project-user [{:keys [username]} project-role my-role]
   (let [user (re-frame/subscribe [:user username])]
     (fn [{:keys [username]}]
@@ -28,19 +32,23 @@
        :displayable? true
        :editable? (can-edit-role? my-role project-role)])))
 
+(def my-user-style
+  {:border "1px solid #d1e8f1"
+   :background-color "#eff7fa"})
+
 (defn project-users [users my-role]
   (let [me (re-frame/subscribe [:me :username])]
     (fn [users my-role]
-      [:div (doall (for [row (partition-all users-per-row users)
-                         {:keys [username role] :as user} row]
-                     ^{:key username}
-                     [:div.col-md-12
-                      {:class (str "col-lg-" (int (ceil (/ 12 users-per-row))))}
-                      [:div.well
-                       {:style (when (= @me username)
-                                 {:border "1px solid #d1e8f1"
-                                  :background-color "#eff7fa"})}
-                       [project-user user role my-role]]]))])))
+      (let [users+ (into (vec users) (when (can-add-users? my-role) [add-user-component]))]
+        [:div (doall (for [row (partition-all users-per-row users+)
+                           {:keys [username role] :as user} row]
+                       ^{:key (or username "add-user-component")}
+                       [:div.col-md-12
+                        {:class (str "col-lg-" (int (ceil (/ 12 users-per-row))))}
+                        [:div.well {:style (when (= @me username) my-user-style)}
+                         (if (and username role)
+                           [project-user user role my-role]
+                           [user users])]]))]))))
 
 (defn key-val-span [key val]
   (fn [key val]

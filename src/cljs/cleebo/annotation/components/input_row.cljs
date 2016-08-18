@@ -4,7 +4,7 @@
             [re-frame.core :as re-frame]
             [cleebo.utils :refer [parse-annotation ->int filter-dummy-tokens nbsp]]
             [cleebo.components :refer [prepend-cell dummy-cell]]
-            [cleebo.autocomplete :refer [autocomplete-jq]])
+            [cleebo.autocomplete :refer [annotation-autocomplete]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
 (def border "1px solid darkgray")
@@ -59,7 +59,7 @@
 (defn input [hit-id token-id chans]
   (let [text (reagent/atom "")]
     (fn [hit-id token-id chans]
-      [:input.from-control.input-cell
+      [:input.form-control.input-cell
        {:type "text"
         :name "input-row"
         :on-key-down (on-key-down hit-id (map ->int (keys @chans)))}])))

@@ -90,17 +90,23 @@
   "adds user to project"
   [{db-conn :db :as db} username project-name user]
   (check-user-in-project db username project-name)
-  (mc/find-and-modify db-conn (:projects colls) {"name" project-name} {$push {"users" user}} {:return-new true}))
+  (-> (mc/find-and-modify
+       db-conn (:projects colls)
+       {"name" project-name}
+       {$push {"users" user}}
+       {:return-new true})
+      normalize-project))
 
 (defn remove-user
   "removes user from project"
   [{db-conn :db :as db} username project-name]
   (check-user-in-project db username project-name)
-  (mc/find-and-modify
-   db-conn (:projects colls)
-   {"name" project-name}
-   {$pull {"users" {"username" username}}}
-   {:return-new true}))
+  (-> (mc/find-and-modify
+       db-conn (:projects colls)
+       {"name" project-name}
+       {$pull {"users" {"username" username}}}
+       {:return-new true})
+      normalize-project))
 
 (defn get-project
   "retrieves project by name"

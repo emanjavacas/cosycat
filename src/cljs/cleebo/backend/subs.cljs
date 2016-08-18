@@ -139,7 +139,7 @@
 
 (re-frame/register-sub
  :user
- (fn [db [_ username & [path]]]
+ (fn [db [_ username & path]]
    (let [user (reaction (get-user @db username))]
      (if path
        (reaction (get-in @user path))

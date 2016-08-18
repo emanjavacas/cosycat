@@ -87,7 +87,7 @@
 (re-frame/register-handler              ;add user to project in client-db
  :add-project-user
  standard-middleware
- (fn [db [_ [{:keys [user project-name]}]]]
+ (fn [db [_ {:keys [user project-name]}]]
    (update-in db [:projects project-name :users] conj user)))
 
 (re-frame/register-handler

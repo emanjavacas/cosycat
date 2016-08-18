@@ -29,7 +29,7 @@
              :refer [notification-container load-from-ls-modal session-message-modal
                      user-thumb throbbing-panel]]
             [cleebo.app-utils :refer [function?]]
-            [cleebo.utils :refer [nbsp]]
+            [cleebo.utils :refer [nbsp format]]
             [cleebo.ajax-interceptors
              :refer [add-interceptor csrf-interceptor ajax-header-interceptor debug-interceptor]]
             [taoensso.timbre :as timbre]
@@ -61,27 +61,30 @@
    label])
 
 (defn user-brand-span [username active-project]
-  (fn [username active-project]
-    [:div (str/capitalize username)
+  (fn [username active-project my-role]
+    [:div username
      (when @active-project
-       [:span {:style {:white-space "nowrap"}}
-        (str "@" @active-project)])]))
+       [:span {:style {:white-space "nowrap"}} (str "@" @active-project)])]))
 
 (defn user-brand [active-project]
-  (let [user (re-frame/subscribe [:me])]
+  (let [user (re-frame/subscribe [:me])
+        users (re-frame/subscribe [:active-project :users])]
     (fn [active-project]
       (let [{username :username {href :href} :avatar} @user]
         [bs/navbar-brand
-         [:div.container-fluid
-          {:style {:margin-top "-9.5px"}}
-          [:div.row
-           {:style {:line-height "35px" :text-align "right"}}
-           [:div.col-sm-8
-            ;; wait until user info is fetched in main
-            (when username [user-brand-span username active-project])]
-           [:div.col-sm-4
-            ;; wait until user info is fetched in main
-            (when username [user-thumb href {:height "30px" :width "30px"}])]]]]))))
+         (when username
+           (let [my-role (->> @users (filter #(= username (:username %))) first :role)
+                 tooltip (format "%s has role [%s] in this project" (str/capitalize username) my-role)]
+             [:div.container-fluid
+              {:style {:margin-top "-9.5px"}}
+              [bs/overlay-trigger
+               {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} tooltip])}
+               [:div.row
+                {:style {:line-height "35px" :text-align "right"}}
+                [:div.col-sm-8 ;; wait until user info is fetched in main
+                 [user-brand-span username active-project my-role]]
+                [:div.col-sm-4 ;; wait until user info is fetched in main            
+                 [user-thumb href {:height "30px" :width "30px"}]]]]]))]))))
 
 (defn navlink [target href label icon]
   (let [active (re-frame/subscribe [:active-panel])]

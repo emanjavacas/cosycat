@@ -93,30 +93,42 @@
     (let [new-idx (swap! current-idx-atom (move-cursor dir roles))]
       (on-change (get-nth-role new-idx roles)))))
 
-(defn editable-role-btn [roles editing {:keys [on-change on-submit]}]
+(defn editable-role-btn [user roles editing editable? opts]
   (let [current-idx (reagent/atom 0)]
-    (fn [roles editing {:keys [on-change on-submit]}] ;if on-change, then is not disabled
-      [:div
-       [:div.input-group
-        [:span.input-group-btn
-         [:button.btn.btn-default
-          {:type "button"
-           :on-click (on-click-fn :prev roles current-idx on-change)}
-          [bs/glyphicon {:glyph "chevron-left"}]]]
-        (let [current-role (get-nth-role @current-idx roles)
-              desc (project-user-roles-descs current-role)]
+    (fn [user roles editing editable?
+         {:keys [on-change on-submit on-dismiss]
+          :or {on-change identity on-submit identity on-dismiss identity}}]
+      (let [current-role (get-nth-role @current-idx roles)
+            desc (project-user-roles-descs current-role)]
+        [:div
+         [:div.input-group
+          [:span.input-group-btn
+           [:button.btn.btn-default
+            {:type "button"
+             :on-click (on-click-fn :prev roles current-idx on-change)}
+            [bs/glyphicon {:glyph "chevron-left"}]]]
           [bs/overlay-trigger
            {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} desc])
             :placement "top"}
            [:span.form-control.text-center
-            {:style {:cursor "pointer"}
-             :on-click #(do (.stopPropagation %) (on-submit current-role) (swap! editing not))}
-            [bs/label current-role]]])
-        [:span.input-group-btn
-         [:button.btn.btn-default
-          {:type "button"
-           :on-click (on-click-fn :next roles current-idx on-change)}
-          [bs/glyphicon {:glyph "chevron-right"}]]]]])))
+            [bs/label current-role]]]
+          [:span.input-group-btn
+           [:button.btn.btn-default
+            {:type "button"
+             :on-click (on-click-fn :next roles current-idx on-change)}
+            [bs/glyphicon {:glyph "chevron-right"}]]]
+          (when editable?
+            [:span.input-group-btn
+             [:button.btn.btn-default
+              {:type "button"
+               :on-click #(on-submit user current-role)}
+              [bs/glyphicon {:glyph "ok"}]]])
+          (when editable?
+            [:span.input-group-btn
+             [:button.btn.btn-default
+              {:type "button"
+               :on-click #(do (swap! editing not) (on-dismiss))}
+              [bs/glyphicon {:glyph "remove"}]]])]]))))
 
 (defn display-role-btn [editing role editable?]
   (fn [editing role editable?]
@@ -129,7 +141,8 @@
          [:span.form-control.text-center [bs/label role]]])
       [bs/overlay-trigger
        {:overlay (reagent/as-component
-                  [bs/tooltip {:id "tooltip"} (if editable? "Click to edit user role" "Can't edit user role")])
+                  [bs/tooltip {:id "tooltip"}
+                   (if editable? "Click to edit user role" "Can't edit user role")])
         :placement "right"}
        [:span.input-group-addon
         {:style {:cursor (if editable? "pointer" "not-allowed") :opacity (if-not editable? 0.6)}
@@ -137,20 +150,27 @@
         [bs/glyphicon {:glyph "pencil"}]]]]]))
 
 (defn select-role-btn
-  [roles {:keys [role on-change on-submit displayable? editable?]
-          :or {on-change identity on-submit identity displayable? false editable? true}}]
+  [user roles {:keys [role on-change on-submit displayable? editable?] :as opts}]
   (when displayable? (assert role "Role must be provide in displayable mode"))
   (let [editing (reagent/atom (not role))]
-    (fn [roles {:keys [role on-change on-submit] :or {on-change identity on-submit identity}}]
+    (fn [user roles {:keys [role on-change on-submit]}]
       (if (not displayable?)
-          [editable-role-btn roles editing {:on-change on-change :on-submit on-submit}]
+          [editable-role-btn user roles editing editable? opts]
           (if @editing
-            [editable-role-btn roles editing {:role role :on-change on-change :on-submit on-submit}]
+            [editable-role-btn user roles editing editable? opts]
             [display-role-btn editing role editable?])))))
 
-(defn user-profile-component [user roles & opts]
+(defn user-profile-component
+  "A component displaying basic user information. If `displayable?`, it requires an initial role,
+   which is use to display an init view of the role, otherwise it presents the user as not
+   having yet any role. If `editable?`, it requires an f (`on-change` role) and (`on-submit`
+   user role) and component shows a button to trigger the role update (and another one to
+   dismiss it)"
+  [user roles & opts]
   (fn [{:keys [avatar username firstname lastname email created last-active] :as user} roles
-       & {:keys [role on-change on-submit] :as opts}]
+       & {:keys [role on-change on-submit editable? displayable?]
+          :or {editable? true displayable? false}
+          :as opts}]
     [:div.container-fluid
      [:div.row
       [:div.col-sm-6.col-md-4
@@ -164,15 +184,11 @@
         [:tr [:td [:span (str "Created:")]] [:td (parse-time created)]]
         [:tr [:td [:span (str "Last active:") ]] [:td (human-time last-active)]]]]]
      [:div.row {:style {:padding "0 15px"}}
-      [select-role-btn roles opts]]]))
+      [select-role-btn user roles opts]]]))
 
-(defn number-cell [n]
-  (fn [n]
-    [:td n]))
+(defn number-cell [n] (fn [n] [:td n]))
 
-(defn dummy-cell []
-  (fn []
-    [:td ""]))
+(defn dummy-cell [] (fn [] [:td ""]))
 
 (defn prepend-cell
   "prepend a cell `child` to a seq of siblings (useful for prepending :td in a :tr)"

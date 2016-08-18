@@ -2,6 +2,7 @@
   (:require [schema.core :as s]
             [schema.coerce :as coerce]
             [taoensso.timbre :as timbre]
+            [cleebo.app-utils :refer [deep-merge]]
             [cleebo.schemas.user-schemas :refer [settings-schema project-history-schema]]
             [cleebo.schemas.results-schemas :refer [query-results-schema]]))
 
@@ -18,6 +19,9 @@
   {:query query-results-schema
    :status (s/conditional empty? {} :else status-schema)
    :filtered-users #{s/Str}})             ;filter out annotations by other users
+
+(def project-settings-schema
+  (deep-merge settings-schema {(s/optional-key :components) {}}))
 
 (def project-user-schema
   {:username s/Str :role s/Str})
@@ -36,6 +40,6 @@
             :created s/Int
             :users [{:username s/Str :role s/Str}]
             (s/optional-key :updates) [update-schema]
-            (s/optional-key :settings) settings-schema
+            (s/optional-key :settings) project-settings-schema
             (s/optional-key :session) project-session-schema
             (s/optional-key :history) project-history-schema}))

@@ -46,11 +46,25 @@
   db)
 
 (defmethod ws-handler :new-project
-  [db {{creator :creator project-name :name :as project} :data}]
+  [db {{{creator :creator project-name :name :as project} :project} :data}]
   (let [message (get-msg [:new-project] project-name creator)]
     (re-frame/dispatch [:add-project project])
     (re-frame/dispatch [:notify {:message message}])
     db))
+
+(defmethod ws-handler :project-add-user ;added user gets project data
+  [db {{project-name :name :as project} :project by :by}]
+  (re-frame/dispatch [:add-project project])
+  (re-frame/dispatch [:notify {:message (get-msg [:new-project] project-name by)}])
+  db)
+
+(defmethod ws-handler :project-new-user ;existing users get new user data
+  [db {project-name :project-name {username :username :as user} :user by :by}]
+  (re-frame/dispatch [:add-project-user {:user user :project-name project-name}])
+  (re-frame/dispatch
+   [:notify {:message (format "[%s] has been added to project [%s] by [%s]"
+                              username project-name by)}])
+  db)
 
 (defmethod ws-handler :project-remove
   [db {{:keys [project-name]} :data}]

@@ -2,7 +2,7 @@
   (:require [compojure.core :refer [routes context POST GET]]
             [cleebo.routes.utils :refer [make-default-route]]
             [cleebo.db.projects :as proj]
-            [cleebo.components.ws :refer [send-clients]]
+            [cleebo.components.ws :refer [send-clients send-client]]
             [taoensso.timbre :as timbre]))
 
 (defn new-project-route
@@ -11,7 +11,7 @@
     {db :db ws :ws} :components}]
   (let [project (proj/new-project db username project-name desc users)]
     (send-clients
-     ws {:type :new-project :data project}
+     ws {:type :new-project :data {:project project}}
      :source-client username
      :target-clients (map :username users))
     project))
@@ -33,12 +33,15 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [{:keys [users] :as project} (proj/get-project db username project-name)
-        data {:user user :project-name project-name}]
-    (proj/add-user db username project-name user)
+        data {:user user :project-name project-name}
+        updated-project (proj/add-user db username project-name user)]
+    (send-client
+     ws (:username user)
+     {:type :project-add-user :data {:project updated-project :by username}})
     (send-clients
-     ws {:type :project-add-user :data data}
+     ws {:type :project-new-user :data (assoc data :by username)}
      :source-client username
-     :target-clients (conj (mapv :username users) (:username user)))
+     :target-clients (mapv :username users))
     data))
 
 (defn remove-user-route

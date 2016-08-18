@@ -77,11 +77,11 @@
   type)
 
 (defn notification-message
-  [{{B :B O :O :as scope} :scope {type :type} :span :as data} message]
-  (.log js/console data)
-  {:message (case type
-              "token" (get-msg [:annotation :error :token] scope message)
-              "IOB" (get-msg [:annotation :error :IOB] B O message))})
+  [{{{B :B O :O :as scope} :scope type :type} :span :as data} message]
+  (->> (case type
+         "token" (get-msg [:annotation :error :token] scope message)
+         "IOB" (get-msg [:annotation :error :IOB] B O message))
+       (assoc {} :message)))
 
 (defmethod dispatch-annotation-handler cljs.core/PersistentArrayMap
   [{status :status
