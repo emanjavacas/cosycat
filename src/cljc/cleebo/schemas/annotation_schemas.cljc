@@ -23,6 +23,7 @@
     :timestamp s/Int
     :corpus s/Str
     :query s/Str
+    :hit-id s/Any
     :_version s/Int
     :span span-schema}])
 
@@ -33,6 +34,7 @@
    :span span-schema
    :corpus s/Str
    :query s/Str
+   :hit-id s/Any
    #?(:clj :_id :cljs (s/optional-key :_id)) s/Any ;outgoing annotations do not have an id yet
    #?(:clj :_version :cljs (s/optional-key :_version)) s/Any   
    (s/optional-key :history) history-schema}) ;     this is the same except history and _id

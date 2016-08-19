@@ -65,11 +65,15 @@
 
 ;;; Outgoing annotations
 (s/defn ^:always-validate make-annotation :- annotation-schema
-  ([ann-map token-id :- s/Int]
-   (assoc ann-map :span {:type "token" :scope token-id} :timestamp (.now js/Date)))
-  ([ann-map token-from :- s/Int token-to :- s/Int]
+  ([ann-map hit-id token-id :- s/Int]
+   (merge ann-map {:hit-id hit-id
+                   :span {:type "token" :scope token-id}
+                   :timestamp (.now js/Date)}))
+  ([ann-map hit-id token-from :- s/Int token-to :- s/Int]
    {:pre [(>= token-to token-from)]}
-   (assoc ann-map :span {:type "IOB" :scope {:B token-from :O token-to}} :timestamp (.now js/Date))))
+   (merge ann-map {:hit-id hit-id
+                   :span {:type "IOB" :scope {:B token-from :O token-to}}
+                   :timestamp (.now js/Date)})))
 
 (defmulti dispatch-annotation-handler
   "Variadic handler for successful annotations. Dispatches are based on whether
@@ -136,16 +140,13 @@
 
 (re-frame/register-handler
  :update-annotation
- (fn [db [_ {{ann-id :_id ann-version :_version new-value :value :as update-map} :update-map
-             hit-id :hit-id}]]
+ (fn [db [_ {{:keys [_version _id hit-id value] :as update-map} :update-map}]]
    (let [project (get-in db [:session :active-project])
          corpus (get-in db [:projects project :session :query :results-summary :corpus])
          query (get-in db [:projects project :session :query :results-summary :query-str])
          update-map (assoc update-map :timestamp (.now js/Date) :corpus corpus :query query)]
      (POST "/annotation/update"
-           {:params {:update-map update-map
-                     :project project
-                     :hit-id hit-id}
+           {:params {:update-map update-map :project project}
             :handler update-annotation-handler
             :error-handler error-handler})
      db)))
@@ -158,30 +159,28 @@
 
 (s/defmethod package-annotation
   [cljs.core/PersistentArrayMap js/Number]
-  ([ann-map project hit-id :- s/Int token-id :- s/Int]
-   (let [ann-map (make-annotation ann-map token-id)]
-     {:hit-id hit-id
-      :project project
+  ([ann-map project hit-id token-id :- s/Int]
+   (let [ann-map (make-annotation ann-map hit-id token-id)]
+     {:project project
       :ann-map ann-map}))
-  ([ann-map project hit-id :- s/Int token-from :- s/Int token-to :- s/Int]
-   (let [ann-map (make-annotation ann-map token-from token-to)]
-     {:hit-id hit-id
-      :project project
+  ([ann-map project hit-id token-from :- s/Int token-to :- s/Int]
+   (let [ann-map (make-annotation ann-map hit-id token-from token-to)]
+     {:project project
       :ann-map ann-map})))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentArrayMap cljs.core/PersistentVector]
-  [ann-map project hit-ids :- [s/Int] token-ids :- [s/Int]]
-  (let [ann-maps (mapv (fn [token-id] (make-annotation ann-map token-id)) token-ids)]
-    {:hit-id hit-ids
-     :project project
+  [ann-map project hit-ids :- [s/Any] token-ids :- [s/Int]]
+  (let [ann-maps (mapv (fn [token-id hit-id] (make-annotation ann-map hit-id token-id))
+                       token-ids hit-ids)]
+    {:project project
      :ann-map ann-maps}))
 
 (s/defmethod package-annotation
   [cljs.core/PersistentVector cljs.core/PersistentVector]
-  [anns project hit-ids :- [s/Int] token-ids :- [s/Int]]
+  [anns project hit-ids :- [s/Any] token-ids :- [s/Int]]
   {:pre [(apply = (map count [anns hit-ids]))]}
-  (let [ann-maps (mapv (fn [ann token-id] (make-annotation ann token-id)) anns token-ids)]
-    {:hit-id hit-ids
-     :project project
+  (let [ann-maps (mapv (fn [ann hit-id token-id] (make-annotation ann hit-id token-id))
+                       anns hit-ids token-ids)]
+    {:project project
      :ann-map ann-maps}))

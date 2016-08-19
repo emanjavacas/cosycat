@@ -53,7 +53,6 @@
 (defn animate [throbbing? progress? value {:keys [max-val fps increase] :as opts}]
   (if (< @value max-val)
     (let [increase (if @throbbing? increase (* 2 increase))]
-      (.log js/console throbbing? progress? value)
       (do (js/setTimeout
            #(animate throbbing? progress? value (update-in opts :increase (partial * 2)))
            fps)
@@ -66,7 +65,6 @@
     (fn [throbbing? & opts]
       (let [progress? (reagent/atom @throbbing?)]
         (animate throbbing? progress? value opts)
-        (.log js/console "progress?" @progress? "throbbing?" @throbbing?)
         (if-not @progress?
           [:hr]
           [:progress {:max (str max-val) :value (str @value)}])))))

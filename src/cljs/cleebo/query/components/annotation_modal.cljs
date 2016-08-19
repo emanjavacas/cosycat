@@ -30,8 +30,7 @@
           :let [{:keys [_id _version]} ann]]
     (re-frame/dispatch
      [:update-annotation
-      {:update-map {:_id _id :_version _version :value new-value}
-       :hit-id hit-id}])))
+      {:update-map {:_id _id :_version _version :value new-value :hit-id hit-id}}])))
 
 (defn deselect-tokens [tokens]
   (doseq [{:keys [hit-id id]} tokens]

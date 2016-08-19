@@ -111,7 +111,7 @@
 
 (defn update-annotation
   [{db-conn :db :as db} project
-   {username :username timestamp :timestamp query :query
+   {username :username timestamp :timestamp query :query hit-id :hit-id corpus :corpus
     value :value version :_version id :_id :as update-map}
    & {:keys [history] :or {history true}}]
   (assert-ex-info (and version id) "annotation update requires annotation id/version" update-map)
@@ -119,6 +119,7 @@
             db-conn (server-project-name project)
             version              
             {:_id id}    ;conditions
-            {$set {"ann.value" value "timestamp" timestamp "username" username "query" query}}
+            {$set {"ann.value" value "timestamp" timestamp "username" username
+                   "query" query "corpus" corpus "hit-id" hit-id}}
             {:return-new true})
     history (with-history db-conn)))

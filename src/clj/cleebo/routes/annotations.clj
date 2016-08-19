@@ -38,7 +38,7 @@
 ;;; Handlers
 (defn insert-annotation-handler*
   "handles errors within the success callback to ease polymorphic payloads (bulk inserts)"
-  [db ws username project {span :span :as ann-map} hit-id]
+  [db ws username project {hit-id :hit-id span :span :as ann-map}]
   (try (check-user-rights db username project :write)
        (let [users (->> (find-project-by-name db project) :users (map :username))
              new-ann (insert-annotation db project (assoc ann-map :username username))
@@ -55,21 +55,21 @@
 (defmulti insert-annotation-handler (fn [{{:keys [ann-map]} :params}] (type ann-map)))
 
 (defmethod insert-annotation-handler clojure.lang.PersistentArrayMap
-  [{{hit-id :hit-id {span :span :as ann} :ann-map project :project} :params
+  [{{{hit-id :hit-id span :span :as ann} :ann-map project :project} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (insert-annotation-handler* db ws username project ann hit-id))
+  (insert-annotation-handler* db ws username project ann))
 
 (defmethod insert-annotation-handler clojure.lang.PersistentVector
-  [{{hit-ids :hit-id anns :ann-map project :project :as data} :params
+  [{{anns :ann-map project :project :as data} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (mapv (fn [ann hit-id]
-          (insert-annotation-handler* db ws username project ann hit-id))
-        anns hit-ids))
+  (mapv (fn [ann]
+          (insert-annotation-handler* db ws username project ann))
+        anns))
 
 (defn update-annotation-handler
-  [{{project :project {id :_id :as update-map} :update-map hit-id :hit-id} :params
+  [{{project :project {hit-id :hit-id id :_id :as update-map} :update-map} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (try (check-user-rights db username project :update)
@@ -99,18 +99,15 @@
   [{{project :project corpus :corpus starts :starts ends :ends hit-ids :hit-ids :as params} :params
     {{username :username} :identity} :session
     {db :db} :components}]
-  (assert-ex-info (= (count starts) (count ends)) "Wrong argument lengths"
-                  {:message :bad-argument :data {:starts (count starts) :ends (count ends)}})
+  (assert-ex-info
+   (= (count starts) (count ends)) "Wrong argument lengths"
+   {:message :bad-argument :data {:starts (count starts) :ends (count ends)}})
   (check-user-rights db username project :read)
   (->> (map (fn [start end hit-id]
               (let [from (->int start)
                     size (- (->int end) from)
-                    anns (->> (fetch-annotations db project corpus from size)
-                              (apply normalize-anns))]
-                (when anns
-                  {:hit-id hit-id
-                   :project project
-                   :anns anns})))
+                    anns (->> (fetch-annotations db project corpus from size) (apply normalize-anns))]
+                (when anns {:hit-id hit-id :project project :anns anns})))
             (vals starts) (vals ends) (vals hit-ids)) ;quickfix needs to find out what's going on
        (filter identity)
        vec))

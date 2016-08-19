@@ -9,8 +9,7 @@
 (defn dispatch-update [id version new-value hit-id on-dispatch]
   (re-frame/dispatch
    [:update-annotation
-    {:update-map {:_id id :_version version :value new-value}
-     :hit-id hit-id}])
+    {:update-map {:_id id :_version version :value new-value :hit-id hit-id}}])
   (on-dispatch))
 
 (defn trigger-update [id version new-value hit-id on-dispatch]
