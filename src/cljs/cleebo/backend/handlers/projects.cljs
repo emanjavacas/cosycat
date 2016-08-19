@@ -71,7 +71,7 @@
 (re-frame/register-handler              ;add project update to client-db
  :add-project-update
  standard-middleware
- (fn [db [_ [{:keys [payload project-name]}]]]
+ (fn [db [_ {:keys [payload project-name]}]]
    (update-in db [:projects project-name :updates] conj payload)))
 
 (re-frame/register-handler
