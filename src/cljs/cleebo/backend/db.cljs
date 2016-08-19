@@ -12,7 +12,7 @@
      :query {:query-opts {:context 5 :from 0 :page-size 10}
              :sort-opts []
              :filter-opts []
-             :snippet-opts {:snippet-size 30 :snippet-delta 15}
+             :snippet-opts {:snippet-size 50 :snippet-delta 25}
              :corpus corpus}}))
 
 (defn default-session

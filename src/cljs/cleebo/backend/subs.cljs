@@ -42,7 +42,6 @@
 (re-frame/register-sub
  :throbbing?
  (fn [db [_ panel]]
-   (.log js/console "Throbbing?" panel (get-in @db [:session :throbbing? panel] false))
    (reaction (get-in @db [:session :throbbing? panel] false))))
 
 (re-frame/register-sub

@@ -74,7 +74,7 @@
         [bs/navbar-brand
          (when username
            (let [my-role (->> @users (filter #(= username (:username %))) first :role)
-                 tooltip (format "%s has role [%s] in this project" (str/capitalize username) my-role)]
+                 tooltip (format "You are [%s] in this project" my-role)]
              [:div.container-fluid
               {:style {:margin-top "-9.5px"}}
               [bs/overlay-trigger

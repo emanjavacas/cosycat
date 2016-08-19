@@ -53,7 +53,7 @@
     db))
 
 (defmethod ws-handler :project-add-user ;added user gets project data
-  [db {{project-name :name :as project} :project by :by}]
+  [db {{{project-name :name :as project} :project by :by} :data}]
   (re-frame/dispatch [:add-project project])
   (re-frame/dispatch [:notify {:message (get-msg [:new-project] project-name by)}])
   db)
