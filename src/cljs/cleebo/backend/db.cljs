@@ -9,7 +9,7 @@
   [& {:keys [corpora] :or {corpora []}}] ;TODO: settings should be adapted to corpus config
   (let [corpus (first (map :name corpora))]
     {:notifications {:delay 7500}
-     :query {:query-opts {:context 5 :from 0 :page-size 10}
+     :query {:query-opts {:context 5 :from 0 :page-size 5}
              :sort-opts []
              :filter-opts []
              :snippet-opts {:snippet-size 50 :snippet-delta 25}
@@ -26,6 +26,7 @@
            :results []
            :results-by-id {}}
    :status {}
+   :components {:panel-order ["query-frame"]}
    :filtered-users (into #{} (map :username (:users project)))})
 
 (def default-project-history

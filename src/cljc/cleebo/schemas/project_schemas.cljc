@@ -18,6 +18,7 @@
 (def project-session-schema
   {:query query-results-schema
    :status (s/conditional empty? {} :else status-schema)
+   :components {s/Any s/Any}
    :filtered-users #{s/Str}})             ;filter out annotations by other users
 
 (def project-settings-schema

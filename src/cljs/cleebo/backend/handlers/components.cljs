@@ -45,6 +45,28 @@
  (fn [db [_ component-id]]
    (update-in db [:session :component-error] dissoc component-id)))
 
+(defn ensure-first [v value]
+  (let [filtered (seq (filter #(= % value) v))
+        removed (remove #(= % value) v)]
+    (into (vec (or filtered [value])) (vec removed))))
+
+(defn ensure-last [v value]
+  (let [filtered (seq (filter #(= % value) v))
+        removed (remove #(= % value) v)]
+    (into (vec removed) (vec (or filtered [value])))))
+
+(re-frame/register-handler
+ :panel-order
+ standard-middleware
+ (fn [db [_ id dir]]
+   (let [active-project (get-in db [:session :active-project])
+         path [:projects active-project :session :components :panel-order]]
+     (.log js/console (get-in db path))
+     (case dir
+       :top (update-in db path ensure-first id)
+       :bottom (update-in db path ensure-last id)
+       (throw (js/Error "dir must be `:top` or `:bottom`"))))))
+
 ;;; marking
 (re-frame/register-handler
  :mark-hit
@@ -75,8 +97,6 @@
                (assoc-in acc (into path-to-results [hit-id :meta :marked]) false))
              db
              (keys (get-in db path-to-results))))))
-
-
 
 (defn mark-token [token] (assoc token :marked true))
 

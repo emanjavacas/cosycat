@@ -115,21 +115,33 @@
       [:div.col-lg-7.col-sm-5 [:div.pull-left [filter-annotation-buttons]]]
       [:div.col-lg-4.col-sm-5 [:div.pull-right [unmark-all-hits-btn]]]]]))
 
+(defn minimizable-query-frame []
+  [minimize-panel
+   {:child query-frame
+    :id "query-frame"
+    :open-header (label-closed-header "Query Panel")
+    :closed-header query-panel-closed-header}])
+
+(defn minimizable-annotation-panel []
+  (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
+    (when-not (zero? (count @marked-hits))
+      [minimize-panel
+       {:child annotation-panel
+        :id "annotation-panel"
+        :closed-header annotation-closed-header
+        :open-header annotation-open-header
+        :init true}])))
+
 (defn query-panel []
-  (let [query-size (re-frame/subscribe [:session :query-results :query-size])
-        marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])
+  (let [panel-order (re-frame/subscribe [:project-session :components :panel-order])
         throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
     (fn []
       [:div.container-fluid.pad
        {:style {:width "100%" :padding "0px 10px 0px 10px"}}
-       [:div.row [minimize-panel
-                  {:child query-frame
-                   :open-header (label-closed-header "Query Panel")
-                   :closed-header query-panel-closed-header}]]
-       (when-not (zero? (count @marked-hits))
-         [:div.row [minimize-panel
-                    {:child annotation-panel
-                     :closed-header annotation-closed-header
-                     :open-header annotation-open-header
-                     :init true}]])
+       (if (= (first @panel-order) "annotation-panel")
+         [:div.row [minimizable-annotation-panel]]
+         [:div.row [minimizable-query-frame]])
+       (if (= (first @panel-order) "annotation-panel")
+         [:div.row [minimizable-query-frame]]
+         [:div.row [minimizable-annotation-panel]])
        [snippet-modal]])))
