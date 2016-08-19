@@ -9,12 +9,12 @@
 (def server-events-history-schema
   [{:received s/Int
     :type s/Keyword
-    :data {s/Any s/Any}}])
+    :payload {s/Any s/Any}}])
 
 (def internal-event-history-schema
   [{:received s/Int
     :type s/Keyword
-    :data {s/Any s/Any}}])
+    :payload {s/Any s/Any}}])
 
 (def history-schema
   {:server-events server-events-history-schema
