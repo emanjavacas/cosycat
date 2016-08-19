@@ -23,7 +23,8 @@
 (declare bl-server-url bl-server-sort-str)
 
 ;;; normalize blacklab-out -> cleebo app-schemas
-(declare parse-hit-id normalize-results normalize-results-summary normalize-corpus-info)
+(declare parse-hit-id)
+(declare normalize-results normalize-results-summary normalize-corpus-info normalize-snippet)
 
 ;;; handle counting callbacks
 (declare on-counting clear-timeout)
@@ -36,60 +37,60 @@
   (p/query [this query-str {:keys [context from page-size] :as query-opts}]
     (clear-timeout timeout-ids)
     (maybe-reset-last-action last-action {:action-id query-str})
-    (p/handle-query
-     this (bl-server-url server web-service index)
-     (merge {:patt query-str
-             :wordsaroundhit context
-             :first from
-             :number page-size
-             :jsonp "callback"}
-            (when-let [sort-opts (get-sort-opts last-action)]
-              {:sort (apply bl-server-sort-str sort-opts)})
-            default-query-params)
+    (p/handle-query this (bl-server-url server web-service index)
+                    (merge {:patt query-str
+                            :wordsaroundhit context
+                            :first from
+                            :number page-size
+                            :jsonp "callback"}
+                           (when-let [sort-opts (get-sort-opts last-action)]
+                             {:sort (apply bl-server-sort-str sort-opts)})
+                           default-query-params)
      :method jsonp))
 
   (p/query-sort [this query-str {:keys [context from page-size]} sort-opts filter-opts]
     (let [sort-str (bl-server-sort-str sort-opts filter-opts)]
       (set-last-action last-action {:action-id query-str :action :sort :opts [sort-opts filter-opts]})
-      (p/handle-query
-       this (bl-server-url server web-service index)
-       (merge {:patt query-str
-               :wordsaroundhit context
-               :first from
-               :number page-size
-               :sort sort-str
-               :jsonp "callback"}
-              default-query-params)
-       :method jsonp)))
+      (p/handle-query this (bl-server-url server web-service index)
+                      (merge {:patt query-str
+                              :wordsaroundhit context
+                              :first from
+                              :number page-size
+                              :sort sort-str
+                              :jsonp "callback"}
+                             default-query-params)
+                      :method jsonp)))
 
-  (p/snippet [this query-str {:keys [snippet-size] :as query-opts} hit-id]
+  (p/snippet [this query-str {:keys [snippet-size snippet-delta] :as snippet-opts} hit-id dir]
     (let [{:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)]
-      (p/handle-query
-       this (bl-server-url server web-service index :resource (str "docs/" doc-id "snippet"))
-       (merge {:wordsaroundhit snippet-size
-               :hitstart hit-start
-               :hitend hit-end
-               :jsonp "callback"}
-              default-query-params)
-       :method jsonp)))
+      (jsonp (bl-server-url server web-service index :resource (str "docs/" doc-id "/snippet"))
+             {:params (merge {:wordsaroundhit (+ snippet-delta snippet-size)
+                              :wordstart -1
+                              :wordend -1
+                              :hitstart (->int hit-start)
+                              :hitend (->int hit-end)
+                              :jsonp "callbackSnippet"}
+                             default-query-params)
+              :json-callback-str "callbackSnippet"
+              :handler #(-> % (normalize-snippet hit-id dir) p/handle-snippet)
+              :error-handler #(.log js/console %)})))
   
-  (p/transform-data [corpus data]
-    (let [{{:keys [message code] :as error} :error :as cljs-data} (js->clj data :keywordize-keys true)
-          uri (bl-server-url server web-service index)]
-      (.log js/console "transform this" data)
+  (p/transform-data [this data]
+    (let [{{:keys [message code] :as error} :error :as cljs-data} (js->clj data :keywordize-keys true)]
       (if error
         {:message message :code code}
         (let [{summary :summary hits :hits doc-infos :docInfos} cljs-data
-              {{from :first :as params} :searchParam counting? :stillCounting} summary]
+              {{from :first :as params} :searchParam counting? :stillCounting} summary
+              uri (bl-server-url server web-service index)]
           (when counting? (on-counting timeout-ids {:uri uri :params params :callback callback}))
           {:results-summary (normalize-results-summary summary)
            :results (normalize-results doc-infos hits from)
            :status {:status :ok}}))))
  
-  (p/transform-error-data [corpus data]
+  (p/transform-error-data [this data]
     (identity data))
 
-  (p/get-corpus-info [corpus]
+  (p/get-corpus-info [this]
     (let [uri (bl-server-url server web-service index :resource "")]
       (if-let [corpus-info (some-> (with-ls-cache uri) keywordify)]
         (p/handle-info corpus-info)
@@ -221,6 +222,19 @@
                    :last-modified last-modified}
      :status status
      :sort-props props}))
+
+(defn normalize-snippet [data hit-id dir]
+  (let [{{:keys [message code] :as error} :error :as cljs-data} (js->clj data :keywordize-keys true)]
+    (if error
+      (dissoc cljs-data :left :match :right)
+      (let [{{left :word} :left {match :word} :match {right :word} :right} cljs-data]
+        {:snippet (cond-> {:left (interpose " " left)
+                           :match (interpose " " match)
+                           :right (interpose " " right)}
+                    (= dir :left) (dissoc :right)
+                    (= dir :right) (dissoc :left)
+                    :else identity)
+         :hit-id hit-id}))))
 
 ;; (def mbg-corpus
 ;;   (make-blacklab-server-corpus

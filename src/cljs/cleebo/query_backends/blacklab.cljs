@@ -30,7 +30,7 @@
       :route :sort-query
       :sort-map (bl-parse-sort-opts sort-opts)}))
 
-  (p/snippet [this query-str {:keys [snippet-size] :as snippet-map} hit-id]
+  (p/snippet [this query-str {:keys [snippet-size] :as snippet-map} hit-id dir]
     (p/handle-query
      this "/blacklab"
      {:corpus corpus-name

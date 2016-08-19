@@ -76,7 +76,7 @@
 (defn find-corpus-config [db corpus-name]
   (some #(when (= corpus-name (:name %)) %) (db :corpora)))
 
-(defn current-project-results [db]
+(defn current-results [db]
   (let [active-project (get-in db [:session :active-project])
         project (get-in db [:projects active-project])]
     (get-in project [:session :query :results-summary])))
@@ -110,8 +110,7 @@
  (fn [db [_ direction]]
    (let [query-settings (get-in db [:session :settings :query])
          {{page-size :page-size :as query-opts} :query-opts corpus-name :corpus} query-settings
-         {query-str :query-str query-size :query-size {from :from to :to} :page}
-         (current-project-results db)
+         {query-str :query-str query-size :query-size {from :from to :to} :page} (current-results db)
          corpus-config (find-corpus-config db corpus-name)
          [from to] (case direction
                      :next (pager-next query-size page-size to)
@@ -126,34 +125,19 @@
  :query-sort
  (fn [db _]
    (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:session :settings :query])
-         {query-str :query-str query-size :query-size {from :from to :to} :page}
-         (current-project-results db)
+         {query-str :query-str query-size :query-size {from :from to :to} :page} (current-results db)
          corpus-config (find-corpus-config db corpus)]
      (re-frame/dispatch [:start-throbbing :results-frame])
      (query-sort (ensure-corpus corpus-config) query-str query-opts sort-opts filter-opts)
      db)))
 
-(defn snippet-error-handler
-  [{:keys [status content] :as error}]
-  (re-frame/dispatch
-   [:notify
-    {:message (str "Error while retrieving snippet" content)
-     :status :error}]))
-
-(defn snippet-result-handler [& [context]]
-  (fn [{:keys [snippet status hit-idx] :as payload}]
-    (let [payload (case context
-                 nil payload
-                 :left (update-in payload [:snippet] dissoc :right)
-                 :right (update-in payload [:snippet] dissoc :left))]
-      (re-frame/dispatch [:open-modal :snippet payload]))))
-
-(defn fetch-snippet [hit-idx snippet-size & {:keys [context]}]
-)
-
 (re-frame/register-handler
  :fetch-snippet
- (fn [db [_ hit-idx & {:keys [snippet-size context]}]]
-   (let [snippet-size (or snippet-size (get-in db [:settings :snippets :snippet-size]))]
-     (fetch-snippet hit-idx snippet-size :context context)
+ (fn [db [_ hit-id {user-snippet-delta :snippet-delta dir :dir}]]
+   (let [{{snippet-delta :snippet-delta :as snippet-opts} :snippet-opts
+          corpus-name :corpus} (get-in db [:session :settings :query])
+         {query-str :query-str} (current-results db)
+         corpus (ensure-corpus (find-corpus-config db corpus-name))
+         snippet-opts (assoc snippet-opts :snippet-delta (or user-snippet-delta snippet-delta))]
+     (snippet corpus query-str snippet-opts hit-id dir)
      db)))

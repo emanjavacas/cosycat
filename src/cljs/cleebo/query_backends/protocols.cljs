@@ -1,5 +1,6 @@
 (ns cleebo.query-backends.protocols
   (:require [re-frame.core :as re-frame]
+            [cleebo.utils :refer [format]]
             [ajax.core :refer [GET]]))
 
 (defprotocol Corpus
@@ -12,8 +13,9 @@
     `sort-opts`   [{:position \"(match|left|right)\" :attribute attribute :facet facet}]
     `filter-opts` [{:attribute \"(textType|genre)\" :value \"(sermon|history)\"}]
      opts: attribute (word|pos|lemma); facet (sensitive|insensitive)")
-  (snippet [corpus query-str query-opts hit-id]
-    "fetches text surrounding a given query hit identified by `hit-id`")
+  (snippet [corpus query-str query-opts hit-id dir]
+    "fetches text surrounding a given query hit identified by `hit-id` in a 
+     given `dir` (:left :right nil)")
   (transform-data [corpus data]
     "transforms success payload to app internal data structure")
   (transform-error-data [corpus data]
@@ -50,9 +52,26 @@
   [{{corpus-name :corpus-name} :corpus-info :as corpus-info}]
   (re-frame/dispatch [:set-corpus-info corpus-name corpus-info]))
 
+(defn snippet-result-handler [& [context]]
+  (fn [{:keys [snippet status hit-idx] :as payload}]
+    (let [payload (case context
+                    nil payload
+                    :left (update-in payload [:snippet] dissoc :right)
+                    :right (update-in payload [:snippet] dissoc :left))]
+      (re-frame/dispatch [:open-modal :snippet payload]))))
+
+(defn handle-snippet [{{:keys [message code] :as error} :error :as data}]
+  (if error
+    (re-frame/dispatch
+     [:notify
+      {:message (format "Error [%s] while retrieving snippet: %s" code message)
+       :status :error}])
+    (re-frame/dispatch [:open-modal :snippet data])))
+
 (defn handle-query
   "wrapper for ajax/jsonp queries that simplifies protocol implementations"
   [corpus url params & {:keys [method] :or {method GET}}]
   (method url {:params params
                :handler (fn [data] (handler (transform-data corpus data)))
                :error-handler (fn [data] (error-handler (transform-error-data corpus data)))}))
+

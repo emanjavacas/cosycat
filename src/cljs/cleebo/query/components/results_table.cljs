@@ -90,7 +90,7 @@
        ^{:key (str hit-num "-num")}
        [:td.ignore.snippet-trigger
         {:style {:width "20px" :background-color "#F9F9F9" :cursor "pointer"}
-         :on-double-click (on-double-click hit-num)}
+         :on-double-click (on-double-click id)}
         [:label.ignore
          {:style {:font-weight "bold" :cursor "pointer"}}
          (inc hit-num)]]]

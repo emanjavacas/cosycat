@@ -4,17 +4,16 @@
             [react-bootstrap.components :as bs]
             [taoensso.timbre :as timbre]))
 
-(defn fetch-more-snippet [hit-idx snippet-size snippet-delta context]
-  (re-frame/dispatch
-   [:fetch-snippet hit-idx :snippet-size (+ snippet-size snippet-delta) :context context]))
+(defn fetch-more-snippet [hit-id snippet-delta dir]
+  (re-frame/dispatch [:fetch-snippet hit-id {:snippet-delta snippet-delta :dir dir}]))
 
-(defn more-button [hit-idx snippet-size snippet-delta context glyph]
-  (let [delta-state (reagent/atom 0)]
-    (fn [hit-idx snippet-size snippet-delta context glyph]
+(defn more-button [hit-id snippet-size snippet-delta dir glyph]
+  (let [delta-state (reagent/atom snippet-delta)]
+    (fn [hit-id snippet-size snippet-delta dir glyph]
       [:div.text-center
        [:i.round-button
-        {:on-click #(let [snippet-delta (swap! delta-state + @snippet-delta)]
-                      (fetch-more-snippet hit-idx @snippet-size snippet-delta context))}
+        {:on-click #(let [snippet-delta (swap! delta-state + snippet-delta)]
+                      (fetch-more-snippet hit-id snippet-delta dir))}
         [bs/glyphicon {:glyph glyph}]]])))
 
 (defn text-snippet [left match right]
@@ -26,30 +25,27 @@
       match]
      right]))
 
-(defn on-hide [left-delta right-delta]
-  (fn []
-    (re-frame/dispatch [:close-modal :snippet])))
-
 (defn snippet-modal []
   (let [snippet-modal? (re-frame/subscribe [:modals :snippet])
-        snippet-size (re-frame/subscribe [:settings :snippets :snippet-size])
-        snippet-delta (re-frame/subscribe [:settings :snippets :snippet-delta])]
+        snippet-opts (re-frame/subscribe [:session :settings :query :snippet-opts])]
     (fn []
       [bs/modal
        {:show (boolean @snippet-modal?)}
        [bs/modal-header
-        {:closeButton true}
+        {:closeButton true
+         :onHide #(re-frame/dispatch [:close-modal :snippet])}
         [:h4 "Snippet"]]
        [bs/modal-body
-        (let [{:keys [snippet hit-idx]} @snippet-modal?
-              {:keys [left match right]} snippet]
+        (let [{:keys [snippet hit-id]} @snippet-modal?
+              {:keys [left match right]} snippet
+              {:keys [snippet-delta snippet-size]} @snippet-opts]
           [:div.text-justify
            [:div.row
             [:div.col-sm-5]
             [:div.col-sm-1
-             [more-button hit-idx snippet-size snippet-delta :left "menu-up"]]
+             [more-button hit-id snippet-size snippet-delta :left "menu-up"]]
             [:div.col-sm-1
-             [more-button hit-idx snippet-size snippet-delta :right "menu-down"]]
+             [more-button hit-id snippet-size snippet-delta :right "menu-down"]]
             [:div.col-sm-5]]
            [:br] [:br]
            [text-snippet left match right]])]])))
