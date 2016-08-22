@@ -2,7 +2,8 @@
   (:require [com.stuartsierra.component :as component]
             [monger.collection :as mc]
             [cleebo.vcs :as vcs]
-            [cleebo.components.db :refer [new-db clear-dbs]]
+            [cleebo.components.db :refer [new-db]]
+            [cleebo.env :refer [clear-dbs]]
             [config.core :refer [env]]))
 
 (defn is-test-db? [path]
@@ -17,8 +18,6 @@
   (assert-db (:database-url env))
   (def db (component/start (new-db test-db)))
   (clear-dbs db)
-  (vcs/drop-vcs (:db db))
   (f)
-  (vcs/drop-vcs (:db db))
   (clear-dbs db)
   (component/stop db))

@@ -102,6 +102,11 @@
      (when (check-query query-str)
        (do (re-frame/dispatch [:start-throbbing :results-frame])
            (re-frame/dispatch [:start-throbbing :fetch-annotations])
+           ;; add update
+           (re-frame/dispatch
+            [:register-history [:internal-events]
+             {:type :query
+              :payload {:query-str query-str :corpus corpus-name}}])
            (query (ensure-corpus corpus-config) query-str query-opts)))
      db)))
 
@@ -139,5 +144,11 @@
          {query-str :query-str} (current-results db)
          corpus (ensure-corpus (find-corpus-config db corpus-name))
          snippet-opts (assoc snippet-opts :snippet-delta (or user-snippet-delta snippet-delta))]
+     ;; add update
+     (when-not dir                      ;only register first request
+       (re-frame/dispatch
+        [:register-history [:internal-events]
+         {:type :fetch-snippet
+          :payload {:query-str query-str :corpus corpus :hit-id hit-id}}]))
      (snippet corpus query-str snippet-opts hit-id dir)
      db)))

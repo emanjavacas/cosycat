@@ -3,9 +3,24 @@ body {
     /* overflow-y: hidden; */
 }
 /* chrome outline */
-*:focus {
-    /* box-shadow: 0 0 100px 100px rgba(255, 255, 255, 0.5) inset !important; */
-    outline: 0 !important;
+/* *:focus { */
+/*     /\* box-shadow: 0 0 100px 100px rgba(255, 255, 255, 0.5) inset !important; *\/ */
+/*     outline: 0 !important; */
+/* } */
+
+/* updates animation */
+.updates-enter {
+    opacity: 0;
+    transition: opacity 0.57s ease-in;
+}
+
+.updates-leave {
+    opacity: 0;
+    transition: opacity 0.57s ease-out;
+}
+
+.updates-enter-active {
+    opacity: 0.8;
 }
 
 /* overwrite lumen */

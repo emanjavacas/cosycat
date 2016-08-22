@@ -26,7 +26,9 @@
            :results []
            :results-by-id {}}
    :status {}
-   :components {:panel-order ["query-frame"]}
+   :components {:panel-order ["query-frame" "annotation-panel"]
+                :panel-open {"query-frame" true "annotation-panel" false}
+                :open-hits #{}}
    :filtered-users (into #{} (map :username (:users project)))})
 
 (def default-project-history

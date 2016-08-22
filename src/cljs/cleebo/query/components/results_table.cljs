@@ -13,41 +13,44 @@
   [e]
   (gclass/has (gdom/getFirstElementChild (gdom/getParentElement e)) "checked"))
 
+(defn ignore-cell?
+  [e]
+  (or (gclass/has e "ignore") (is-in-checked-hit? e)))
+
 (defn get-hit-id
   "get hit id from hit row given a cell child"
   [e]
   (gdataset/get (gdom/getParentElement e) "hit"))
 
+(defn get-token-id
+  [e]
+  (gdataset/get e "id"))
+
 (defn on-mouse-down [mouse-down? highlighted?]
   (fn [event]
     (let [e (aget event "target"), btn (aget event "button")]
       (.preventDefault event)
-      (when (and (zero? btn) (not (is-in-checked-hit? e)) (not (gclass/has e "ignore")))
+      (when (and (zero? btn) (not (ignore-cell? e)))
         (gclass/toggle e "highlighted")
         (swap! mouse-down? not)
         (reset! highlighted? (gclass/has e "highlighted"))
         (re-frame/dispatch
          [(if @highlighted? :mark-token :unmark-token)
-          {:hit-id (get-hit-id e)
-           :token-id (gdataset/get e "id")}])))))
+          {:hit-id (get-hit-id e) :token-id (get-token-id e)}])))))
 
 (defn on-mouse-over [mouse-down? highlighted?]
   (fn [event]
     (let [e (aget event "target"), btn (aget event "button")]
-      (when (and (zero? btn)
-                 @mouse-down?
-                 (not (gclass/has e "ignore"))
-                 (not (is-in-checked-hit? e)))
+      (when (and @mouse-down? (zero? btn) (not (ignore-cell? e)))
         (gclass/enable e "highlighted" @highlighted?)
         (re-frame/dispatch
          [(if @highlighted? :mark-token :unmark-token)
-          {:hit-id (get-hit-id e)
-           :token-id (gdataset/get e "id")}])))))
+          {:hit-id (get-hit-id e) :token-id (get-token-id e)}])))))
 
 (defn on-mouse-up [mouse-down? highlighted?]
   (fn [event]
     (let [btn (aget event "button"), e (aget event "target")]
-      (when (and (zero? btn) (not (gclass/has e "ignore")))
+      (when (and (zero? btn) (not (ignore-cell? e)))
         (swap! mouse-down? not)))))
 
 (defn highlight-annotation
@@ -75,17 +78,25 @@
     (aset event "cancelBubble" true)
     (re-frame/dispatch [:fetch-snippet hit-idx])))
 
-(defn results-row [hit-num {:keys [hit id meta]} color-map]
-  (fn [hit-num {:keys [hit id meta]} color-map]
-    [:tr {:data-hit id :style {:opacity (if (:marked meta) 0.6 1)}}
+(defn results-row [hit-num {:keys [hit id meta] :as hit-map} color-map]
+  (fn [hit-num {:keys [hit id meta] :as hit-map} color-map]
+    [:tr {:class (when (:marked meta) "marked") :data-hit id}
      (concat
-      ;; checkbox
       [^{:key (str hit-num "-check")}
        [:td.ignore
-        {:style {:width "20px" :background-color "#F9F9F9" :cursor "pointer"
-                 :color (if (:marked meta) "#158CBA" "black")}
-         :on-click #(re-frame/dispatch [:mark-hit {:hit-id id :flag (not (:marked meta))}])}
-        [:i.zmdi.zmdi-edit.ignore]]
+        {:class (if (:marked meta) "checked")
+         :style {:width "20px"
+                 :background-color "#F9F9F9"
+                 :cursor "pointer"
+                 :color (if (:marked meta) "#158CBA" "black")}}
+        [:input.checkbox-custom.ignore
+         {:id (str hit-num "-check")
+          :type "checkbox"
+          :checked (:marked meta)
+          :on-change #(re-frame/dispatch [:mark-hit {:hit-id id :flag (not (:marked meta))}])}]
+        [:label.checkbox-custom-label.ignore
+         {:for (str hit-num "-check")
+          :tab-index (inc hit-num)}]]
        ;; hit number
        ^{:key (str hit-num "-num")}
        [:td.ignore.snippet-trigger
@@ -113,7 +124,6 @@
         :on-mouse-down (on-mouse-down mouse-down? highlighted?)        
         :on-mouse-over (on-mouse-over mouse-down? highlighted?)
         :on-mouse-up (on-mouse-up mouse-down? highlighted?)
-        :tab-index 0
         :style {:border-collapse "collapse"}}
        [:thead]
        [:tbody {:style {:font-size "12px"}}

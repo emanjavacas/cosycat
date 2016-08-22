@@ -251,32 +251,6 @@
                     :let [filtered (contains? @filtered-users username)]]
                 ^{:key username} [filter-annotation-btn username filtered]))])))
 
-(defn default-header [] [:div ""])
-
-(defn minimize-panel
-  [{:keys [child args id init open-header closed-header]
-    :or {init true open-header default-header close-header default-header}}]
-  (let [open (reagent/atom init)
-        panel-order (re-frame/subscribe [:project-session :components :panel-order])]
-    (fn [{:keys [child init args]}]
-      (let [dir (if (= id (first @panel-order)) :bottom :top)]
-        [bs/panel
-         {:collapsible true
-          :expanded @open
-          :header (reagent/as-component
-                   [:div.container-fluid
-                    [:div.row
-                     [:span.pull-right
-                      [bs/button-toolbar
-                       [bs/button
-                        {:onClick #(re-frame/dispatch [:panel-order id dir]) :bsSize "xsmall"}
-                        [bs/glyphicon {:glyph (if (= :bottom dir) "chevron-down" "chevron-up")}]]
-                       [bs/button
-                        {:onClick #(swap! open not) :bsSize "xsmall"}
-                        [bs/glyphicon {:glyph (if @open "collapse-up" "collapse-down")}]]]]
-                     (if @open [open-header] [closed-header])]])}
-         (into [child] args)]))))
-
 (defn disabled-button-tooltip [disabled?-fn msg]
   (if (disabled?-fn)
     (reagent/as-component [bs/tooltip {:id "tooltip"} msg])

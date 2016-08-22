@@ -9,12 +9,15 @@
   (to-interceptor {:name "AJAX-Header interceptor"
                    :request #(assoc-in % [:header "X-Requested-With"] "XMLHttpRequest")}))
 
+(defn debug-response [res]
+  (.log js/console "Response:" (try (.getResponseJson res)
+                                    (catch :default e
+                                      "couldn't parse response")))
+  res)
+
 (defn debug-interceptor []
   (to-interceptor {:name "Debug interceptor"
-                   :response (fn [res] (.log js/console "Response:" (try (.getResponseJson res)
-                                                                         (catch :default e
-                                                                           "couldn't parse response")))
-                               res)
+                   :response debug-response
                    :request (fn [req] (.log js/console "Request" req) req)}))
 
 (defn add-interceptor [interceptor & args]

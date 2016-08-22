@@ -9,9 +9,10 @@
             [cleebo.query.components.results-toolbar :refer [results-toolbar]]
             [cleebo.query.components.sort-toolbar :refer [sort-toolbar]]
             [cleebo.query.components.snippet-modal :refer [snippet-modal]]
+            [cleebo.query.components.minimize-panel :refer [minimize-panel]]
             [cleebo.annotation.components.annotation-panel :refer [annotation-panel]]
             [cleebo.components :refer
-             [error-panel throbbing-panel minimize-panel filter-annotation-buttons]]
+             [error-panel throbbing-panel filter-annotation-buttons]]
             [taoensso.timbre :as timbre]))
 
 (defn parse-query-error-msg [message]
@@ -82,12 +83,6 @@
        [query-frame-spacer]
        [results-frame]])))
 
-(defn unmark-all-hits-btn []
-  [bs/button
-   {:onClick #(re-frame/dispatch [:unmark-all-hits])
-    :style {:font-size "12px" :height "34px"}}
-   "Unmark hits"])
-
 (defn label-closed-header [label]
   (fn []
     [:div.container-fluid [:div.row [:div.col-lg-10 [:div label]]]]))
@@ -107,6 +102,12 @@
        [:div.row
         [:div.col-lg-10
          (str "Annotation panel (" (count @marked-hits) " selected hits)")]]])))
+
+(defn unmark-all-hits-btn []
+  [bs/button
+   {:onClick #(re-frame/dispatch [:unmark-all-hits])
+    :style {:font-size "12px" :height "34px"}}
+   "Unmark hits"])
 
 (defn annotation-open-header []
   (fn []

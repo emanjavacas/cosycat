@@ -96,6 +96,6 @@
 (re-frame/register-handler
  :ws
  standard-middleware
- (fn [db [_ payload]]
-   (re-frame/dispatch [:register-history [:server-events] {:type :ws :payload payload}])
+ (fn [db [_ {type :type data :data :as payload}]]
+   (re-frame/dispatch [:register-history [:server-events] {:type type :payload data}])
    (ws-handler db payload)))

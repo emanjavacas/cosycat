@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [cleebo.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [cleebo.utils :refer [time-id has-marked? update-token]]
-            [cleebo.app-utils :refer [deep-merge]]
+            [cleebo.app-utils :refer [deep-merge disjconj]]
             [taoensso.timbre :as timbre]))
 
 (re-frame/register-handler
@@ -61,11 +61,26 @@
  (fn [db [_ id dir]]
    (let [active-project (get-in db [:session :active-project])
          path [:projects active-project :session :components :panel-order]]
-     (.log js/console (get-in db path))
      (case dir
        :top (update-in db path ensure-first id)
        :bottom (update-in db path ensure-last id)
        (throw (js/Error "dir must be `:top` or `:bottom`"))))))
+
+(re-frame/register-handler
+ :panel-open
+ standard-middleware
+ (fn [db [_ id v]]
+   (let [active-project (get-in db [:session :active-project])
+         path [:projects active-project :session :components :panel-open id]]
+     (assoc-in db path v))))
+
+(re-frame/register-handler
+ :open-hit
+ standard-middleware
+ (fn [db [_ hit-id]]
+   (let [active-project (get-in db [:session :active-project])
+         path [:projects active-project :session :components :open-hits]]
+     (update-in db path disjconj hit-id))))
 
 ;;; marking
 (re-frame/register-handler

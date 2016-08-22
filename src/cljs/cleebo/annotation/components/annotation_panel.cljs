@@ -3,7 +3,6 @@
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
             [cleebo.utils :refer [filter-dummy-tokens]]
-            [cleebo.app-utils :refer [disjconj]]
             [cleebo.components :refer [prepend-cell]]
             [cleebo.annotation.components.input-row :refer [input-row]]
             [cleebo.annotation.components.annotation-row :refer [annotation-row]]))
@@ -35,7 +34,7 @@
     (into
      [:tr
       {:style {:background-color "#f5f5f5" :cursor "pointer" :width "100%"}
-       :on-click #(swap! open-hits disjconj hit-id)}]
+       :on-click #(re-frame/dispatch [:open-hit hit-id])}]
      (-> (for [{id :id :as token} (filter-dummy-tokens hit)]
            ^{:key (str "hit" hit-id id)} [hit-cell token])
          (prepend-cell {:key (str hit-id) :child hit-id-cell :opts [hit-id]})))))
@@ -72,7 +71,7 @@
 
 (defn annotation-panel []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])
-        open-hits (reagent/atom #{})]
+        open-hits (re-frame/subscribe [:project-session :components :open-hits])]
     (fn []
       [:div.container-fluid
        (doall (for [{hit-id :id :as hit} @marked-hits]

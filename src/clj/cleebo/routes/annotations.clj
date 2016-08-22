@@ -47,6 +47,7 @@
          {:status :ok :data data})
        (catch clojure.lang.ExceptionInfo e
          (let [{:keys [message data]} (bean e)]
+           (clojure.pprint/pprint (bean e))
            {:status :error :message message :data (assoc data :span span)}))
        (catch Exception e
          (let [{message :message ex :class} (bean e)]
@@ -80,6 +81,7 @@
          {:status :ok :data data})
        (catch clojure.lang.ExceptionInfo e
          (let [{:keys [message data]} (bean e)]
+           (clojure.pprint/pprint (bean e))
            {:status :error :message message :data data}))
        (catch Exception e
          (let [{message :message ex :class} (bean e)]

@@ -1,18 +1,36 @@
 (ns cleebo.updates.page
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
+            [react-bootstrap.components :as bs]
+            [cleebo.components :refer [css-transition-group]]
+            [cleebo.updates.components.event-component :refer [event-component]]
             [taoensso.timbre :as timbre]))
 
 (defn history-panel []
-  (let [history (re-frame/subscribe [:read-history [:server-events]])]
+  (let [app-history (re-frame/subscribe [:read-history [:internal-events]])
+        server-history (re-frame/subscribe [:read-history [:server-events]])]
     (fn []
-      [:div.container-fluid
-       (doall (for [[idx item] (map-indexed vector (sort-by :timestamp > @history))]
-                ^{:key idx}
-                [:div.row (str item)]))])))
+      [bs/list-group
+       [css-transition-group {:transition-name "updates"
+                              :transition-enter-timeout 650
+                              :transition-leave-timeout 650}
+        (doall (for [{:keys [received type payload] :as event}
+                     (sort-by :received > (concat @app-history @server-history))]
+                 ^{:key received} [event-component event]))]])))
 
 (defn updates-panel []
-  [:div.container-fluid
-   [:div.row [:h3 [:span.text-muted "Updates (what's new in your feed)"]]]
-   [:div.row [:hr]]
-   [history-panel]])
+  (fn []
+    [:div.container-fluid
+     [:div.row
+      [:div.col-lg-2.col-sm-1]
+      [:div.col-lg-8.col-sm-10 [:h3 [:span.text-muted "Updates (what's new in your feed)"]]]
+      [:div.col-lg-2.col-sm-1]]
+     [:div.row
+      [:div.col-lg-2.col-sm-1]
+      [:div.col-lg-8.col-sm-10 [:hr]]
+      [:div.col-lg-2.col-sm-1]]
+     [:div.container-fluid
+      [:div.row
+       [:div.col-lg-2.col-sm-1]
+       [:div.col-lg-8.col-sm-10 [history-panel]]
+       [:div.col-lg-2.col-sm-1]]]]))

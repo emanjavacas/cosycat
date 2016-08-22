@@ -59,6 +59,9 @@
       missing-username (throw (ex-user missing-username))
       (is-project? db project-name) (throw (ex-project project-name)))))
 
+(defn join-project-creator [creator users]
+  (conj users {:username creator :role "creator"}))
+
 (defn new-project
   "creates a new project"
   [{db-conn :db :as db} creator project-name description & [users]]
@@ -68,7 +71,7 @@
        {:name project-name
         :description description
         :created (System/currentTimeMillis)
-        :users (map #(select-keys % [:username :role]) (conj users {:username creator :role "creator"}))})
+        :users (->> users (join-project-creator creator) (map #(select-keys % [:username :role])))})
       normalize-project))
 
 (defn check-user-in-project [db username project-name]

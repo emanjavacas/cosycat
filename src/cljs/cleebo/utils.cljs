@@ -46,7 +46,7 @@
   (parse-time time {"hour" "2-digit" "minute" "2-digit"}))
 
 (defn date-str->locale [date-str]
-  (.toLocaleString (js/Date. date-str) "en-US"))
+  (.toLocaleString (js/Date. date-str) "en-GB"))
 
 ;;; Resources
 (def color-codes

@@ -33,6 +33,7 @@
 
 (def token-ann
   {:ann {:key "a", :value "a"},
+   :hit-id 5377
    :username "user",
    :span     {:type "token", :scope 166},
    :corpus "my-corpus"
@@ -41,6 +42,7 @@
 
 (def IOB-ann
   {:ann {:key "a", :value "a"},
+   :hit-id 5377
    :username "user",
    :span     {:type "IOB", :scope {:B 160 :O 165}}
    :corpus "my-corpus"
@@ -49,6 +51,7 @@
 
 (def overlapping-IOB-IOB-ann
   {:ann {:key "a", :value "a"},
+   :hit-id 5377
    :username "user",
    :span     {:type "IOB", :scope {:B 159 :O 162}}
    :corpus "my-corpus"
@@ -57,6 +60,7 @@
 
 (def overlapping-token-IOB-ann
   {:ann {:key "a", :value "a"},
+   :hit-id 5377
    :username "user",
    :span     {:type "IOB", :scope {:B 164 :O 168}}
    :corpus "my-corpus"
@@ -65,6 +69,7 @@
 
 (def overlapping-IOB-token-ann
   {:ann {:key "a", :value "a"},
+   :hit-id 5377
    :username "user",
    :span     {:type "token", :scope 164},
    :corpus "my-corpus"

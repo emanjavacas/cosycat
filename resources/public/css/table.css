@@ -4,9 +4,47 @@ table td.highlighted {
     /* border: 0.5px solid black !important; */
 }
 
-/* table td.snippet-trigger:hover { */
-/*     background-color: #e0e0e0 !important; */
-/* } */
+table tr.marked {
+    background-color: #e3e3e3 !important;
+    color: black !important;
+}
+
+/* checkbox */
+input[type=checkbox].checkbox-custom {
+    opacity: 0;
+    position: absolute;   
+}
+
+input[type=checkbox].checkbox-custom, label.checkbox-custom-label {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 2px;
+    cursor: pointer;
+}
+
+label.checkbox-custom-label {
+    position: relative;
+}
+
+input[type=checkbox].checkbox-custom + label.checkbox-custom-label:before {
+    content: '';
+    background: #fff;
+    border: 2px solid #ddd;
+    display: inline-block;
+    vertical-align: middle;
+    width: 20px;
+    height: 20px;
+    padding: 2px;
+    text-align: center;
+}
+
+input[type=checkbox].checkbox-custom:checked + label.checkbox-custom-label:before {
+    background: rebeccapurple;
+}
+
+input[type=checkbox].checkbox-custom:focus + label.checkbox-custom-label {
+    outline: 1px solid black; /* focus style */
+}
 
 table#table-annotation {
     /* border-collapse: collapse !important; */

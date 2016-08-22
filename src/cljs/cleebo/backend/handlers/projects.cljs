@@ -53,6 +53,7 @@
   (re-frame/dispatch [:notify {:message message :meta data :status :error}]))
 
 (defn new-project-handler [{project-name :name :as project}]
+  (re-frame/dispatch [:register-history [:server-events] {:type :new-project :payload project}])
   (re-frame/dispatch [:add-project project])
   (nav! (str "/project/" project-name)))
 
@@ -74,13 +75,16 @@
  (fn [db [_ {:keys [payload project-name]}]]
    (update-in db [:projects project-name :updates] conj payload)))
 
+(defn project-update-handler [project-update]
+  (re-frame/dispatch [:add-project-update project-update]))
+
 (re-frame/register-handler
  :project-update
  standard-middleware
  (fn [db [_ {:keys [payload project-name]}]]
    (POST "/project/update"
          {:params {:project-name project-name :payload payload}
-          :handler #(re-frame/dispatch [:add-project-update %])
+          :handler project-update-handler
           :error-handler error-handler})
    db))
 
@@ -90,13 +94,17 @@
  (fn [db [_ {:keys [user project-name]}]]
    (update-in db [:projects project-name :users] conj user)))
 
+(defn new-user-handler [user]
+  (re-frame/dispatch [:register-history [:server-events]])
+  (re-frame/dispatch [:add-project-user user]))
+
 (re-frame/register-handler
  :project-add-user
  standard-middleware
  (fn [db [_ {:keys [user project-name]}]]
    (POST "/project/add-user"
          {:params {:user user :project-name project-name}
-          :handler #(re-frame/dispatch [:add-project-user %])
+          :handler new-user-handler
           :error-handler error-handler})
    db))
 
@@ -108,27 +116,33 @@
     db [:projects project-name :users]
     (fn [users] (vec (remove #(= (:username %) (:username user)) users))))))
 
+(defn remove-user-handler [project-name]
+  #(re-frame/dispatch [:notify "Goodbye from project " project-name]))
+
 (re-frame/register-handler
  :project-remove-user
  (fn [db [_ {:keys [project-name]}]]
    (POST "/project/remove-user"
          {:params {:project-name project-name}
-          :handler #(re-frame/dispatch [:notify "Goodbye from project " project-name])
+          :handler (remove-user-handler project-name)
           :error-handler error-handler})
    db))
 
 (defn remove-project-handler [{project-name :name :as project}]
   (fn [payload]
     (if (empty? payload)
-      (do (re-frame/dispatch [:remove-project project-name])
+      (do (re-frame/dispatch
+           [:remove-project project-name])
+          (re-frame/dispatch
+           [:register-history [:server-events] {:type :remove-project :payload project-name}])
           (re-frame/dispatch
            [:notify {:message (str "Project " project-name " was successfully deleted")}])
           (nav! "/"))
       (let [updated-project (update-in project [:updates] conj payload)
             {:keys [pending]} (pending-users updated-project)] ;still users
+        (re-frame/dispatch [:add-project-update {:payload payload :project-name project-name}])
         (re-frame/dispatch
-         [:notify {:message (str (count pending) " users pending to remove project")}])
-        (re-frame/dispatch [:add-project-update {:payload payload :project-name project-name}])))))
+         [:notify {:message (str (count pending) " users pending to remove project")}])))))
 
 (re-frame/register-handler
  :project-remove

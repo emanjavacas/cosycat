@@ -24,19 +24,6 @@
   (map->DB {:url url}))
 
 (def colls
-  {:anns "anns"
-   :cpos-anns "cpos_anns"
-   :projects "projects"
-   :users "users"})
-
-(defn clear-dbs
-  [{db :db} & {:keys [collections] :or {collections (keys colls)}}]
-  (doseq [k-coll collections
-          :let [v-coll (get colls k-coll)]]
-    (timbre/info "Clearing collection:" v-coll "in db: " (:database-url env))
-    (try (mc/drop db v-coll)
-         (catch Exception e
-           (timbre/info (format "Couldn't clear collection %s: [%s]"
-                                v-coll (str (class e))))))))
+  {:projects "projects" :users "users"})
 
 
