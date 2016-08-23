@@ -24,17 +24,14 @@
 
 (defn on-user-select [users selected-user-atom]
   (fn [target]
-    (timbre/debug "on-user-select" selected-user-atom)
     (when (= 13 (.-charCode target))
       (let [selected-user (->> users (filter #(= (by-id "username-input") (:username %))) first)]
-        (timbre/debug "selected-user" selected-user)
         (reset! selected-user-atom selected-user)))))
 
 (defn username-input [username-input-show selected-user-atom project-users]
   (let [users (re-frame/subscribe [:users])]
     (fn [username-input-show selected-user-atom project-users]
       (let [eligible-users (remove-project-users @users project-users)]
-        (timbre/debug "username-input" selected-user-atom)
         [:div.container-fluid
          [:div.row
           [users-autocomplete
@@ -54,6 +51,7 @@
       (if @selected-user-atom
         [user-profile-component @selected-user-atom project-user-roles
          :editable? true
+         :on-dismiss #(reset! selected-user-atom nil)
          :on-submit (fn [user role]
                       (re-frame/dispatch
                        [:project-add-user

@@ -2,6 +2,11 @@
   (:require [hiccup.core :refer [html]]
             [cleebo.views.imgs :refer [random-img]]))
 
+(defn style [& info]
+  {:style (.trim (apply str (map #(let [[kwd val] %]
+                                    (str (name kwd) ":" val "; "))
+                                 (apply hash-map info))))})
+
 (declare base nav tabs footer)
 
 (def bootstrap-css
@@ -31,8 +36,9 @@
      :href "http://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic"}]
    [:link {:href bootstrap-css :rel "stylesheet"}]]
     [:body
+     (style :margin-bottom "200px" :margin-top "40px")
      (nav logged?)
-     [:div.container  {:style "padding: 80px 40px 0 40px;"} ;body
+     [:div.container (style :padding "80px 40px 0 40px")
       [:div.row
        [:div.col-md-7 left]
        [:div.col-md-5 right]]]
@@ -41,7 +47,7 @@
 (defn nav [& [logged?]]
   [:nav.navbar.navbar-default.navbar-fixed-top ;navbar
    [:div.container
-    [:div.navbar-header {:style "padding: 0 0 0 25px"}
+    [:div.navbar-header (style :padding "0 0 0 25px")
      [:button.navbar-toggle
       {:aria-controls "navbar"
        :aria-expanded "true"
@@ -52,38 +58,61 @@
        [:span.icon-bar]]
       [:a.navbar-brand {:href "/"} "Cleebo"]]
     [:div.navbar-collapse.collapse
-     [:ul.nav.navbar-nav.navbar-right {:style "margin-right: 25px;"}
+     [:ul.nav.navbar-nav.navbar-right (style :margin-right "25px")
       (if logged? [:li [:a {:href "/logout"} "Logout"]] [:li " "])
       [:li [:a {:href "/about"} "About"]]
       [:li [:a {:href "/cleebo"} "Query"]]]]]])
 
 (defn footer []
   [:footer.nav.navbar.navbar-inverse.navbar-fixed-bottom ;footer
-   {:style "background-color:#2a2730;color:#99979c;"}
+   (style :background-color "#2a2730" :color "#99979c")
    [:div.rc-v-box.display-flex
-    {:style
-     "align-items: baseline; -webkit-flex-flow: column nowrap; -webkit-flex: 0 0 80px; -webkit-justify-content: flex-start; flex: 0 0 80px; justify-content: flex-start; -webkit-align-items: baseline; flex-flow: column nowrap; margin: 0 15px 0 15px;"}
+    (style
+     :align-items "baseline"
+     :-webkit-flex-flow "column nowrap"
+     :-webkit-flex "0 0 80px"
+     :-webkit-justify-content "flex-start"
+     :-webkit-align-items "baseline"
+     :flex "0 0 80px"
+     :justify-content "flex-start"
+     :flex-flow "column nowrap"
+     :margin "0 15px 0 15px")
     [:br]
     [:div.rc-v-box.display-flex
-     {:style
-      "align-items:stretch;-webkit-flex-flow:column nowrap;-webkit-flex:none;-webkit-justify-content:flex-start;flex:none;justify-content:flex-start;-webkit-align-items:stretch;flex-flow:column nowrap;margin:0 0 0 25px;"}
+     (style
+      :align-items "stretch"
+      :-webkit-flex-flow "column nowrap"
+      :-webkit-flex "none"
+      :-webkit-justify-content "flex-start"
+      :flex "none"
+      :justify-content "flex-start"
+      :-webkit-align-items "stretch"
+      :flex-flow "column nowrap"
+      :margin "0 0 0 25px")
      [:div.rc-h-box.display-flex
-      {:style
-       "-webkit-flex-flow:row nowrap;flex-flow:row nowrap;-webkit-flex:none;flex:none;-webkit-justify-content:flex-start;justify-content:flex-start;-webkit-align-items:stretch;align-items:stretch;"}
+      (style
+       :-webkit-flex-flow "row nowrap"
+       :flex-flow "row nowrap"
+       :-webkit-flex "none"
+       :flex "none"
+       :-webkit-justify-content "flex-start"
+       :justify-content "flex-start"
+       :-webkit-align-items "stretch"
+       :align-items "stretch")
       [:li
        [:a
-        {:style "color:white;font-size:13px;",
-         :href "http://www.github.com/emanjavacas/cleebo"}
+        (assoc (style :color "white" :font-size "13px")
+               :href "http://www.github.com/emanjavacas/cleebo")
         "GitHub"]]
-      [:div.rc-gap {:style "-webkit-flex:0 0 25px;flex:0 0 25px;width:25px;"} " "]
+      [:div.rc-gap (style :-webkit-flex "0 0 25px" :flex "0 0 25px" :width "25px") " "]
       [:li
        [:a
-        {:style "color:white;font-size:13px;",
-         :href "https://www.uantwerpen.be/en/projects/mind-bending-grammars/"}
+        (assoc (style :color "white" :font-size "13px")
+               :href "https://www.uantwerpen.be/en/projects/mind-bending-grammars/")
         "MindBendingGrammars"]]
-      [:div.rc-gap {:style "-webkit-flex:0 0 25px;flex:0 0 25px;width:25px;"} " "]
-      [:li [:a {:style "color:white;font-size:13px;", :href "http://erc.europa.eu"} "ERC"]]]
-     [:div.rc-gap {:style "-webkit-flex:0 0 5px;flex:0 0 5px;height:5px;"} " "]
-     [:span {:style "flex:none;width:450px;min-width:450px;"}
+      [:div.rc-gap (style :-webkit-flex "0 0 25px" :flex "0 0 25px" :width "25px") " "]
+      [:li [:a (assoc (style :color "white" :font-size "13px") :href "http://erc.europa.eu") "ERC"]]]
+     [:div.rc-gap (style :-webkit-flex "0 0 5px" :flex "0 0 5px" :height "5px") " "]
+     [:span (style :flex "none" :width "450px" :min-width "450px")
       [:p "Powered by ClojureScript and Reagent"]]]
      [:br]]])

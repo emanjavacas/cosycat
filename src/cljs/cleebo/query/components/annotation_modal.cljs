@@ -9,11 +9,10 @@
 
 (defn classify-annotation
   ([anns ann-key username] (classify-annotation (get anns ann-key) username))
-  ([ann username] (if-not ann
-                    :empty-annotation
-                    (if (= username (:username ann))
-                      :exisiting-annotation-owner
-                      :existing-annotation))))
+  ([ann username]
+   (cond (not ann)                    :empty-annotation
+         (= username (:username ann)) :existing-annotation-owner
+         :else                        :existing-annotation)))
 
 (defn group-tokens [tokens ann-key username]
   (->> tokens filter-dummy-tokens (group-by #(classify-annotation (:anns %) ann-key username))))
@@ -41,16 +40,15 @@
 
 (defn trigger-dispatch
   [{:keys [marked-tokens annotation-modal-show current-ann me]}]
-  (fn [target]
-    (when (= 13 (.-charCode target))
-      (if-let [[key value] (parse-annotation (by-id "token-ann-key"))]
-        (let [{:keys [empty-annotation existing-annotation-owner existing-annotation]}
-              (group-tokens @marked-tokens @current-ann @me)]
-          (dispatch-annotations {:key key :value value} empty-annotation)
-          (deselect-tokens empty-annotation)
-          (update-annotations key value existing-annotation-owner)
-          (deselect-tokens existing-annotation-owner)
-          (swap! annotation-modal-show not))))))
+  (fn [e]
+    (if-let [[key value] (parse-annotation (by-id "token-ann-key"))]
+      (let [{:keys [empty-annotation existing-annotation-owner existing-annotation]}
+            (group-tokens @marked-tokens @current-ann @me)]
+        (dispatch-annotations {:key key :value value} empty-annotation)
+        (deselect-tokens empty-annotation)
+        (update-annotations key value existing-annotation-owner)
+        (deselect-tokens existing-annotation-owner)
+        (swap! annotation-modal-show not)))))
 
 (defn update-current-ann [current-ann]
   (fn [target]
@@ -84,17 +82,17 @@
           :class "form-control form-control-no-border"
           :id "token-ann-key"
           :on-change (update-current-ann current-ann)
-          :on-key-press
-          (trigger-dispatch
-           {:marked-tokens marked-tokens
-            :current-ann current-ann
-            :me me
-            :annotation-modal-show annotation-modal-show})}]]]]]))
+          :on-key-press #(when (= 13 (.-charCode %))
+                           ((trigger-dispatch
+                              {:marked-tokens marked-tokens
+                               :current-ann current-ann
+                               :me me
+                               :annotation-modal-show annotation-modal-show}) %))}]]]]]))
 
 (defn existing-annotation-label [{username :username {val :value} :ann :as ann} me]
   (case (classify-annotation ann me)
     :empty-annotation (nbsp)
-    :exisiting-annotation-owner val
+    :existing-annotation-owner val
     :existing-annotation
     [bs/overlay-trigger
      {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} (str "by: " username)])

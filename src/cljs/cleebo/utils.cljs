@@ -136,7 +136,7 @@
   "transforms annotation string into a vec of annotation key and value"
   [s]
   (let [[k v] (gstr/splitLimit s "=" 2)]
-    (if (and k v)
+    (if (and (not (empty? k)) (not (empty? v)))
       [k v])))
 
 ;;; Else

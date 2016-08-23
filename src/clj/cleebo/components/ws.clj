@@ -66,11 +66,12 @@
                         (router ws {:ws-from username :payload parsed-payload}))))))
 
 (defn send-client [{clients :clients :as ws} ws-target payload]
-  (let [str-payload (write-str payload :json)
-        ws-target-ch (get @clients ws-target)]
-    (s/validate (ws-from-server payload) payload)
-    (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
-    (kit/send! ws-target-ch str-payload)))
+  (let [str-payload (write-str payload :json)]
+    (if-let [ws-target-ch (get @clients ws-target)]
+      (do (s/validate (ws-from-server payload) payload)
+          (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
+          (kit/send! ws-target-ch str-payload))
+      (timbre/info "not sending" payload "to" ws-target "[Not online]"))))
 
 (defn send-clients
   "function wrapper over multiplexed puts to out-chan"

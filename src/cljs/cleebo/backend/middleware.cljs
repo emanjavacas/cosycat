@@ -39,31 +39,9 @@
                 new-db)
             new-db))))))
 
-;; (defn debug
-;;   "Middleware which logs debug information for each event.
-;;   Includes a clojure.data/diff of the db, before vs after, showing the changes
-;;   caused by the event handler.
-;;   See also: https://gist.github.com/mike-thompson-day8/9439d8c502c2f307c029a142b689852d
-;;   "
-;;   [handler]
-;;   (fn debug-handler
-;;     [db v]
-;;     (.log js/console "Handling re-frame event: " v)
-;;     (let [new-db  (handler db v)
-;;           [before after] [new-db new-db]; (clojure.data/diff db new-db)
-;;           db-changed? (or (some? before) (some? after))]
-;;       (if db-changed?
-;;         (do (.log js/console "clojure.data/diff for: " v)
-;;             (.log js/console "only before: " before)
-;;             (.log js/console "only after : " after))
-;;         (.log js/console "clojure.data/diff no changes for: " v))
-;;       new-db)))
-
 (def standard-middleware
-  ;; []
   [(when ^boolean goog.DEBUG)
    (when ^boolean goog.DEBUG re-frame/debug)
-   ;; (when ^boolean goog.DEBUG debug)
    (when ^boolean goog.DEBUG (re-frame/after validate-db-schema))])
 
 (def no-debug-middleware
