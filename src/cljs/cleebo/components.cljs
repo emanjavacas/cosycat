@@ -187,8 +187,8 @@
      [:div.row {:style {:padding "0 15px"}}
       [bs/table
        {:style {:table-layout "fixed"}}
+       [:colgroup [:col {:span 1 :style {:width "25%"}}]]
        [:tbody
-        [:col {:span 1 :style {:width "25%"}}]
         [:tr [:td [bs/glyphicon {:glyph "envelope"}]] [text-td email]]
         [:tr [:td [:span (str "Created:")]] [text-td (parse-time created)]]
         [:tr [:td [:span (str "Active:") ]] [text-td (human-time last-active)]]]]]

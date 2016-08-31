@@ -83,7 +83,7 @@
     (fn [active-project]
       (let [{username :username {href :href} :avatar} @user
             my-role (->> @users (filter #(= username (:username %))) first :role)
-            tooltip (format "Your role is [%s] in the current project" my-role)]
+            tooltip (format "Your role is [%s] in this project" my-role)]
         [bs/navbar-brand
          [:div.container-fluid
           {:style {:margin-top "-9.5px"}}

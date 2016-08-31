@@ -1,7 +1,8 @@
 (ns cleebo.query-backends.protocols
   (:require [re-frame.core :as re-frame]
             [cleebo.utils :refer [format]]
-            [ajax.core :refer [GET]]))
+            [ajax.core :refer [GET]]
+            [taoensso.timbre :as timbre]))
 
 (defprotocol Corpus
   "abstraction over different corpus query engine services"
