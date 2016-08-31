@@ -28,7 +28,7 @@
             [cleebo.routes.blacklab :refer [blacklab-routes]]
             [cleebo.routes.session :refer [session-route]]
             [cleebo.routes.projects :refer [project-routes]]
-            [cleebo.routes.settings :refer [settings-route]]
+            [cleebo.routes.settings :refer [settings-routes]]
             [cleebo.routes.annotations :refer [annotation-routes]]))
 
 (defn static-routes []
@@ -44,7 +44,6 @@
 (defn web-app-routes []
   (routes
    (GET "/session" [] session-route)
-   (POST "/settings" [] settings-route)
    (GET "/ws" [] ws-handler-http-kit)))
 
 (defn base-routes []
@@ -57,7 +56,6 @@
 (defn is-ajax
   "not sure how robust this is"
   [{headers :headers :as req}]
-  (println headers)
   (boolean (= "XMLHttpRequest" (get headers "X-Requested-With"))))
 
 (defn wrap-internal-error [handler]
@@ -101,6 +99,8 @@
 
 (defn make-handler [component]
   (let [components (select-keys component (:components component))]
-    (-> (app-routes static-routes web-app-routes blacklab-routes annotation-routes project-routes base-routes)
+    (-> (app-routes
+         static-routes web-app-routes settings-routes blacklab-routes
+         annotation-routes project-routes base-routes)
         (wrap-app-component components)
         (wrap-routes wrap-base))))

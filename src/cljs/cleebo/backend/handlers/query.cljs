@@ -34,8 +34,11 @@
            (filter-marked-hits old-results :has-marked? has-marked?))))
 
 (defn fetch-annotations-params [results]
-  (some->> (seq (for [{hit :hit id :id} results] ;seq; avoid empty seq
-                  [(->int (:id (first hit))) (->int (:id (last hit))) id]))
+  (some->> (seq (for [{hit :hit id :id} results ;seq; avoid empty seq
+                      :let [start (->int (:id (first hit)))
+                            end   (->int (:id (last hit)))
+                            hit-id id]]
+                  [start end hit-id]))
            (apply map vector)
            (zipmap [:starts :ends :hit-ids])))
 
@@ -46,13 +49,12 @@
    (re-frame/dispatch [:stop-throbbing :results-frame])
    (re-frame/dispatch [:fetch-annotations (fetch-annotations-params results)])
    (let [active-project (get-in db [:session :active-project])
-         path-fn (fn [key] [:projects active-project :session :query key])
-         merge-old-results (merge-fn results :has-marked? true)]
+         path-fn (fn [key] [:projects active-project :session :query key])]
      (-> db
          (assoc-in [:projects active-project :session :status] status)
          (update-in (path-fn :results-summary) merge results-summary)
          (assoc-in (path-fn :results) (map :id results))
-         (update-in (path-fn :results-by-id) merge-old-results)))))
+         (update-in (path-fn :results-by-id) (merge-fn results :has-marked? true))))))
 
 (re-frame/register-handler
  :unset-query-results
@@ -97,7 +99,7 @@
 (re-frame/register-handler
  :query
  (fn [db [_ query-str]]
-   (let [{query-opts :query-opts corpus-name :corpus} (get-in db [:session :settings :query])
+   (let [{query-opts :query-opts corpus-name :corpus} (get-in db [:settings :query])
          corpus-config (find-corpus-config db corpus-name)]
      (when (check-query query-str)
        (do (re-frame/dispatch [:start-throbbing :results-frame])
@@ -113,7 +115,7 @@
 (re-frame/register-handler
  :query-range
  (fn [db [_ direction]]
-   (let [query-settings (get-in db [:session :settings :query])
+   (let [query-settings (get-in db [:settings :query])
          {{page-size :page-size :as query-opts} :query-opts corpus-name :corpus} query-settings
          {query-str :query-str query-size :query-size {from :from to :to} :page} (current-results db)
          corpus-config (find-corpus-config db corpus-name)
@@ -129,7 +131,7 @@
 (re-frame/register-handler
  :query-sort
  (fn [db _]
-   (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:session :settings :query])
+   (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:settings :query])
          {query-str :query-str query-size :query-size {from :from to :to} :page} (current-results db)
          corpus-config (find-corpus-config db corpus)]
      (re-frame/dispatch [:start-throbbing :results-frame])
@@ -140,7 +142,7 @@
  :fetch-snippet
  (fn [db [_ hit-id {user-snippet-delta :snippet-delta dir :dir}]]
    (let [{{snippet-delta :snippet-delta :as snippet-opts} :snippet-opts
-          corpus-name :corpus} (get-in db [:session :settings :query])
+          corpus-name :corpus} (get-in db [:settings :query])
          {query-str :query-str} (current-results db)
          corpus (ensure-corpus (find-corpus-config db corpus-name))
          snippet-opts (assoc snippet-opts :snippet-delta (or user-snippet-delta snippet-delta))]

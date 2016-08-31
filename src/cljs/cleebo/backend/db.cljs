@@ -15,11 +15,7 @@
              :snippet-opts {:snippet-size 50 :snippet-delta 25}
              :corpus corpus}}))
 
-(defn default-session
-  [& {:keys [corpora] :or {corpora []}}] ;TODO: settings should be adapted to corpus config
-  {:active-panel :front-panel
-   :active-project nil
-   :settings (default-settings :corpora corpora)})
+(def default-session {:active-panel :front-panel :active-project nil})
 
 (defn default-project-session [project]
   {:query {:results-summary {}
@@ -31,9 +27,6 @@
                 :open-hits #{}}
    :filtered-users (into #{} (map :username (:users project)))})
 
-(def default-project-history
-  {:query []})
+(def default-project-history {:query []})
 
-(def default-history
-  {:server-events []
-   :internal-events []})
+(def default-history {:server-events [] :internal-events []})

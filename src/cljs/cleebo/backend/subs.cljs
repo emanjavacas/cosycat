@@ -60,7 +60,7 @@
 (re-frame/register-sub
  :settings
  (fn [db [_ & path]]
-   (let [global-settings (reaction (get-in @db [:session :settings]))]
+   (let [global-settings (reaction (get-in @db [:settings]))]
      (reaction (get-in @global-settings path)))))
 
 (re-frame/register-sub
@@ -179,6 +179,6 @@
  :corpus-info
  (fn [db [_ & path]]
    (let [corpora (reaction (:corpora @db))
-         corpus-name (reaction (get-in @db [:session :settings :query :corpus]))
+         corpus-name (reaction (get-in @db [:settings :query :corpus]))
          corpus (reaction (some #(when (= @corpus-name (:name %)) %) @corpora))]
      (reaction (get-in @corpus (into [:info] path))))))

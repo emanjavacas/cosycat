@@ -35,7 +35,7 @@
    (let [project-settings (get-in db [:projects project-name :settings] {})]
      (-> db
          (assoc-in [:session :active-project] project-name)
-         (update-in [:session :settings] merge project-settings)))))
+         (update-in [:settings] merge project-settings)))))
 
 (re-frame/register-handler              ;add project to client-db
  :add-project

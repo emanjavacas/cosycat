@@ -1,37 +1,42 @@
 (ns cleebo.routes.settings
-  (:require [cleebo.routes.utils :refer [safe]]
-            [cleebo.db.users :refer [update-user-info]]
+  (:require [compojure.core :refer [routes context POST GET]]
+            [cleebo.routes.utils :refer [make-default-route]]
+            [cleebo.db.users :as users]
             [cleebo.avatar :refer [user-avatar]]
             [cleebo.components.ws :refer [send-clients]]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
-(defmulti settings-router (fn [{{route :route} :params}] route))
-
-(defmethod settings-router :new-avatar
+(defn user-settings-route
   [{{{username :username} :identity} :session
-    {db :db ws :ws} :components}]
+    {project-name :project} :params
+    {db :db} :components}]
+  (users/user-project-settings db username project-name))
+
+(defn new-avatar-route
+  [{{{username :username} :identity} :session {db :db ws :ws} :components}]
   (let [avatar (user-avatar username)]
-    (update-user-info db username {:avatar avatar})
-    (send-clients ws {:type :new-user-avatar :data {:avatar avatar :username username}})
+    (users/update-user-info db username {:avatar avatar})
+    (send-clients ws {:type :new-user-avatar :data {:avatar avatar :username username}} :source-client username)
     avatar))
 
-(defmethod settings-router :save-user-settings
+(defn save-settings-route
   [{{{username :username} :identity} :session
-    {db :db ws :ws} :components}]
-  ;; todo
-  )
+    {project-name :project update-map :update-map} :params
+    {db :db} :components}]
+  (users/update-user-settings db username update-map))
 
-(defmethod settings-router :save-project-settings
+(defn save-project-settings-router
   [{{{username :username} :identity} :session
+    {project-name :project update-map :update-map} :params
     {db :db ws :ws} :components}]
-  ;; todo
-  )
+  (users/update-user-project-settings db username project-name update-map))
 
-(def settings-route 
-  (safe (fn [req]
-          (try {:status 200 :body (settings-router req)}
-               (catch Exception e
-                 (let [{ex :class} (bean e)]
-                   {:status 500 :body {:message "Ooops" :data {:exception (str ex)}}}))))
-        {:login-uri "/login"}))
+(defn settings-routes []
+  (routes
+   (context "/settings" []
+            (GET "/user-settings" [] (make-default-route user-settings-route))
+            (GET "/debug" [] (make-default-route identity))
+            (POST "/new-avatar" [] (make-default-route new-avatar-route))
+            (POST "/save-user" [] (make-default-route save-settings-route))
+            (POST "/save-project" [] (make-default-route save-project-settings-router)))))

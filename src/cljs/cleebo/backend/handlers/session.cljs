@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [ajax.core :refer [GET]]
-            [cleebo.backend.db :refer [default-history default-session]]
+            [cleebo.backend.db :refer [default-history default-session default-settings]]
             [cleebo.backend.middleware :refer [standard-middleware]]
             [cleebo.backend.handlers.projects :refer [normalize-projects]]
             [cleebo.app-utils :refer [update-coll disjconj]]
@@ -36,12 +36,17 @@
  (fn [db [_ active-panel]]
    (assoc-in db [:session :active-panel] active-panel)))
 
+(defn deb [stuff]
+  (timbre/debug stuff)
+  stuff)
+
 (re-frame/register-handler
  :initialize-db
  standard-middleware
- (fn [_ [_ {:keys [me users corpora projects] :as payload}]]
+ (fn [_ [_ {:keys [me users corpora projects settings] :as payload}]]
    (-> payload
-       (assoc :session (default-session :corpora corpora) :history default-history)
+       (assoc :session default-session :history default-history)
+       (assoc :settings (merge (default-settings :corpora corpora) (or settings {})))
        (assoc-in [:session :init] true)
        (assoc :projects (normalize-projects projects me)))))
 

@@ -24,7 +24,7 @@
 (def public-user-schema
   (-> user-schema (assoc :active s/Bool) (dissoc :projects)))
 
-;;; session (highly & component dependent data)
+;;; session (component dependent data)
 (def notification-schema
   {(s/required-key :id) s/Any
    (s/required-key :data) {(s/required-key :message) s/Any
@@ -37,7 +37,6 @@
   {:init s/Bool
    :active-panel s/Keyword
    :active-project s/Any
-   :settings settings-schema            ;mutable global session-settings (in case outside project)
    (s/optional-key :notifications) {s/Any notification-schema}
    (s/optional-key :modals)     {s/Keyword s/Any}
    (s/optional-key :session-error) (s/maybe {:message s/Str (s/optional-key :code) s/Str})
@@ -48,6 +47,7 @@
 (def db-schema
   {;; dynamic app data
    :session session-schema              ;mutable component-related data
+   :settings settings-schema            ;mutable global session-settings (in case outside project)
    :history history-schema              ;keeps track of events(could go into session/user?)
    ;; static app data (might of course change, but less so)
    :me user-schema                     ;client user
