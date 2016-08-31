@@ -61,30 +61,37 @@
    label])
 
 (defn user-brand-span [username active-project]
-  (fn [username active-project my-role]
+  (fn [username active-project]
     [:div username
      (when @active-project
        [:span {:style {:white-space "nowrap"}} (str "@" @active-project)])]))
+
+(defn user-brand-component [active-project user]
+  (fn [active-project user]
+    (let [{username :username {href :href} :avatar} @user]
+      (when username                    ;wait until loaded
+        [:div.row
+         {:style {:line-height "35px" :text-align "right"}}
+         [:div.col-sm-8 
+          [user-brand-span username active-project]]
+         [:div.col-sm-4
+          [user-thumb href {:height "30px" :width "30px"}]]]))))
 
 (defn user-brand [active-project]
   (let [user (re-frame/subscribe [:me])
         users (re-frame/subscribe [:active-project :users])]
     (fn [active-project]
-      (let [{username :username {href :href} :avatar} @user]
+      (let [{username :username {href :href} :avatar} @user
+            my-role (->> @users (filter #(= username (:username %))) first :role)
+            tooltip (format "Your role is [%s] in the current project" my-role)]
         [bs/navbar-brand
-         (when username
-           (let [my-role (->> @users (filter #(= username (:username %))) first :role)
-                 tooltip (format "You are [%s] in this project" my-role)]
-             [:div.container-fluid
-              {:style {:margin-top "-9.5px"}}
-              [bs/overlay-trigger
-               {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} tooltip])}
-               [:div.row
-                {:style {:line-height "35px" :text-align "right"}}
-                [:div.col-sm-8 ;; wait until user info is fetched in main
-                 [user-brand-span username active-project my-role]]
-                [:div.col-sm-4 ;; wait until user info is fetched in main            
-                 [user-thumb href {:height "30px" :width "30px"}]]]]]))]))))
+         [:div.container-fluid
+          {:style {:margin-top "-9.5px"}}
+          (if @active-project
+            [bs/overlay-trigger
+             {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} tooltip])}
+             [:div [user-brand-component active-project user]]]
+            [:div [user-brand-component active-project user]])]]))))
 
 (defn navlink [target href label icon]
   (let [active (re-frame/subscribe [:active-panel])]
@@ -186,20 +193,15 @@
 (defn mount-root []
   (reagent/render [main-panel] (.getElementById js/document "app")))
 
-(defn host-url []
-  (str "ws://" (.-host js/location) "/ws"))
-
 (defn init! []
   ;; install csrf-token & other ajax interceptors
   (add-interceptor csrf-interceptor {:csrf-token js/csrf})
   (add-interceptor ajax-header-interceptor)
   (add-interceptor debug-interceptor)
   ;; web-sockets
-  (open-ws-channel {:url (host-url)})
+  (open-ws-channel {:url (str "ws://" (.-host js/location) "/ws")})
   ;; start session
   (re-frame/dispatch-sync [:initialize-session])
-  ;; ;; ensure we start on home page (so that db can be loaded)
-  ;; (routes/nav! "/")
   ;; declare app routes
   (routes/app-routes)
   ;; handle refreshes
