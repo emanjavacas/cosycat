@@ -96,23 +96,25 @@
 ;;; user settings
 (defn user-settings
   [{db-conn :db :as db} username]
-  (->> (user-info db username) :settings))
+  (-> (user-info db username)
+      (get :settings {})))
 
 (defn update-user-settings
   [{db-conn :db :as db} username update-map]
   ;; do a check on settings
-  (->> (update-user-info db username update-map) :settings))
+  (-> (update-user-info db username {:settings update-map})
+      (get :settings {})))
 
 (defn user-project-settings
   [{db-conn :db} username project-name]
-  (->> (mc/find-maps db-conn (:users colls) {:username username})
-       (get-in [:projects project-name :settings])))
+  (-> (mc/find-maps db-conn (:users colls) {:username username})
+      (get-in [:projects project-name :settings] {})))
 
 (defn update-user-project-settings
   [{db-conn :db} username project-name update-map]
-  (->> (mc/find-and-modify
+  (-> (mc/find-and-modify
         db-conn (:users colls)
         {:username username}
         {$set {(format "projects.%s.settings") update-map}}
         {:return-new true})
-       (get-in [:projects project-name :settings])))
+      (get-in [:projects project-name :settings] {})))

@@ -35,8 +35,7 @@
  standard-middleware
  (fn [db [_ path value]]
    (let [active-project (get-in db [:session :active-project])]
-     ;; TODO: this should also send the updated settings to the db.
-     ;; TODO: and also update session settings {:settings}
+     ;; TODO: this should update session settings {:settings}
      (assoc-in db (into [:projects active-project :settings] path) value))))
 
 (defn avatar-error-handler [& args]
@@ -51,10 +50,13 @@
           :error-handler avatar-error-handler})
    db))
 
-(GET "settings/user-settings"
-     {:params {:a [1 2 3] :project "testProject"}
-      :handler #(timbre/debug %)
-      :error-handler #(timbre/debug "ERROR" %)})
-
-
+(re-frame/register-handler
+ :submit-settings
+ (fn [db [_ update-map]]
+   (POST "settings/save-settings"
+         {:params {:update-map update-map}
+          :handler #(re-frame/dispatch [:notify {:message "Successfully saved settings"}])
+          :error-handler #(re-frame/dispatch
+                           [:notify {:message "Error while saving settings" :status :error}])})
+   db))
 

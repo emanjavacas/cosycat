@@ -1,7 +1,7 @@
 (ns cleebo.routes.session
   (:require [cleebo.routes.utils :refer [safe]]
             [cleebo.components.ws :refer [get-active-users]]
-            [cleebo.db.users :refer [user-info users-info]]
+            [cleebo.db.users :refer [user-info users-info user-settings]]
             [cleebo.db.projects :refer [get-projects]]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
@@ -19,10 +19,12 @@
 (defn fetch-init-session
   [{{{username :username roles :roles} :identity} :session
     {db :db ws :ws} :components}]
-  (let [active-users (get-active-users ws)]
-    {:me (user-info db username)
+  (let [active-users (get-active-users ws)
+        {settings :settings :as me} (user-info db username)]
+    {:me (dissoc me :settings)
      :users (normalize-users (users-info db) username active-users)
-     :projects (get-projects db username)
+     :projects (get-projects db username) ;TODO: add project settings
+     :settings settings
      :corpora (env :corpora)}))
 
 (def session-route

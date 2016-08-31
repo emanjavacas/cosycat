@@ -22,11 +22,11 @@
 
 (defn save-settings-route
   [{{{username :username} :identity} :session
-    {project-name :project update-map :update-map} :params
+    {update-map :update-map} :params
     {db :db} :components}]
   (users/update-user-settings db username update-map))
 
-(defn save-project-settings-router
+(defn save-project-settings-route
   [{{{username :username} :identity} :session
     {project-name :project update-map :update-map} :params
     {db :db ws :ws} :components}]
@@ -35,8 +35,7 @@
 (defn settings-routes []
   (routes
    (context "/settings" []
-            (GET "/user-settings" [] (make-default-route user-settings-route))
-            (GET "/debug" [] (make-default-route identity))
+            (GET "/settings" [] (make-default-route user-settings-route))
             (POST "/new-avatar" [] (make-default-route new-avatar-route))
-            (POST "/save-user" [] (make-default-route save-settings-route))
-            (POST "/save-project" [] (make-default-route save-project-settings-router)))))
+            (POST "/save-settings" [] (make-default-route save-settings-route))
+            (POST "/save-project-settings" [] (make-default-route save-project-settings-route)))))

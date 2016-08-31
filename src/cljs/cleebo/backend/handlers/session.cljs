@@ -5,7 +5,7 @@
             [cleebo.backend.db :refer [default-history default-session default-settings]]
             [cleebo.backend.middleware :refer [standard-middleware]]
             [cleebo.backend.handlers.projects :refer [normalize-projects]]
-            [cleebo.app-utils :refer [update-coll disjconj]]
+            [cleebo.app-utils :refer [update-coll disjconj deep-merge]]
             [cleebo.utils :refer [format]]
             [taoensso.timbre :as timbre]))
 
@@ -45,10 +45,11 @@
  standard-middleware
  (fn [_ [_ {:keys [me users corpora projects settings] :as payload}]]
    (-> payload
-       (assoc :session default-session :history default-history)
-       (assoc :settings (merge (default-settings :corpora corpora) (or settings {})))
-       (assoc-in [:session :init] true)
-       (assoc :projects (normalize-projects projects me)))))
+       (assoc :session default-session)
+       (assoc :history default-history)
+       (assoc :settings (deep-merge (default-settings :corpora corpora) settings))
+       (assoc :projects (normalize-projects projects me))
+       (assoc-in [:session :init] true))))
 
 (re-frame/register-handler              ;load error
  :register-session-error
