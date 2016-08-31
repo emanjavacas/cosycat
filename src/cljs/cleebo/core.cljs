@@ -122,6 +122,16 @@
                  args)
           label])])))
 
+(defn merge-target-project-url
+  "computes url for project, adding subpath /query if origin was in query itself
+   `cleebo#/project/project1/query` -> `cleebo#/project/project2/query`
+   instead of `cleebo#/project/project1/query` -> `cleebo#/project/project2`"
+  [project-name]
+  (let [prefix (str "#/project/" project-name)]
+    (if (.endsWith (.-lastToken_ cleebo.routes/history) "query")
+      (str prefix "/query")
+      prefix)))
+
 (defn projects-dropdown [projects active-project]
   (fn [projects active-project]
     [navdropdown :no-panel "Projects" "zmdi-toys"
@@ -133,19 +143,10 @@
       (doall
        (for [[project-name {:keys [project]}] @projects]
          {:label project-name
-          :href (str "#/project/" project-name)
+          :href (merge-target-project-url project-name)
           :style (when (= project-name @active-project)
                    {:background-color "#e7e7e7"
                     :color "black"})})))]))
-
-(defn debug-dropdown []
-  [navdropdown :debug-panel "Debug" "zmdi-bug" ;debug mode
-   :children
-   [{:label "Debug page" :href "#/debug"}
-    {:label "App snapshots"
-     :on-select #(re-frame/dispatch [:open-modal :localstorage])}
-    {:label "New backup"
-     :on-select ls/dump-db}]])
 
 (defn navbar [active-panel]
   (let [active-project (re-frame/subscribe [:session :active-project])
@@ -167,7 +168,6 @@
           [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"])
         (when-not (or (= @active-panel :front-panel) (empty? @projects))
           [projects-dropdown projects active-project])
-        ;; [debug-dropdown]
         [navlink :exit "#/exit" "Exit" "zmdi-power"]]])))
 
 (defn main-panel []
