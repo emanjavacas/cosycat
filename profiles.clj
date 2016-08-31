@@ -43,5 +43,5 @@
            :cljsbuild {:jar true
                        :builds {:app {:source-paths ["env/prod/cljs"]
                                       :compiler {:optimizations :advanced
-                                                 :closure-defines {goog.DEBUG true}
-                                                 :pretty-print false}}}}}}
+                                                 :closure-defines {goog.DEBUG false}
+                                                 :pretty-print true}}}}}}

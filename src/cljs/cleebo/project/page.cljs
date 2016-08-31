@@ -6,8 +6,9 @@
             [cleebo.project.components.add-user-component :refer [add-user-component]]
             [cleebo.components :refer [user-profile-component]]
             [cleebo.roles :refer [project-user-roles]]
-            [cleebo.utils :refer [human-time]]
+            [cleebo.utils :refer [human-time format]]
             [cleebo.app-utils :refer [ceil]]
+            [cleebo.viewport :refer [viewport]]
             [taoensso.timbre :as timbre]))
 
 (def users-per-row 3)
@@ -36,19 +37,30 @@
   {:border "1px solid #d1e8f1"
    :background-color "#eff7fa"})
 
+(defn col-class [users-per-row]
+  ;format
+  "col-lg-6.col-sm-6.col-md-6"
+                                        ;(int (ceil (/ 12 users-per-row)))
+  )
+
 (defn project-users [users my-role]
   (let [me (re-frame/subscribe [:me :username])]
     (fn [users my-role]
-      (let [users+ (into (vec users) (when (can-add-users? my-role) [add-user-component]))]
-        [:div (doall (for [row (partition-all users-per-row users+)
-                           {:keys [username role] :as user} row]
-                       ^{:key (or username "add-user-component")}
-                       [:div.col-md-12
-                        {:class (str "col-lg-" (int (ceil (/ 12 users-per-row))))}
-                        [:div.well {:style (when (= @me username) my-user-style)}
-                         (if (and username role)
-                           [project-user user role my-role]
-                           [user users])]]))]))))
+      (let [users-per-row (if (> 992 (:width @viewport)) 2 3)]
+        (let [users+ (into (vec users) (when (can-add-users? my-role) [add-user-component]))]
+          [:div.container
+           (doall (for [[idx row] (map-indexed vector (partition-all users-per-row users+))]
+                    ^{:key (str "row." idx)}
+                    [:div.row
+                     (doall (for [{:keys [username role] :as user-or-add-user-component} row]
+                              ^{:key (or username "add-user-component")}
+                              [:div.col-lg-4.col-sm-6.col-md-6
+                               [:div.well {:style (when (= @me username) my-user-style)}
+                                (if (and username role)
+                                  ;; render user component
+                                  [project-user user-or-add-user-component role my-role]
+                                  ;; render add user component
+                                  [user-or-add-user-component users])]]))]))])))))
 
 (defn key-val-span [key val]
   (fn [key val]

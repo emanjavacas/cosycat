@@ -160,6 +160,13 @@
             [editable-role-btn user roles editing editable? opts]
             [display-role-btn editing role editable?])))))
 
+(defn text-td [text]
+  [:td [:div {:style {:width "100%"
+                      :white-space "nowrap"
+                      :overflow "hidden"
+                      :text-overflow "ellipsis"}}
+        text]])
+
 (defn user-profile-component
   "A component displaying basic user information. If `displayable?`, it requires an initial role,
    which is use to display an init view of the role, otherwise it presents the user as not
@@ -168,21 +175,23 @@
    dismiss it)"
   [user roles & opts]
   (fn [{:keys [avatar username firstname lastname email created last-active] :as user} roles
-       & {:keys [role on-change on-submit editable? displayable?]
+       & {:keys [role on-change on-submit on-dismiss editable? displayable?]
           :or {editable? true displayable? false}
           :as opts}]
     [:div.container-fluid
      [:div.row
-      [:div.col-sm-6.col-md-4
+      [:div.col-sm-4.col-md-4
        [:h4 [:img.img-rounded.img-responsive {:src (:href avatar)}]]]
-      [:div.col-sm-6.col-md-8
+      [:div.col-sm-8.col-md-8
        [:h4 username [:br] [:span [:small [:cite (str firstname " " lastname)]]]]]]
      [:div.row {:style {:padding "0 15px"}}
       [bs/table
+       {:style {:table-layout "fixed"}}
        [:tbody
-        [:tr [:td [bs/glyphicon {:glyph "envelope"}]] [:td email]]
-        [:tr [:td [:span (str "Created:")]] [:td (parse-time created)]]
-        [:tr [:td [:span (str "Last active:") ]] [:td (human-time last-active)]]]]]
+        [:col {:span 1 :style {:width "25%"}}]
+        [:tr [:td [bs/glyphicon {:glyph "envelope"}]] [text-td email]]
+        [:tr [:td [:span (str "Created:")]] [text-td (parse-time created)]]
+        [:tr [:td [:span (str "Active:") ]] [text-td (human-time last-active)]]]]]
      [:div.row {:style {:padding "0 15px"}}
       [select-role-btn user roles opts]]]))
 
