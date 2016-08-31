@@ -33,21 +33,20 @@
     (merge (zipmap (map :id results) results) ;normalize results
            (filter-marked-hits old-results :has-marked? has-marked?))))
 
-(defn fetch-annotations-params [results]
-  (some->> (seq (for [{hit :hit id :id} results ;seq; avoid empty seq
-                      :let [start (->int (:id (first hit)))
-                            end   (->int (:id (last hit)))
-                            hit-id id]]
-                  [start end hit-id]))
-           (apply map vector)
-           (zipmap [:starts :ends :hit-ids])))
+(defn page-margins [results]
+  (-> (for [{hit :hit id :id} results ;seq; avoid empty seq
+             :let [start (->int (:id (first hit)))
+                   end   (->int (:id (last hit)))
+                   hit-id id]]
+        {:start start :end end :hit-id hit-id})
+      vec))
 
 (re-frame/register-handler
  :set-query-results
  standard-middleware
  (fn [db [_ {:keys [results-summary results status]}]]
    (re-frame/dispatch [:stop-throbbing :results-frame])
-   (re-frame/dispatch [:fetch-annotations (fetch-annotations-params results)])
+   (re-frame/dispatch [:fetch-annotations {:page-margins (page-margins results)}])
    (let [active-project (get-in db [:session :active-project])
          path-fn (fn [key] [:projects active-project :session :query key])]
      (-> db

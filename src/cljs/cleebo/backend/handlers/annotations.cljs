@@ -35,10 +35,10 @@
   (let [results-by-id (get-in db [:projects project :session :query :results-by-id])
         path [:projects project :session :query :results-by-id hit-id :hit]]
     (if (contains? results-by-id hit-id)
-      (do (.log js/console "contains") (update-in db path update-hit anns))
+      (do (timbre/debug "contains") (update-in db path update-hit anns))
       (if-let [hit-id (find-hit-id (keys anns) (vals results-by-id))]
-        (do (.log js/console "found") (update-in db path update-hit anns))
-        (do (.log js/console "didn't found") db)))))
+        (do (timbre/debug "found") (update-in db path update-hit anns))
+        (do (timbre/debug "didn't found") db)))))
 
 (defmethod add-annotations cljs.core/PersistentVector
   [db ms]
@@ -51,16 +51,17 @@
 
 (re-frame/register-handler
  :fetch-annotations
- (fn [db [_ {:keys [starts ends hit-ids] :as params}]]
+ standard-middleware
+ (fn [db [_ {:keys [page-margins]}]]
    (let [project (get-in db [:session :active-project])
          corpus (get-in db [:projects project :session :query :results-summary :corpus])]
      (re-frame/dispatch [:start-throbbing :fetch-annotations])
      (GET "/annotation/page"
-          {:params (assoc params :project project :corpus corpus)
+          {:params {:page-margins page-margins :project project :corpus corpus}
            :handler #(do (re-frame/dispatch [:add-annotation %])
                          (re-frame/dispatch [:stop-throbbing :fetch-annotations]))
            :error-handler #(do (re-frame/dispatch [:stop-throbbing :fetch-annotations])
-                               (.log js/console "Couldn't fetch anns" %))}))
+                               (timbre/info "Couldn't fetch anns" %))}))
    db))
 
 ;;; Outgoing annotations
