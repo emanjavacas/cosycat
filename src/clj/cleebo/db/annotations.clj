@@ -100,7 +100,7 @@
             db-conn (server-project-name project)
             {"corpus" corpus
              $or [{$and [{"span.scope" {$gte from}} {"span.scope" {$lt (+ from size)}}]}
-                  {$or  [{"span.scope.O" {$gte from}} {"span.scope.B" {$lt (+ from size)}}]}]})
+                  {$and [{"span.scope.B" {$lte (+ from size)}} {"span.scope.O" {$gt from}}]}]})
     history (mapv (partial with-history db-conn))))
 
 ;;; Setters
@@ -117,7 +117,7 @@
   (assert-ex-info (and version id) "annotation update requires annotation id/version" update-map)
   (cond->> (vcs/find-and-modify
             db-conn (server-project-name project)
-            version              
+            version  
             {:_id id}    ;conditions
             {$set {"ann.value" value "timestamp" timestamp "username" username
                    "query" query "corpus" corpus "hit-id" hit-id}}
