@@ -97,20 +97,19 @@
    :anns (->> (fetch-annotations db project corpus (->int from) (->int size))
               (apply normalize-anns))})
 
+(defn fetch-from-range [db project corpus]
+  (fn [{:keys [start end hit-id]}]
+    (let [from (->int start)
+          size (- (->int end) from)
+          anns (->> (fetch-annotations db project corpus from size) (apply normalize-anns))]
+      (when anns {:hit-id hit-id :project project :anns anns}))))
+
 (defn fetch-annotation-page-handler
-  [{{project :project corpus :corpus starts :starts ends :ends hit-ids :hit-ids :as params} :params
+  [{{project :project corpus :corpus page-margins :page-margins} :params
     {{username :username} :identity} :session
     {db :db} :components}]
-  (assert-ex-info
-   (= (count starts) (count ends)) "Wrong argument lengths"
-   {:message :bad-argument :data {:starts (count starts) :ends (count ends)}})
   (check-user-rights db username project :read)
-  (->> (map (fn [start end hit-id]
-              (let [from (->int start)
-                    size (- (->int end) from)
-                    anns (->> (fetch-annotations db project corpus from size) (apply normalize-anns))]
-                (when anns {:hit-id hit-id :project project :anns anns})))
-            (vals starts) (vals ends) (vals hit-ids)) ;quickfix needs to find out what's going on
+  (->> (map (fetch-from-range db project corpus) (vals page-margins)) ;don't know why this happens
        (filter identity)
        vec))
 
