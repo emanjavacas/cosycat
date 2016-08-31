@@ -117,9 +117,9 @@
          [bs/menu-item
           (merge {:eventKey k
                   :style style
-                  :href href
+                  :href (if (function? href) (href) href)
                   :onSelect on-select}
-                 args)
+                 (dissoc args :style :href :onSelect))
           label])])))
 
 (defn merge-target-project-url
@@ -127,8 +127,9 @@
    `cleebo#/project/project1/query` -> `cleebo#/project/project2/query`
    instead of `cleebo#/project/project1/query` -> `cleebo#/project/project2`"
   [project-name]
-  (let [prefix (str "#/project/" project-name)]
-    (if (.endsWith (.-lastToken_ cleebo.routes/history) "query")
+  (let [prefix (str "#/project/" project-name)
+        origin (.-lastToken_ cleebo.routes/history)]
+    (if (.endsWith origin "query")
       (str prefix "/query")
       prefix)))
 
@@ -143,7 +144,7 @@
       (doall
        (for [[project-name {:keys [project]}] @projects]
          {:label project-name
-          :href (merge-target-project-url project-name)
+          :href #(merge-target-project-url project-name)
           :style (when (= project-name @active-project)
                    {:background-color "#e7e7e7"
                     :color "black"})})))]))
