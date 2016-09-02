@@ -23,6 +23,7 @@
             [cleebo.front.page :refer [front-panel]]
             [cleebo.error.page :refer [error-panel]]
             [cleebo.backend.ws :refer [open-ws-channel]]
+            [cleebo.key-bindings :refer [bind-panel-keys]]
             [cleebo.routes :as routes]
             [cleebo.localstorage :as ls]
             [cleebo.components
@@ -129,7 +130,7 @@
   [project-name]
   (let [prefix (str "#/project/" project-name)
         origin (.-lastToken_ cleebo.routes/history)]
-    (if (.endsWith origin "query")
+    (if (and origin (.endsWith origin "query"))
       (str prefix "/query")
       prefix)))
 
@@ -171,6 +172,12 @@
           [projects-dropdown projects active-project])
         [navlink :exit "#/exit" "Exit" "zmdi-power"]]])))
 
+(defn has-session-error? [session-error]
+  session-error)
+
+(defn has-init-session? [session-init]
+  (not session-init))
+
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [:active-panel])
         session-error (re-frame/subscribe [:session-has-error?])
@@ -185,11 +192,12 @@
        [session-message-modal session-message-modal?]
        [:div.container-fluid
         {:style {:padding "75px 50px 0 50px"}}
-        (panels
-         (cond
-           @session-error :error-panel
-           (not @session-init) :loading-panel
-           :else @active-panel))]])))
+        (let [panel-key (cond
+                          (has-session-error? @session-error) :error-panel
+                          (has-init-session? @session-init) :loading-panel
+                          :else @active-panel)]
+          (bind-panel-keys panel-key)
+          (panels panel-key))]])))
 
 (defn mount-root []
   (reagent/render [main-panel] (.getElementById js/document "app")))
