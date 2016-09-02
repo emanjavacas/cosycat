@@ -6,19 +6,15 @@
             [cleebo.schemas.user-schemas :refer [user-schema settings-schema]]))
 
 ;;; history
-(def server-events-history-schema
+(def event-schema
   [{:received s/Int
     :type s/Keyword
-    :payload {s/Any s/Any}}])
-
-(def internal-event-history-schema
-  [{:received s/Int
-    :type s/Keyword
-    :payload {s/Any s/Any}}])
+    :data {s/Any s/Any}}])
 
 (def history-schema
-  {:server-events server-events-history-schema
-   :internal-events internal-event-history-schema})
+  {:app-events event-schema       ;general, non-project-dependent event (eg. signup)
+   :project-events event-schema   ;project-dependent event (eg. ann update)
+   :user-events event-schema})    ;client event - might be project dependent (eg. query, settings)
 
 ;;; users
 (def public-user-schema

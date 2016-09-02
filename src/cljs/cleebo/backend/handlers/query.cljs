@@ -105,26 +105,27 @@
            (re-frame/dispatch [:start-throbbing :fetch-annotations])
            ;; add update
            (re-frame/dispatch
-            [:register-history [:internal-events]
+            [:register-history [:user-events]
              {:type :query
-              :payload {:query-str query-str :corpus corpus-name}}])
+              :data {:query-str query-str :corpus corpus-name}}])
            (query (ensure-corpus corpus-config) query-str query-opts)))
      db)))
 
 (re-frame/register-handler
  :query-range
  (fn [db [_ direction]]
-   (let [query-settings (get-in db [:settings :query])
-         {{page-size :page-size :as query-opts} :query-opts corpus-name :corpus} query-settings
-         {query-str :query-str query-size :query-size {from :from to :to} :page} (current-results db)
-         corpus-config (find-corpus-config db corpus-name)
-         [from to] (case direction
-                     :next (pager-next query-size page-size to)
-                     :prev (pager-prev query-size page-size from))]
-     (re-frame/dispatch [:start-throbbing :results-frame])
-     (query (ensure-corpus corpus-config)
-            query-str
-            (assoc query-opts :from from :page-size (- to from)))
+   (let [results-summary (current-results db)]
+     (when-not (empty? results-summary)       ;return if there hasn't been a query yet
+       (let [query-settings (get-in db [:settings :query])
+             {{page-size :page-size :as query-opts} :query-opts corpus-name :corpus} query-settings
+             {query-str :query-str query-size :query-size {from :from to :to} :page} results-summary
+             corpus-config (find-corpus-config db corpus-name)
+             [from to] (case direction
+                         :next (pager-next query-size page-size to)
+                         :prev (pager-prev query-size page-size from))
+             query-opts (assoc query-opts :from from :page-size (- to from))]
+         (re-frame/dispatch [:start-throbbing :results-frame])
+         (query (ensure-corpus corpus-config) query-str query-opts)))
      db)))
 
 (re-frame/register-handler
@@ -148,8 +149,8 @@
      ;; add update
      (when-not dir                      ;only register first request
        (re-frame/dispatch
-        [:register-history [:internal-events]
+        [:register-history [:user-events]
          {:type :fetch-snippet
-          :payload {:query-str query-str :corpus corpus :hit-id hit-id}}]))
+          :data {:query-str query-str :corpus corpus-name :hit-id hit-id}}]))
      (snippet corpus query-str snippet-opts hit-id dir)
      db)))

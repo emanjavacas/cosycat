@@ -28,9 +28,10 @@
   db)
 
 (defmethod ws-handler :signup
-  [db {{username :username :as data} :data}]
+  [db {{username :username :as data} :data type :type}]
   (re-frame/dispatch [:add-user data])
   (re-frame/dispatch [:notify {:message (get-msg [:signup] username) :by username}])
+  (re-frame/dispatch [:register-history [:app-events] {:type type :data data}])
   db)
 
 (defmethod ws-handler :login
@@ -97,5 +98,4 @@
  :ws
  standard-middleware
  (fn [db [_ {type :type data :data :as payload}]]
-   (re-frame/dispatch [:register-history [:server-events] {:type type :payload data}])
    (ws-handler db payload)))

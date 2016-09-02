@@ -7,15 +7,16 @@
             [taoensso.timbre :as timbre]))
 
 (defn history-panel []
-  (let [app-history (re-frame/subscribe [:read-history [:internal-events]])
-        server-history (re-frame/subscribe [:read-history [:server-events]])]
+  (let [app-history (re-frame/subscribe [:read-history [:app-events]])
+        project-history (re-frame/subscribe [:read-history [:project-events]])
+        user-history (re-frame/subscribe [:read-history [:user-events]])]
     (fn []
       [bs/list-group
        [css-transition-group {:transition-name "updates"
                               :transition-enter-timeout 650
                               :transition-leave-timeout 650}
         (doall (for [{:keys [received type payload] :as event}
-                     (sort-by :received > (concat @app-history @server-history))]
+                     (sort-by :received > (concat @app-history @project-history @user-history))]
                  ^{:key received} [event-component event]))]])))
 
 (defn updates-panel []

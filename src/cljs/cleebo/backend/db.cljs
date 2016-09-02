@@ -27,6 +27,6 @@
                 :open-hits #{}}
    :filtered-users (into #{} (map :username (:users project)))})
 
-(def default-history {:server-events [] :internal-events []})
+(def default-history {:app-events [] :project-events [] :user-events []})
 
 (def default-project-history {:query []})
