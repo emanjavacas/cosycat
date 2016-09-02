@@ -43,7 +43,9 @@
        (let [users (->> (find-project-by-name db project) :users (map :username))
              new-ann (insert-annotation db project (assoc ann-map :username username))
              data {:anns (normalize-anns new-ann) :project project :hit-id hit-id}]
-         (send-clients ws {:type :annotation :data data} :source-client username :target-clients users)
+         (send-clients
+          ws {:type :annotation :data data}
+          :source-client username :target-clients users)
          {:status :ok :data data})
        (catch clojure.lang.ExceptionInfo e
          (let [{:keys [message data]} (bean e)]
@@ -77,7 +79,9 @@
        (let [users (->> (find-project-by-name db project) :users (map :username))
              new-ann (update-annotation db project (assoc update-map :username username))
              data {:anns (normalize-anns new-ann) :project project :hit-id hit-id}]
-         (send-clients ws {:type :annotation :data data} :source-client username :target-clients users)
+         (send-clients
+          ws {:type :annotation :data data}
+          :source-client username :target-clients users)
          {:status :ok :data data})
        (catch clojure.lang.ExceptionInfo e
          (let [{:keys [message data]} (bean e)]

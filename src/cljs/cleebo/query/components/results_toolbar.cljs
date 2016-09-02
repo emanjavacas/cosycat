@@ -11,7 +11,7 @@
 
 (defn pager-button [& {:keys [direction label]}]
   [bs/button
-   {:onClick #(re-frame/dispatch [:query-range direction :results-frame])
+   {:onClick #(re-frame/dispatch [:query-range direction])
     :style {:font-size "12px" :height "34px" :width "70px"}}
    label])
 

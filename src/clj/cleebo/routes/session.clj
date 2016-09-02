@@ -14,17 +14,18 @@
 (defn normalize-users [users username active-users]
   (->> users
        (remove (fn [user] (= username (:username user))))
+       (map (fn [user] (dissoc user :settings)))
        (mapv (fn [user] {:username (:username user) :user (add-active-info user active-users)}))))
 
 (defn fetch-init-session
   [{{{username :username roles :roles} :identity} :session
     {db :db ws :ws} :components}]
   (let [active-users (get-active-users ws)
-        {settings :settings :as me} (user-info db username)]
+        {:keys [settings] :as me} (user-info db username)]
     {:me (dissoc me :settings)
      :users (normalize-users (users-info db) username active-users)
      :projects (get-projects db username) ;TODO: add project settings
-     :settings settings
+     :settings (or settings {})
      :corpora (env :corpora)}))
 
 (def session-route

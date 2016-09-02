@@ -89,7 +89,7 @@
        (assoc {} :message)))
 
 (defn dispatch-annotation-history [data] ;data should be anns
-  (re-frame/dispatch [:register-history [:server-events] {:type :annotation :payload data}]))
+  (re-frame/dispatch [:register-history [:project-events] {:type :annotation :data data}]))
 
 (defmethod dispatch-annotation-handler cljs.core/PersistentArrayMap
   [{status :status

@@ -8,7 +8,7 @@
   (re-frame/dispatch [:fetch-snippet hit-id {:snippet-delta snippet-delta :dir dir}]))
 
 (defn more-button [hit-id snippet-size snippet-delta dir glyph]
-  (let [delta-state (reagent/atom snippet-delta)]
+  (let [delta-state (atom snippet-delta)]
     (fn [hit-id snippet-size snippet-delta dir glyph]
       [:div.text-center
        [:i.round-button
@@ -27,14 +27,14 @@
 
 (defn snippet-modal []
   (let [snippet-modal? (re-frame/subscribe [:modals :snippet])
-        snippet-opts (re-frame/subscribe [:session :settings :query :snippet-opts])]
+        snippet-opts (re-frame/subscribe [:settings :query :snippet-opts])]
     (fn []
       [bs/modal
        {:show (boolean @snippet-modal?)}
        [bs/modal-header
         {:closeButton true
          :onHide #(re-frame/dispatch [:close-modal :snippet])}
-        [:h4 "Snippet"]]
+        [:h4 "Snippet!"]]
        [bs/modal-body
         (let [{:keys [snippet hit-id]} @snippet-modal?
               {:keys [left match right]} snippet

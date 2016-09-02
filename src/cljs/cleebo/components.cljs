@@ -167,6 +167,13 @@
                       :text-overflow "ellipsis"}}
         text]])
 
+(defn online-dot [active]
+  (let [color (when active "rgb(66, 183, 42)")
+        style {:height "8px" :width "8px" :display "inline-block"}]
+    [bs/overlay-trigger
+     {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} "Active"])}
+     [:div {:style (assoc style :border-radius "50%" :background-color color)}]]))
+
 (defn user-profile-component
   "A component displaying basic user information. If `displayable?`, it requires an initial role,
    which is use to display an init view of the role, otherwise it presents the user as not
@@ -174,16 +181,17 @@
    user role) and component shows a button to trigger the role update (and another one to
    dismiss it)"
   [user roles & opts]
-  (fn [{:keys [avatar username firstname lastname email created last-active] :as user} roles
-       & {:keys [role on-change on-submit on-dismiss editable? displayable?]
-          :or {editable? true displayable? false}
-          :as opts}]
+  (fn [{:keys [avatar username firstname lastname email created last-active active] :as user}
+       roles & {:keys [role on-change on-submit on-dismiss editable? displayable?]
+                :or {editable? true displayable? false}
+                :as opts}]
     [:div.container-fluid
      [:div.row
       [:div.col-sm-4.col-md-4
        [:h4 [:img.img-rounded.img-responsive {:src (:href avatar)}]]]
       [:div.col-sm-8.col-md-8
-       [:h4 username [:br] [:span [:small [:cite (str firstname " " lastname)]]]]]]
+       [:h4 username [:br] [:span [:small [:cite (str firstname " " lastname)]]]]
+       (when active [online-dot active])]]
      [:div.row {:style {:padding "0 15px"}}
       [bs/table
        {:style {:table-layout "fixed"}}

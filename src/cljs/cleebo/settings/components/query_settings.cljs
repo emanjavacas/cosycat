@@ -67,7 +67,7 @@
         [dropdown-select
          {:label "Extra snippet text: "
           :header "Select number of words"
-          :options (map #(->map % %) [5 10 15 25 35])
+          :options (map #(->map % %) [5 10 25 45 75 100])
           :model @snippet-delta
           :select-fn (fn [choice]
                        (re-frame/dispatch
