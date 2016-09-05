@@ -27,7 +27,7 @@
             [cleebo.routes :as routes]
             [cleebo.localstorage :as ls]
             [cleebo.components
-             :refer [notification-container load-from-ls-modal session-message-modal
+             :refer [notification-container session-message-modal
                      user-thumb throbbing-panel]]
             [cleebo.app-utils :refer [function?]]
             [cleebo.utils :refer [nbsp format]]
@@ -182,13 +182,11 @@
   (let [active-panel (re-frame/subscribe [:active-panel])
         session-error (re-frame/subscribe [:session-has-error?])
         session-init (re-frame/subscribe [:session :init])
-        session-message-modal? (re-frame/subscribe [:modals :session-message])
-        ls-modal? (re-frame/subscribe [:modals :localstorage])]
+        session-message-modal? (re-frame/subscribe [:modals :session-message])]
     (fn []
       [:div
        [navbar active-panel]
        [notification-container]
-       [load-from-ls-modal ls-modal?]
        [session-message-modal session-message-modal?]
        [:div.container-fluid
         {:style {:padding "75px 50px 0 50px"}}
@@ -214,6 +212,6 @@
   ;; declare app routes
   (routes/app-routes)
   ;; handle refreshes
-  (.addEventListener js/window "beforeunload" ls/dump-db)
+  ;; (.addEventListener js/window "beforeunload" ls/dump-db) ;; disable this (too buggy)
   ;; render root
   (mount-root))
