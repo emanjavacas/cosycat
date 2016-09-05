@@ -21,4 +21,3 @@
 (defn bind-panel-keys [component-key]
   (unbind)
   (bind component-key))
-
