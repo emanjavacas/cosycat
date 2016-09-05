@@ -1,11 +1,19 @@
 (ns cleebo.query.components.annotation-modal
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cleebo.utils :refer [by-id ->int parse-annotation filter-dummy-tokens nbsp]]
+            [cleebo.utils :refer [by-id ->int parse-annotation filter-dummy-tokens nbsp format]]
+            [cleebo.app-utils :refer [dekeyword]]
+            [cleebo.roles :refer [check-annotation-role]]
             [cleebo.components :refer [disabled-button-tooltip]]
             [cleebo.autocomplete :refer [annotation-autocomplete]]
             [schema.core :as s]
-            [react-bootstrap.components :as bs]))
+            [react-bootstrap.components :as bs]
+            [taoensso.timbre :as timbre]))
+
+(defn notify-not-authorized [action role]
+  (let [action (dekeyword action)
+        message (format "Your project role [%] does not allow you to [%s] annotations" role action)]
+    (re-frame/dispatch [:notify {:message message}])))
 
 (defn classify-annotation
   ([anns ann-key username] (classify-annotation (get anns ann-key) username))
@@ -24,12 +32,13 @@
     (->> tokens (map :hit-id))    ;hit-ids
     (->> tokens (map :id) (mapv ->int))])) ;token-ids
 
-(defn update-annotations [ann-key new-value tokens]
-  (doseq [{hit-id :hit-id {ann ann-key} :anns} tokens
+(defn update-annotations [{:keys [key value]} tokens]
+  (doseq [{hit-id :hit-id {ann key} :anns} tokens
           :let [{:keys [_id _version]} ann]]
+    (timbre/debug ann)
     (re-frame/dispatch
      [:update-annotation
-      {:update-map {:_id _id :_version _version :value new-value :hit-id hit-id}}])))
+      {:update-map {:_id _id :_version _version :value value :hit-id hit-id}}])))
 
 (defn deselect-tokens [tokens]
   (doseq [{:keys [hit-id id]} tokens]
@@ -44,17 +53,27 @@
     (if-let [[key value] (parse-annotation (by-id "token-ann-key"))]
       (let [{:keys [empty-annotation existing-annotation-owner existing-annotation]}
             (group-tokens @marked-tokens @current-ann @me)]
-        (dispatch-annotations {:key key :value value} empty-annotation)
-        (deselect-tokens empty-annotation)
-        (update-annotations key value existing-annotation-owner)
-        (deselect-tokens existing-annotation-owner)
+        (if (and (empty? empty-annotation) (empty? existing-annotation-owner))
+          (re-frame/dispatch [:notify {:message "To be implemented"}])
+          (let [key-val {:key key :value value}]
+            (dispatch-annotations key-val empty-annotation)
+            (update-annotations key-val existing-annotation-owner)
+            (deselect-tokens empty-annotation)
+            (deselect-tokens existing-annotation-owner)))
         (swap! annotation-modal-show not)))))
+
+(defn wrap-key [key-code f]
+  (fn [e] (when (= key-code (.-charCode e))) (f)))
 
 (defn update-current-ann [current-ann]
   (fn [target]
     (let [input-data (by-id "token-ann-key")
           [_ key] (re-find #"([^=]+)=?" input-data)]
       (reset! current-ann key))))
+
+(defn deb [stuff]
+  (timbre/debug stuff)
+  stuff)
 
 (defn count-selected [marked-tokens current-ann me]
   (->> @marked-tokens
@@ -70,7 +89,7 @@
       :else danger)))
 
 (defn annotation-input [marked-tokens opts]
-  (fn [marked-tokens {:keys [annotation-modal-show current-ann me]}]
+  (fn [marked-tokens {:keys [annotation-modal-show current-ann me my-role]}]
     [:table
      {:width "100%"}
      [:tbody
@@ -82,31 +101,40 @@
           :class "form-control form-control-no-border"
           :id "token-ann-key"
           :on-change (update-current-ann current-ann)
-          :on-key-press #(when (= 13 (.-charCode %))
-                           ((trigger-dispatch
-                              {:marked-tokens marked-tokens
-                               :current-ann current-ann
-                               :me me
-                               :annotation-modal-show annotation-modal-show}) %))}]]]]]))
+          :on-key-press
+          (wrap-key 13 (trigger-dispatch
+                        {:marked-tokens marked-tokens
+                         :current-ann current-ann
+                         :me me
+                         :my-role my-role
+                         :annotation-modal-show annotation-modal-show}))}]]]]]))
 
-(defn existing-annotation-label [{username :username {val :value} :ann :as ann} me]
-  (case (classify-annotation ann me)
-    :empty-annotation (nbsp)
-    :existing-annotation-owner val
-    :existing-annotation
+(defmulti existing-annotation-label (fn [ann me] (classify-annotation ann me)))
+
+(defmethod existing-annotation-label :empty-annotation
+  [ann me]
+  [:span (nbsp)])
+
+(defmethod existing-annotation-label :existing-annotation-owner
+  [{username :username {value :value} :ann} me]
+  [:span (str value)])
+
+(defmethod existing-annotation-label :existing-annotation
+  [{username :username {value :value} :ann} me]
+  (fn [{username :username {value :value} :ann} me]
     [bs/overlay-trigger
      {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} (str "by: " username)])
       :placement "right"}
-     val]))
+     [:span (str value)]]))
 
-(defn token-counts-row [[word ann] c me]
-  (fn [[word {username :username {val :value} :ann :as ann}] c me]
+(defn token-counts-row [[word ann :as token] cnt me]
+  (fn [[word ann] cnt me]
     [:tr
      {:style {:background-color (background-color ann @me)}}
      [:td {:style {:padding-bottom "5px"}} word]
-     [:td {:style {:padding-bottom "5px"}} (existing-annotation-label ann @me)]
+     [:td {:style {:padding-bottom "5px"}} [existing-annotation-label ann @me]]
      [:td {:style {:padding-bottom "5px" :text-align "right"}}
-      [bs/label {:style {:vertical-align "-30%" :display "inline-block" :font-size "100%"}} c]]]))
+      [bs/label {:style {:vertical-align "-30%" :display "inline-block" :font-size "100%"}} cnt]]]))
 
 (defn token-counts-table [marked-tokens {:keys [current-ann me]}]
   (fn [marked-tokens {:keys [current-ann me]}]
@@ -119,18 +147,18 @@
        [:th {:style {:padding-bottom "10px" :text-align "right"}} "Count"]]]
      [:tbody
       {:style {:font-size "14px !important"}}
-      (for [[[word ann :as token] c] (count-selected marked-tokens current-ann me)]
+      (for [[[word ann :as token] cnt] (count-selected marked-tokens current-ann me)]
         ^{:key (str word (:username ann) "pop")}
-        [token-counts-row token c me])]]))
+        [token-counts-row token cnt me])]]))
 
-(defn annotation-modal [annotation-modal-show marked-tokens]
+(defn annotation-modal [annotation-modal-show marked-tokens current-ann]
   (let [me (re-frame/subscribe [:me :username])
-        current-ann (reagent/atom "")]
-    (fn [annotation-modal-show marked-tokens]
+        my-role (re-frame/subscribe [:active-project-role])]
+    (fn [annotation-modal-show marked-tokens current-ann]
       [bs/modal
        {:class "large"
         :show @annotation-modal-show
-        :on-hide #(do (swap! annotation-modal-show not) (reset! current-ann ""))}
+        :on-hide #(do (reset! current-ann "") (swap! annotation-modal-show not))}
        [bs/modal-header
         {:closeButton true}
         [bs/modal-title
@@ -139,13 +167,13 @@
        [bs/modal-body
         [:div.container-fluid
          [:div.row
-          ^{:key "ann-table"}
           [annotation-input marked-tokens
            {:annotation-modal-show annotation-modal-show
             :me me
+            :my-role my-role
             :current-ann current-ann}]
           [:hr]
-          ^{:key "cnt-table"} [token-counts-table marked-tokens {:current-ann current-ann :me me}]]]]
+          [token-counts-table marked-tokens {:current-ann current-ann :me me}]]]]
        [bs/modal-footer
         [bs/button
          {:className "pull-right"
@@ -154,22 +182,23 @@
                     {:marked-tokens marked-tokens
                      :current-ann current-ann
                      :me me
+                     :my-role my-role
                      :annotation-modal-show annotation-modal-show})}
          "Submit"]]])))
 
 (defn annotation-modal-button []
   (let [marked-tokens (re-frame/subscribe [:marked-tokens])
+        current-ann (reagent/atom "")
         show? (reagent/atom false)]
     (fn []
       (let [disabled? (fn [marked-tokens] (zero? (count @marked-tokens)))]
-        [bs/overlay-trigger
-         {:overlay (disabled-button-tooltip #(disabled? marked-tokens) "No tokens selected!")
-          :placement "bottom"}
-         [bs/button
-          {:bsStyle "primary"
-           :style {:opacity (if (disabled? marked-tokens)  0.65 1)
-                   :cursor (if (disabled? marked-tokens) "auto" "auto")
-                   :height "34px"}
-           :onClick #(when-not (disabled? marked-tokens) (swap! show? not))}
-          [:div [:i.zmdi.zmdi-edit]
-           [annotation-modal show? marked-tokens]]]]))))
+        [bs/button
+         {:bsStyle "primary"
+          :style {:opacity (if (disabled? marked-tokens)  0.65 1)
+                  :cursor (if (disabled? marked-tokens) "auto" "auto")
+                  :height "34px"}
+          :onClick #(when-not (disabled? marked-tokens)
+                      (do (reset! current-ann "")
+                          (swap! show? not)))}
+         [:div [:i.zmdi.zmdi-edit]
+          [annotation-modal show? marked-tokens current-ann]]]))))
