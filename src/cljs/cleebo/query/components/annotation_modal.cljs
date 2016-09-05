@@ -12,7 +12,7 @@
 
 (defn notify-not-authorized [action role]
   (let [action (dekeyword action)
-        message (format "Your project role [%] does not allow you to [%s] annotations" role action)]
+        message (format "Your project role [%s] does not allow you to [%s] annotations" role action)]
     (re-frame/dispatch [:notify {:message message}])))
 
 (defn classify-annotation
@@ -48,19 +48,20 @@
        :token-id id}])))
 
 (defn trigger-dispatch
-  [{:keys [marked-tokens annotation-modal-show current-ann me]}]
-  (fn [e]
-    (if-let [[key value] (parse-annotation (by-id "token-ann-key"))]
-      (let [{:keys [empty-annotation existing-annotation-owner existing-annotation]}
-            (group-tokens @marked-tokens @current-ann @me)]
-        (if (and (empty? empty-annotation) (empty? existing-annotation-owner))
-          (re-frame/dispatch [:notify {:message "To be implemented"}])
-          (let [key-val {:key key :value value}]
-            (dispatch-annotations key-val empty-annotation)
-            (update-annotations key-val existing-annotation-owner)
-            (deselect-tokens empty-annotation)
-            (deselect-tokens existing-annotation-owner)))
-        (swap! annotation-modal-show not)))))
+  [action {:keys [marked-tokens annotation-modal-show current-ann me my-role]}]
+  (if-let [[key value] (parse-annotation (by-id "token-ann-key"))]
+    (let [{:keys [empty-annotation existing-annotation-owner existing-annotation]}
+          (group-tokens @marked-tokens @current-ann @me)]
+      (cond (not (check-annotation-role action @my-role))
+            (notify-not-authorized action @my-role)
+            (and (empty? empty-annotation) (empty? existing-annotation-owner))
+            (re-frame/dispatch [:notify {:message "To be implemented"}])
+            :else (let [key-val {:key key :value value}]
+                    (dispatch-annotations key-val empty-annotation)
+                    (update-annotations key-val existing-annotation-owner)
+                    (deselect-tokens empty-annotation)
+                    (deselect-tokens existing-annotation-owner)))
+      (swap! annotation-modal-show not))))
 
 (defn wrap-key [key-code f]
   (fn [e] (when (= key-code (.-charCode e))) (f)))
@@ -70,10 +71,6 @@
     (let [input-data (by-id "token-ann-key")
           [_ key] (re-find #"([^=]+)=?" input-data)]
       (reset! current-ann key))))
-
-(defn deb [stuff]
-  (timbre/debug stuff)
-  stuff)
 
 (defn count-selected [marked-tokens current-ann me]
   (->> @marked-tokens
@@ -102,12 +99,13 @@
           :id "token-ann-key"
           :on-change (update-current-ann current-ann)
           :on-key-press
-          (wrap-key 13 (trigger-dispatch
-                        {:marked-tokens marked-tokens
-                         :current-ann current-ann
-                         :me me
-                         :my-role my-role
-                         :annotation-modal-show annotation-modal-show}))}]]]]]))
+          (wrap-key 13 #(trigger-dispatch
+                         :write
+                         {:marked-tokens marked-tokens
+                          :current-ann current-ann
+                          :me me
+                          :my-role my-role
+                          :annotation-modal-show annotation-modal-show}))}]]]]]))
 
 (defmulti existing-annotation-label (fn [ann me] (classify-annotation ann me)))
 
@@ -178,12 +176,14 @@
         [bs/button
          {:className "pull-right"
           :bsStyle "info"
-          :onClick (trigger-dispatch
-                    {:marked-tokens marked-tokens
-                     :current-ann current-ann
-                     :me me
-                     :my-role my-role
-                     :annotation-modal-show annotation-modal-show})}
+          :onClick
+          #(trigger-dispatch
+            :write
+            {:marked-tokens marked-tokens
+             :current-ann current-ann
+             :me me
+             :my-role my-role
+             :annotation-modal-show annotation-modal-show})}
          "Submit"]]])))
 
 (defn annotation-modal-button []
