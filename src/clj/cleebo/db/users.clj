@@ -26,7 +26,7 @@
 (defn is-user?
   [{db-conn :db :as db} {:keys [username email]}]
   (some-> (mc/find-one-as-map db-conn (:users colls) {$or [{:username username} {:email email}]})
-          normalize-user))
+          (normalize-user :settings)))
 
 (defn- check-user-exists
   "user check. returns nil or ex-info (in case a exception has to be thrown)"
@@ -47,14 +47,17 @@
   "insert user into db"
   [{db-conn :db :as db} user]
   (check-user-exists db user)
-  (-> (mc/insert-and-return db-conn (:users colls) (create-new-user user)) normalize-user))
+  (-> (mc/insert-and-return db-conn (:users colls) (create-new-user user))
+      (normalize-user :settings)))
 
 (defn lookup-user
   "user authentication logic"
   [{db-conn :db :as db} {:keys [username email password] :as user}]
-  (if-let [db-user (mc/find-one-as-map db-conn (:users colls) {$or [{:username username} {:email email}]})]
+  (if-let [db-user (mc/find-one-as-map
+                    db-conn (:users colls)
+                    {$or [{:username username} {:email email}]})]
     (if (hashers/check password (:password db-user))
-      (-> db-user normalize-user))))
+      (-> db-user (normalize-user :settings)))))
 
 (defn remove-user
   "remove user from database"           ;TODO: remove all info related to user
