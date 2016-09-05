@@ -25,14 +25,14 @@
    })
 
 (def annotation-roles
-  "a map from project-related actions to required roles"
+  "a map from annotation actions to required roles"
   {:delete #{"creator"}
    :update #{"creator" "project-lead"}
    :write  #{"creator" "project-lead" "user"}
    :read   #{"creator" "project-lead" "user" "guest"}});retrieve project
 
 (defn check-role [roles-map action role]
-  (boolean (some #{role} (get project-roles action))))
+  (boolean (some #{role} (get roles-map action))))
 
 (defn check-project-role [action role]
   (check-role project-roles action role))
