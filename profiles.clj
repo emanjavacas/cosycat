@@ -3,7 +3,7 @@
        :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]}}}
        :env {:host "localhost"
              :pass "pass"
-             :database-url "mongodb://127.0.0.1:27017/cleeboDev"
+             :database-url "mongodb://127.0.0.1:27017/cosycatDev"
              :port 3000
              :session-expires 900       ;in minutes
              :corpora
@@ -19,8 +19,8 @@
                       :web-service "blacklab-server-1.4-SNAPSHOT"}}
               {:name "mbg-small-local"
                :type :blacklab
-               :args {:path "/home/enrique/cleebo-dep/indices/blacklab/mbg-index-small/"}}]}}
- :test {:env {:database-url "mongodb://127.0.0.1:27017/cleeboTest"
+               :args {:path "/home/enrique/cosycat-dep/indices/blacklab/mbg-index-small/"}}]}}
+ :test {:env {:database-url "mongodb://127.0.0.1:27017/cosycatTest"
               :pass "pass"
               :corpora
               [{:name "mbg-small"
@@ -30,11 +30,11 @@
                        :web-service "blacklab-server-1.4-SNAPSHOT"}}
                {:name "mbg-small-local"
                 :type :blacklab
-                :args {:path "/home/enrique/cleebo-dep/indices/blacklab/mbg-index-small/"}}]}}
+                :args {:path "/home/enrique/cosycat-dep/indices/blacklab/mbg-index-small/"}}]}}
  :uberjar {:source-paths ["env/prod/clj"]
            :hooks [leiningen.cljsbuild]
            :prep-tasks ["compile" ["cljsbuild" "once"]]
-           :env {:database-url "mongodb://127.0.0.1:27017/cleebo"
+           :env {:database-url "mongodb://127.0.0.1:27017/cosycat"
                  :pass "pass"
                  :port 3000
                  :session-expires 90}

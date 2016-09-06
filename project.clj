@@ -1,4 +1,4 @@
-(defproject cleebo "0.1.0-SNAPSHOT"
+(defproject cosycat "0.1.0-SNAPSHOT"
   :description "Corpus query interface plus annotations"
   :license {:name "GNU v3.0"}  
   :dependencies [[org.clojure/clojure "1.8.0"]
@@ -42,7 +42,7 @@
   
   :repositories [["hackrslab-repository" "http://hackrslab.github.io/maven-repo"]]
 
-  :main cleebo.main
+  :main cosycat.main
   
   :jvm-opts ["-Xmx4000M" "-Djava.awt.headless=true"]
   
@@ -60,13 +60,13 @@
 
   :min-lein-version "2.5.0"
 
-  :uberjar-name "cleebo-prod.jar"
+  :uberjar-name "cosycat-prod.jar"
 
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
 
   :cljsbuild {:builds
               {:app {:source-paths ["src/cljs" "src/cljc" "src/clj"]
-                     :compiler {:main "cleebo.main"
+                     :compiler {:main "cosycat.main"
                                 :output-to "resources/public/js/compiled/app.js"
                                 :output-dir "resources/public/js/compiled/out"
                                 :asset-path "js/compiled/out"
