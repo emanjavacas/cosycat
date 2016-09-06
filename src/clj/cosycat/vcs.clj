@@ -166,7 +166,6 @@
   (fn wrapped-func
     ([db coll version conditions-or-id document] (wrapped-func db coll version conditions-or-id document {}))
     ([db coll version {:keys [_id] :as conditions-or-id} document {:keys [multi upsert remove] :as opts}]
-     (timbre/info opts)
      (assert-ex-info (not multi) ":multi is not allowed" {:message :multi-not-allowed :data opts})
      (assert-ex-info (not upsert) ":upsert is not allowed" {:message :upsert-not-allowed :data opts})
      (assert-ex-info (not remove) ":remove is not allowed" {:message :remove-not-allowed :data opts})

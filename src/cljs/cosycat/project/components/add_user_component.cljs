@@ -9,6 +9,9 @@
             [cosycat.app-utils :refer [ceil pending-users]]
             [taoensso.timbre :as timbre]))
 
+(defn remove-project-users [users project-users]
+  (remove #(contains? (apply hash-set (map :username project-users)) (:username %)) users))
+
 (defn add-user-btn [username-input-show]
   (fn [username-input-show]
     [:div.container-fluid
@@ -18,9 +21,6 @@
        [bs/button {:bsSize "large" :onClick #(swap! username-input-show not)}
         [:h4 [:img.img-rounded.img-responsive {:src "img/add_user_icon2.png"}]]]]
       [:div.col-sm-4.col-md-4]]]))
-
-(defn remove-project-users [users project-users]
-  (remove #(contains? (apply hash-set (map :username project-users)) (:username %)) users))
 
 (defn on-user-select [users selected-user-atom]
   (fn [target]

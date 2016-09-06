@@ -149,7 +149,7 @@
       (throw (ex-rights username :delete role)))
     (let [payload (delete-payload username)
           {:keys [updates users] :as project} (update-project db username project-name payload)
-          {:keys [pending non-app agreed-users] :as m} (pending-users project)]
+          {:keys [pending non-app agreed-users]} (pending-users project)]
       (if (empty? pending)
         (erase-project db project-name (:users project))
         payload))))
