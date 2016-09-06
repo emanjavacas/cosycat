@@ -64,7 +64,8 @@
     (testing "retrieves project"
       (is (not (empty? projects))))
     (testing "user roles are alright"
-      (let [{users :users} (proj/get-project db creator project-name)]
+      (let [{users :users :as project} (proj/get-project db creator project-name)]
+        (println "project!" project)
         (is (= (apply hash-set users) (apply hash-set check-roles)))))
     (testing "users not in project can't see project"
       (is (= (try (proj/get-project db "a random name!" project-name)
@@ -84,7 +85,8 @@
                  :message)
              :not-authorized)))
     (testing "remove-project adds username to updates type delete-project-agree"
-      (let [{:keys [updates] :as project} (proj/remove-project db "howdy" project-name)]
+      (let [_ (proj/remove-project db "howdy" project-name)
+            {:keys [updates] :as project} (proj/get-project db "howdy" project-name)]
         (is (not (empty? updates)))
         (is (some #{"howdy"} (->> updates (filter #(= "delete-project-agree" (:type %))) (map :username))))))
     (testing "project is not yet removed"

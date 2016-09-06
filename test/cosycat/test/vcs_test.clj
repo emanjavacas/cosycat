@@ -6,9 +6,7 @@
             [monger.operators :refer :all]
             [cosycat.vcs :as vcs]
             [cosycat.test.test-config :refer [db-fixture db]]
-            [config.core :refer [env]]
-            [com.stuartsierra.component :as component]
-            [cosycat.components.db :refer [new-db colls clear-dbs]]))
+            [com.stuartsierra.component :as component]))
 
 (def coll "test")
 (def data {:id 1234567890 :ann {:key "animacy" :value "true"}
