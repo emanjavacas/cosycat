@@ -17,9 +17,11 @@
                :args {:index "brown-tei"
                       :server "mbgserver.uantwerpen.be:8080"
                       :web-service "blacklab-server-1.4-SNAPSHOT"}}
-              {:name "mbg-small-local"
-               :type :blacklab
-               :args {:path "/home/enrique/cosycat-dep/indices/blacklab/mbg-index-small/"}}]}}
+              {:name "mbg-index"
+               :type :blacklab-server
+               :args {:index "mbg-index"
+                      :server "mbgserver.uantwerpen.be:8080"
+                      :web-service "blacklab-server-1.4-SNAPSHOT"}}]}}
  :test {:env {:database-url "mongodb://127.0.0.1:27017/cosycatTest"
               :pass "pass"
               :corpora
@@ -27,10 +29,7 @@
                 :type :blacklab-server
                 :args {:index "mbg-index-small"
                        :server "mbgserver.uantwerpen.be:8080"
-                       :web-service "blacklab-server-1.4-SNAPSHOT"}}
-               {:name "mbg-small-local"
-                :type :blacklab
-                :args {:path "/home/enrique/cosycat-dep/indices/blacklab/mbg-index-small/"}}]}}
+                       :web-service "blacklab-server-1.4-SNAPSHOT"}}]}}
  :uberjar {:source-paths ["env/prod/clj"]
            :hooks [leiningen.cljsbuild]
            :prep-tasks ["compile" ["cljsbuild" "once"]]
