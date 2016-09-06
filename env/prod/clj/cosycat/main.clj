@@ -2,7 +2,7 @@
      (:require [com.stuartsierra.component :as component]
                [clojure.tools.namespace.repl :refer [refresh refresh-all]]
                [cosycat.utils :refer [prn-format delete-directory]]
-               [cosycat.env :refer [clear-dbs]]
+               [cosycat.db-utils :refer [clear-dbs]]
                [cosycat.components.http-server :refer [new-http-server]]
                [cosycat.components.db :refer [new-db colls]]
                [cosycat.components.blacklab :refer [new-bl paths-map-from-corpora]]
