@@ -43,8 +43,10 @@
   (fn [hit open-hits]
     [bs/table
      {:id "table-annotation"
-      :responsive true
-      :style {:width "99%"}}
+      :style {:border-collapse "collapse"
+              :border "1px"
+              :border-style "inset"}
+      :responsive true}
      [:thead]
      (into
       [:tbody]

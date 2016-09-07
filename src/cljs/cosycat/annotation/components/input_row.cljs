@@ -7,7 +7,8 @@
             [cosycat.autocomplete :refer [annotation-autocomplete]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
-(def border "1px solid darkgray")
+(def border-style
+  {:border "1px solid darkgray"})
 
 (defn assoc-metadata! [metadata & bindings]
   (doseq [[key val] (partition 2 bindings)]
@@ -69,7 +70,7 @@
 
 (defn visible-input-cell [hit-id token-id chans metadata]
   (fn [hit-id token-id chans metadata]
-    [:td {:style {:padding "0px" :border border}
+    [:td {:style (merge {:padding "0px"} border-style)
           :colSpan (count @chans)
           :on-mouse-down #(input-mouse-down metadata (get @chans token-id))
           :on-mouse-enter #(input-mouse-over token-id metadata chans)
@@ -89,8 +90,7 @@
   (let [metadata {:mouse-down (reagent/atom false) :source (reagent/atom nil)}]
     (fn [{hit :hit hit-id :id meta :meta}]
       (into [:tr
-             {:style {:width "100%"}
-              :on-mouse-leave #(reset-metadata! metadata)
+             {:on-mouse-leave #(reset-metadata! metadata)
               :on-mouse-up #(reset-metadata! metadata)}]
             (-> (for [{token-id :id word :word match :match} (filter-dummy-tokens hit)]
                   ^{:key (str hit-id "-" token-id)}
