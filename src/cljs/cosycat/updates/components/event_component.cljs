@@ -46,8 +46,8 @@
 (defmulti event-component (fn [{event-type :type}] event-type))
 
 (defmethod event-component :annotation
-  [{{:keys [anns project hit-id]} :payload event-type :type timestamp :received}]
-  (fn [{{:keys [anns project hit-id]} :payload event-type :type timestamp :received}]
+  [{{:keys [anns project hit-id]} :data event-type :type timestamp :received}]
+  (fn [{{:keys [anns project hit-id]} :data event-type :type timestamp :received}]
     (let [[ann-key {:keys [_version username] :as ann-data}] (extract-ann-data anns)]
       [event-item {:header-text (dekeyword event-type)
                    :source-user username
@@ -55,11 +55,11 @@
                    :timestamp timestamp}])))
 
 (defmethod event-component :default
-  [{payload :payload event-type :type timestamp :received}]
-  (fn [{payload :payload event-type :type timestamp :received}]
+  [{data :data event-type :type timestamp :received}]
+  (fn [{data :data event-type :type timestamp :received}]
     [event-item {:header-text (dekeyword event-type)
                  :source-user ""
-                 :event-text (str payload)
+                 :event-text (str data)
                  :timestamp timestamp}]))
 
 

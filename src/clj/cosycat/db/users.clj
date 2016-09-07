@@ -10,7 +10,7 @@
 
 (defn- ex-user-exists
   "returns a exception to be thrown in case user exists"
-  ([data] (ex-info "User already exist" {:message :user-exists :data data}))
+  ([data] (ex-info "User already exist" {:code :user-exists :data data}))
   ([{old-name :username old-email :email} {new-name :username new-email :email}]
    (cond
      (and (= new-name old-name) (= new-email old-email)) (ex-user-exists [:username :email])

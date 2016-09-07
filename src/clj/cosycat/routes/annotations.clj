@@ -121,7 +121,7 @@
 (defn annotation-routes []
   (routes
    (context "/annotation" []
-            (POST "/new"  [] (make-safe-route insert-annotation-handler))
-            (POST "/update" [] (make-safe-route update-annotation-handler))
-            (GET "/range" [] (make-default-route fetch-annotation-range-handler))
-            (GET "/page" [] (make-default-route fetch-annotation-page-handler)))))
+    (POST "/new"  [] (make-safe-route insert-annotation-handler))
+    (POST "/update" [] (make-safe-route update-annotation-handler))
+    (GET "/range" [] (make-default-route fetch-annotation-range-handler))
+    (GET "/page" [] (make-default-route fetch-annotation-page-handler)))))

@@ -12,21 +12,22 @@
             [taoensso.timbre :as timbre]))
 
 (defn ex-user [username]
-  (ex-info "User doesn't exist" {:message "User doesn't exist" :data {:username username}}))
+  (ex-info "User doesn't exist" {:code :missing-user :data {:username username}}))
 
 (defn ex-project [project-name]
-  (ex-info "Project already exist" {:message "Project already exist" :data {:project project-name}}))
+  (ex-info "Project already exist" {:code :project-exists :data {:project project-name}}))
 
 (defn ex-non-existing-project [project-name]
-  (ex-info "Project doesn't exist" {:message "Project doesn't exist" :data {:project project-name}}))
+  (ex-info "Project doesn't exist" {:code :missing-project  :data {:project project-name}}))
 
 (defn ex-user-project [username project-name]
-  (ex-info "User is not in project" {:message "User is not in project"
-                                     :data {:username username :project project-name}}))
+  (ex-info "User is not in project"
+           {:code :user-not-in-project
+            :data {:username username :project project-name}}))
 
 (defn ex-rights [username action role]
   (ex-info (str username " doesn't have sufficient rights")
-           {:message (str username " doesn't have sufficient rights")
+           {:code :not-authorized
             :data {:username username :action action :role role}}))
 
 (defn normalize-project [project]
@@ -153,3 +154,17 @@
       (if (empty? pending)
         (erase-project db project-name (:users project))
         payload))))
+
+(defn update-user-role [{db-conn :db :as db} issuer project-name username new-role]
+  (let [project (find-project-by-name db project-name)
+        role (get-user-role db project-name issuer)]
+    (when-not role
+      (throw (ex-user username)))
+    (when-not (check-project-role :write role)
+      (throw (ex-rights issuer :write role)))
+    (-> (mc/find-and-modify
+         db-conn (:projects colls)
+         {"users.username" username}
+         {$set {"users.$.role" new-role}}
+         {:return-new true})
+        normalize-project)))

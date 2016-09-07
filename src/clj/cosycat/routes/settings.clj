@@ -35,7 +35,7 @@
 (defn settings-routes []
   (routes
    (context "/settings" []
-            (GET "/settings" [] (make-default-route user-settings-route))
-            (POST "/new-avatar" [] (make-default-route new-avatar-route))
-            (POST "/save-settings" [] (make-default-route save-settings-route))
-            (POST "/save-project-settings" [] (make-default-route save-project-settings-route)))))
+    (GET "/settings" [] (make-default-route user-settings-route))
+    (POST "/new-avatar" [] (make-default-route new-avatar-route))
+    (POST "/save-settings" [] (make-default-route save-settings-route))
+    (POST "/save-project-settings" [] (make-default-route save-project-settings-route)))))

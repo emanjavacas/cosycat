@@ -30,6 +30,7 @@
       [user-profile-component @user project-user-roles
        :role project-role
        ;; :on-submit TODO: send edit to project
+       :on-submit #(.log js/console % %2)
        :displayable? true
        :editable? (can-edit-role? my-role project-role)])))
 
@@ -38,10 +39,7 @@
    :background-color "#eff7fa"})
 
 (defn col-class [users-per-row]
-  ;format
-  "col-lg-6.col-sm-6.col-md-6"
-                                        ;(int (ceil (/ 12 users-per-row)))
-  )
+  "col-lg-6.col-sm-6.col-md-6")
 
 (defn project-users [users my-role]
   (let [me (re-frame/subscribe [:me :username])]
