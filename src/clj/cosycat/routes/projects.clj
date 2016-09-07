@@ -70,11 +70,22 @@
        :source-client username
        :target-clients (mapv :username (:users project))))))
 
+(defn update-user-role
+  [{{project-name :project-name target-username :username new-role :new-role} :params
+    {{username :username} :identity} :session
+    {db :db ws :ws} :components}]
+  (let [{users :users} (proj/update-user-role db username project-name target-username role)]
+    (send-clients ws {:type :new-user-role :data users}
+     :source-client username
+     :target-clients (mapv :username users))
+    users))
+
 (defn project-routes []
   (routes
    (context "/project" []
-            (POST "/new" [] (make-default-route new-project-route))
-            (POST "/update" [] (make-default-route update-project-route))
-            (POST "/add-user" [] (make-default-route add-user-route))
-            (POST "/remove-user" [] (make-default-route remove-user-route))
-            (POST "/remove-project" [] (make-default-route remove-project-route)))))
+    (POST "/new" [] (make-default-route new-project-route))
+    (POST "/update" [] (make-default-route update-project-route))
+    (POST "/add-user" [] (make-default-route add-user-route))
+    (POST "/remove-user" [] (make-default-route remove-user-route))
+    (POST "/remove-project" [] (make-default-route remove-project-route))
+    (POST "/update-user-role" [] (make-default-route update-user-role)))))

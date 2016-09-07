@@ -23,6 +23,12 @@
    projects))
 
 (re-frame/register-handler
+ :update-project-data
+ standard-middleware
+ (fn [db [project-name path value]]
+   (assoc-in db (into [:projects project-name] path) value)))
+
+(re-frame/register-handler
  :remove-active-project
  standard-middleware
  (fn [db _]
@@ -53,7 +59,7 @@
   (re-frame/dispatch [:notify {:message message :meta data :status :error}]))
 
 (defn new-project-handler [{project-name :name :as project}]
-  (re-frame/dispatch [:register-history [:general-events] {:type :new-project :data project}])
+  (re-frame/dispatch [:register-history [:app-events] {:type :new-project :data project}])
   (re-frame/dispatch [:add-project project])
   (nav! (str "/project/" project-name)))
 
@@ -139,7 +145,7 @@
       (do (re-frame/dispatch
            [:remove-project project-name])
           (re-frame/dispatch
-           [:register-history [:general-events] {:type :remove-project :data project-name}])
+           [:register-history [:app-events] {:type :remove-project :data project-name}])
           (re-frame/dispatch
            [:notify {:message (str "Project " project-name " was successfully deleted")}])
           (nav! "/"))
@@ -159,3 +165,18 @@
           :handler (remove-project-handler (get-in db [:projects project-name]))
           :error-handler error-handler})
    db))
+
+(defn handle-new-user-role [project-name]
+  (fn [users]
+    (re-frame/dispatch [:update-project-data project-name [:users] users])))
+
+(re-frame/register-handler
+ :update-user-role
+ (fn [db [_ {:keys [username new-role]}]]
+   (let [project-name (get-in db [:session :active-project])]
+     (POST "/project/update-user-role"
+           {:params {:project-name project-name
+                     :username username
+                     :new-role new-role}
+            :handler (handle-new-user-role project-name)
+            :error-handler error-handler}))))

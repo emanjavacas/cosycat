@@ -60,7 +60,7 @@
 (use-fixtures :once db-fixture project-fixture)
 
 (deftest project-test
-  (let [projects (proj/get-projects db creator)]
+  (let [projects (proj/get-projects db "hello")]
     (testing "retrieves project"
       (is (not (empty? projects))))
     (testing "user roles are alright"
@@ -70,7 +70,7 @@
     (testing "users not in project can't see project"
       (is (= (try (proj/get-project db "a random name!" project-name)
                   (catch clojure.lang.ExceptionInfo e
-                    (:message (ex-data e))))
+                    (:code (ex-data e))))
              :user-not-in-project)))))
 
 (deftest remove-project-test
@@ -82,7 +82,7 @@
       (is (= (-> (try (proj/remove-project db "hello" project-name)
                       (catch clojure.lang.ExceptionInfo e
                         (ex-data e)))
-                 :message)
+                 :code)
              :not-authorized)))
     (testing "remove-project adds username to updates type delete-project-agree"
       (let [_ (proj/remove-project db "howdy" project-name)
@@ -101,3 +101,15 @@
       (let [hist (mc/find-maps (:db db) vcs/*hist-coll-name* {})]
         (is (not (empty? hist)))
         (is (every? :_remove hist))))))
+
+(deftest update-user-role-test
+  (testing "authorized user new role"
+    (let [{users :users :as project} (proj/update-user-role db creator project-name "hello" "user")
+          new-role (->> users (filter #(= "hello" (:username %))) first :role)]
+      (is (= new-role "user"))))
+  (testing "unauthorized update"
+    (is (= (-> (try (proj/update-user-role db "hello" project-name creator "guest")
+                    (catch clojure.lang.ExceptionInfo e
+                      (ex-data e)))
+               :code)
+           :not-authorized))))
