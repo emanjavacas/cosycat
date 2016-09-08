@@ -64,7 +64,7 @@
       (swap! annotation-modal-show not))))
 
 (defn wrap-key [key-code f]
-  (fn [e] (when (= key-code (.-charCode e))) (f)))
+  (fn [e] (when (= key-code (.-charCode e)) (f))))
 
 (defn update-current-ann [current-ann]
   (fn [target]
@@ -195,7 +195,7 @@
         [bs/button
          {:bsStyle "primary"
           :style {:opacity (if (disabled? marked-tokens)  0.65 1)
-                  :cursor (if (disabled? marked-tokens) "auto" "auto")
+                  :cursor (if (disabled? marked-tokens) "auto" "pointer")
                   :height "34px"}
           :onClick #(when-not (disabled? marked-tokens)
                       (do (reset! current-ann "")
