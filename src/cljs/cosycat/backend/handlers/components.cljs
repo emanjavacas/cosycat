@@ -75,6 +75,20 @@
      (assoc-in db path v))))
 
 (re-frame/register-handler
+ :swap-panels
+ standard-middleware
+ (fn [db _]
+   (let [active-project (get-in db [:session :active-project])
+         path [:projects active-project :session :components]
+         is-open (get-in db (into path [:panel-open "query-frame"]))
+         should-open (if is-open "annotation-panel" "query-frame")
+         other-panel (if (= should-open "query-frame") "annotation-panel" "query-frame")]
+     (-> db
+         (assoc-in (into path [:panel-open should-open]) true)
+         (assoc-in (into path [:panel-open other-panel]) false)
+         (update-in (into path [:panel-order]) ensure-first should-open)))))
+
+(re-frame/register-handler
  :open-hit
  standard-middleware
  (fn [db [_ hit-id]]

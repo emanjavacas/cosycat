@@ -13,9 +13,7 @@
        [bs/button-toolbar
         (let [other-panel (if (= id "query-frame") "annotation-panel" "query-frame")
               dir (if @open :bottom :top)]
-          [bs/button {:onClick #(do (re-frame/dispatch [:panel-order id dir])
-                                    (re-frame/dispatch [:panel-open id (not @open)])
-                                    (re-frame/dispatch [:panel-open other-panel @open]))}
+          [bs/button {:onClick #(re-frame/dispatch [:swap-panels])}
            [bs/glyphicon {:glyph "sort"}]])]]
       (if @open [open-header] [closed-header])]]))
 
