@@ -8,7 +8,10 @@
                   :fn #(re-frame/dispatch [:query-range :next])}
                  {:key-stroke "shift-p"
                   :event-key :prev
-                  :fn #(re-frame/dispatch [:query-range :prev])}]})
+                  :fn #(re-frame/dispatch [:query-range :prev])}
+                 {:key-stroke "shift-s"
+                  :event-key :swap-panels
+                  :fn #(re-frame/dispatch [:swap-panels])}]})
 
 (defn unbind []
   (doseq [{:keys [key-stroke event-key]} (flatten (vals key-bindings))]
