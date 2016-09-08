@@ -74,7 +74,7 @@
   [{{project-name :project-name target-username :username new-role :new-role} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [{users :users} (proj/update-user-role db username project-name target-username role)]
+  (let [{users :users} (proj/update-user-role db username project-name target-username new-role)]
     (send-clients ws {:type :new-user-role :data users}
      :source-client username
      :target-clients (mapv :username users))
