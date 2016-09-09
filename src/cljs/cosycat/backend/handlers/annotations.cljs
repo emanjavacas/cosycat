@@ -68,7 +68,7 @@
          corpus (get-in db [:projects project :session :query :results-summary :corpus])]
      (re-frame/dispatch [:start-throbbing :fetch-annotations])
      (doseq [[i sub-page-margins] (map-indexed vector (partition-all 35 page-margins))
-             :let [is-last (is-last-partition) (>= (* 35 (inc i)) (count page-margins))]]
+             :let [is-last (is-last-partition)]]
        (GET "/annotation/page"
             {:params {:page-margins sub-page-margins :project project :corpus corpus}
              :processData false
