@@ -3,7 +3,7 @@
             [schema.core :as s]
             [ajax.core :refer [POST GET]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
-            [cosycat.app-utils :refer [deep-merge]]
+            [cosycat.app-utils :refer [deep-merge is-last-partition]]
             [cosycat.utils :refer [->int format get-msg get-token-id]]
             [cosycat.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))
@@ -49,6 +49,17 @@
  standard-middleware
  (fn [db [_ map-or-maps]] (add-annotations db map-or-maps)))
 
+(defn fetch-annotation-handler [& {:keys [is-last]}]
+  (fn [ann]
+    (re-frame/dispatch [:add-annotation ann])
+    (when is-last
+      (re-frame/dispatch [:stop-throbbing :fetch-annotations]))))
+
+(defn fetch-annotation-error-handler []
+  (fn [data]
+    (re-frame/dispatch [:stop-throbbing :fetch-annotations])
+    (timbre/info "Couldn't fetch anns" data)))
+
 (re-frame/register-handler
  :fetch-annotations
  standard-middleware
@@ -56,12 +67,13 @@
    (let [project (get-in db [:session :active-project])
          corpus (get-in db [:projects project :session :query :results-summary :corpus])]
      (re-frame/dispatch [:start-throbbing :fetch-annotations])
-     (GET "/annotation/page"
-          {:params {:page-margins page-margins :project project :corpus corpus}
-           :handler #(do (re-frame/dispatch [:add-annotation %])
-                         (re-frame/dispatch [:stop-throbbing :fetch-annotations]))
-           :error-handler #(do (re-frame/dispatch [:stop-throbbing :fetch-annotations])
-                               (timbre/info "Couldn't fetch anns" %))}))
+     (doseq [[i sub-page-margins] (map-indexed vector (partition-all 35 page-margins))
+             :let [is-last (is-last-partition) (>= (* 35 (inc i)) (count page-margins))]]
+       (GET "/annotation/page"
+            {:params {:page-margins sub-page-margins :project project :corpus corpus}
+             :processData false
+             :handler (fetch-annotation-handler :is-last is-last)
+             :error-handler (fetch-annotation-error-handler)})))
    db))
 
 ;;; Outgoing annotations

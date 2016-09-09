@@ -80,6 +80,13 @@
               item))]
     (if (vector? coll) (vec s) s)))
 
+(defn is-last-partition
+  "given a partitioned collection of len `length` compute whether 
+  partition at idx `partition-idx` is the last if the collection 
+  was partitioned in `partition-size` partitions"
+  [length partition-size partition-idx]
+  (>= (* partition-size (inc partition-idx)) length))
+
 (defn atom? [o] (instance? #?(:clj clojure.lang.Atom :cljs cljs.core/Atom) o))
 
 (defn function? [o] #?(:clj clojure.test/function? :cljs (= (type inc) (type o))))
