@@ -42,7 +42,8 @@
       (recur))))
 
 (defn handle-span-dispatch [ann-map hit-id token-ids]
-  (let [from (apply min token-ids)
+  (let [token-ids (map #(-> (parse-token %) :id) token-ids)
+        from (apply min token-ids)
         to (apply max token-ids)]
     (re-frame/dispatch [:dispatch-annotation ann-map hit-id from to])))
 
