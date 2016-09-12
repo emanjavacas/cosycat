@@ -65,10 +65,12 @@
  standard-middleware
  (fn [db [_ {:keys [page-margins]}]]
    (let [project (get-in db [:session :active-project])
-         corpus (get-in db [:projects project :session :query :results-summary :corpus])]
+         corpus (get-in db [:projects project :session :query :results-summary :corpus])
+         margins (count page-margins)
+         partition-size 35]
      (re-frame/dispatch [:start-throbbing :fetch-annotations])
-     (doseq [[i sub-page-margins] (map-indexed vector (partition-all 35 page-margins))
-             :let [is-last (is-last-partition)]]
+     (doseq [[i sub-page-margins] (map-indexed vector (partition-all partition-size page-margins))
+             :let [is-last (is-last-partition margins partition-size i)]]
        (GET "/annotation/page"
             {:params {:page-margins sub-page-margins :project project :corpus corpus}
              :processData false
