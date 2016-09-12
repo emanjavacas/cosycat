@@ -11,17 +11,17 @@
                :type :blacklab-server
                :args {:index "mbg-index-small"
                       :server "mbgserver.uantwerpen.be:8080"
-                      :web-service "blacklab-server-1.4-SNAPSHOT"}}
+                      :web-service "blacklab-server-1.6.0-SNAPSHOT"}}
               {:name "brown-tei"
                :type :blacklab-server
                :args {:index "brown-tei"
                       :server "mbgserver.uantwerpen.be:8080"
-                      :web-service "blacklab-server-1.4-SNAPSHOT"}}
+                      :web-service "blacklab-server-1.6.0-SNAPSHOT"}}
               {:name "mbg-index"
                :type :blacklab-server
                :args {:index "mbg-index"
                       :server "mbgserver.uantwerpen.be:8080"
-                      :web-service "blacklab-server-1.4-SNAPSHOT"}}]}}
+                      :web-service "blacklab-server-1.6.0-SNAPSHOT"}}]}}
  :test {:env {:database-url "mongodb://127.0.0.1:27017/cosycatTest"
               :pass "pass"
               :corpora
