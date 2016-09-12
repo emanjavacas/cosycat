@@ -2,7 +2,8 @@
   (:require [cljs.core.async :refer [<! chan put!]]
             [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cosycat.utils :refer [parse-annotation ->int filter-dummy-tokens nbsp]]
+            [cosycat.utils :refer [parse-annotation nbsp]]
+            [cosycat.app-utils :refer [->int]]
             [cosycat.components :refer [prepend-cell dummy-cell]]
             [cosycat.autocomplete :refer [annotation-autocomplete]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
@@ -92,7 +93,7 @@
       (into [:tr
              {:on-mouse-leave #(reset-metadata! metadata)
               :on-mouse-up #(reset-metadata! metadata)}]
-            (-> (for [{token-id :id word :word match :match} (filter-dummy-tokens hit)]
+            (-> (for [{token-id :id word :word match :match} hit]
                   ^{:key (str hit-id "-" token-id)}
                   [input-cell hit-id token-id metadata])
                 (prepend-cell {:key (str hit-id "first") :child dummy-cell}))))))

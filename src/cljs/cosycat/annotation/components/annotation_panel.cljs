@@ -2,7 +2,6 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
-            [cosycat.utils :refer [filter-dummy-tokens]]
             [cosycat.components :refer [prepend-cell]]
             [cosycat.annotation.components.input-row :refer [input-row]]
             [cosycat.annotation.components.annotation-row :refer [annotation-row]]))
@@ -35,7 +34,7 @@
      [:tr
       {:style {:background-color "#f5f5f5" :cursor "pointer" :width "100%"}
        :on-click #(re-frame/dispatch [:open-hit hit-id])}]
-     (-> (for [{id :id :as token} (filter-dummy-tokens hit)]
+     (-> (for [{id :id :as token} hit]
            ^{:key (str "hit" hit-id id)} [hit-cell token])
          (prepend-cell {:key (str hit-id) :child hit-id-cell :opts [hit-id]})))))
 

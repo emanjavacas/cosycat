@@ -3,21 +3,21 @@
             [schema.core :as s]
             [ajax.core :refer [POST GET]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
-            [cosycat.app-utils :refer [deep-merge is-last-partition]]
-            [cosycat.utils :refer [->int format get-msg get-token-id]]
+            [cosycat.app-utils :refer [deep-merge is-last-partition parse-token token-id->span]]
+            [cosycat.utils :refer [format get-msg now]]
             [cosycat.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))
 
 ;;; Incoming annotations
 (defn update-hit [hit anns]
   (mapv (fn [{token-id :id :as token}]
-          (if-let [ann (get anns (->int token-id))]
+          (if-let [ann (get anns token-id)]
             (update token :anns deep-merge ann)
             token))
         hit))
 
 (defn find-hit-id
-  "find the hid id for a continuous span given `token-ids`"
+  "find the hid id given `token-ids`"
   [token-ids hit-maps]
   (some (fn [{:keys [id hit]}]
           (let [{from :id} (first hit)
@@ -35,10 +35,10 @@
   (let [results-by-id (get-in db [:projects project :session :query :results-by-id])
         path [:projects project :session :query :results-by-id hit-id :hit]]
     (if (contains? results-by-id hit-id)
-      (do (timbre/debug "contains") (update-in db path update-hit anns))
+      (update-in db path update-hit anns) ;found hit by id
       (if-let [hit-id (find-hit-id (keys anns) (vals results-by-id))]
-        (do (timbre/debug "found") (update-in db path update-hit anns))
-        (do (timbre/debug "didn't found") db)))))
+        (update-in db path update-hit anns) ;found hit for annotation
+        db)))) ;couldn't find hit for annotation
 
 (defmethod add-annotations cljs.core/PersistentVector
   [db ms]
@@ -69,26 +69,21 @@
          margins (count page-margins)
          partition-size 35]
      (re-frame/dispatch [:start-throbbing :fetch-annotations])
-     (doseq [[i sub-page-margins] (map-indexed vector (partition-all partition-size page-margins))
+     (doseq [[i subpage-margins] (map-indexed vector (partition-all partition-size page-margins))
              :let [is-last (is-last-partition margins partition-size i)]]
        (GET "/annotation/page"
-            {:params {:page-margins sub-page-margins :project project :corpus corpus}
-             :processData false
+            {:params {:page-margins subpage-margins :project project :corpus corpus}
              :handler (fetch-annotation-handler :is-last is-last)
              :error-handler (fetch-annotation-error-handler)})))
    db))
 
 ;;; Outgoing annotations
-(s/defn ^:always-validate make-annotation :- annotation-schema
-  ([ann-map hit-id token-id :- s/Int]
-   (merge ann-map {:hit-id hit-id
-                   :span {:type "token" :scope token-id}
-                   :timestamp (.now js/Date)}))
-  ([ann-map hit-id token-from :- s/Int token-to :- s/Int]
-   {:pre [(>= token-to token-from)]}
-   (merge ann-map {:hit-id hit-id
-                   :span {:type "IOB" :scope {:B token-from :O token-to}}
-                   :timestamp (.now js/Date)})))
+(s/defn make-annotation :- annotation-schema
+  ([ann-map hit-id token-id]
+   (timbre/debug token-id)
+   (merge ann-map {:hit-id hit-id :span (token-id->span token-id) :timestamp (now)}))
+  ([ann-map hit-id token-from token-to]
+   (merge ann-map {:hit-id hit-id :span (token-id->span token-from token-to) :timestamp (now)})))
 
 (defmulti dispatch-annotation-handler
   "Variadic handler for successful annotations. Dispatches are based on whether
@@ -106,11 +101,7 @@
   (re-frame/dispatch [:register-history [:project-events] {:type :annotation :data data}]))
 
 (defmethod dispatch-annotation-handler cljs.core/PersistentArrayMap
-  [{status :status
-    message :message                    ;error message in case of error
-    {project :project hit-id :hit-id anns :anns ;success payload
-     {{B :B O :O :as scope} :scope type :type} :span ;error payload
-     :as data} :data}]
+  [{status :status message :message data :data}]
   (case status
     :ok (do (re-frame/dispatch [:add-annotation data])
             ;; add update
@@ -178,32 +169,25 @@
 (defmulti package-annotation
   "packages annotation data for the server. It only supports bulk payloads for token annotations"
   (fn [ann-map-or-maps project hit-id token-id & [token-to]]
-    [(type ann-map-or-maps) (type token-id)]))
+    [(type ann-map-or-maps) (coll? token-id)]))
 
-(s/defmethod package-annotation
-  [cljs.core/PersistentArrayMap js/Number]
-  ([ann-map project hit-id token-id :- s/Int]
-   (let [ann-map (make-annotation ann-map hit-id token-id)]
-     {:project project
-      :ann-map ann-map}))
-  ([ann-map project hit-id token-from :- s/Int token-to :- s/Int]
-   (let [ann-map (make-annotation ann-map hit-id token-from token-to)]
-     {:project project
-      :ann-map ann-map})))
+(defmethod package-annotation
+  [cljs.core/PersistentArrayMap false]
+  ([ann-map project hit-id token-id]
+   {:project project :ann-map (make-annotation ann-map hit-id token-id)})
+  ([ann-map project hit-id token-from token-to]
+   {:project project :ann-map (make-annotation ann-map hit-id token-from token-to)}))
 
-(s/defmethod package-annotation
-  [cljs.core/PersistentArrayMap cljs.core/PersistentVector]
-  [ann-map project hit-ids :- [s/Any] token-ids :- [s/Int]]
-  (let [ann-maps (mapv (fn [token-id hit-id] (make-annotation ann-map hit-id token-id))
-                       token-ids hit-ids)]
-    {:project project
-     :ann-map ann-maps}))
+(defmethod package-annotation
+  [cljs.core/PersistentArrayMap true]
+  [ann-map project hit-ids token-ids]
+  (->> (mapv (fn [token-id hit-id] (make-annotation ann-map hit-id token-id)) token-ids hit-ids)
+       (assoc {:project project} :ann-map)))
 
-(s/defmethod package-annotation
-  [cljs.core/PersistentVector cljs.core/PersistentVector]
-  [anns project hit-ids :- [s/Any] token-ids :- [s/Int]]
-  {:pre [(apply = (map count [anns hit-ids]))]}
-  (let [ann-maps (mapv (fn [ann hit-id token-id] (make-annotation ann hit-id token-id))
-                       anns hit-ids token-ids)]
-    {:project project
-     :ann-map ann-maps}))
+(defmethod package-annotation
+  [cljs.core/PersistentVector true]
+  [anns project hit-ids token-ids]
+  (timbre/debug "anns" anns "hit-ids" hit-ids)
+  (assert (apply = (map count [anns hit-ids])) "Each ann must have a hit-id")
+  (->> (mapv (fn [ann hit-id token-id] (make-annotation ann hit-id token-id)) anns hit-ids token-ids)
+       (assoc {:project project} :ann-map)))

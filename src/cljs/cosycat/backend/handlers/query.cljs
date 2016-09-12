@@ -5,7 +5,8 @@
             [cosycat.query-backends.core :refer [ensure-corpus]]
             [cosycat.query-backends.protocols :refer [query query-sort snippet]]
             [cosycat.query-parser :refer [missing-quotes]]
-            [cosycat.utils :refer [filter-marked-hits ->int]]
+            [cosycat.utils :refer [filter-marked-hits]]
+            [cosycat.app-utils :refer [parse-token]]
             [taoensso.timbre :as timbre]))
 
 (defn pager-next
@@ -34,11 +35,10 @@
            (filter-marked-hits old-results :has-marked? has-marked?))))
 
 (defn page-margins [results]
-  (-> (for [{hit :hit id :id} results ;seq; avoid empty seq
-             :let [start (->int (:id (first hit)))
-                   end   (->int (:id (last hit)))
-                   hit-id id]]
-        {:start start :end end :hit-id hit-id})
+  (-> (for [{hit :hit id :id} results   ;seq; avoid empty seq
+            :let [{doc :doc start :id} (parse-token (:id (first hit)))
+                  {end :id} (parse-token (:id (last hit)))]]
+        {:start start :end end :hit-id id :doc doc})
       vec))
 
 (re-frame/register-handler

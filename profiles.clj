@@ -7,12 +7,7 @@
              :port 3000
              :session-expires 900       ;in minutes
              :corpora
-             [{:name "mbg-index-small"
-               :type :blacklab-server
-               :args {:index "mbg-index-small"
-                      :server "mbgserver.uantwerpen.be:8080"
-                      :web-service "blacklab-server-1.6.0-SNAPSHOT"}}
-              {:name "brown-tei"
+             [{:name "brown-tei"
                :type :blacklab-server
                :args {:index "brown-tei"
                       :server "mbgserver.uantwerpen.be:8080"

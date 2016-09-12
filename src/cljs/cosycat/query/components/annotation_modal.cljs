@@ -1,7 +1,7 @@
 (ns cosycat.query.components.annotation-modal
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cosycat.utils :refer [by-id ->int parse-annotation filter-dummy-tokens nbsp format]]
+            [cosycat.utils :refer [by-id parse-annotation nbsp format]]
             [cosycat.app-utils :refer [dekeyword]]
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.components :refer [disabled-button-tooltip]]
@@ -23,19 +23,18 @@
          :else                        :existing-annotation)))
 
 (defn group-tokens [tokens ann-key username]
-  (->> tokens filter-dummy-tokens (group-by #(classify-annotation (:anns %) ann-key username))))
+  (->> tokens (group-by #(classify-annotation (:anns %) ann-key username))))
 
 (defn dispatch-annotations [ann-map tokens]
   (re-frame/dispatch
    [:dispatch-annotation
     ann-map                    ;ann-map
     (->> tokens (map :hit-id))    ;hit-ids
-    (->> tokens (map :id) (mapv ->int))])) ;token-ids
+    (->> tokens (map :id))])) ;token-ids
 
 (defn update-annotations [{:keys [key value]} tokens]
   (doseq [{hit-id :hit-id {ann key} :anns} tokens
           :let [{:keys [_id _version]} ann]]
-    (timbre/debug ann)
     (re-frame/dispatch
      [:update-annotation
       {:update-map {:_id _id :_version _version :value value :hit-id hit-id}}])))
@@ -54,7 +53,9 @@
           (group-tokens @marked-tokens @current-ann @me)]
       (cond (not (check-annotation-role action @my-role))
             (notify-not-authorized action @my-role)
-            (and (empty? empty-annotation) (empty? existing-annotation-owner))
+            (and (empty? empty-annotation)
+                 (empty? existing-annotation-owner)
+                 (not (empty? existing-annotation)))
             (re-frame/dispatch [:notify {:message "To be implemented"}])
             :else (let [key-val {:key key :value value}]
                     (dispatch-annotations key-val empty-annotation)

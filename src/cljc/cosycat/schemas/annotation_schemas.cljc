@@ -7,11 +7,13 @@
 
 (def token-span-schema
   {:type (s/enum "token")
-   :scope cpos-schema})
+   :scope cpos-schema
+   (s/optional-key :doc) s/Any})
 
 (def iob-span-schema
   {:type (s/enum "IOB")
-   :scope {:B cpos-schema :O cpos-schema}})
+   :scope {:B cpos-schema :O cpos-schema}
+   (s/optional-key :doc) s/Any})
 
 (def span-schema
   (s/conditional #(= (:type %) "token") token-span-schema

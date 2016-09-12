@@ -2,7 +2,7 @@
   (:require [react-bootstrap.components :as bs]
             [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cosycat.utils :refer [human-time ->int filter-dummy-tokens ->box]]
+            [cosycat.utils :refer [human-time ->box]]
             [cosycat.components :refer [user-thumb prepend-cell]]
             [cosycat.annotation.components.annotation-popover :refer [annotation-popover]]
             [taoensso.timbre :as timbre]))
@@ -32,7 +32,7 @@
          {:style (annotation-cell-style @color-map username)
           :on-click #(do (reset! target (.-target %)) (swap! open? not))}
          [:div (case type
-                 "IOB" [:span (when (= B (->int token-id)) [key-val ann-map])]
+                 "IOB" [:span (when (= B token-id) [key-val ann-map])]
                  "token" [key-val ann-map])
           [bs/overlay
            {:show @open?
@@ -54,7 +54,7 @@
     (fn [{hit-id :id hit :hit} ann-key]
       (into
        [:tr.ann-row {:data-hitid hit-id}]
-       (-> (for [{token-id :id anns :anns} (filter-dummy-tokens hit)]
+       (-> (for [{token-id :id anns :anns} hit]
              ^{:key (str ann-key hit-id token-id)}
              [annotation-cell {:ann-map (get anns ann-key)
                                :hit-id hit-id :token-id token-id :color-map color-map}])

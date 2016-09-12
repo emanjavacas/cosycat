@@ -3,7 +3,8 @@
             [cljs.core.async :refer [chan >! <! put! close! timeout sliding-buffer take!]]
             [cosycat.ajax-jsonp :refer [jsonp]]
             [cosycat.query-backends.protocols :as p]
-            [cosycat.utils :refer [->int keywordify]]
+            [cosycat.utils :refer [keywordify]]
+            [cosycat.app-utils :refer [->int]]
             [cosycat.localstorage :refer [with-ls-cache]]
             [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -170,14 +171,6 @@
   (swap! last-action assoc :action action :opts opts :action-id action-id))
 
 ;;; normalize blacklab-out -> cosycat app-schemas
-(defn sub-hit [{:keys [punct id word]} & {:keys [is-match?]}]
-  (mapv (fn [token-word token-id]
-          (if is-match?
-            {:word token-word :id token-id :match true}
-            {:word token-word :id token-id}))
-        word
-        id))
-
 (defn normalize-meta [num doc]
   (assoc doc :num num))
 
@@ -186,10 +179,26 @@
   (let [[doc-id hit-start hit-end] (clojure.string/split hit-id #"\.")]
     {:doc-id doc-id :hit-start hit-start :hit-end hit-end}))
 
+(defn ->bl-token-id [doc-id token-id]
+  {:doc doc-id :token token-id})
+
+(defn sub-hit [{:keys [punct word]} doc-id first-id & {:keys [is-match?]}]
+  (->> word
+       (mapv (fn [token-word]
+               (let [base {:word token-word}]
+                 (if is-match?
+                   (assoc base :match true)
+                   base))))
+       (mapv (fn [id token-map] (assoc token-map :id (str doc-id "." id)))
+             (map (partial + first-id) (range)))))
+
 (defn normalize-bl-hit
   [hit num doc]
-  (let [{left :left match :match right :right doc-id :docPid start :start end :end} hit]    
-    {:hit (concat (sub-hit left) (sub-hit match :is-match? true) (sub-hit right))
+  (let [{left :left match :match right :right doc-id :docPid start :start end :end} hit]
+    (timbre/debug left)
+    {:hit (concat (sub-hit left  doc-id (- start (count (:word left)))) ;assuming word is present
+                  (sub-hit match doc-id start :is-match? true)
+                  (sub-hit right doc-id end))
      :id (apply str (interpose "." [doc-id start end]))
      :meta (normalize-meta num doc)}))
 

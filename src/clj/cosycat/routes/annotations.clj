@@ -3,7 +3,7 @@
             [compojure.core :refer [routes context POST GET]]
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.utils :refer [->int assert-ex-info]]
-            [cosycat.app-utils :refer [deep-merge-with]]
+            [cosycat.app-utils :refer [deep-merge-with parse-token span->token-id]]
             [cosycat.routes.utils :refer [make-safe-route make-default-route]]
             [cosycat.db.annotations :refer [insert-annotation update-annotation fetch-annotations]]
             [cosycat.db.projects :refer [find-project-by-name]]
@@ -25,10 +25,11 @@
 
 ;;; Formatters
 (defn ann->maps
-  [{{{B :B O :O :as scope} :scope type :type} :span {key :key} :ann :as ann}]
-  (case type
-    "token" {scope {key ann}}
-    "IOB" (zipmap (range B (inc O)) (repeat {key ann}))))
+  [{{type :type :as span} :span {key :key} :ann :as ann}]
+  (let [token-id-or-ids (span->token-id span)]
+    (case type
+      "token" {token-id-or-ids {key ann}}
+      "IOB" (zipmap token-id-or-ids (repeat {key ann})))))
 
 (defn normalize-anns
   "converts incoming annotations into a map of token-ids to ann-keys to anns"
@@ -92,20 +93,20 @@
            {:status :error :message message :data {:id id :exception ex}}))))
 
 (defn fetch-annotation-range-handler
-  [{{project :project corpus :corpus from :from size :size hit-id :hit-id} :params
+  [{{project :project corpus :corpus from :from size :size doc :doc hit-id :hit-id} :params
     {{username :username} :identity} :session
     {db :db} :components}]
   (check-user-rights db username project :read)
   {:hit-id hit-id
    :project project
-   :anns (->> (fetch-annotations db project corpus (->int from) (->int size))
+   :anns (->> (fetch-annotations db project corpus (->int from) (->int size) :doc doc)
               (apply normalize-anns))})
 
 (defn fetch-from-range [db project corpus]
-  (fn [{:keys [start end hit-id]}]
+  (fn [{:keys [start end hit-id doc]}]
     (let [from (->int start)
           size (- (->int end) from)
-          anns (->> (fetch-annotations db project corpus from size) (apply normalize-anns))]
+          anns (->> (fetch-annotations db project corpus from size :doc doc) (apply normalize-anns))]
       (when anns {:hit-id hit-id :project project :anns anns}))))
 
 (defn fetch-annotation-page-handler

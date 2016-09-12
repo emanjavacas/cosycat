@@ -58,6 +58,11 @@
   [{headers :headers :as req}]
   (boolean (= "XMLHttpRequest" (get headers "X-Requested-With"))))
 
+(defn wrap-debug [handler]
+  (fn [req]
+    (timbre/debug req)
+    (handler req)))
+
 (defn wrap-internal-error [handler]
   (fn [req]
     (try
@@ -83,6 +88,7 @@
       wrap-nested-params
       wrap-params
       (wrap-transit-response {:encoding :json-verbose})
+      wrap-debug
       wrap-exceptions
       wrap-internal-error))
 

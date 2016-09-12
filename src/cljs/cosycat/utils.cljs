@@ -4,6 +4,7 @@
             [reagent.core :as reagent]
             [goog.dom.dataset :as gdataset]
             [goog.string :as gstr]
+            [cosycat.app-utils :refer [->int]]
             [taoensso.timbre :as timbre]))
 
 ;;; JS-interop
@@ -13,11 +14,6 @@
 (defn by-id [id & {:keys [value] :or {value true}}]
   (let [elt (.getElementById js/document id)]
     (if value (.-value elt) elt)))
-
-(defn ->int [s]
-  (try (js/parseInt s)
-       (catch :default e
-         s)))
 
 (defn keywordify [m]
   (let [keyword-if-not-int (fn [s] (if (js/isNaN s) (keyword s) (js/parseInt s)))]
@@ -34,6 +30,8 @@
 (defn time-id []
   (-> (timestamp)
       (.toString 36)))
+
+(defn now [] (.now js/Date))
 
 (defn parse-time [i & [opts]]
   (let [js-date (js/Date. i)]
@@ -123,11 +121,6 @@
   [{id :id :as token}]
   (try (js/parseInt id)
        (catch :default e -1)))
-
-(defn filter-dummy-tokens
-  "removes dummy tokens from hit"
-  [tokens]
-  (filter (fn [token] (pos? (get-token-id token))) tokens))
 
 ;;; annotations
 (defn ->box [color] (str "0 -1.5px " color " inset"))
