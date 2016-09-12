@@ -88,7 +88,7 @@
       wrap-nested-params
       wrap-params
       (wrap-transit-response {:encoding :json-verbose})
-      wrap-debug
+      ;; wrap-debug
       wrap-exceptions
       wrap-internal-error))
 

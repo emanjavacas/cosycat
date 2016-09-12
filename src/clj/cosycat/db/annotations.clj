@@ -11,8 +11,8 @@
 
 ;;; Exceptions
 (defn span-or-token [{B :B O :O :as scope}]
-  (cond (and B O)   "span"
-        (int scope) "token"
+  (cond (and B O) "span"
+        (integer? scope) "token"
         :else "undefined"))
 
 (defn ex-overwrite-span [source-scope scope]
@@ -41,17 +41,17 @@
     (and (<= new-B old-O) (<= old-B new-O)) false
     :else true))
 
-(defmulti check-insert (fn [db project corpus {{type :type} :span}] type))
+(defmulti check-insert (fn [db project {{type :type} :span}] type))
 
 (defmethod check-insert "token"
-  [{db-conn :db :as db} project corpus {{scope :scope :as span} :span {key :key} :ann}]
+  [{db-conn :db :as db} project {corpus :corpus {scope :scope :as span} :span {key :key} :ann}]
   (when-let [existing-token-annotation (fetch-token-annotation-by-key db project corpus key span)]
     (throw (ex-overwrite-token (get-in existing-token-annotation [:span :scope]) (:scope span))))
   (when-let [existing-span-annotation (fetch-span-annotation-by-key db project corpus key span)]
     (throw (ex-overwrite-span (get-in existing-span-annotation [:span :scope]) scope))))
 
 (defmethod check-insert "IOB"
-  [{db-conn :db :as db} project corpus {{{B :B O :O} :scope :as span} :span {key :key} :ann}]
+  [{db-conn :db :as db} project {corpus :corpus {{B :B O :O} :scope :as span} :span {key :key} :ann}]
   (when-let [existing-token-annotation (fetch-token-annotation-by-key db project corpus key span)]
     (throw (ex-overwrite-token (get-in existing-token-annotation [:span :scope]) (:scope span))))
   (when-let [existing-span-annotation (fetch-span-annotation-by-key db project corpus key span)]
