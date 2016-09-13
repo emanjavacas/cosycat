@@ -10,7 +10,7 @@
 (defn on-click-sort                     ;redo this
   [route]
   (fn []
-    (re-frame/dispatch [:query-sort route :results-frame])))
+))
 
 (defn multiple-dropdown-label [local-label]
   (fn [local-label]
@@ -85,5 +85,5 @@
               [bs/glyphicon {:glyph "minus"}]])
            (when-not (zero? sort-opts-total)
              [bs/button
-              {:onClick (on-click-sort :sort-query)} ;todo
+              {:onClick #(re-frame/dispatch [:query-sort])}
               "Sort"])])]])))

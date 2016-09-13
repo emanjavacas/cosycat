@@ -98,8 +98,9 @@
 (re-frame/register-handler
  :query
  (fn [db [_ query-str]]
-   (let [{query-opts :query-opts corpus-name :corpus} (get-in db [:settings :query])
-         corpus-config (find-corpus-config db corpus-name)]
+   (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:settings :query])
+         corpus-config (find-corpus-config db corpus)]
+     (timbre/debug sort-opts filter-opts)
      (when (check-query query-str)
        (do (re-frame/dispatch [:start-throbbing :results-frame])
            (re-frame/dispatch [:start-throbbing :fetch-annotations])
@@ -107,8 +108,10 @@
            (re-frame/dispatch
             [:register-history [:user-events]
              {:type :query
-              :data {:query-str query-str :corpus corpus-name}}])
-           (query (ensure-corpus corpus-config) query-str query-opts)))
+              :data {:query-str query-str :corpus corpus}}])
+           (if (and (empty? sort-opts) (empty? filter-opts))
+             (query (ensure-corpus corpus-config) query-str query-opts)
+             (query-sort (ensure-corpus corpus-config) query-str query-opts sort-opts filter-opts))))
      db)))
 
 (re-frame/register-handler
@@ -116,16 +119,18 @@
  (fn [db [_ direction]]
    (let [results-summary (current-results db)]
      (when-not (empty? results-summary)       ;return if there hasn't been a query yet
-       (let [query-settings (get-in db [:settings :query])
-             {{page-size :page-size :as query-opts} :query-opts corpus-name :corpus} query-settings
+       (let [{:keys [corpus sort-opts filter-opts query-opts]} (get-in db [:settings :query])
+             {page-size :page-size :as query-opts} query-opts
              {query-str :query-str query-size :query-size {from :from to :to} :page} results-summary
-             corpus-config (find-corpus-config db corpus-name)
+             corpus-config (find-corpus-config db corpus)
              [from to] (case direction
                          :next (pager-next query-size page-size to)
                          :prev (pager-prev query-size page-size from))
              query-opts (assoc query-opts :from from :page-size (- to from))]
          (re-frame/dispatch [:start-throbbing :results-frame])
-         (query (ensure-corpus corpus-config) query-str query-opts)))
+         (if (and (empty? sort-opts) (empty? filter-opts))
+           (query (ensure-corpus corpus-config) query-str query-opts)
+           (query-sort (ensure-corpus corpus-config) query-str query-opts sort-opts filter-opts))))
      db)))
 
 (re-frame/register-handler
@@ -142,15 +147,15 @@
  :fetch-snippet
  (fn [db [_ hit-id {user-snippet-delta :snippet-delta dir :dir}]]
    (let [{{snippet-delta :snippet-delta :as snippet-opts} :snippet-opts
-          corpus-name :corpus} (get-in db [:settings :query])
+          corpus :corpus} (get-in db [:settings :query])
          {query-str :query-str} (current-results db)
-         corpus (ensure-corpus (find-corpus-config db corpus-name))
+         corpus (ensure-corpus (find-corpus-config db corpus))
          snippet-opts (assoc snippet-opts :snippet-delta (or user-snippet-delta snippet-delta))]
      ;; add update
      (when-not dir                      ;only register first request
        (re-frame/dispatch
         [:register-history [:user-events]
          {:type :fetch-snippet
-          :data {:query-str query-str :corpus corpus-name :hit-id hit-id}}]))
+          :data {:query-str query-str :corpus corpus :hit-id hit-id}}]))
      (snippet corpus query-str snippet-opts hit-id dir)
      db)))

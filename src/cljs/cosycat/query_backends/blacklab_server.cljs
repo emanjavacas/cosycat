@@ -13,15 +13,15 @@
 
 (defn make-blacklab-server-corpus
   [{:keys [index server web-service on-counting-callback] :or {on-counting-callback identity}}]
-  (let [last-action (atom {}), timeout-ids (atom [])]
-    (->BlacklabServerCorpus index server web-service on-counting-callback last-action timeout-ids)))
+  (let [timeout-ids (atom [])]
+    (->BlacklabServerCorpus index server web-service on-counting-callback timeout-ids)))
 
 (def default-query-params
   {:maxcount 100000
    :waitfortotal "no"})
 
 ;;; parse cosycat args -> blacklab-server params
-(declare bl-server-url bl-server-sort-str)
+(declare bl-server-url bl-server-sort-str bl-server-filter-str)
 
 ;;; normalize blacklab-out -> cosycat app-schemas
 (declare parse-hit-id)
@@ -33,34 +33,32 @@
 ;;; handle internal sort state (blacklab-server is stateless)
 (declare maybe-reset-last-action set-last-action get-sort-opts)
 
-(deftype BlacklabServerCorpus [index server web-service callback last-action timeout-ids]
-  p/Corpus
-  (p/query [this query-str {:keys [context from page-size] :as query-opts}]
-    (clear-timeout timeout-ids)
-    (maybe-reset-last-action last-action {:action-id query-str})
-    (p/handle-query this (bl-server-url server web-service index)
-                    (merge {:patt query-str
-                            :wordsaroundhit context
-                            :first from
-                            :number page-size
-                            :jsonp "callback"}
-                           (when-let [sort-opts (get-sort-opts last-action)]
-                             {:sort (apply bl-server-sort-str sort-opts)})
-                           default-query-params)
-     :method jsonp))
-
-  (p/query-sort [this query-str {:keys [context from page-size]} sort-opts filter-opts]
-    (let [sort-str (bl-server-sort-str sort-opts filter-opts)]
-      (set-last-action last-action {:action-id query-str :action :sort :opts [sort-opts filter-opts]})
-      (p/handle-query this (bl-server-url server web-service index)
-                      (merge {:patt query-str
+(defn- -base-query
+  ([corpus query-str {:keys [context from page-size] :as query-opts} sort-opts filter-opts]
+   (.log js/console
+         "sort" sort-opts (bl-server-sort-str sort-opts)
+         "filter" filter-opts (bl-server-filter-str filter-opts))
+   (let [server (.-server corpus) web-service (.-web-service corpus) index (.-index corpus)]
+     (p/handle-query corpus (bl-server-url server web-service index)
+                     (cond-> {:patt query-str
                               :wordsaroundhit context
                               :first from
                               :number page-size
-                              :sort sort-str
                               :jsonp "callback"}
-                             default-query-params)
-                      :method jsonp)))
+                       (not (empty? sort-opts)) (merge {:sort (bl-server-sort-str sort-opts)})
+                       (not (empty? filter-opts)) (merge {:filter (bl-server-filter-str filter-opts)})
+                       true (merge default-query-params))
+                     :method jsonp)))
+  ([corpus query-str query-opts] (-base-query corpus query-str query-opts nil nil)))
+
+(deftype BlacklabServerCorpus [index server web-service callback timeout-ids]
+  p/Corpus
+  (p/query [this query-str query-opts]
+    (clear-timeout timeout-ids)
+    (-base-query this query-str query-opts))
+
+  (p/query-sort [this query-str query-opts sort-opts filter-opts]
+    (-base-query this query-str query-opts sort-opts filter-opts))
 
   (p/snippet [this query-str {:keys [snippet-size snippet-delta] :as snippet-opts} hit-id dir]
     (let [{:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)]
@@ -77,7 +75,8 @@
               :error-handler #(.log js/console %)})))
   
   (p/transform-data [this data]
-    (let [{{:keys [message code] :as error} :error :as cljs-data} (js->clj data :keywordize-keys true)]
+    (let [{{:keys [message code] :as error} :error :as cljs-data}
+          (js->clj data :keywordize-keys true)]
       (if error
         {:message message :code code}
         (let [{summary :summary hits :hits doc-infos :docInfos} cljs-data
@@ -125,8 +124,13 @@
 
 (defn bl-server-sort-str
   "builds the blacklab sort string from param maps"
-  [sort-opts filter-opts]
-  (apply str (interpose "," (concat (parse-sort-opts sort-opts) (parse-filter-opts filter-opts)))))
+  [sort-opts]
+  (apply str (parse-sort-opts sort-opts)))
+
+(defn bl-server-filter-str
+  "builds the blacklab filter string from param maps"
+  [filter-opts]
+  (apply str (parse-filter-opts filter-opts)))
 
 ;;; handle counting callbacks
 (defn clear-timeout [timeout-ids]
@@ -157,19 +161,6 @@
           (+ 1000 (* 1500 retried-count)))
          (swap! timeout-ids conj))))
 
-;;; handle internal sort state (blacklab-server is stateless)
-(defn maybe-reset-last-action [last-action {:keys [action-id]}]
-  (if-not (= action-id (:action-id @last-action))
-    (reset! last-action {})))
-
-(defn get-sort-opts [last-action]
-  (let [{:keys [action opts]} @last-action]
-    (when (= action :sort)
-      opts)))
-
-(defn set-last-action [last-action {:keys [action-id action opts]}]
-  (swap! last-action assoc :action action :opts opts :action-id action-id))
-
 ;;; normalize blacklab-out -> cosycat app-schemas
 (defn normalize-meta [num doc]
   (assoc doc :num num))
@@ -182,13 +173,16 @@
 (defn ->bl-token-id [doc-id token-id]
   {:doc doc-id :token token-id})
 
-(defn sub-hit [{:keys [punct word]} doc-id first-id & {:keys [is-match?]}]
-  (->> word
-       (mapv (fn [token-word]
-               (let [base {:word token-word}]
-                 (if is-match?
-                   (assoc base :match true)
-                   base))))
+(defn transpose-lists [x]
+  (map (fn [m] (zipmap (keys x) m))
+       (apply map vector (vals x))))
+
+(defn sub-hit
+  "transform a sub-hit (one of `left`, `right` or `match` into a vec of token maps
+  containing at least :word and :id (plus any other field in the corpus)"
+  [hit doc-id first-id & {:keys [is-match?]}]
+  (->> (transpose-lists hit)
+       (mapv (fn [token-map] (cond-> token-map is-match? (assoc :match true))))
        (mapv (fn [id token-map] (assoc token-map :id (str doc-id "." id)))
              (map (partial + first-id) (range)))))
 
