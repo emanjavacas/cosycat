@@ -171,14 +171,14 @@
   (fn [ann-map-or-maps project hit-id token-id & [token-to]]
     [(type ann-map-or-maps) (coll? token-id)]))
 
-(defmethod package-annotation
+(defmethod package-annotation           ;simple token annotation
   [cljs.core/PersistentArrayMap false]
   ([ann-map project hit-id token-id]
    {:project project :ann-map (make-annotation ann-map hit-id token-id)})
   ([ann-map project hit-id token-from token-to]
    {:project project :ann-map (make-annotation ann-map hit-id token-from token-to)}))
 
-(defmethod package-annotation
+(defmethod package-annotation           ;bulk token annotation
   [cljs.core/PersistentArrayMap true]
   [ann-map project hit-ids token-ids]
   (->> (mapv (fn [token-id hit-id] (make-annotation ann-map hit-id token-id)) token-ids hit-ids)

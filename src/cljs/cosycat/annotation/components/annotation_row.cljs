@@ -3,6 +3,7 @@
             [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cosycat.utils :refer [human-time ->box]]
+            [cosycat.app-utils :refer [parse-token]]
             [cosycat.components :refer [user-thumb prepend-cell]]
             [cosycat.annotation.components.annotation-popover :refer [annotation-popover]]
             [taoensso.timbre :as timbre]))
@@ -24,7 +25,7 @@
 
 (defn annotation-cell [{:keys [ann-map color-map token-id hit-id]}]
   (let [open? (reagent/atom false), target (reagent/atom nil)]
-    (fn [{{{{B :B O :O} :scope type :type} :span
+    (fn [{{{{B :B} :scope type :type :as span} :span
            username :username anns :anns :as ann-map} :ann-map
           color-map :color-map hit-id :hit-id token-id :token-id}]
       (if ann-map                       ;when ann is present
@@ -32,7 +33,7 @@
          {:style (annotation-cell-style @color-map username)
           :on-click #(do (reset! target (.-target %)) (swap! open? not))}
          [:div (case type
-                 "IOB" [:span (when (= B token-id) [key-val ann-map])]
+                 "IOB" (when (= B (-> (parse-token token-id) :id)) [key-val ann-map])
                  "token" [key-val ann-map])
           [bs/overlay
            {:show @open?

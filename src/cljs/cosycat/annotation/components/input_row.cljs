@@ -3,9 +3,10 @@
             [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cosycat.utils :refer [parse-annotation nbsp]]
-            [cosycat.app-utils :refer [->int]]
+            [cosycat.app-utils :refer [->int parse-token]]
             [cosycat.components :refer [prepend-cell dummy-cell]]
-            [cosycat.autocomplete :refer [annotation-autocomplete]])
+            [cosycat.autocomplete :refer [annotation-autocomplete]]
+            [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
 (def border-style
@@ -42,14 +43,15 @@
       (recur))))
 
 (defn handle-span-dispatch [ann-map hit-id token-ids]
-  (let [token-ids (map #(-> (parse-token %) :id) token-ids)
-        from (apply min token-ids)
-        to (apply max token-ids)]
+  (let [sorted-ids (sort-by #(-> % parse-token :id) token-ids)
+        from (first sorted-ids)
+        to (last sorted-ids)]
     (re-frame/dispatch [:dispatch-annotation ann-map hit-id from to])))
 
 (defn on-key-down
   [hit-id token-ids]
   (fn [pressed]
+    (.stopPropagation pressed)
     (if (= 13 (.-keyCode pressed))
       (if-let [[key val] (parse-annotation (.. pressed -target -value))]
         (let [ann {:key key :value val}]
@@ -65,7 +67,7 @@
       [:input.form-control.input-cell
        {:type "text"
         :name "input-row"
-        :on-key-down (on-key-down hit-id (map ->int (keys @chans)))}])))
+        :on-key-down (on-key-down hit-id (keys @chans))}])))
 
 (defn hidden-input-cell []
   (fn [] [:td {:style {:display "none"}}]))

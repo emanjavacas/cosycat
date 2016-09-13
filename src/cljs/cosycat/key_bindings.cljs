@@ -25,7 +25,7 @@
 
 (defn bind [panel-key]
   (doseq [{key-stroke :key-stroke event-key :event-key f :fn} (get key-bindings panel-key)]
-    (key/bind! key-stroke event-key (wrap-event f))))
+    (key/bind! key-stroke event-key f)))
 
 (defn bind-panel-keys [component-key]
   (unbind)

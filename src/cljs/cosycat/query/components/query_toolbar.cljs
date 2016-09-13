@@ -59,9 +59,9 @@
 (defn normalize-str [s]
   (str/replace s #"[ ]+" " "))
 
-(defn on-key-press [k]
+(defn on-key-press [pressed]
   (let [query-str (normalize-str (by-id "query-str"))]
-    (when (and (not (zero? (count query-str))) (= (.-charCode k) 13))
+    (when (and (not (zero? (count query-str))) (= (.-charCode pressed) 13))
       (re-frame/dispatch [:query query-str]))))
 
 (defn on-click-search []
@@ -83,13 +83,14 @@
            :type "text"
            :name "query"
            :value @query-str-atom
-           :placeholder "Example: [pos='.*\\.']" ;remove?
+           :placeholder "Example: [word='(wo)?man']" ;remove?
            :autoCorrect "false"
            :autoCapitalize "false"
            :autoComplete "false"
            :spellCheck "false"
-           :on-change #(reset! query-str-atom (.. % -target -value))
-           :on-key-press on-key-press}]
+           :on-key-down #(.stopPropagation %) ;avoid triggerring global events
+           :on-key-press on-key-press
+           :on-change #(reset! query-str-atom (.. % -target -value))}]
          [:span.input-group-addon
           {:on-click on-click-search
            :style {:cursor "pointer"}}
