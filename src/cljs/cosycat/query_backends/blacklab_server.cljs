@@ -195,7 +195,6 @@
 (defn normalize-bl-hit
   [hit num doc]
   (let [{left :left match :match right :right doc-id :docPid start :start end :end} hit]
-    (timbre/debug left)
     {:hit (concat (sub-hit left  doc-id (- start (count (:word left)))) ;assuming word is present
                   (sub-hit match doc-id start :is-match? true)
                   (sub-hit right doc-id end))
@@ -222,13 +221,18 @@
 
 (defn normalize-corpus-info [data]
   (let [{{created :timeCreated last-modified :timeModified} :versionInfo
-         {metadata :metadataFields {{props :basicProperties} :contents} :complexFields} :fieldInfo
-         corpus-name :indexName word-count :tokenCount status :status}
+         metadata :metadataFields
+         {{props :basicProperties main-prop :mainProperty} :contents} :complexFields
+         corpus-name :indexName
+         word-count :tokenCount
+         status :status}
         (js->clj data :keywordize-keys true)]
     {:corpus-info {:corpus-name corpus-name
                    :word-count word-count
                    :created created
-                   :last-modified last-modified}
+                   :last-modified last-modified
+                   :metadata metadata}
+     ;; TODO add main-prop
      :status status
      :sort-props props}))
 
@@ -244,11 +248,3 @@
                     (= dir :right) (dissoc :left)
                     :else identity)
          :hit-id hit-id}))))
-
-;; (def mbg-corpus
-;;   (make-blacklab-server-corpus
-;;    {:index "mbg-index-small"
-;;     :server "mbgserver.uantwerpen.be:8080"
-;;     :web-service "blacklab-server-1.4-SNAPSHOT"}))
-
-

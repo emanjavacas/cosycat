@@ -49,7 +49,7 @@
         context (re-frame/subscribe [:settings :query :query-opts :context])
         page-size (re-frame/subscribe [:settings :query :query-opts :page-size])
         has-query? (re-frame/subscribe [:has-query?])
-        corpora (re-frame/subscribe [:corpora])]
+        corpora (re-frame/subscribe [:corpora-names])]
     (fn []
       [bs/button-toolbar
        [corpus-select corpus :corpora @corpora]

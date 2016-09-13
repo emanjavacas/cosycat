@@ -64,9 +64,14 @@
      (reaction (get-in @global-settings path)))))
 
 (re-frame/register-sub
- :corpora
+ :corpora-names
  (fn [db _]
    (reaction (doall (map :name (:corpora @db))))))
+
+(re-frame/register-sub
+ :corpora
+ (fn [db _]
+   (reaction (:corpora @db))))
 
 (re-frame/register-sub
  :projects
