@@ -38,7 +38,10 @@
            {:class "glyphicon-chevron-right"
             :style {:margin-left "-1px" :padding-right "2px"}}])
         (str k)]
-       [:span {:style {:margin-left "15px"}} (when (or @open (is-last-child children)) children)]])))
+       [:span {:style {:margin-left "15px"}}
+        (cond @open                    children
+              (is-last-child children) children
+              (not @open)              "...")]])))
 
 (defn recursive* [data depth init-open]
   (cond (map? data)                     ;map
