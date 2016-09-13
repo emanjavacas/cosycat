@@ -2,7 +2,8 @@
   (:require [secretary.core :as secretary]
             [goog.events :as events]
             [goog.history.EventType :as EventType]
-            [re-frame.core :as re-frame])
+            [re-frame.core :as re-frame]
+            [clojure.string :as str])
   (:import goog.History)
   (:require-macros [secretary.core :refer [defroute]]))
 
@@ -10,6 +11,16 @@
 
 (defn nav! [token]
   (.setToken history token))
+
+(defn find-path []
+  (let [href js/window.location.href
+        path js/window.location.pathname]
+    (-> (clojure.string/split href path)
+        last
+        (clojure.string/replace "#" ""))))
+
+(defn refresh []
+  (nav! (find-path)))
 
 (defn hook-browser-navigation! []
   (doto history

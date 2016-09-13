@@ -4,6 +4,7 @@
             [reagent.core :as reagent]
             [taoensso.timbre :as timbre]
             [cosycat.schemas.app-state-schemas :refer [db-schema]]
+            [cosycat.routes :refer [refresh]]
             [schema.core :as s :include-macros true]))
 
 (enable-console-print!)
@@ -24,20 +25,25 @@
     (do (timbre/debug "validation error:" res)
         (.log js/console "validation error: " res))))
 
+(defn project-not-found-error [project-name]
+  (re-frame/dispatch
+   [:register-session-error
+    {:code (str "Project " project-name " not found!")
+     :message "These are not the projects you are looking for."}]))
+
 (defn check-project-exists
   [handler]
   (fn [db [_ {:keys [project-name]} :as args]]
     (let [new-db (handler db args)]
       (if-not project-name
         (do (warn "Project middleware requires named :project-name but got" args) new-db)
-        (let [projects (get-in new-db [:projects])]
+        (if-let [projects (get-in new-db [:projects])]
           (if-not (some #{project-name} (keys projects))
-            (do (re-frame/dispatch
-                 [:register-session-error
-                  {:code "Project not found!"
-                   :message "These are not the projects you are looking for."}])
-                new-db)
-            new-db))))))
+            (do (project-not-found-error project-name) new-db)
+            new-db)
+          (do (re-frame/dispatch-sync [:intialize-session])
+              (refresh)
+              new-db))))))
 
 (def standard-middleware
   [(when ^boolean goog.DEBUG re-frame/debug)
