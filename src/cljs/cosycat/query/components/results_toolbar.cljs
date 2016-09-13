@@ -4,9 +4,10 @@
             [taoensso.timbre :as timbre]
             [react-bootstrap.components :as bs]
             [goog.string :as gstr]
-            [cosycat.utils :refer [->default-map by-id]]
+            [cosycat.utils :refer [->default-map by-id ->map]]
+            [cosycat.app-utils :refer [dekeyword]]
             [cosycat.routes :refer [nav!]]
-            [cosycat.components :refer [disabled-button-tooltip]]
+            [cosycat.components :refer [disabled-button-tooltip dropdown-select]]
             [cosycat.query.components.annotation-modal :refer [annotation-modal-button]]))
 
 (defn pager-button [& {:keys [direction label]}]
@@ -46,8 +47,20 @@
     :style {:font-size "12px" :height "34px"}}
    "Mark hits"])
 
+(defn token-field-button []
+  (let [metadata-fields (re-frame/subscribe [:corpus-info :sort-props])
+        current-field (re-frame/subscribe [:project-session :components :token-field])]
+    (fn []
+      [dropdown-select
+       {:label "Prop: "
+        :model (dekeyword @current-field)
+        :options (->> @metadata-fields keys (map dekeyword) (mapv #(->map % %)))
+        :select-fn #(re-frame/dispatch [:set-token-field (keyword %)])
+        :header "Select prop to display"}])))
+
 (defn mark-buttons []
   [bs/button-toolbar
+   [token-field-button]
    [mark-all-hits-btn]
    [annotation-modal-button]])
 

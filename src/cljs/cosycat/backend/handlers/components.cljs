@@ -96,6 +96,13 @@
          path [:projects active-project :session :components :open-hits]]
      (update-in db path disjconj hit-id))))
 
+(re-frame/register-handler
+ :set-token-field
+ (fn [db [_ token-field]]               ;todo, should validate token-field
+   (let [active-project (get-in db [:session :active-project])
+         path [:projects active-project :session :components :token-field]]
+     (assoc-in db path token-field))))
+
 ;;; marking
 (re-frame/register-handler
  :mark-hit

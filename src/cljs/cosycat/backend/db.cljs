@@ -24,7 +24,8 @@
    :status {}
    :components {:panel-order ["query-frame" "annotation-panel"]
                 :panel-open {"query-frame" true "annotation-panel" false}
-                :open-hits #{}}
+                :open-hits #{}
+                :token-field :word}
    :filtered-users (into #{} (map :username (:users project)))})
 
 (def default-history {:app-events [] :project-events [] :user-events []})

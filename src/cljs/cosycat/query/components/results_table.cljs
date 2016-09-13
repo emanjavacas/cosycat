@@ -62,24 +62,24 @@
     (if-let [color (get color-map user)]
       (->box color))))
 
-(defn hit-token [{:keys [id word match marked anns]} color-map]
-  (fn [{:keys [id word match marked anns] :as token} color-map]
+(defn hit-token [{:keys [id match marked anns]} color-map token-field]
+  (fn [{:keys [id match marked anns] :as token-map} color-map token-field]
     (let [highlighted (if marked "highlighted " "")
-          color (when anns (highlight-annotation token @color-map))
+          color (when anns (highlight-annotation token-map @color-map))
           is-match (when match "info")]
       [:td
        {:class (str highlighted is-match)
         :style {:box-shadow color}
         :data-id id}
-       word])))
+       (get token-map token-field)])))
 
 (defn on-double-click [hit-id]
   (fn [event]
     (.stopPropagation event)
     (re-frame/dispatch [:fetch-snippet hit-id])))
 
-(defn results-row [hit-num {hit :hit id :id {num :num marked :marked} :meta :as hit-map} color-map]
-  (fn [hit-num {hit :hit id :id {num :num marked :marked} :meta :as hit-map} color-map]
+(defn results-row [hit-num hit-map color-map token-field]
+  (fn [hit-num {hit :hit id :id {num :num marked :marked} :meta :as hit-map} color-map token-field]
     [:tr {:class (when marked "marked") :data-hit id}
      (concat
       [^{:key (str hit-num "-check")}
@@ -107,14 +107,16 @@
          (inc (or num hit-num))]]]
       ;; hit
       (for [token hit]
-        ^{:key (str hit-num "-" (:id token))} [hit-token token color-map]))]))
+        ^{:key (str hit-num "-" (:id token))} [hit-token token color-map token-field]))]))
 
 (defn results-table []
   (let [results (re-frame/subscribe [:results])
         from (re-frame/subscribe [:project-session :query :results-summary :from])
+        color-map (re-frame/subscribe [:filtered-users-colors])
+        token-field (re-frame/subscribe [:project-session :components :token-field])
         mouse-down? (reagent/atom false)
-        highlighted? (reagent/atom false)
-        color-map (re-frame/subscribe [:filtered-users-colors])]
+        highlighted? (reagent/atom false)]
+    (timbre/debug @token-field)
     (fn []
       [bs/table
        {:responsive true
@@ -130,4 +132,4 @@
         (doall
          (for [[idx {:keys [hit meta id] :as hit-map}] (map-indexed vector @results)
                :let [hit-num (+ idx @from)]]
-           ^{:key hit-num} [results-row hit-num hit-map color-map]))]])))
+           ^{:key hit-num} [results-row hit-num hit-map color-map @token-field]))]])))
