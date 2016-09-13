@@ -73,14 +73,14 @@
         :data-id id}
        word])))
 
-(defn on-double-click [hit-idx]
+(defn on-double-click [hit-id]
   (fn [event]
-    (aset event "cancelBubble" true)
-    (re-frame/dispatch [:fetch-snippet hit-idx])))
+    (.stopPropagation event)
+    (re-frame/dispatch [:fetch-snippet hit-id])))
 
-(defn results-row [hit-num {:keys [hit id meta] :as hit-map} color-map]
-  (fn [hit-num {:keys [hit id meta] :as hit-map} color-map]
-    [:tr {:class (when (:marked meta) "marked") :data-hit id}
+(defn results-row [hit-num {hit :hit id :id {num :num marked :marked} :meta :as hit-map} color-map]
+  (fn [hit-num {hit :hit id :id {num :num marked :marked} :meta :as hit-map} color-map]
+    [:tr {:class (when marked "marked") :data-hit id}
      (concat
       [^{:key (str hit-num "-check")}
        [:td.ignore
@@ -92,8 +92,8 @@
         [:input.checkbox-custom.ignore
          {:id (str hit-num "-check")
           :type "checkbox"
-          :checked (:marked meta)
-          :on-change #(re-frame/dispatch [:mark-hit {:hit-id id :flag (not (:marked meta))}])}]
+          :checked marked
+          :on-change #(re-frame/dispatch [:mark-hit {:hit-id id :flag (not marked)}])}]
         [:label.checkbox-custom-label.ignore
          {:for (str hit-num "-check")
           :tab-index (inc hit-num)}]]
@@ -104,7 +104,7 @@
          :on-double-click (on-double-click id)}
         [:label.ignore
          {:style {:font-weight "bold" :cursor "pointer"}}
-         (inc hit-num)]]]
+         (inc (or num hit-num))]]]
       ;; hit
       (for [token hit]
         ^{:key (str hit-num "-" (:id token))} [hit-token token color-map]))]))
