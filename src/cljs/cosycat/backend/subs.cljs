@@ -16,6 +16,15 @@
    (reaction (get-in @db [:session :modals modal]))))
 
 (re-frame/register-sub
+ :snippet-hit
+ (fn [db _]
+   (let [snippet-modal (reaction (get-in @db [:session :modals :snippet]))]
+     (reaction (when-let [{:keys [hit-id]} @snippet-modal]
+                 (let [active-project (reaction (get-in @db [:session :active-project]))
+                       project (reaction (get-in @db [:projects @active-project]))]
+                   (get-in @project [:session :query :results-by-id hit-id])))))))
+
+(re-frame/register-sub
  :session-has-error?
  (fn [db _]
    (reaction (get-in @db [:session :session-error]))))
@@ -109,12 +118,13 @@
 
 (re-frame/register-sub
  :results
- (fn [db _]
+ (fn [db [_ & [hit-ids]]]
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))
-         results-ids (reaction (get-in @project [:session :query :results]))
          results-by-id (reaction (get-in @project [:session :query :results-by-id]))]
-     (reaction (select-values @results-by-id @results-ids)))))
+     (if (empty? hit-ids)
+       (reaction (select-values @results-by-id (get-in @project [:session :query :results])))
+       (reaction (select-values @results-by-id hit-ids))))))
 
 (re-frame/register-sub ;all marked hits, also if currently not in table-results
  :marked-hits
