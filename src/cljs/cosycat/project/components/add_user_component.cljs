@@ -38,7 +38,8 @@
            {:id "username-input"
             :class "form-control form-control-no-border"
             :users eligible-users
-            :on-key-press (on-user-select eligible-users selected-user-atom)}]]
+            :on-key-press (on-user-select eligible-users selected-user-atom)
+            :on-blur #(swap! username-input-show not)}]]
          [:div.row
           [:span.text-muted.pull-right
            "Insert username"]]]))))
