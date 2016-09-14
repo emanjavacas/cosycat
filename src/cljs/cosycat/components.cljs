@@ -3,6 +3,7 @@
             [re-frame.core :as re-frame]
             [cosycat.roles :refer [project-user-roles-descs]]
             [cosycat.utils :refer [color-codes date-str->locale parse-time human-time]]
+            [cosycat.app-utils :refer [deep-merge]]
             [cosycat.localstorage :refer [fetch-db get-backups]]
             [taoensso.timbre :as timbre]
             [goog.string :as gstr]
@@ -22,19 +23,20 @@
    [:div.row [:br]]
    [:div.row.text-center content]])
 
-(defn dropdown-select [{:keys [label model options select-fn header] :as args}]
+(defn dropdown-select [{:keys [label model options select-fn header height] :as args}]
   (let [local-label (reagent/atom model)]
-    (fn [{:keys [label model options select-fn header] :or {select-fn identity}}]
+    (fn [{:keys [label model options select-fn header height] :or {select-fn identity}}]
       (let [args (dissoc args :label :model :options :select-fn :header)]
         [bs/dropdown
-         (merge
+         (deep-merge
           {:id "my-dropdown"
            :onSelect (fn [e k] (reset! local-label k) (select-fn k))}
-          args)
+          args
+          {:style {:height height}})
          [bs/button
-          {:style {:pointer-events "none !important"}}
+          {:style {:pointer-events "none !important" :height height}}
           [:span.text-muted label] @local-label]
-         [bs/dropdown-toggle]
+         [bs/dropdown-toggle {:style {:height height}}]
          [bs/dropdown-menu
           (concat
            [^{:key "header"} [bs/menu-item {:header true} header]

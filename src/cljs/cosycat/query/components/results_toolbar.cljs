@@ -53,6 +53,7 @@
     (fn []
       [dropdown-select
        {:label "Prop: "
+        :height "34px"
         :model (dekeyword @current-field)
         :options (->> @metadata-fields keys (map dekeyword) (mapv #(->map % %)))
         :select-fn #(re-frame/dispatch [:set-token-field (keyword %)])
