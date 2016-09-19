@@ -6,6 +6,9 @@
             [cosycat.tree :refer [data-tree]]
             [cosycat.schemas.app-state-schemas :refer [db-schema]]
             [cosycat.localstorage :refer [dump-db fetch-last-dump get-backups]]
+            [cosycat.autosuggest :refer [suggest-annotations]]
+            [react-autosuggest.core :refer [autosuggest]]
+            [clojure.string :as str]
             [taoensso.timbre :as timbre]))
 
 (defn ls-dump []
@@ -42,4 +45,5 @@
          [ls-print]
          [ls-reload]]]
        [:div.row [:hr]]
+       [:div.row [suggest-annotations [(js->clj js/defaultTagset :keywordize-keys true)]]]
        [:div.row [data-tree @db]]])))

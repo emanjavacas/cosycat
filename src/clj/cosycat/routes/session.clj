@@ -26,6 +26,7 @@
      :users (normalize-users (users-info db) username active-users)
      :projects (get-projects db username) ;TODO: add project settings
      :settings (or settings {})
+     :tagsets (env :tagsets)
      :corpora (env :corpora)}))
 
 (def session-route

@@ -64,9 +64,11 @@
 (defn input [hit-id token-id chans]
   (let [text (reagent/atom "")]
     (fn [hit-id token-id chans]
-      [:input.form-control.input-cell
+      [annotation-autocomplete
        {:type "text"
         :name "input-row"
+        :source :complex-source
+        :class "form-control input-cell"
         :on-key-down (on-key-down hit-id (keys @chans))}])))
 
 (defn hidden-input-cell []

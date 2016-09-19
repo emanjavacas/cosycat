@@ -86,7 +86,3 @@
 
 (def navbar-text
   (reagent.core/adapt-react-class js/ReactBootstrap.Navbar.Text))
-
-
-
-

@@ -15,6 +15,7 @@
      (include-css "css/loader.css")
      (include-css "css/table.css")
      (include-css "css/notifications.css")
+     (include-css "css/autosuggest.css")
      (include-css "http://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic")
      (include-css "http://fonts.googleapis.com/css?family=Roboto+Condensed:400,300")
      (include-css "vendor/css/jquery-ui.min.css")]
@@ -22,6 +23,6 @@
      [:div#app]
      (include-js "vendor/js/jquery/jquery-1.11.2.min.js")
      (include-js "vendor/js/jquery/jquery-ui.min.js")
+     (include-js "js/defaultTagset.js")
      [:script (str "var csrf =\"" csrf "\";")]
-;     [:script "cosycat.core.init();"]
      (include-js "js/compiled/app.js")]]))

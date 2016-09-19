@@ -6,6 +6,7 @@
              :database-url "mongodb://127.0.0.1:27017/cosycatDev"
              :port 3000
              :session-expires 900       ;in minutes
+             :tagsets ["tagset/tagset.json"]
              :corpora
              [{:name "brown-tei"
                :type :blacklab-server

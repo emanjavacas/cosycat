@@ -6,6 +6,7 @@
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.components :refer [disabled-button-tooltip]]
             [cosycat.autocomplete :refer [annotation-autocomplete]]
+            [cosycat.autosuggest :as autosuggest]
             [schema.core :as s]
             [react-bootstrap.components :as bs]
             [taoensso.timbre :as timbre]))
@@ -86,6 +87,17 @@
       (= (:username ann) me) success
       :else danger)))
 
+(defn on-key-press [marked-tokens current-ann me my-role annotation-modal-show]
+  (wrap-key
+   13
+   #(trigger-dispatch
+     :write
+     {:marked-tokens marked-tokens
+      :current-ann current-ann
+      :me me
+      :my-role my-role
+      :annotation-modal-show annotation-modal-show})))
+
 (defn annotation-input [marked-tokens opts]
   (fn [marked-tokens {:keys [annotation-modal-show current-ann me my-role]}]
     [:table
@@ -100,13 +112,7 @@
           :id "token-ann-key"
           :on-change (update-current-ann current-ann)
           :on-key-press
-          (wrap-key 13 #(trigger-dispatch
-                         :write
-                         {:marked-tokens marked-tokens
-                          :current-ann current-ann
-                          :me me
-                          :my-role my-role
-                          :annotation-modal-show annotation-modal-show}))}]]]]]))
+          (on-key-press marked-tokens current-ann me my-role annotation-modal-show)}]]]]]))
 
 (defmulti existing-annotation-label (fn [ann me] (classify-annotation ann me)))
 

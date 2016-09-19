@@ -36,20 +36,32 @@
  (fn [db [_ active-panel]]
    (assoc-in db [:session :active-panel] active-panel)))
 
-(defn deb [stuff]
-  (timbre/debug stuff)
-  stuff)
+(re-frame/register-handler
+ :add-tagset
+ (fn [db [_ tagset]]
+   (update db :tagsets conj tagset)))
+
+(re-frame/register-handler
+ :fetch-tagsets
+ (fn [db [_ tagsets]]
+   (doseq [tagset tagsets]
+     (GET tagset
+          {:handler #(re-frame/dispatch [:add-tagset %])
+           :error-handler #(timbre/info "Couldn't load tagset " tagset)}))
+   db))
 
 (re-frame/register-handler
  :initialize-db
  standard-middleware
- (fn [_ [_ {:keys [me users corpora projects settings] :as payload}]]
+ (fn [_ [_ {:keys [me users corpora projects settings tagsets] :as payload}]]
+   (re-frame/dispatch [:fetch-tagsets tagsets])
    (-> payload
        (assoc :session default-session)
        (assoc :history default-history)
        (assoc :settings (deep-merge (default-settings :corpora corpora) settings))
        (assoc :projects (normalize-projects projects me))
-       (assoc-in [:session :init] true))))
+       (assoc-in [:session :init] true)
+       (dissoc :tagsets))))
 
 (re-frame/register-handler              ;load error
  :register-session-error

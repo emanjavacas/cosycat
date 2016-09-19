@@ -3,7 +3,7 @@
             [reagent.core :as reagent]
             [taoensso.timbre :as timbre]))
 
-(def annotation-keys
+(def example-annotation-keys
   {"NE"
    ["country" "person" "organization"]
    "pos"
@@ -22,11 +22,11 @@
 
 (defn parse-complex-expression [expr]
   (if (not (re-find #".*=.*" expr))
-    (find-tags expr (keys annotation-keys))
+    (find-tags expr (keys example-annotation-keys))
     (let [[k v] (clojure.string/split expr #"=")]
       (if v
-        (map #(str k "=" %) (find-tags v (get annotation-keys k [])))
-        (find-tags k (keys annotation-keys))))))
+        (map #(str k "=" %) (find-tags v (get example-annotation-keys k [])))
+        (find-tags k (keys example-annotation-keys))))))
 
 (defn complex-source [req res]
   (try 
@@ -40,8 +40,8 @@
     (try
       (let [term (.-term req)
             tags (case target
-                   :keys (keys annotation-keys)
-                   :vals (annotation-keys "pos"))]
+                   :keys (keys example-annotation-keys)
+                   :vals (example-annotation-keys "pos"))]
         (res (clj->js (find-tags term tags))))
       (catch :default e
         (res (clj->js {}))))))
