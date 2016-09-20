@@ -6,7 +6,7 @@
             [goog.dom.classes :as gclass]
             [goog.dom.dataset :as gdataset]
             [react-bootstrap.components :as bs]
-            [cosycat.utils :refer [->box]]))
+            [cosycat.utils :refer [highlight-annotation]]))
 
 (defn is-in-checked-hit?
   "is current cell child inside a checked hit row"
@@ -52,15 +52,6 @@
     (let [btn (aget event "button"), e (aget event "target")]
       (when (and (zero? btn) (not (ignore-cell? e)))
         (swap! mouse-down? not)))))
-
-(defn highlight-annotation
-  "if a given token has annotations it computes a color for the user with the most
-  annotations in that token"
-  [{anns :anns :as token} color-map]
-  (let [filt-anns (filter #(contains? color-map (:username %)) (vals anns))
-        [user _] (first (sort-by second > (frequencies (map :username filt-anns))))]
-    (if-let [color (get color-map user)]
-      (->box color))))
 
 (defn hit-token [{:keys [id match marked anns]} color-map token-field]
   (fn [{:keys [id match marked anns] :as token-map} color-map token-field]

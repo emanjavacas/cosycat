@@ -3,6 +3,7 @@
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
             [cosycat.components :refer [prepend-cell]]
+            [cosycat.utils :refer [highlight-annotation]]
             [cosycat.annotation.components.input-row :refer [input-row]]
             [cosycat.annotation.components.annotation-row :refer [annotation-row]]))
 
@@ -18,28 +19,33 @@
        (map :key)
        (into (hash-set))))
 
-(defn hit-id-cell [hit-id] [:td {:style {:width "100%" :display "table-cell"}} hit-id])
+(defn hit-id-cell [hit-id]
+  [:td
+   {:style {:width "100%" :display "table-cell"}}
+   hit-id])
 
-(defn hit-cell [{:keys [word match]}]
-  (fn [{:keys [word match]}]
-    [:td.unselectable
-     {:class (when match "info")}
-     word]))
+(defn hit-cell [{:keys [word match]} color-map]
+  (fn [{:keys [word match anns] :as token-map} color-map]
+    (let [color (when anns (highlight-annotation token-map @color-map))]
+      [:td.unselectable
+       {:class (when match "info")
+        :style {:box-shadow color}}
+       word])))
 
 (defn hit-row
   "component for a (currently being annotated) hit row"
-  [{hit :hit hit-id :id meta :meta} open-hits]
-  (fn [{hit :hit hit-id :id meta :meta} open-hits]
+  [{hit :hit hit-id :id meta :meta} open-hits color-map]
+  (fn [{hit :hit hit-id :id meta :meta} open-hits color-map]
     (into
      [:tr
       {:style {:background-color "#f5f5f5" :cursor "pointer" :width "100%"}
        :on-click #(re-frame/dispatch [:open-hit hit-id])}]
      (-> (for [{id :id :as token} hit]
-           ^{:key (str "hit" hit-id id)} [hit-cell token])
+           ^{:key (str "hit" hit-id id)} [hit-cell token color-map])
          (prepend-cell {:key (str hit-id) :child hit-id-cell :opts [hit-id]})))))
 
-(defn open-annotation-component [hit open-hits]
-  (fn [hit open-hits]
+(defn open-annotation-component [hit open-hits color-map]
+  (fn [hit open-hits color-map]
     [bs/table
      {:id "table-annotation"
       :style {:border-collapse "collapse"
@@ -50,25 +56,25 @@
      (into
       [:tbody]
       (concat
-       [[hit-row hit open-hits]]
-       ;; [bs/collapse {:in (contains? @open-hits (:id hit))}]
+       [[hit-row hit open-hits color-map]]
        [[input-row hit]]
        (for [ann-key (sort-by (juxt :type :key) > (ann-types hit))]
          [annotation-row hit ann-key])))]))
 
-(defn closed-annotation-component []
-  (fn [hit open-hits]
+(defn closed-annotation-component [hit open-hits color-map]
+  (fn [hit open-hits color-map]
     [bs/table
      {:id "table-annotation"}
      [:thead]
      [:tbody
-      [hit-row hit open-hits]]]))
+      [hit-row hit open-hits color-map]]]))
 
 (defn annotation-component [hit open-hits]
-  (fn [hit open-hits]
-    (if (contains? @open-hits (:id hit))
-      [open-annotation-component hit open-hits]
-      [closed-annotation-component hit open-hits])))
+  (let [color-map (re-frame/subscribe [:filtered-users-colors])]
+    (fn [hit open-hits]
+      (if (contains? @open-hits (:id hit))
+        [open-annotation-component hit open-hits color-map]
+        [closed-annotation-component hit open-hits color-map]))))
 
 (defn annotation-panel []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])

@@ -132,6 +132,15 @@
     (if (and (not (empty? k)) (not (empty? v)))
       [k v])))
 
+(defn highlight-annotation
+  "if a given token has annotations it computes a color for the user with the most
+  annotations in that token"
+  [{anns :anns :as token} color-map]
+  (let [filt-anns (filter #(contains? color-map (:username %)) (vals anns))
+        [user _] (first (sort-by second > (frequencies (map :username filt-anns))))]
+    (if-let [color (get color-map user)]
+      (->box color))))
+
 ;;; Else
 (defn dominant-color
   "http://stackoverflow.com/a/2541680"
