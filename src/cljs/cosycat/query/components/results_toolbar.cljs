@@ -41,9 +41,9 @@
       [:div.col-lg-3.col-sm-5 [query-result-label]]
       [:div.col-lg-9.col-sm-7 [:div.pull-left [pager-buttons]]]]]))
 
-(defn mark-all-hits-btn []
+(defn mark-hits-btn []
   [bs/button
-   {:onClick #(re-frame/dispatch [:mark-all-hits])
+   {:onClick #(re-frame/dispatch [:mark-hits])
     :style {:font-size "12px" :height "34px"}}
    "Mark hits"])
 
@@ -62,7 +62,7 @@
 (defn mark-buttons []
   [bs/button-toolbar
    [token-field-button]
-   [mark-all-hits-btn]
+   [mark-hits-btn]
    [annotation-modal-button]])
 
 (defn results-toolbar []

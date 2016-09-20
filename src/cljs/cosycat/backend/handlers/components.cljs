@@ -97,6 +97,23 @@
      (update-in db path disjconj hit-id))))
 
 (re-frame/register-handler
+ :close-hits
+ standard-middleware
+ (fn [db _]
+   (let [active-project (get-in db [:session :active-project])]
+     (assoc-in db [:projects active-project :session :components :open-hits] #{}))))
+
+(re-frame/register-handler
+ :open-hits
+ standard-middleware
+ (fn [db _]
+   (let [active-project (get-in db [:session :active-project])
+         results (get-in db [:projects active-project :session :query :results-by-id])
+         marked-hits (filter #(get-in % [:meta :marked]) (vals results))]
+     (assoc-in db [:projects active-project :session :components :open-hits]
+               (apply hash-set (map :id marked-hits))))))
+
+(re-frame/register-handler
  :set-token-field
  (fn [db [_ token-field]]               ;todo, should validate token-field
    (let [active-project (get-in db [:session :active-project])
@@ -113,7 +130,7 @@
      (assoc-in db path (boolean flag)))))
 
 (re-frame/register-handler
- :mark-all-hits
+ :mark-hits
  standard-middleware
  (fn [db _]
    (let [active-project (get-in db [:session :active-project])
@@ -124,7 +141,7 @@
              (get-in db [:projects active-project :session :query :results])))))
 
 (re-frame/register-handler
- :unmark-all-hits
+ :unmark-hits
  standard-middleware
  (fn [db _]
    (let [active-project (get-in db [:session :active-project])

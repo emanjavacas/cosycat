@@ -104,18 +104,33 @@
         [:div.col-lg-10
          (str "Annotation panel (" (count @marked-hits) " selected hits)")]]])))
 
-(defn unmark-all-hits-btn []
+(defn unmark-hits-btn []
   [bs/button
-   {:onClick #(re-frame/dispatch [:unmark-all-hits])
+   {:onClick #(re-frame/dispatch [:unmark-hits])
     :style {:font-size "12px" :height "34px"}}
    "Unmark hits"])
+
+(defn close-hits-btn []
+  [bs/button
+   {:onClick #(re-frame/dispatch [:close-hits])
+    :style {:font-size "12px" :height "34px"}}
+   "Close hits"])
+
+(defn open-hits-btn []
+  [bs/button
+   {:onClick #(re-frame/dispatch [:open-hits])
+    :style {:font-size "12px" :height "34px"}}
+   "Open hits"])
+
+(defn hits-toolbar []
+  [bs/button-toolbar [open-hits-btn] [close-hits-btn] [unmark-hits-btn]])
 
 (defn annotation-open-header []
   (fn []
     [:div.container-fluid
      [:div.row
       [:div.col-lg-7.col-sm-5 [:div.pull-left [filter-annotation-buttons]]]
-      [:div.col-lg-4.col-sm-5 [:div.pull-right [unmark-all-hits-btn]]]]]))
+      [:div.col-lg-4.col-sm-5 [:div.pull-right [hits-toolbar]]]]]))
 
 (defn minimizable-query-frame []
   [minimize-panel
