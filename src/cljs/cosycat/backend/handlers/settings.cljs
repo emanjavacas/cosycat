@@ -35,8 +35,10 @@
  standard-middleware
  (fn [db [_ path value]]
    (let [active-project (get-in db [:session :active-project])]
-     ;; TODO: this should update session settings {:settings}
-     (assoc-in db (into [:projects active-project :settings] path) value))))
+     ;; TODO: this should update general settings {:settings}
+     (-> db
+         (assoc-in (into [:settings] path) value)
+         (assoc-in (into [:projects active-project :settings] path) value)))))
 
 (defn avatar-error-handler [& args]
   (re-frame/dispatch [:notify {:message "Couldn't update avatar"}]))
@@ -56,7 +58,18 @@
    (POST "settings/save-settings"
          {:params {:update-map update-map}
           :handler #(re-frame/dispatch [:notify {:message "Successfully saved settings"}])
-          :error-handler #(re-frame/dispatch
-                           [:notify {:message "Error while saving settings" :status :error}])})
+          :error-handler #(re-frame/dispatch [:notify {:message "Couldn't save settings" :status :error}])})
    db))
+
+(re-frame/register-handler
+ :submit-project-settings
+ (fn [db [_ update-map]]
+   (let [active-project (get-in db [:session :active-project])]
+     (POST "settings/save-project-settings"
+           {:params {:update-map update-map :project active-project}
+            :handler #(re-frame/dispatch [:notify {:message "Successfully saved project settings"}])
+            :error-handler #(re-frame/dispatch [:notify {:message "Couldn't save settings" :status :error}])})
+     db)))
+
+
 

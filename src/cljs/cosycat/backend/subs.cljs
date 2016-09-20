@@ -11,6 +11,11 @@
    (reaction @db)))
 
 (re-frame/register-sub
+ :tagsets
+ (fn [db [_ & path]]
+   (reaction (mapv #(get-in % path) (:tagsets @db)))))
+
+(re-frame/register-sub
  :modals
  (fn [db [_ modal]]
    (reaction (get-in @db [:session :modals modal]))))

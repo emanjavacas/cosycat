@@ -21,8 +21,14 @@
    :components {s/Any s/Any}
    :filtered-users #{s/Str}})             ;filter out annotations by other users
 
-(def project-settings-schema
-  (deep-merge settings-schema {(s/optional-key :components) {}}))
+(defn make-keys-optional [schema]
+  (reduce-kv (fn [m k v] (if (s/optional-key? k)
+                           m
+                           (-> m (assoc (s/optional-key k) v) (dissoc k))))
+             {}
+             schema))
+
+(def project-settings-schema (make-keys-optional settings-schema))
 
 (def project-user-schema
   {:username s/Str :role s/Str})

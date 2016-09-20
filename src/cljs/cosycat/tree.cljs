@@ -46,13 +46,17 @@
 (defn recursive* [data depth init-open]
   (cond (map? data)                     ;map
         (into [:div {:style (style depth)}]
-              (mapv (fn [[k v]] [i k v depth (recursive* v (inc depth))
-                                 :tag :div :init-open init-open])
+              (mapv (fn [[k v]]
+                      ^{:key (str depth "-" k)}
+                      [i k v depth (recursive* v (inc depth))
+                       :tag :div :init-open init-open])
                     data))
         (coll? data)              ;sequential
         (into [:ul {:style (assoc (style depth) :list-style-type "none")}]
-              (mapv (fn [[k v]] [i k v depth (recursive* v (inc depth))
-                                 :tag :li :init-open init-open])
+              (mapv (fn [[k v]]
+                      ^{:key (str depth "-" k)}
+                      [i k v depth (recursive* v (inc depth))
+                       :tag :li :init-open init-open])
                     (map-indexed vector data)))
         :else [:span [child-label data]]))              ;else
 

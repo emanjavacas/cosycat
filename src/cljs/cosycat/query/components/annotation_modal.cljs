@@ -5,15 +5,15 @@
             [cosycat.app-utils :refer [dekeyword]]
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.components :refer [disabled-button-tooltip]]
-            [cosycat.autocomplete :refer [annotation-autocomplete]]
-            [cosycat.autosuggest :as autosuggest]
+            [cosycat.autosuggest :refer [suggest-annotations]]
             [schema.core :as s]
             [react-bootstrap.components :as bs]
             [taoensso.timbre :as timbre]))
 
 (defn notify-not-authorized [action role]
   (let [action (dekeyword action)
-        message (format "Your project role [%s] does not allow you to [%s] annotations" role action)]
+        message (format "Your project role [%s] does not allow you to [%s] annotations"
+                        role action)]
     (re-frame/dispatch [:notify {:message message}])))
 
 (defn classify-annotation
@@ -47,18 +47,21 @@
       {:hit-id hit-id
        :token-id id}])))
 
+(defn suggest-annotation [new-val existin-annotation]
+  (re-frame/dispatch [:notify {:message "To be implemented"}]))
+
 (defn trigger-dispatch
-  [action {:keys [marked-tokens annotation-modal-show current-ann me my-role]}]
-  (if-let [[key value] (parse-annotation (by-id "token-ann-key"))]
+  [action {:keys [value marked-tokens annotation-modal-show current-ann me my-role]}]
+  (if-let [[key val] (parse-annotation @value)]
     (let [{:keys [empty-annotation existing-annotation-owner existing-annotation]}
           (group-tokens @marked-tokens @current-ann @me)]
-      (cond (not (check-annotation-role action @my-role))
+      (cond (not (check-annotation-role action @my-role)) ;user is not authorized
             (notify-not-authorized action @my-role)
-            (and (empty? empty-annotation)
+            (and (empty? empty-annotation) ;user suggestion to change
                  (empty? existing-annotation-owner)
                  (not (empty? existing-annotation)))
-            (re-frame/dispatch [:notify {:message "To be implemented"}])
-            :else (let [key-val {:key key :value value}]
+            (suggest-annotation val existing-annotation)
+            :else (let [key-val {:key key :value val}] ;dispatch annotations
                     (dispatch-annotations key-val empty-annotation)
                     (update-annotations key-val existing-annotation-owner)
                     (deselect-tokens empty-annotation)
@@ -68,16 +71,16 @@
 (defn wrap-key [key-code f]
   (fn [e] (when (= key-code (.-charCode e)) (f))))
 
-(defn update-current-ann [current-ann]
+(defn update-current-ann [current-ann value]
   (fn [target]
-    (let [input-data (by-id "token-ann-key")
+    (let [input-data @value
           [_ key] (re-find #"([^=]+)=?" input-data)]
       (reset! current-ann key))))
 
-(defn count-selected [marked-tokens current-ann me]
+(defn count-selected [marked-tokens current me]
   (->> @marked-tokens
-       (sort-by (juxt :word (fn [{:keys [anns]}] (classify-annotation anns @current-ann @me))))
-       (map (juxt :word (fn [token] (get-in token [:anns @current-ann]))))
+       (sort-by (juxt :word (fn [{:keys [anns]}] (classify-annotation anns @current @me))))
+       (map (juxt :word (fn [token] (get-in token [:anns @current]))))
        frequencies))
 
 (defn background-color [ann me]
@@ -87,32 +90,29 @@
       (= (:username ann) me) success
       :else danger)))
 
-(defn on-key-press [marked-tokens current-ann me my-role annotation-modal-show]
-  (wrap-key
-   13
-   #(trigger-dispatch
-     :write
-     {:marked-tokens marked-tokens
-      :current-ann current-ann
-      :me me
-      :my-role my-role
-      :annotation-modal-show annotation-modal-show})))
+(defn on-key-press
+  [{:keys [value marked-tokens current-ann me my-role annotation-modal-show] :as opts}]
+  (wrap-key 13 (fn [] (trigger-dispatch :write opts))))
 
 (defn annotation-input [marked-tokens opts]
-  (fn [marked-tokens {:keys [annotation-modal-show current-ann me my-role]}]
-    [:table
-     {:width "100%"}
-     [:tbody
-      [:tr
-       [:td [:i.zmdi.zmdi-edit]]
-       [:td
-        [annotation-autocomplete
-         {:source :complex-source
-          :class "form-control form-control-no-border"
-          :id "token-ann-key"
-          :on-change (update-current-ann current-ann)
-          :on-key-press
-          (on-key-press marked-tokens current-ann me my-role annotation-modal-show)}]]]]]))
+  (let [tagsets (re-frame/subscribe [:tagsets])
+        value (reagent/atom "")]
+    (fn [marked-tokens {:keys [annotation-modal-show current-ann me my-role]}]
+      [:table
+       {:width "100%"}
+       [:tbody
+        [:tr
+         [:td [:i.zmdi.zmdi-edit]]
+         [:td [suggest-annotations @tagsets
+               {:on-change (update-current-ann current-ann value)
+                :class "form-control form-control-no-border"
+                :placeholder "Format: key=value"
+                :value value
+                :onKeyDown #(.stopPropagation %)
+                :onKeyPress (on-key-press
+                             {:value value :marked-tokens marked-tokens
+                              :current-ann current-ann :me me :my-role my-role
+                              :annotation-modal-show annotation-modal-show})}]]]]])))
 
 (defmulti existing-annotation-label (fn [ann me] (classify-annotation ann me)))
 
@@ -139,7 +139,8 @@
      [:td {:style {:padding-bottom "5px"}} word]
      [:td {:style {:padding-bottom "5px"}} [existing-annotation-label ann @me]]
      [:td {:style {:padding-bottom "5px" :text-align "right"}}
-      [bs/label {:style {:vertical-align "-30%" :display "inline-block" :font-size "100%"}} cnt]]]))
+      [bs/label {:style {:vertical-align "-30%" :display "inline-block" :font-size "100%"}}
+       cnt]]]))
 
 (defn token-counts-table [marked-tokens {:keys [current-ann me]}]
   (fn [marked-tokens {:keys [current-ann me]}]

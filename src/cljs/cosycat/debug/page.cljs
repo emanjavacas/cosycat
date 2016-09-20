@@ -45,5 +45,4 @@
          [ls-print]
          [ls-reload]]]
        [:div.row [:hr]]
-       [:div.row [suggest-annotations [(js->clj js/defaultTagset :keywordize-keys true)]]]
        [:div.row [data-tree @db]]])))

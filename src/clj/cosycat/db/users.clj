@@ -4,6 +4,7 @@
             [buddy.hashers :as hashers]
             [taoensso.timbre :as timbre]
             [schema.core :as s]
+            [cosycat.db.utils :refer [->set-update-map]]
             [cosycat.schemas.user-schemas :refer [user-schema]]
             [cosycat.components.db :refer [new-db colls]]
             [cosycat.avatar :refer [user-avatar]]))
@@ -19,7 +20,7 @@
 
 (defn normalize-user
   "transforms db user doc into public user (no private info)"
-  [user & ks] 
+  [user & ks]
   (-> (apply dissoc user :password :_id ks)
       (update-in [:roles] (partial apply hash-set))))
 
@@ -118,6 +119,6 @@
   (-> (mc/find-and-modify
         db-conn (:users colls)
         {:username username}
-        {$set {(format "projects.%s.settings") update-map}}
+        {$set (->set-update-map (format "projects.%s.settings" project-name) update-map)}
         {:return-new true})
       (get-in [:projects project-name :settings] {})))

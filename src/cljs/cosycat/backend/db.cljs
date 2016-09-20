@@ -15,7 +15,9 @@
              :snippet-opts {:snippet-size 50 :snippet-delta 25}
              :corpus corpus}}))
 
-(def default-session {:active-panel :front-panel :active-project nil})
+(def default-session
+  {:active-panel :front-panel
+   :active-project nil})
 
 (defn default-project-session [project]
   {:query {:results-summary {}

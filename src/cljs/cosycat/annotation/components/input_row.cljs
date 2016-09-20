@@ -6,6 +6,7 @@
             [cosycat.app-utils :refer [->int parse-token]]
             [cosycat.components :refer [prepend-cell dummy-cell]]
             [cosycat.autocomplete :refer [annotation-autocomplete]]
+            [cosycat.autosuggest :refer [suggest-annotations]]
             [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
@@ -62,14 +63,14 @@
           (set! (.. pressed -target -value) ""))))))
 
 (defn input [hit-id token-id chans]
-  (let [text (reagent/atom "")]
+  (let [tagsets (re-frame/subscribe [:tagsets])]
     (fn [hit-id token-id chans]
-      [annotation-autocomplete
-       {:type "text"
-        :name "input-row"
-        :source :complex-source
-        :class "form-control input-cell"
-        :on-key-down (on-key-down hit-id (keys @chans))}])))
+      [:div.input-cell
+       [suggest-annotations
+        @tagsets
+        {:id (str "input-" hit-id)
+         :class "form-control input-cell"
+         :onKeyDown (on-key-down hit-id (keys @chans))}]])))
 
 (defn hidden-input-cell []
   (fn [] [:td {:style {:display "none"}}]))

@@ -15,7 +15,8 @@
 
 (def settings-schema
   {:notifications {:delay s/Int} ;overridable by project-setts
-   :query query-opts-schema})
+   :query query-opts-schema
+   (s/optional-key :tagsets) [s/Any]})
 
 (def project-history-schema
   {:query [{:query-str s/Str :timestamp s/Int}]})

@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [ajax.core :refer [POST]]
-            [cosycat.app-utils :refer [pending-users]]
+            [cosycat.app-utils :refer [pending-users deep-merge]]
             [cosycat.routes :refer [nav!]]
             [cosycat.backend.middleware :refer [standard-middleware check-project-exists]]
             [cosycat.backend.db :refer [default-project-session default-project-history]]
@@ -41,7 +41,7 @@
    (let [project-settings (get-in db [:projects project-name :settings] {})]
      (-> db
          (assoc-in [:session :active-project] project-name)
-         (update-in [:settings] merge project-settings)))))
+         (update-in [:settings] deep-merge project-settings)))))
 
 (re-frame/register-handler              ;add project to client-db
  :add-project

@@ -38,6 +38,7 @@
 
 (re-frame/register-handler
  :add-tagset
+ standard-middleware
  (fn [db [_ tagset]]
    (update db :tagsets conj tagset)))
 
@@ -47,13 +48,16 @@
    (doseq [tagset tagsets]
      (GET tagset
           {:handler #(re-frame/dispatch [:add-tagset %])
-           :error-handler #(timbre/info "Couldn't load tagset " tagset)}))
+           :error-handler #(timbre/info "Couldn't load tagset " tagset)
+           :keywords? true
+           :response-format :json}))
    db))
 
 (re-frame/register-handler
  :initialize-db
  standard-middleware
  (fn [_ [_ {:keys [me users corpora projects settings tagsets] :as payload}]]
+   (.log js/console projects settings)
    (re-frame/dispatch [:fetch-tagsets tagsets])
    (-> payload
        (assoc :session default-session)

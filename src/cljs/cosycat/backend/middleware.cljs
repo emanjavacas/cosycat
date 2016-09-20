@@ -41,7 +41,7 @@
           (if-not (some #{project-name} (keys projects))
             (do (project-not-found-error project-name) new-db)
             new-db)
-          (do (re-frame/dispatch-sync [:intialize-session])
+          (do (re-frame/dispatch [:initialize-session])
               (refresh)
               new-db))))))
 

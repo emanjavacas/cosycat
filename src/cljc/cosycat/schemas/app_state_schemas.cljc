@@ -49,5 +49,5 @@
    :me user-schema                     ;client user
    :users [{:username s/Str :user public-user-schema}]
    :corpora [s/Any]                     ;see query-backends/Corpus
-   :tagsets [s/Str]
+   :tagsets [s/Any]
    :projects {s/Any project-schema}})
