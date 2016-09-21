@@ -10,24 +10,24 @@
             [schema.coerce :as coerce]))
 
 ;;; Exceptions
-(defn span-or-token [{B :B O :O :as scope}]
+(defn span-or-token [{{B :B O :O :as scope} :scope}]
   (cond (and B O) "span"
         (integer? scope) "token"
         :else "undefined"))
 
-(defn ex-overwrite-span [source-scope scope]
+(defn ex-overwrite-span [source-span span]
   (ex-info (str "Attempt to overwrite span annotation with "
-                (span-or-token source-scope) " annotation")
-           {:source-scope source-scope :scope scope}))
+                (span-or-token source-span) " annotation")
+           {:source-span source-span :span span}))
 
-(defn ex-overwrite-token [source-scope scope]
+(defn ex-overwrite-token [source-span span]
   (ex-info (str "Attempt to overwrite token annotation with "
-                (span-or-token source-scope) " annotation")
-           {:source-scope source-scope :scope scope}))
+                (span-or-token source-span) " annotation")
+           {:source-span source-span :span span}))
 
-(defn ex-overlapping-span [source-scope scope]
+(defn ex-overlapping-span [source-span span]
   (ex-info "Attempt to overwrite overlapping span annotation"
-           {:source-scope source-scope :scope scope}))
+           {:source-span source-span :span span}))
 
 ;;; Checkers
 (declare fetch-span-annotation-by-key fetch-token-annotation-by-key)
@@ -46,16 +46,16 @@
 (defmethod check-insert "token"
   [{db-conn :db :as db} project {corpus :corpus {scope :scope :as span} :span {key :key} :ann}]
   (when-let [existing-token-annotation (fetch-token-annotation-by-key db project corpus key span)]
-    (throw (ex-overwrite-token (get-in existing-token-annotation [:span :scope]) (:scope span))))
+    (throw (ex-overwrite-token (:span existing-token-annotation) span)))
   (when-let [existing-span-annotation (fetch-span-annotation-by-key db project corpus key span)]
-    (throw (ex-overwrite-span (get-in existing-span-annotation [:span :scope]) scope))))
+    (throw (ex-overwrite-span (:span existing-span-annotation) span))))
 
 (defmethod check-insert "IOB"
   [{db-conn :db :as db} project {corpus :corpus {{B :B O :O} :scope :as span} :span {key :key} :ann}]
   (when-let [existing-token-annotation (fetch-token-annotation-by-key db project corpus key span)]
-    (throw (ex-overwrite-token (get-in existing-token-annotation [:span :scope]) (:scope span))))
+    (throw (ex-overwrite-token (:span existing-token-annotation) span)))
   (when-let [existing-span-annotation (fetch-span-annotation-by-key db project corpus key span)]
-    (throw (ex-overlapping-span (get-in existing-span-annotation [:span :scope]) (:scope span)))))
+    (throw (ex-overlapping-span (:span existing-span-annotation) span))))
 
 ;;; Fetchers
 (defn fetch-annotation-by-id [{db-conn :db} project id]
@@ -126,3 +126,8 @@
                    "query" query "corpus" corpus "hit-id" hit-id}}
             {:return-new true})
     history (with-history db-conn)))
+
+(defn remove-annotation
+  [{db-conn :db :as db} project {version :_version id :_id :as ann-map}]
+  (assert-ex-info (and version id) "annotation update requires annotation id/version" ann-map)
+  (vcs/remove-by-id db-conn (server-project-name project) version id))

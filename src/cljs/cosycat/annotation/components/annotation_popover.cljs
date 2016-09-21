@@ -6,22 +6,27 @@
             [cosycat.components :refer [user-thumb]]
             [taoensso.timbre :as timbre]))
 
-(defn dispatch-update [id version new-value hit-id on-dispatch]
+(defn dispatch-update [{id :_id version :_version} hit-id new-value]
   (re-frame/dispatch
    [:update-annotation
-    {:update-map {:_id id :_version version :value new-value :hit-id hit-id}}])
-  (on-dispatch))
+    {:update-map {:_id id :_version version :value new-value :hit-id hit-id}}]))
 
-(defn trigger-update [id version new-value hit-id on-dispatch]
+(defn dispatch-remove [ann-map hit-id]
+  (re-frame/dispatch [:delete-annotation {:ann-map ann-map :hit-id hit-id}]))
+
+(defn trigger-update [ann-map hit-id new-value on-dispatch]
   (fn [e]
     (when (= 13 (.-charCode e))
-      (dispatch-update id version new-value hit-id on-dispatch))))
+      (on-dispatch)
+      (if (empty? new-value)
+        (dispatch-remove ann-map hit-id)
+        (dispatch-update ann-map hit-id new-value)))))
 
 (defn new-value-input [{{key :key value :value} :ann} hit-id on-dispatch]
   (let [text-atom (reagent/atom value)
         clicked (reagent/atom false)]
     (fn [{{key :key value :value} :ann
-          id :_id version :_version user :username time :timestamp} hit-id]
+          id :_id version :_version user :username time :timestamp :as ann} hit-id]
       [:div
        [:span {:style {:padding-left "5px"}} key]
        [:span {:style {:text-align "left" :margin-left "7px"}}
@@ -38,7 +43,7 @@
            {:name "newannval"
             :type "text"
             :value  @text-atom
-            :on-key-press (trigger-update id version @text-atom hit-id on-dispatch)
+            :on-key-press (trigger-update ann hit-id @text-atom on-dispatch)
             :on-blur #(do (reset! text-atom value) (swap! clicked not))
             :on-change #(reset! text-atom (.. % -target -value))}])]])))
 
@@ -54,7 +59,7 @@
            [bs/label
             {:style {:cursor "pointer"}
              :bsStyle "primary"
-             :onClick #(dispatch-update id version value hit-id on-dispatch)}
+             :onClick #(do (dispatch-update current-ann hit-id value) (on-dispatch))}
             value]]]
      [:td {:style {:width "25px"}}]
      [:td
@@ -84,14 +89,16 @@
      {:id "popover"
       :title (reagent/as-component
               [:div.container-fluid
+               {:style {:min-width "200px"}}
                [:div.row
-                [:div.col-sm-4
+                [:div.col-sm-4.pad
                  {:style {:padding-left "0px"}}
                  [user-thumb (get-in @user [:avatar :href])]]
-                [:div.col-sm-8
-                 [:div.row.pull-right [:div.text-muted username]]
-                 [:br] [:br]
-                 [:div.row.pull-right (human-time timestamp)]]]])
+                [:div.col-sm-8.pad
+                 [:div.container-fluid
+                  [:div.row.pad.pull-right [:div.text-muted username]]
+                  [:div.row.pad {:style {:height "25px"}}]
+                  [:div.row.pad.pull-right (human-time timestamp)]]]]])
       :style {:max-width "100%"}}
      [:div.container-fluid
       [:div.row {:style {:background-color "#e2e2e2"}} [new-value-input ann hit-id on-dispatch]]

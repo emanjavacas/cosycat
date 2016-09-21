@@ -3,7 +3,7 @@
             [schema.core :as s]
             [ajax.core :refer [POST GET]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
-            [cosycat.app-utils :refer [deep-merge is-last-partition parse-token token-id->span]]
+            [cosycat.app-utils :refer [deep-merge is-last-partition parse-token token-id->span span->token-id]]
             [cosycat.utils :refer [format get-msg now]]
             [cosycat.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))
@@ -16,15 +16,22 @@
             token))
         hit))
 
+(defn delete-ann [hit token-id key]
+  (mapv (fn [{id :id anns :anns :as token}]
+          (if (contains? anns key)
+            (assoc token :anns (dissoc anns key))
+            token))
+        hit))
+
 (defn find-hit-id
   "find the hid id given `token-ids`"
-  [token-ids hit-maps]
-  (some (fn [{:keys [id hit]}]
-          (let [{from :id} (first hit)
-                {to :id} (last hit)]
-            (when (some #(and (>= % from) (<= % to)) token-ids)
-              id)))
-        hit-maps))
+  [token-id-or-ids hit-maps]
+  (if (coll? token-id-or-ids)
+    (some #(find-hit-id % hit-maps) token-id-or-ids)
+    (some (fn [{:keys [id hit]}]
+            (when (some #{token-id-or-ids} (map :id hit))
+              id))
+          hit-maps)))
 
 (defmulti add-annotations
   "generic reducer function for incoming annotation data"
@@ -48,6 +55,19 @@
  :add-annotation
  standard-middleware
  (fn [db [_ map-or-maps]] (add-annotations db map-or-maps)))
+
+(re-frame/register-handler
+ :remove-annotation
+ standard-middleware
+ (fn [db [_ project hit-id key {type :type :as span}]]
+   (let [path [:projects project :session :query :results-by-id hit-id :hit]
+         results (vals (get-in db [:projects project :session :query :results-by-id]))
+         token-id-or-ids (span->token-id span)]
+     (if-let [hit (get-in db path)]
+       (update-in db path delete-ann token-id-or-ids key) ;found hit by id
+       (if-let [hit-id (find-hit-id token-id-or-ids results)]
+         (update-in db path delete-ann token-id-or-ids key) ;found hit for annotation
+         db))))) ;couldn't find hit
 
 (defn fetch-annotation-handler [& {:keys [is-last]}]
   (fn [ann]
@@ -91,7 +111,7 @@
   type)
 
 (defn notification-message
-  [{{{B :B O :O :as scope} :scope type :type} :span :as data} message]
+  [{{{B :B O :O :as scope} :scope type :type} :span} message]
   (->> (case type
          "token" (get-msg [:annotation :error :token] scope message)
          "IOB" (get-msg [:annotation :error :IOB] B O message))
@@ -139,14 +159,13 @@
                  :error-handler error-handler})
           (catch :default e
             (re-frame/dispatch
-             [:notify {:message (format "Couldn't dispatch annotation: %s" (str e))}])))
+             [:notify {:message (format "Couldn't dispatch annotation. Reason: [%s]" (str e))}])))
      db)))
 
 (defn update-annotation-handler
   [{status :status message :message data :data}]
   (condp = status
-    :ok (do (re-frame/dispatch [:add-annotation data])
-            (dispatch-annotation-history data))
+    :ok (do (re-frame/dispatch [:add-annotation data]) (dispatch-annotation-history data))
     :error (re-frame/dispatch
             [:notify
              {:message (format "Couldn't update annotation! Reason: [%s]" message)
@@ -162,6 +181,24 @@
      (POST "/annotation/update"
            {:params {:update-map update-map :project project}
             :handler update-annotation-handler
+            :error-handler error-handler})
+     db)))
+
+(defn remove-annotation-handler
+  [{{project :project hit-id :hit-id span :span key :key :as data} :data status :status message :message}]
+  (condp = status
+    :ok (re-frame/dispatch [:remove-annotation project hit-id key span])
+    :error (re-frame/dispatch [:notify {:message (format "Couldn't remove annotation! Reason: [%s]" message)
+                                        :meta data}])))
+
+(re-frame/register-handler
+ :delete-annotation
+ (fn [db [_ {:keys [ann-map hit-id]}]]
+   (let [project (get-in db [:session :active-project])
+         corpus (get-in db [:projects project :session :query :results-summary :corpus])]
+     (POST "/annotation/remove"
+           {:params {:project project :hit-id hit-id :ann ann-map}
+            :handler remove-annotation-handler
             :error-handler error-handler})
      db)))
 
