@@ -47,7 +47,7 @@
 (defn filter-popover [{:keys [metadata filter-opts on-dispatch]}]
   [bs/popover
    {:id "popover"
-    :style {:width "450px"}
+    :style {:min-width "450px"}
     :title (reagent/as-component
             [:div.container-fluid
              [:div.row
@@ -65,7 +65,7 @@
               (doall (for [{field-name :fieldName :as field} row
                            :let [{filter-value :value} (current-filter filter-opts field-name)]]
                        ^{:key field-name}
-                       [:div.col-sm-4.col-md-4.pad [filter-field field "Hi!"]]))]))]])
+                       [:div.col-sm-4.col-md-4.pad [filter-field field filter-value]]))]))]])
 
 (defn filter-button []
   (let [show? (reagent/atom false), target (reagent/atom nil)
