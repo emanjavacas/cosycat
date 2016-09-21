@@ -10,10 +10,19 @@
  (fn [db _]
    (reaction @db)))
 
+(defn filter-tagsets [selected-tagsets tagsets]
+  (if-not selected-tagsets
+    tagsets
+    (filter #(some (hash-set (:name %)) selected-tagsets) tagsets)))
+
 (re-frame/register-sub
  :tagsets
  (fn [db [_ & path]]
-   (reaction (mapv #(get-in % path) (:tagsets @db)))))
+   (let [tagsets (reaction (:tagsets @db))
+         active-project (reaction (get-in @db [:session :active-project]))
+         selected-tagsets (reaction (get-in @db [:projects @active-project :settings :tagsets]))]
+     (.log js/console @selected-tagsets)
+     (reaction (mapv #(get-in % path) (filter-tagsets @selected-tagsets @tagsets))))))
 
 (re-frame/register-sub
  :modals
