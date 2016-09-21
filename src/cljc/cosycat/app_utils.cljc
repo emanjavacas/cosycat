@@ -155,5 +155,15 @@
   (case [type (nil? doc)]
     ["token" true] scope
     ["token" false] (str doc "." scope)
-    ["IOB" true] (range B (inc O))
-    ["IOB" false] (map #(str doc "." %) (range B (inc O)))))
+    ["IOB" true] (vec (range B (inc O)))
+    ["IOB" false] (mapv #(str doc "." %) (range B (inc O)))))
+
+(defn token-id->int
+  "compute a unique integer identifier from str token ids (e.g. BlackLab token ids \"0.123\")
+   in order to be able to do integer-based queries (>=, <, etc.). We increase doc number to avoid
+   dropping doc number in case it is 0"
+  [token-id]
+  (if (integer? token-id)
+    token-id
+    (let [[doc id] (clojure.string/split "0.123" #"\.")]
+      (-> (str (inc (->int doc)) id) ->int))))
