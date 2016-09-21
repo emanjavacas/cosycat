@@ -19,10 +19,10 @@
        (map :key)
        (into (hash-set))))
 
-(defn hit-id-cell [hit-id]
+(defn hit-id-cell [hit-id {num :num}]
   [:td
-   {:style {:width "100%" :display "table-cell"}}
-   hit-id])
+   {:style {:width "100%" :display "table-cell" :font-weight "bold"}}
+   (if num (inc num) hit-id)])
 
 (defn hit-cell [{:keys [word match]} color-map]
   (fn [{:keys [word match anns] :as token-map} color-map]
@@ -42,7 +42,7 @@
        :on-click #(re-frame/dispatch [:open-hit hit-id])}]
      (-> (for [{id :id :as token} hit]
            ^{:key (str "hit" hit-id id)} [hit-cell token color-map])
-         (prepend-cell {:key (str hit-id) :child hit-id-cell :opts [hit-id]})))))
+         (prepend-cell {:key (str hit-id) :child hit-id-cell :opts [hit-id meta]})))))
 
 (defn open-annotation-component [hit open-hits color-map]
   (fn [hit open-hits color-map]
