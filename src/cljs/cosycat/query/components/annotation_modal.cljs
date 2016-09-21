@@ -95,9 +95,8 @@
   (wrap-key 13 (fn [] (trigger-dispatch :write opts))))
 
 (defn annotation-input [marked-tokens opts]
-  (let [tagsets (re-frame/subscribe [:tagsets])
-        value (reagent/atom "")]
-    (fn [marked-tokens {:keys [annotation-modal-show current-ann me my-role]}]
+  (let [tagsets (re-frame/subscribe [:tagsets])]
+    (fn [marked-tokens {:keys [annotation-modal-show value current-ann me my-role] :as opts}]
       [:table
        {:width "100%"}
        [:tbody
@@ -109,10 +108,7 @@
                 :placeholder "Format: key=value"
                 :value value
                 :onKeyDown #(.stopPropagation %)
-                :onKeyPress (on-key-press
-                             {:value value :marked-tokens marked-tokens
-                              :current-ann current-ann :me me :my-role my-role
-                              :annotation-modal-show annotation-modal-show})}]]]]])))
+                :onKeyPress (on-key-press opts)}]]]]])))
 
 (defmulti existing-annotation-label (fn [ann me] (classify-annotation ann me)))
 
@@ -159,40 +155,32 @@
 
 (defn annotation-modal [annotation-modal-show marked-tokens current-ann]
   (let [me (re-frame/subscribe [:me :username])
+        value (reagent/atom "")
         my-role (re-frame/subscribe [:active-project-role])]
     (fn [annotation-modal-show marked-tokens current-ann]
-      [bs/modal
-       {:class "large"
-        :show @annotation-modal-show
-        :on-hide #(do (reset! current-ann "") (swap! annotation-modal-show not))}
-       [bs/modal-header
-        {:closeButton true}
-        [bs/modal-title
-         {:style {:font-size "18px"}}
-         "Tokens marked for annotation"]]
-       [bs/modal-body
-        [:div.container-fluid
-         [:div.row
-          [annotation-input marked-tokens
-           {:annotation-modal-show annotation-modal-show
-            :me me
-            :my-role my-role
-            :current-ann current-ann}]
-          [:hr]
-          [token-counts-table marked-tokens {:current-ann current-ann :me me}]]]]
-       [bs/modal-footer
-        [bs/button
-         {:className "pull-right"
-          :bsStyle "info"
-          :onClick
-          #(trigger-dispatch
-            :write
-            {:marked-tokens marked-tokens
-             :current-ann current-ann
-             :me me
-             :my-role my-role
-             :annotation-modal-show annotation-modal-show})}
-         "Submit"]]])))
+      (let [opts {:annotation-modal-show annotation-modal-show :value value :me me
+                  :my-role my-role :current-ann current-ann :marked-tokens marked-tokens}]
+        [bs/modal
+         {:class "large"
+          :show @annotation-modal-show
+          :on-hide #(do (reset! current-ann "") (swap! annotation-modal-show not))}
+         [bs/modal-header
+          {:closeButton true}
+          [bs/modal-title
+           {:style {:font-size "18px"}}
+           "Tokens marked for annotation"]]
+         [bs/modal-body
+          [:div.container-fluid
+           [:div.row
+            [annotation-input marked-tokens opts]
+            [:hr]
+            [token-counts-table marked-tokens {:current-ann current-ann :me me}]]]]
+         [bs/modal-footer
+          [bs/button
+           {:className "pull-right"
+            :bsStyle "info"
+            :onClick #(trigger-dispatch :write opts)}
+           "Submit"]]]))))
 
 (defn annotation-modal-button []
   (let [marked-tokens (re-frame/subscribe [:marked-tokens])
