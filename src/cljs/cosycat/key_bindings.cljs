@@ -11,7 +11,13 @@
                   :fn #(re-frame/dispatch [:query-range :prev])}
                  {:key-stroke "shift-s"
                   :event-key :swap-panels
-                  :fn #(re-frame/dispatch [:swap-panels])}]})
+                  :fn #(re-frame/dispatch [:swap-panels])}
+                 {:key-stroke "shift-o"
+                  :event-key :open-hits
+                  :fn #(re-frame/dispatch [:open-hits])}
+                 {:key-stroke "shift-c"
+                  :event-key :close-hits
+                  :fn #(re-frame/dispatch [:close-hits])}]})
 
 
 (defn wrap-event [f]
