@@ -26,8 +26,8 @@
 
 (def annotation-roles
   "a map from annotation actions to required roles"
-  {:delete #{"creator"}
-   :update #{"creator" "project-lead"}
+  {:update #{"creator" "project-lead"}
+   :delete #{"creator" "project-lead" "user"}
    :write  #{"creator" "project-lead" "user"}
    :read   #{"creator" "project-lead" "user" "guest"}});retrieve project
 
