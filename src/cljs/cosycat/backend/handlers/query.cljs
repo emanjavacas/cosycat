@@ -28,11 +28,14 @@
            :else            [new-from from]))))
 
 (defn merge-fn
-  "on new results, update current results leaving untouched those that are marked"
-  [results & {:keys [has-marked?]}]
-  (fn [old-results]
-    (merge (zipmap (map :id results) results) ;normalize results
-           (filter-marked-hits old-results :has-marked? has-marked?))))
+  "on new results, update current results preserving marked metadata"
+  [old-results results]
+  (reduce-kv (fn [m k v]
+               (if (and (get m k) (get-in m [k :meta :marked]))
+                 (assoc m k (assoc-in v [:meta :marked] true))
+                 (assoc m k v)))
+             old-results
+             (zipmap (map :id results) results))) ;normalize results
 
 (defn page-margins [results]
   (-> (for [{hit :hit id :id} results   ;seq; avoid empty seq
@@ -53,7 +56,7 @@
          (assoc-in [:projects active-project :session :status] status)
          (update-in (path-fn :results-summary) merge results-summary)
          (assoc-in (path-fn :results) (map :id results))
-         (update-in (path-fn :results-by-id) (merge-fn results :has-marked? true))))))
+         (update-in (path-fn :results-by-id) merge-fn results :has-marked? true)))))
 
 (re-frame/register-handler
  :unset-query-results
