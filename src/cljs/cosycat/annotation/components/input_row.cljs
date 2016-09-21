@@ -5,7 +5,6 @@
             [cosycat.utils :refer [parse-annotation nbsp]]
             [cosycat.app-utils :refer [->int parse-token]]
             [cosycat.components :refer [prepend-cell dummy-cell]]
-            [cosycat.autocomplete :refer [annotation-autocomplete]]
             [cosycat.autosuggest :refer [suggest-annotations]]
             [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
