@@ -21,7 +21,6 @@
    (let [tagsets (reaction (:tagsets @db))
          active-project (reaction (get-in @db [:session :active-project]))
          selected-tagsets (reaction (get-in @db [:projects @active-project :settings :tagsets]))]
-     (.log js/console @selected-tagsets)
      (reaction (mapv #(get-in % path) (filter-tagsets @selected-tagsets @tagsets))))))
 
 (re-frame/register-sub
