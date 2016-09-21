@@ -2,7 +2,6 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
-            [cosycat.autocomplete :refer [users-autocomplete]]
             [cosycat.components :refer [user-profile-component]]
             [cosycat.roles :refer [project-user-roles]]
             [cosycat.utils :refer [human-time by-id]]
@@ -34,12 +33,13 @@
       (let [eligible-users (remove-project-users @users project-users)]
         [:div.container-fluid
          [:div.row
-          [users-autocomplete
-           {:id "username-input"
-            :class "form-control form-control-no-border"
-            :users eligible-users
-            :on-key-press (on-user-select eligible-users selected-user-atom)
-            :on-blur #(swap! username-input-show not)}]]
+          ;; [users-autocomplete
+          ;;  {:id "username-input"
+          ;;   :class "form-control form-control-no-border"
+          ;;   :users eligible-users
+          ;;   :on-key-press (on-user-select eligible-users selected-user-atom)
+          ;;   :on-blur #(swap! username-input-show not)}]
+          ]
          [:div.row
           [:span.text-muted.pull-right
            "Insert username"]]]))))
