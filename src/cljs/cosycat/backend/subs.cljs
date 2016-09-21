@@ -96,12 +96,12 @@
    (reaction (:corpora @db))))
 
 (re-frame/register-sub
- :corpus-info
+ :corpus-config
  (fn [db [_ & path]]
    (let [corpora (reaction (:corpora @db))
          corpus-name (reaction (get-in @db [:settings :query :corpus]))
          corpus (reaction (some #(when (= @corpus-name (:name %)) %) @corpora))]
-     (reaction (get-in @corpus (into [:info] path))))))
+     (reaction (get-in @corpus path)))))
 
 (re-frame/register-sub
  :projects

@@ -3,14 +3,10 @@
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
             [cosycat.components :refer [dropdown-select]]
+            [cosycat.query.components.filter-button :refer [filter-button]]
             [cosycat.utils :refer [->default-map]]
             [cosycat.app-utils :refer [dekeyword]]
             [taoensso.timbre :as timbre]))
-
-(defn on-click-sort                     ;redo this
-  [route]
-  (fn []
-))
 
 (defn multiple-dropdown-label [local-label]
   (fn [local-label]
@@ -57,10 +53,10 @@
 (defn sort-toolbar []
   (let [sort-opts (re-frame/subscribe [:settings :query :sort-opts])
         corpus (re-frame/subscribe [:settings :query :corpus])
-        sort-props (re-frame/subscribe [:corpus-info :sort-props])]
+        sort-props (re-frame/subscribe [:corpus-config :info :sort-props])]
     (fn []
       [:div.row
-       [:div.col-lg-12.pull-left
+       [:div.col-lg-8.pull-left
         (let [sort-opts-total (count @sort-opts)]
           [bs/button-toolbar
            (doall
@@ -86,4 +82,6 @@
            (when-not (zero? sort-opts-total)
              [bs/button
               {:onClick #(re-frame/dispatch [:query-sort])}
-              "Sort"])])]])))
+              "Sort"])])]
+       [:div.col-lg-4.pull-right
+        [filter-button]]])))

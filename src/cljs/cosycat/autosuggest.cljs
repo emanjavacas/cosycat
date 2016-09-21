@@ -112,8 +112,7 @@
           [autosuggest
            {:suggestions @sugg-atom
             :multiSection true
-            :onSuggestionsUpdateRequested (wrap-react
-                                           sugg-atom (fetch-requested tag-suggs suggs))
+            :onSuggestionsUpdateRequested (wrap-react sugg-atom (fetch-requested tag-suggs suggs))
             :onSuggestionsClearRequested #(reset! sugg-atom [])
             :getSuggestionValue (get-suggestion-value value-atom)
             :renderSuggestion (render-suggestion value-atom)

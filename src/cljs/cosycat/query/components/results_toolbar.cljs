@@ -48,7 +48,7 @@
    "Mark hits"])
 
 (defn token-field-button []
-  (let [metadata-fields (re-frame/subscribe [:corpus-info :sort-props])
+  (let [metadata-fields (re-frame/subscribe [:corpus-config :info :sort-props])
         current-field (re-frame/subscribe [:project-session :components :token-field])]
     (fn []
       [dropdown-select
