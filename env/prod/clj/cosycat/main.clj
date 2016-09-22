@@ -33,7 +33,7 @@
           :ws          [:db]}))))
 
 (defn usage [options-summary]
-  (->> ["Welcome to the command line interface of Cosycat (Corpus Linguistics with EEBO)"
+  (->> ["Welcome to the command line interface of Cosycat (Collaborative Synchronized Corpus Annotation tool)"
         ""
         "Usage: path/to/jar [options] action"
         ""
