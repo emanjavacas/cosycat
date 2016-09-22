@@ -16,12 +16,17 @@
     (filter #(some (hash-set (:name %)) selected-tagsets) tagsets)))
 
 (re-frame/register-sub
- :tagsets
+ :selected-tagsets
  (fn [db [_ & path]]
    (let [tagsets (reaction (:tagsets @db))
          active-project (reaction (get-in @db [:session :active-project]))
          selected-tagsets (reaction (get-in @db [:projects @active-project :settings :tagsets]))]
      (reaction (mapv #(get-in % path) (filter-tagsets @selected-tagsets @tagsets))))))
+
+(re-frame/register-sub
+ :tagsets
+ (fn [db _]
+   (reaction (:tagsets @db))))
 
 (re-frame/register-sub
  :modals

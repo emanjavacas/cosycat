@@ -95,7 +95,7 @@
   (wrap-key 13 (fn [] (trigger-dispatch :write opts))))
 
 (defn annotation-input [marked-tokens opts]
-  (let [tagsets (re-frame/subscribe [:tagsets])]
+  (let [tagsets (re-frame/subscribe [:selected-tagsets])]
     (fn [marked-tokens {:keys [annotation-modal-show value current-ann me my-role] :as opts}]
       [:table
        {:width "100%"}

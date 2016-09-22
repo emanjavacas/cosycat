@@ -62,7 +62,7 @@
           (set! (.. pressed -target -value) ""))))))
 
 (defn input [hit-id token-id chans]
-  (let [tagsets (re-frame/subscribe [:tagsets])]
+  (let [tagsets (re-frame/subscribe [:selected-tagsets])]
     (fn [hit-id token-id chans]
       [:div.input-cell
        [suggest-annotations
