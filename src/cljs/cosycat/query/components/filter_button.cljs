@@ -10,69 +10,66 @@
 (defn ->box [color]
   (str "0 -1.5px " color " inset"))
 
-(defn filter-input [has-focus?]
+(defn ->filter-opt [filter-name filter-value]
+  {:attribute filter-name :value filter-value})
+
+(defn add-filter [filter-name filter-value]
+  (re-frame/dispatch [:add-opts-map :filter-opts (->filter-opt filter-name filter-value)]))
+
+(defn remove-filter [filter-name]
+  (let [update-f (fn [filter-opts] (->> filter-opts (remove #(= filter-name (:attribute %))) vec))]
+    (re-frame/dispatch [:remove-opts-map :filter-opts :update-f update-f])))
+
+(defn dispatch-new-filter [filter-name value]
+  (fn [e]
+    (when (= 13 (.-charCode e))
+      (add-filter filter-name @value))))
+
+(defn filter-input [filter-name clicked?]
   (let [value (reagent/atom "")]
-    (fn [has-focus?]
+    (fn [filter-name clicked?]
       [:input.form-control.form-control-no-border
-       {:on-focus #(reset! has-focus? true)
-        :on-blur #(reset! has-focus? false)
+       {:on-blur #(reset! clicked? false)
         :style {:height "20px" :margin-top "10px"}
         :value @value
-        :on-key-down #(.preventDefault %)
-        :on-key-press #(.log js/console "dispatch new filter")
+        :autoFocus true
+        :on-key-down #(.stopPropagation %)
+        :on-key-press (dispatch-new-filter filter-name value)
         :on-change #(reset! value (.-value (.-target %)))}])))
 
-(defn filter-field [{field-name :fieldName field-type :fieldType} filter-value]
-  (let [has-focus? (reagent/atom false)]
-    (fn [{field-name :fieldName field-type :fieldType} has-filter]
-      [:div.well.well-sm
-       {:style {:margin-bottom "5px"
-                :min-width "60px"
-                :min-height "70px"
-                :box-shadow (->box (if (or @has-focus? filter-value) "#c8dde8" "#ffffff"))
-                :background-color (when (or @has-focus? filter-value) "#e6f6ff")}}
-       [:div.container-fluid
-        [:div.row.text-muted field-name]
-        [:div.row
-         (if (or @has-focus? (not filter-value))
-           [filter-input has-focus?]
-           [:span
-            {:on-click #(reset! has-focus? true)
-             :style {:cursor "pointer"}}
-            filter-value])]]])))
+(defn value-span [filter-name filter-value {:keys [clicked? has-value?]}]
+  (fn [filter-name filter-value {:keys [clicked? has-value?]}]
+    [:div.text-muted
+     {:on-click #(do (swap! clicked? not) (when has-value? (remove-filter filter-name)))
+      :style {:cursor "pointer"}}
+     filter-value]))
 
-(defn current-filter [filter-opts field-name]
-  (some #(= field-name (:attribute %)) filter-opts))
+(defn filter-field [{filter-name :fieldName field-type :fieldType} filter-value]
+  (let [clicked? (reagent/atom false)]
+    (fn [{filter-name :fieldName field-type :fieldType} has-filter]
+      [:div
+       [:div.well.well-sm
+        {:style {:margin-bottom "5px"
+                 :min-width "60px"
+                 :min-height "70px"
+                 :box-shadow (->box (if (or @clicked? filter-value) "#c8dde8" "#ffffff"))
+                 :background-color (when (or @clicked? filter-value) "#e6f6ff")}}
+        [:div.container-fluid
+         [:div.row filter-name]
+         [:div.row
+          (cond @clicked? [filter-input filter-name clicked?]
+                filter-value [value-span filter-name filter-value {:clicked? clicked? :has-value? true}]
+                :else [value-span filter-name "..." {:clicked? clicked? :has-value? false}])]]]])))
 
-(defn filter-popover [{:keys [metadata filter-opts on-dispatch]}]
-  [bs/popover
-   {:id "popover"
-    :style {:min-width "450px"}
-    :title (reagent/as-component
-            [:div.container-fluid
-             [:div.row
-              [:div.col-sm-8.pull-left [:h4 "Add filter to query"]]
-              [:div.col-sm-4.text-right
-               {:style {:font-size "12px" :text-align "right"}}
-               [:span
-                {:style {:cursor "pointer" :line-height "3.3"}
-                 :onClick on-dispatch}
-                "✕"]]]])}
-   [:div.container-fluid
-    (doall (for [[row-idx row] (map-indexed vector (partition-all 3 (vals metadata)))]
-             ^{:key row-idx}
-             [:div.row.pad
-              (doall (for [{field-name :fieldName :as field} row
-                           :let [{filter-value :value} (current-filter filter-opts field-name)]]
-                       ^{:key field-name}
-                       [:div.col-sm-4.col-md-4.pad [filter-field field filter-value]]))]))]])
+(defn current-filter [filter-opts filter-name]
+  (some #(= filter-name (:attribute %)) filter-opts))
 
 (defn filter-button []
   (let [show? (reagent/atom false), target (reagent/atom nil)
-        current-corpus-metadata (re-frame/subscribe [:corpus-config :info :corpus-info :metadata])
+        corpus-metadata (re-frame/subscribe [:corpus-config :info :corpus-info :metadata])
         filter-opts (re-frame/subscribe [:settings :query :filter-opts])]
     (fn []
-      [:div
+      [:div.text-right
        [bs/button
         {:onClick #(do (swap! show? not) (reset! target (.-target %)))
          :bsStyle "primary"}
@@ -83,8 +80,25 @@
          :placement "left"
          :rootClose true
          :onHide #(swap! show? not)}
-        (filter-popover
-         {:metadata @current-corpus-metadata
-          :filter-opts @filter-opts
-          :on-dispatch #(swap! show? not)})]])))
+        [bs/popover
+         {:id "popover"
+          :style {:min-width "450px"}
+          :title (reagent/as-component
+                  [:div.container-fluid
+                   [:div.row
+                    [:div.col-sm-8.pull-left [:h4 "Add filter to query"]]
+                    [:div.col-sm-4.text-right
+                     {:style {:font-size "12px" :text-align "right"}}
+                     [:span
+                      {:style {:cursor "pointer" :line-height "3.3"}
+                       :onClick #(swap! show? not)}
+                      "✕"]]]])}
+         [:div.container-fluid
+          (doall (for [[row-idx row] (map-indexed vector (partition-all 3 (vals @corpus-metadata)))]
+                   ^{:key row-idx}
+                   [:div.row.pad
+                    (doall (for [{filter-name :fieldName :as field} row
+                                 :let [{filter-value :value} (current-filter @filter-opts filter-name)]]
+                             ^{:key filter-name}
+                             [:div.col-sm-4.col-md-4.pad [filter-field field filter-value]]))]))]]]])))
 

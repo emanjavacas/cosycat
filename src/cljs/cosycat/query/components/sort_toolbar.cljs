@@ -13,7 +13,8 @@
     [bs/button {:style {:pointer-events "none !important"}}
      (let [total-labels (count local-label)]
        (doall (for [[idx [k v-atom]] (map-indexed vector local-label)]
-                ^{:key idx} [:span (str @v-atom (if (= (inc idx) total-labels) "" ":"))])))]))
+                ^{:key idx}
+                [:span (str @v-atom (if (= (inc idx) total-labels) "" ":"))])))]))
 
 (defn multiple-select [local-label select-fn]
   (fn [_ [k sub-k]]
@@ -50,38 +51,43 @@
            (for [[idx [k v]] (map-indexed vector options)]
              (sub-menu k v idx total-options))))]])))
 
-(defn sort-toolbar []
-  (let [sort-opts (re-frame/subscribe [:settings :query :sort-opts])
-        corpus (re-frame/subscribe [:settings :query :corpus])
+(defn sort-select-fn [idx]
+  (fn [a b] (re-frame/dispatch [:set-settings [:query :sort-opts idx a] b])))
+
+(defn sort-button-toolbar []
+  (let [corpus (re-frame/subscribe [:settings :query :corpus])
+        sort-opts (re-frame/subscribe [:settings :query :sort-opts])
         sort-props (re-frame/subscribe [:corpus-config :info :sort-props])]
     (fn []
-      [:div.row
-       [:div.col-lg-8.pull-left
-        (let [sort-opts-total (count @sort-opts)]
-          [bs/button-toolbar
-           (doall
-            (for [[idx opts] (map-indexed vector @sort-opts)]
-              ^{:key (str "multi-" idx)}
-              [multiple-dropdown
-               {:model opts
-                :options {:position (->default-map ["match" "left" "right"])
-                          :attribute (->default-map (mapv dekeyword (keys @sort-props)))
-                          :facet (->default-map ["sensitive" "insensitive"])} ;todo: depends on corpus
-                :select-fn #(re-frame/dispatch [:set-settings [:query :sort-opts idx %] %2])}]))
+      (let [sort-opts-total (count @sort-opts)]
+        [bs/button-toolbar
+         (doall
+          (for [[idx opts] (map-indexed vector @sort-opts)]
+            ^{:key (str "multi-" idx)}
+            [multiple-dropdown
+             {:model opts
+              :options {:position (->default-map ["match" "left" "right"])
+                        :attribute (->default-map (mapv dekeyword (keys @sort-props)))
+                        :facet (->default-map ["sensitive" "insensitive"])};TODO
+              :select-fn (sort-select-fn idx)}]))
+         [bs/button
+          {:onClick #(re-frame/dispatch [:add-opts-map :sort-opts])
+           :bsStyle "primary"}
+          (if (zero? sort-opts-total)
+            "add sort criterion"
+            [bs/glyphicon {:glyph "plus"}])]
+         (when-not (zero? sort-opts-total)
            [bs/button
-            {:onClick #(re-frame/dispatch [:add-default-opts-map :sort-opts])
+            {:onClick #(re-frame/dispatch [:remove-opts-map :sort-opts])
              :bsStyle "primary"}
-            (if (zero? sort-opts-total)
-              "add sort criterion"
-              [bs/glyphicon {:glyph "plus"}])]
-           (when-not (zero? sort-opts-total)
-             [bs/button
-              {:onClick #(re-frame/dispatch [:remove-opts-map :sort-opts])
-               :bsStyle "primary"}
-              [bs/glyphicon {:glyph "minus"}]])
-           (when-not (zero? sort-opts-total)
-             [bs/button
-              {:onClick #(re-frame/dispatch [:query-sort])}
-              "Sort"])])]
-       [:div.col-lg-4.pull-right
-        [filter-button]]])))
+            [bs/glyphicon {:glyph "minus"}]])
+         (when-not (zero? sort-opts-total)
+           [bs/button
+            {:onClick #(re-frame/dispatch [:query-sort])}
+            "Sort"])]))))
+
+(defn sort-toolbar []
+  (fn []
+    [:div.row
+     [:div.col-lg-8.pull-left [sort-button-toolbar]]
+     [:div.col-lg-4.pull-right [filter-button]]]))

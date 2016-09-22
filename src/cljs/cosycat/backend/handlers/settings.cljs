@@ -20,15 +20,16 @@
    (assoc-in db [:settings :query :corpus] corpus-name)))
 
 (re-frame/register-handler              ;key is one of (:sort-opts, :filter-opts)
- :add-default-opts-map
+ :add-opts-map
  standard-middleware
- (fn [db [_ key & [default-opts]]]
-   (update-in db [:settings :query key] conj (or default-opts (default-opts-map key)))))
+ (fn [db [_ key & [opts]]]
+   (update-in db [:settings :query key] conj (or opts (default-opts-map key)))))
 
 (re-frame/register-handler              ;key is one of (:sort-opts, :filter-opts)
  :remove-opts-map
  standard-middleware
- (fn [db [_ key]] (update-in db [:settings :query key] pop)))
+ (fn [db [_ key & {:keys [update-f] :or {update-f pop}}]]
+   (update-in db [:settings :query key] update-f)))
 
 (re-frame/register-handler              ;set session data related to active project
  :set-project-settings
@@ -52,14 +53,23 @@
           :error-handler avatar-error-handler})
    db))
 
+(defn submit-settings-error-handler []
+  (re-frame/dispatch [:notify {:message "Couldn't save settings" :status :error}]))
+
 (re-frame/register-handler
  :submit-settings
  (fn [db [_ update-map]]
    (POST "settings/save-settings"
          {:params {:update-map update-map}
           :handler #(re-frame/dispatch [:notify {:message "Successfully saved settings"}])
-          :error-handler #(re-frame/dispatch [:notify {:message "Couldn't save settings" :status :error}])})
+          :error-handler submit-settings-error-handler})
    db))
+
+(defn submit-project-settings-error-handler []
+  (re-frame/dispatch [:notify {:message "Couldn't save settings" :status :error}]))
+
+(defn submit-project-settings-handler []
+  (re-frame/dispatch [:notify {:message "Successfully saved project settings"}]))
 
 (re-frame/register-handler
  :submit-project-settings
@@ -67,8 +77,8 @@
    (let [active-project (get-in db [:session :active-project])]
      (POST "settings/save-project-settings"
            {:params {:update-map update-map :project active-project}
-            :handler #(re-frame/dispatch [:notify {:message "Successfully saved project settings"}])
-            :error-handler #(re-frame/dispatch [:notify {:message "Couldn't save settings" :status :error}])})
+            :handler submit-project-settings-handler
+            :error-handler submit-project-settings-error-handler})
      db)))
 
 
