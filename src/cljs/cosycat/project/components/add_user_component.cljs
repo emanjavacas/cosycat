@@ -18,7 +18,7 @@
       [:div.col-sm-4.col-md-4]
       [:div.col-sm-4.col-md-4
        [bs/button {:bsSize "large" :onClick #(swap! username-input-show not)}
-        [:h4 [:img.img-rounded.img-responsive {:src "img/add_user_icon2.png"}]]]]
+        [:h4 [:img.img-rounded.img-responsive {:src "img/add_user_icon.png"}]]]]
       [:div.col-sm-4.col-md-4]]]))
 
 (defn on-user-select [users selected-user-atom]

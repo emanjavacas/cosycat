@@ -33,7 +33,8 @@
           :ws          [:db]}))))
 
 (defn usage [options-summary]
-  (->> ["Welcome to the command line interface of Cosycat (Collaborative Synchronized Corpus Annotation tool)"
+  (->> [(str "Welcome to the command line interface of Cosycat"
+             "(Collaborative Synchronized Corpus Annotation tool)")
         ""
         "Usage: path/to/jar [options] action"
         ""
@@ -64,8 +65,7 @@
       .getParentFile
       .getPath))
 
-(defn cwd []
-  (System/getProperty "user.dir"))
+(defn cwd [] (System/getProperty "user.dir"))
 
 (defn ensure-dynamic-resource-path []
   (let [resource-path (:dynamic-resource-path env)
@@ -114,7 +114,7 @@
     (doseq [[k v] colls]
       (prompt-user
        {:prompt-msg (format "Do you want to drop collection [%s]" v)
-        ;; :yes-msg (format "Dropping collection [%s]..." v)
+        :yes-msg (format "Dropping collection [%s]..." v)
         :action #(clear-dbs db :collections [k])}))
     (.stop db)
     (exit 0 "Done. Goodbye!")))

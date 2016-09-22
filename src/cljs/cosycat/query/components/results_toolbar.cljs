@@ -32,7 +32,7 @@
       (let [{{from :from to :to} :page query-size :query-size} @results-summary]
         [:label
          {:style {:line-height "35px"}}
-         (gstr/format "%d-%d of %d hits" (inc from) to query-size)]))))
+         (gstr/format "%d-%d of %d" (inc from) to query-size)]))))
 
 (defn result-label-pager []
   (fn []

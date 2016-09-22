@@ -94,4 +94,4 @@
          [:span.input-group-addon
           {:on-click on-click-search
            :style {:cursor "pointer"}}
-          [bs/glyphicon {:glyph "search"}]]]]]))) ;to do, add filter possibilities
+          [bs/glyphicon {:glyph "search"}]]]]])))
