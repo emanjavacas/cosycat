@@ -37,8 +37,7 @@
                  [buddy/buddy-auth "0.8.1"]
                  [buddy/buddy-hashers "0.9.1"]
                  [com.stuartsierra/component "0.3.1"]
-                 [org.hackrslab/random-avatar "0.2.3"]
-                 [nl.inl.blacklab/blacklab "1.3.2"]]
+                 [org.hackrslab/random-avatar "0.2.3"]]
   
   :repositories [["hackrslab-repository" "http://hackrslab.github.io/maven-repo"]]
 

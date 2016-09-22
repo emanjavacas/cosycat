@@ -5,7 +5,7 @@
             [ring.util.response :refer [redirect response]]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
             [cosycat.components.ws :refer [send-clients]]
-            [cosycat.components.blacklab :refer [remove-hits!]]
+
             [cosycat.db.users :refer [lookup-user is-user? new-user normalize-user]]
             [cosycat.views.login :refer [login-page]]
             [buddy.auth.backends.session :refer [session-backend]]
@@ -58,8 +58,7 @@
 
 (defn logout-route
   [{{{username :username} :identity} :session
-    {blacklab :blacklab ws :ws} :components}]
-  (remove-hits! blacklab username)
+    {ws :ws} :components}]
   (send-clients ws {:type :logout :data {:username username}})
   (-> (redirect "/") (assoc :session {})))
 

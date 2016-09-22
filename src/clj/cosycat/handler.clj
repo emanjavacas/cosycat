@@ -25,7 +25,6 @@
              :refer [is-logged? auth-backend token-backend login-route logout-route signup-route]]
             [cosycat.routes.utils :refer [safe]]
             [cosycat.components.ws :refer [ws-handler-http-kit send-clients]]
-            [cosycat.routes.blacklab :refer [blacklab-routes]]
             [cosycat.routes.session :refer [session-route]]
             [cosycat.routes.projects :refer [project-routes]]
             [cosycat.routes.settings :refer [settings-routes]]
@@ -106,7 +105,6 @@
 (defn make-handler [component]
   (let [components (select-keys component (:components component))]
     (-> (app-routes
-         static-routes web-app-routes settings-routes blacklab-routes
-         annotation-routes project-routes base-routes)
+         static-routes web-app-routes settings-routes annotation-routes project-routes base-routes)
         (wrap-app-component components)
         (wrap-routes wrap-base))))

@@ -5,7 +5,6 @@
                [cosycat.db-utils :refer [clear-dbs]]
                [cosycat.components.http-server :refer [new-http-server]]
                [cosycat.components.db :refer [new-db colls]]
-               [cosycat.components.blacklab :refer [new-bl paths-map-from-corpora]]
                [cosycat.components.ws :refer [new-ws]]
                [clojure.tools.cli :refer [parse-opts]]
                [clojure.java.io :as io]
@@ -26,13 +25,11 @@
 (defn create-prod-system [config-map]
   (let [{:keys [handler port database-url corpora]} config-map]
     (-> (component/system-map
-         :blacklab (new-bl (paths-map-from-corpora corpora))
          :db (new-db database-url)
          :ws (new-ws)
-         :http-server (new-http-server {:port port :components [:db :ws :blacklab]}))
+         :http-server (new-http-server {:port port :components [:db :ws]}))
         (component/system-using
-         {:http-server [:db :ws :blacklab]
-          :blacklab    [:ws]
+         {:http-server [:db :ws]
           :ws          [:db]}))))
 
 (defn usage [options-summary]
