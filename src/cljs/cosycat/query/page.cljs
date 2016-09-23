@@ -72,15 +72,16 @@
           [:progress {:max (str max-val) :value (str @value)}])))))
 
 (defn query-frame []
-  (let [has-query? (re-frame/subscribe [:has-query-results?])
+  (let [has-query-results? (re-frame/subscribe [:has-query-results?])
+        has-query? (re-frame/subscribe [:has-query?])
         fetching-annotations? (re-frame/subscribe [:throbbing? :fetch-annotations])]
     (fn []
       [:div.container-fluid
        [query-toolbar]
        [query-frame-spacer]
        (when @has-query? [sort-toolbar])
-       (when @has-query? [progress-bar fetching-annotations?]) ;still not quite working
-       (when @has-query? [results-toolbar])
+       (when @has-query-results? [progress-bar fetching-annotations?])
+       (when @has-query-results? [results-toolbar])
        [query-frame-spacer]
        [results-frame]])))
 
