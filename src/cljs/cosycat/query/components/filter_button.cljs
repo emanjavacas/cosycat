@@ -25,12 +25,14 @@
     (when (= 13 (.-charCode e))
       (add-filter filter-name @value))))
 
+(def span-height "40px")
+
 (defn filter-input [filter-name clicked?]
   (let [value (reagent/atom "")]
     (fn [filter-name clicked?]
       [:input.form-control.form-control-no-border
        {:on-blur #(reset! clicked? false)
-        :style {:height "20px" :margin-top "10px"}
+        :style {:height span-height :margin-top "10px"}
         :value @value
         :autoFocus true
         :on-key-down #(.stopPropagation %)
@@ -41,12 +43,12 @@
   (fn [filter-name filter-value {:keys [clicked? has-value?]}]
     [:div.text-muted
      {:on-click #(do (swap! clicked? not) (when has-value? (remove-filter filter-name)))
-      :style {:cursor "pointer"}}
+      :style {:cursor "pointer" :height span-height :margin-top "10px"}}
      filter-value]))
 
 (defn filter-field [{filter-name :fieldName field-type :fieldType} filter-value]
   (let [clicked? (reagent/atom false)]
-    (fn [{filter-name :fieldName field-type :fieldType} has-filter]
+    (fn [{filter-name :fieldName field-type :fieldType} filter-value]
       [:div
        [:div.well.well-sm
         {:style {:margin-bottom "5px"
@@ -57,18 +59,19 @@
         [:div.container-fluid
          [:div.row filter-name]
          [:div.row
-          (cond @clicked? [filter-input filter-name clicked?]
+          (cond (and @clicked? (not filter-value)) [filter-input filter-name clicked?]
                 filter-value [value-span filter-name filter-value {:clicked? clicked? :has-value? true}]
                 :else [value-span filter-name "..." {:clicked? clicked? :has-value? false}])]]]])))
 
 (defn current-filter [filter-opts filter-name]
-  (some #(= filter-name (:attribute %)) filter-opts))
+  (some #(when (= filter-name (:attribute %)) %) filter-opts))
 
 (defn filter-button []
   (let [show? (reagent/atom false), target (reagent/atom nil)
         corpus-metadata (re-frame/subscribe [:corpus-config :info :corpus-info :metadata])
         filter-opts (re-frame/subscribe [:settings :query :filter-opts])]
     (fn []
+      (.log js/console @filter-opts)
       [:div.text-right
        [bs/button
         {:onClick #(do (swap! show? not) (reset! target (.-target %)))
