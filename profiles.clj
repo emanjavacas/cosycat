@@ -2,41 +2,26 @@
        :source-paths ["env/dev/clj"]
        :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]}}}
        :env {:host "localhost"
+             :dev? true
              :pass "pass"
              :database-url "mongodb://127.0.0.1:27017/cosycatDev"
              :port 3000
              :session-expires 900       ;in minutes
              :tagset-paths ["tagsets"]
              :corpora
-             [{:name "brown-tei"
+             [{:corpus "brown-tei"
                :type :blacklab-server
-               :args {:index "brown-tei"
-                      :server "mbgserver.uantwerpen.be:8080"
+               :args {:server "mbgserver.uantwerpen.be:8080"
                       :web-service "blacklab-server-1.6.0-SNAPSHOT"}}
-              {:name "mbg-index"
+              {:corpus "mbg-index"
                :type :blacklab-server
-               :args {:index "mbg-index"
-                      :server "mbgserver.uantwerpen.be:8080"
+               :args {:server "mbgserver.uantwerpen.be:8080"
                       :web-service "blacklab-server-1.6.0-SNAPSHOT"}}]}}
  :test {:env {:database-url "mongodb://127.0.0.1:27017/cosycatTest"
               :pass "pass"
+              :dev? true
               :corpora
-              [{:name "mbg-small"
+              [{:corpus "mbg-small"
                 :type :blacklab-server
-                :args {:index "mbg-index-small"
-                       :server "mbgserver.uantwerpen.be:8080"
-                       :web-service "blacklab-server-1.4-SNAPSHOT"}}]}}
- :uberjar {:source-paths ["env/prod/clj"]
-           :hooks [leiningen.cljsbuild]
-           :prep-tasks ["compile" ["cljsbuild" "once"]]
-           :env {:database-url "mongodb://127.0.0.1:27017/cosycat"
-                 :pass "pass"
-                 :port 3000
-                 :session-expires 90}
-           :omit-source true
-           :aot :all
-           :cljsbuild {:jar true
-                       :builds {:app {:source-paths ["env/prod/cljs"]
-                                      :compiler {:optimizations :advanced
-                                                 :closure-defines {goog.DEBUG false}
-                                                 :pretty-print true}}}}}}
+                :args {:server "mbgserver.uantwerpen.be:8080"
+                       :web-service "blacklab-server-1.4-SNAPSHOT"}}]}}}

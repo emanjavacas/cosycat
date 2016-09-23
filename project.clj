@@ -59,7 +59,21 @@
 
   :min-lein-version "2.5.0"
 
-  :uberjar-name "cosycat-prod.jar"
+  :profiles {:uberjar
+             {:source-paths ["env/prod/clj"]
+              :hooks [leiningen.cljsbuild]
+              :prep-tasks ["compile" ["cljsbuild" "once"]]
+              :env {:database-url "mongodb://127.0.0.1:27017/cosycat"
+                    :pass "pass"
+                    :port 3000
+                    :session-expires 90}
+              :omit-source true
+              :aot :all
+              :cljsbuild {:jar true
+                          :builds {:app {:source-paths ["env/prod/cljs"]
+                                         :compiler {:optimizations :advanced
+                                                    :closure-defines {goog.DEBUG false}
+                                                    :pretty-print true}}}}}}
 
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
 
@@ -72,7 +86,7 @@
                                 :optimizations :none
                                 :pretty-print true
                                 :source-map-timestamp true}}}
-              :min {:source-paths ["src/cljs" "src/cljc" "src/clj" "env/dev/cljs"]
+              :min {:source-paths ["src/cljs" "src/cljc" "src/clj"]
                     :compiler {:output-to "resources/public/js/compiled/app.js"
                                :optimizations :advanced
                                :closure-defines {goog.DEBUG false}
