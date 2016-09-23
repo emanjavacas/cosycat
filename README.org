@@ -1,53 +1,59 @@
-* TODO Cosycat (Collaborative Synchronized Corpus Annotation Tool)
+* Cosycat (Collaborative Synchronized Corpus Annotation Tool)
 
-* TODOs
+** Introduction
 
-** Bulk inserts (does this work atomically in MongoDB?)
- Span annotations always touch multiple documents (from B to O)
- In that case, we should try ~$isolated~:
- See [[https://docs.mongodb.org/manual/core/write-operations-atomicity/][atomicity]] and [[https://docs.mongodb.org/manual/reference/operator/update/isolated/#up._S_isolated][$isolated operator]].
+ Cosycat is a web-based corpus query and annotation interface with a focus on
+ multiuser *synchronization* and *version control*. The application is designed 
+ with an emphasis on *modularity* and *reusability*.
 
-** Schemes
+[a beautiful screenshot here]
 
- - Simple
- #+BEGIN_SRC json
-{
-    "pos": [
-	"NN",
-	"NNP",
-	"PP"
-    ],
-    "animate": [
-	"human",
-	"non-human",
-	"animal",
-	"inanimate"
-    ]
-}
- #+END_SRC
+*** What can you do with Cosycat
 
- - Or more complex, which of course implies more complex annotation schemes (including tag metadata)
- #+BEGIN_SRC json
-[
-    {
-	"key": "pos",
-	"systems": [
-	    {
-		"name": "default Tagset",
-		"source": "inline",
-		"tags": [
-		    "NN",
-		    "NNP",
-		    "PP"
-		]
-	    },
-	    {
-		"name": "STTS",
-		"source": "http://www.ims.uni-stuttgart.de/forschung/ressourcen/lexika/TagSets/stts-table.html"	
-	    }
-	]
-    }
-]
- #+END_SRC
+    The major goal of Cosycat is to enable synchronized multiuser annotation of corpora.
+    While Cosycat can absolutely be used for annotating typical NLP resources (such as
+    Part-of-Speech tagging a newspaper corpus), it is mostly geared towards (preferrably
+    team-based) Corpus Linguistic research aiming at statistically analyzing 
+    particular constructions that have to be first retrieved and annotated.
 
+    Cosycat allows multiple users to analize 
+
+*** How does it work
+
+**** User interaction
+
+**** Projects (access rights, pub/sub notifications)
+
+**** VCS
+
+**** Architecture
+
+[[./doc/img/app-remote.jpg]]
+
+** Installation
+
+*** Clojure/Lein
+
+*** MongoDb
+
+*** Corpus Query Engines
+
+*** Tagsets
+
+**** BlackLab
+
+
+
+** Contributing
+
+*** Adding support for a new Corpus Query Engine
+
+*** TODOs (WIP)
+
+**** Bulk inserts (does this work atomically in MongoDB?)
+   Span annotations always touch multiple documents (from B to O)
+   In that case, we should try ~$isolated~:
+   See [[https://docs.mongodb.org/manual/core/write-operations-atomicity/][atomicity]] and [[https://docs.mongodb.org/manual/reference/operator/update/isolated/#up._S_isolated][$isolated operator]].
+
+** License
 
