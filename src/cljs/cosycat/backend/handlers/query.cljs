@@ -78,7 +78,7 @@
                    {:message message :code code})))))
 
 (defn find-corpus-config [db corpus-name]
-  (some #(when (= corpus-name (:name %)) %) (db :corpora)))
+  (some #(when (= corpus-name (:corpus %)) %) (db :corpora)))
 
 (defn current-results [db]
   (let [active-project (get-in db [:session :active-project])

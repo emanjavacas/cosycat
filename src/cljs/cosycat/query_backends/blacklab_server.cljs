@@ -12,9 +12,10 @@
 (declare ->BlacklabServerCorpus)
 
 (defn make-blacklab-server-corpus
-  [{:keys [index server web-service on-counting-callback] :or {on-counting-callback identity}}]
+  [corpus-name {:keys [server web-service on-counting-callback]
+                :or {on-counting-callback identity}}]
   (let [timeout-ids (atom [])]
-    (->BlacklabServerCorpus index server web-service on-counting-callback timeout-ids)))
+    (->BlacklabServerCorpus corpus-name server web-service on-counting-callback timeout-ids)))
 
 (def default-query-params
   {:maxcount 100000
@@ -125,12 +126,12 @@
 (defn bl-server-sort-str
   "builds the blacklab sort string from param maps"
   [sort-opts]
-  (apply str (parse-sort-opts sort-opts)))
+  (apply str (interpose "&" (parse-sort-opts sort-opts))))
 
 (defn bl-server-filter-str
   "builds the blacklab filter string from param maps"
   [filter-opts]
-  (apply str (parse-filter-opts filter-opts)))
+  (apply str (interpose "&" (parse-filter-opts filter-opts))))
 
 ;;; handle counting callbacks
 (defn clear-timeout [timeout-ids]

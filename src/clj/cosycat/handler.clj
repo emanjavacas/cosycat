@@ -62,24 +62,26 @@
     (timbre/debug req)
     (handler req)))
 
+(defn format-exception [req error]
+  (let [msg "Oops! Something bad happened!"]
+    (if (is-ajax req)
+      {:status 500 :body {:message msg :data {:exception error :type :internal-error}}}
+      (error-page :status 500 :title msg :message error))))
+
 (defn wrap-internal-error [handler]
   (fn [req]
     (try
       (handler req)
+      (catch clojure.lang.ExceptionInfo e
+        (->> e ex-data :error (format-exception req)))
       (catch Throwable t
-        (let [msg "Oops! Something bad happened!"
-              ex-msg (str (class t))]
-          (if (is-ajax req)
-            {:status 500 :body {:message msg :data {:exception ex-msg :type :internal-error}}}
-            (error-page :status 500 :title "Something very bad happened!" :message ex-msg)))))))
+        (->> t class str (format-exception req))))))
 
 (defn wrap-base [handler]
-  (-> handler   
+  (-> handler
       wrap-reload
-      (wrap-authorization auth-backend)
-      (wrap-authentication auth-backend)
-;      (wrap-authorization token-backend)
-;      (wrap-authentication token-backend)
+      (wrap-authorization auth-backend) ;todo, swap with token backend (jwt)
+      (wrap-authentication auth-backend) ;todo swap with token backend (jwt)
       (wrap-anti-forgery {:read-token (fn [req] (get-in req [:params :csrf]))})
       (wrap-session {:store (ttl-memory-store (* (env :session-expires) 60))})
       (wrap-transit-params {:encoding :json-verbose})
@@ -87,9 +89,7 @@
       wrap-nested-params
       wrap-params
       (wrap-transit-response {:encoding :json-verbose})
-      ;; wrap-debug
-      wrap-exceptions
-      wrap-internal-error))
+      ((fn [handler] (if (:dev? env) (wrap-exceptions handler) (wrap-internal-error handler))))))
 
 (defn wrap-app-component [handler components]
   (fn [req]
@@ -104,7 +104,6 @@
 
 (defn make-handler [component]
   (let [components (select-keys component (:components component))]
-    (-> (app-routes
-         static-routes web-app-routes settings-routes annotation-routes project-routes base-routes)
+    (-> (app-routes static-routes web-app-routes settings-routes annotation-routes project-routes base-routes)
         (wrap-app-component components)
         (wrap-routes wrap-base))))

@@ -11,16 +11,18 @@
   (let [ctor (get ctors corpus-type)]
     (if-let [corpus (get @mem corpus-name)]      
       corpus
-      (let [corpus (ctor args)]
+      (let [corpus (ctor corpus-name args)]
         (get-corpus-info corpus)
         corpus))))
 
 (let [mem (atom {})]
   (defn ensure-corpus
     "instantiates corpus object and caches it for further calls"
-    [{:keys [name type args] :as corpus-config} & {:keys [force] :or {force false}}]
-    (if-let [corpus (get-corpus mem name type args)]
-      (do (-> (swap! mem assoc name corpus) (get name)))
+    [{corpus-name :corpus corpus-type :type args :args :as corpus-config} &
+     {:keys [force] :or {force false}}]
+    (.log js/console corpus-config)
+    (if-let [corpus (get-corpus mem corpus-name corpus-type args)]
+      (do (-> (swap! mem assoc corpus-name corpus) (get corpus-name)))
       (throw (js/Error. "Corpus not available")))))
 
 

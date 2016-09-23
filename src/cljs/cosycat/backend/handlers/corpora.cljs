@@ -13,4 +13,4 @@
     db
     [:corpora]
     (fn [corpora]
-      (update-coll corpora #(= (:name %) corpus-name) assoc :info corpus-info)))))
+      (update-coll corpora #(= (:corpus %) corpus-name) assoc :info corpus-info)))))

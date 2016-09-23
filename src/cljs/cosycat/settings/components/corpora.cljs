@@ -8,11 +8,11 @@
             [cosycat.tree :refer [data-tree]]
             [taoensso.timbre :as timbre]))
 
-(defn corpus-info [{:keys [name info] :as corpus-config}]
+(defn corpus-info [{:keys [corpus info] :as corpus-config}]
   (ensure-corpus corpus-config)
-  (fn [{:keys [name info] :as corpus-config}]
+  (fn [{:keys [corpus info] :as corpus-config}]
     [:div.container-fluid
-     [:div.row [bs/label {:style {:font-size "14px" :line-height "2.5em"}} name]]
+     [:div.row [bs/label {:style {:font-size "14px" :line-height "2.5em"}} corpus]]
      [:div.row [:br]]
      (if (nil? info)
        [:div.row [throbbing-panel]]
@@ -23,5 +23,5 @@
   (let [corpora (re-frame/subscribe [:corpora])]
     (fn []
       [:div.container-fluid
-       (doall (for [{:keys [name] :as corpus-config} @corpora]
-                ^{:key name} [:div.row [corpus-info corpus-config]]))])))
+       (doall (for [{:keys [corpus] :as corpus-config} @corpora]
+                ^{:key corpus} [:div.row [corpus-info corpus-config]]))])))

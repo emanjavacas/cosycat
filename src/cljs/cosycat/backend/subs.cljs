@@ -91,21 +91,16 @@
      (reaction (get-in @global-settings path)))))
 
 (re-frame/register-sub
- :corpora-names
- (fn [db _]
-   (reaction (doall (map :name (:corpora @db))))))
-
-(re-frame/register-sub
  :corpora
- (fn [db _]
-   (reaction (:corpora @db))))
+ (fn [db [_ & path]]
+   (reaction (doall (mapv #(get-in % path) (:corpora @db))))))
 
 (re-frame/register-sub
  :corpus-config
  (fn [db [_ & path]]
    (let [corpora (reaction (:corpora @db))
          corpus-name (reaction (get-in @db [:settings :query :corpus]))
-         corpus (reaction (some #(when (= @corpus-name (:name %)) %) @corpora))]
+         corpus (reaction (some #(when (= @corpus-name (:corpus %)) %) @corpora))]
      (reaction (get-in @corpus path)))))
 
 (re-frame/register-sub
