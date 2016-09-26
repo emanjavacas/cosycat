@@ -28,7 +28,7 @@
     [dropdown-select
      (merge {:label "window: "
              :header "Select window size"
-             :options (map #(->map % %) (range 1 10))
+             :options (map #(->map % %) [1 2 3 4 5 6 7 8 9 10 15 20 25])
              :model @context
              :select-fn (on-select :context :has-query? has-query?)}
             (dissoc args :has-query?))]))
