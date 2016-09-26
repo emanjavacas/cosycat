@@ -1,0 +1,325 @@
+{
+  "id": "penn_treebank_cheat_sheet",
+  "name": "Penn Treebank Tagset",
+  "description": "The Penn Treebank Tagset consists of clause, phrase and word level tags for part-of-speech annotation.",
+  "metadata": {
+    "sourceUrl": "http://web.mit.edu/6.863/www/PennTreebankTags.html"
+  },
+  "tagTypes": [
+      "pos"
+  ],
+  "tags": {
+    "pos": [
+      {
+        "scope": "clause",
+        "val": "S",
+        "meaning": "Simple declarative clause."
+      },
+      {
+        "scope": "clause",
+        "val": "SBAR",
+        "meaning": "Clause introduced by a (possibly empty) subordinating conjunction."
+      },
+      {
+        "scope": "clause",
+        "val": "SBARQ",
+        "meaning": " Direct question introduced by a wh-word or a wh-phrase. Indirect questions and relative clauses should be bracketed as SBAR, not SBARQ."
+      },
+      {
+        "scope": "clause",
+        "val": "SINV",
+        "meaning": "Inverted declarative sentence, i.e. one in which the subject follows the tensed verb or modal."
+      },
+      {
+        "scope": "clause",
+        "val": "SQ",
+        "meaning": "Inverted yes/no question, or main clause of a wh-question, following the wh-phrase in SBARQ."
+      },
+      {
+        "scope": "phrase",
+        "val": "ADJP",
+        "meaning": "Adjective Phrase"
+      },
+      {
+        "scope": "phrase",
+        "val": "ADVP",
+        "meaning": "Adverb Phrase"
+      },
+      {
+        "scope": "phrase",
+        "val": "CONJP",
+        "meaning": "Conjunction Phrase"
+      },
+      {
+        "scope": "phrase",
+        "val": "FRAG",
+        "meaning": "Fragment"
+      },
+      {
+        "scope": "phrase",
+        "val": "INTJ",
+        "meaning": "Interjection. Corresponds approximately to the part-of-speech tag UH"
+      },
+      {
+        "scope": "phrase",
+        "val": "LST",
+        "meaning": "List marker. Includes surrounding punctuation"
+      },
+      {
+        "scope": "phrase",
+        "val": "NAC",
+        "meaning": "Not a Constituent; used to show the scope of certain prenominal modifiers within an NP"
+      },
+      {
+        "scope": "phrase",
+        "val": "NP",
+        "meaning": "Noun Phrase"
+      },
+      {
+        "scope": "phrase",
+        "val": "NX",
+        "meaning": "Used within certain complex NPs to mark the head of the NP"
+      },
+      {
+        "scope": "phrase",
+        "val": "PP",
+        "meaning": "Prepositional Phrase"
+      },
+      {
+        "scope": "phrase",
+        "val": "PRN",
+        "meaning": "Parenthetical"
+      },
+      {
+        "scope": "phrase",
+        "val": "PRT",
+        "meaning": "Particle. Category for words that should be tagged RP"
+      },
+      {
+        "scope": "phrase",
+        "val": "QP",
+        "meaning": "Quantifier Phrase (i.e. complex measure/amount phrase); used within NP"
+      },
+      {
+        "scope": "phrase",
+        "val": "RRC",
+        "meaning": "Reduced Relative Clause"
+      },
+      {
+        "scope": "phrase",
+        "val": "UCP",
+        "meaning": "Unlike Coordinated Phrase"
+      },
+      {
+        "scope": "phrase",
+        "val": "VP",
+        "meaning": "Verb Phrase"
+      },
+      {
+        "scope": "phrase",
+        "val": "WHADJP",
+        "meaning": "Wh-adjective Phrase"
+      },
+      {
+        "scope": "phrase",
+        "val": "WHAVP",
+        "meaning": "Wh-adverb Phrase"
+      },
+      {
+        "scope": "phrase",
+        "val": "WHNP",
+        "meaning": "Wh-noun Phrase"
+      },
+      {
+        "scope": "phrase",
+        "val": "WHPP",
+        "meaning": "Wh-prepositional Phrase"
+      },
+      {
+        "scope": "phrase",
+        "val": "X",
+        "meaning": "Unknown, uncertain, or unbracketable"
+      },
+      {
+        "scope": "word",
+        "val": "CC",
+        "meaning": "Coordinating conjunction"
+      },
+      {
+        "scope": "word",
+        "val": "CD",
+        "meaning": "Cardinal number"
+      },
+      {
+        "scope": "word",
+        "val": "DT",
+        "meaning": "Determiner"
+      },
+      {
+        "scope": "word",
+        "val": "EX",
+        "meaning": "Existential there"
+      },
+      {
+        "scope": "word",
+        "val": "FW",
+        "meaning": "Foreign word"
+      },
+      {
+        "scope": "word",
+        "val": "IN",
+        "meaning": "Preposition or subordinating conjunction"
+      },
+      {
+        "scope": "word",
+        "val": "JJ",
+        "meaning": "Adjective"
+      },
+      {
+        "scope": "word",
+        "val": "JJR",
+        "meaning": "Adjective, comparative"
+      },
+      {
+        "scope": "word",
+        "val": "JJS",
+        "meaning": "Adjective, superlative"
+      },
+      {
+        "scope": "word",
+        "val": "LS",
+        "meaning": "List item marker"
+      },
+      {
+        "scope": "word",
+        "val": "MD",
+        "meaning": "Modal"
+      },
+      {
+        "scope": "word",
+        "val": "NN",
+        "meaning": "Noun, singular or mass"
+      },
+      {
+        "scope": "word",
+        "val": "NNS",
+        "meaning": "Noun, plural"
+      },
+      {
+        "scope": "word",
+        "val": "NNP",
+        "meaning": "Proper noun, singular"
+      },
+      {
+        "scope": "word",
+        "val": "NNPS",
+        "meaning": "Proper noun, plural"
+      },
+      {
+        "scope": "word",
+        "val": "PDT",
+        "meaning": "Predeterminer"
+      },
+      {
+        "scope": "word",
+        "val": "POS",
+        "meaning": "Possessive ending"
+      },
+      {
+        "scope": "word",
+        "val": "PRP",
+        "meaning": "Personal pronoun"
+      },
+      {
+        "scope": "word",
+        "val": "PRP$",
+        "meaning": "Possessive pronoun (prolog version PRP-S)"
+      },
+      {
+        "scope": "word",
+        "val": "RB",
+        "meaning": "Adverb"
+      },
+      {
+        "scope": "word",
+        "val": "RBR",
+        "meaning": "Adverb, comparative"
+      },
+      {
+        "scope": "word",
+        "val": "RBS",
+        "meaning": "Adverb, superlative"
+      },
+      {
+        "scope": "word",
+        "val": "RB",
+        "meaning": "Particle"
+      },
+      {
+        "scope": "word",
+        "val": "SYM",
+        "meaning": "Symbol"
+      },
+      {
+        "scope": "word",
+        "val": "TO",
+        "meaning": "to"
+      },
+      {
+        "scope": "word",
+        "val": "UH",
+        "meaning": "Interjection"
+      },
+      {
+        "scope": "word",
+        "val": "VB",
+        "meaning": "Verb, base form"
+      },
+      {
+        "scope": "word",
+        "val": "VBD",
+        "meaning": "Verb, past tense"
+      },
+      {
+        "scope": "word",
+        "val": "VBG",
+        "meaning": "Verb, gerund or present participle"
+      },
+      {
+        "scope": "word",
+        "val": "VBN",
+        "meaning": "Verb, past participle"
+      },
+      {
+        "scope": "word",
+        "val": "VBP",
+        "meaning": "Verb, non-3rd person singular present"
+      },
+      {
+        "scope": "word",
+        "val": "VBZ",
+        "meaning": "Verb, 3rd person singular present"
+      },
+      {
+        "scope": "word",
+        "val": "WDT",
+        "meaning": "Wh-determiner"
+      },
+      {
+        "scope": "word",
+        "val": "WP",
+        "meaning": "Wh-pronoun"
+      },
+      {
+        "scope": "word",
+        "val": "WP$",
+        "meaning": "Possessive wh-pronoun"
+      },
+      {
+        "scope": "word",
+        "val": "WRB",
+        "meaning": "Wh-adverb"
+      }
+    ]
+  }
+}
