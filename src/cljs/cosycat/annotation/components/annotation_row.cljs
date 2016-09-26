@@ -4,7 +4,7 @@
             [re-frame.core :as re-frame]
             [cosycat.utils :refer [human-time ->box]]
             [cosycat.app-utils :refer [parse-token]]
-            [cosycat.components :refer [user-thumb prepend-cell]]
+            [cosycat.components :refer [user-thumb prepend-cell dummy-cell]]
             [cosycat.annotation.components.annotation-popover :refer [annotation-popover]]
             [taoensso.timbre :as timbre]))
 
@@ -23,40 +23,54 @@
     {:box-shadow (->box color)}
     {:opacity "0.25"}))
 
-(defn annotation-cell [{:keys [ann-map color-map token-id hit-id]}]
+(defn annotation-cell [{:keys [ann-map color-map token-id hit-id]} colspan]
   (let [open? (reagent/atom false), target (reagent/atom nil)]
-    (fn [{{{{B :B} :scope type :type :as span} :span
-           username :username anns :anns :as ann-map} :ann-map
-          color-map :color-map hit-id :hit-id token-id :token-id}]
-      (if ann-map                       ;when ann is present
+    (fn [{{username :username anns :anns :as ann-map} :ann-map
+          color-map :color-map hit-id :hit-id token-id :token-id} colspan]
+      (if-not ann-map
+        dummy-cell
         [:td.ann-cell
          {:style (annotation-cell-style @color-map username)
+          :colSpan colspan
           :on-click #(do (reset! target (.-target %)) (swap! open? not))}
-         [:div (case type
-                 "IOB" (when (= B (-> (parse-token token-id) :id)) [key-val ann-map])
-                 "token" [key-val ann-map])
+         [:div [key-val ann-map]
           [bs/overlay
            {:show @open?
             :target (fn [] @target)     ;DOMNode
             :rootClose true
-            :onHide #(swap! open? not)  ;called when rootClose triggers
-            :placement "right"}
+            :onHide #(swap! open? not) ;called when rootClose triggers
+            :placement "top"}
            (annotation-popover
             {:ann-map ann-map
              :hit-id hit-id
-             :on-dispatch #(swap! open? not)})]]]
-        [:td ""]))))
+             :on-dispatch #(swap! open? not)})]]]))))
 
 (defn annotation-key [key]
-  [:td [bs/label {:style {:font-size "85%"}} key]])
+  [:td [bs/label {:style {:font-size "90%"}} key]])
+
+(defn is-B-IOB? [{{{B :B O :O} :scope type :type} :span} token-id]
+  (and (= type "IOB") (= B (-> (parse-token token-id) :id))))
+
+(defn with-colspans [hit ann-key]
+  (reduce (fn [acc {token-id :id anns :anns :as token}]
+            (let [{{{B :B O :O} :scope type :type} :span :as ann} (get anns ann-key)]
+              (cond (not type) (conj acc {:colspan 1 :token token}) ;no annotation
+                    (is-B-IOB? ann token-id) (conj acc {:colspan (inc (- O B)) :token token}) ;B IOB
+                    (= type "token") (conj acc {:colspan 1 :token token}) ;token
+                    :else acc)));non-B IOB
+          []
+          hit))
 
 (defn annotation-row [hit ann-key]
   (let [color-map (re-frame/subscribe [:filtered-users-colors])]
     (fn [{hit-id :id hit :hit} ann-key]
       (into
        [:tr.ann-row {:data-hitid hit-id}]
-       (-> (for [{token-id :id anns :anns} hit]
+       (-> (for [{colspan :colspan {token-id :id anns :anns} :token} (with-colspans hit ann-key)]
              ^{:key (str ann-key hit-id token-id)}
              [annotation-cell {:ann-map (get anns ann-key)
-                               :hit-id hit-id :token-id token-id :color-map color-map}])
+                               :hit-id hit-id
+                               :token-id token-id
+                               :color-map color-map}
+              colspan])
            (prepend-cell {:key (str ann-key) :child annotation-key :opts [ann-key]}))))))
