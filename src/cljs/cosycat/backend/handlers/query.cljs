@@ -4,7 +4,6 @@
             [cosycat.backend.db :refer [default-project-session]]
             [cosycat.query-backends.core :refer [ensure-corpus]]
             [cosycat.query-backends.protocols :refer [query query-sort snippet]]
-            [cosycat.query-parser :refer [missing-quotes]]
             [cosycat.utils :refer [filter-marked-hits]]
             [cosycat.app-utils :refer [parse-token]]
             [taoensso.timbre :as timbre]))
@@ -85,36 +84,24 @@
         project (get-in db [:projects active-project])]
     (get-in project [:session :query :results-summary])))
 
-(defn empty-before [s n]
-  (count (filter #(= % " ") (subs s n))))
-
-(defn check-query [query-str]
-  (let [{status :status at :at} (missing-quotes query-str)
-        at (+ at (empty-before query-str at))]
-    (case status
-      :mismatch (re-frame/dispatch
-                 [:query-error
-                  {:code "Query string error"
-                   :message (str "Query: " query-str " ; has error at position: " at ".")}])
-      :finished true)))
+(defn run-query [query-str corpus-config query-opts sort-opts filter-opts]
+  (if (and (empty? sort-opts) (empty? filter-opts))
+    (query (ensure-corpus corpus-config) query-str query-opts)
+    (query-sort (ensure-corpus corpus-config) query-str query-opts sort-opts filter-opts)))
 
 (re-frame/register-handler
  :query
  (fn [db [_ query-str]]
-   (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:settings :query])
-         corpus-config (find-corpus-config db corpus)]
+   (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:settings :query])]
      (timbre/debug sort-opts filter-opts)
-     (when (check-query query-str)
-       (do (re-frame/dispatch [:start-throbbing :results-frame])
-           (re-frame/dispatch [:start-throbbing :fetch-annotations])
-           ;; add update
-           (re-frame/dispatch
-            [:register-history [:user-events]
-             {:type :query
-              :data {:query-str query-str :corpus corpus}}])
-           (if (and (empty? sort-opts) (empty? filter-opts))
-             (query (ensure-corpus corpus-config) query-str query-opts)
-             (query-sort (ensure-corpus corpus-config) query-str query-opts sort-opts filter-opts))))
+     (re-frame/dispatch [:start-throbbing :results-frame])
+     (re-frame/dispatch [:start-throbbing :fetch-annotations])
+     ;; add update
+     (re-frame/dispatch
+      [:register-history [:user-events]
+       {:type :query
+        :data {:query-str query-str :corpus corpus}}])
+     (run-query query-str (find-corpus-config db corpus) query-opts sort-opts filter-opts)
      db)))
 
 (re-frame/register-handler
@@ -125,15 +112,12 @@
        (let [{:keys [corpus sort-opts filter-opts query-opts]} (get-in db [:settings :query])
              {page-size :page-size :as query-opts} query-opts
              {query-str :query-str query-size :query-size {from :from to :to} :page} results-summary
-             corpus-config (find-corpus-config db corpus)
              [from to] (case direction
                          :next (pager-next query-size page-size to)
                          :prev (pager-prev query-size page-size from))
              query-opts (assoc query-opts :from from :page-size (- to from))]
          (re-frame/dispatch [:start-throbbing :results-frame])
-         (if (and (empty? sort-opts) (empty? filter-opts))
-           (query (ensure-corpus corpus-config) query-str query-opts)
-           (query-sort (ensure-corpus corpus-config) query-str query-opts sort-opts filter-opts))))
+         (run-query query-str (find-corpus-config db corpus) query-opts sort-opts filter-opts)))
      db)))
 
 (re-frame/register-handler

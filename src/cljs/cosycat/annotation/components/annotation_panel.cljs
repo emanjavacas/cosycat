@@ -19,16 +19,23 @@
        (map :key)
        (into (hash-set))))
 
+(defn on-double-click [hit-id]
+  (fn [event]
+    (.stopPropagation event)
+    (re-frame/dispatch [:fetch-snippet hit-id])))
+
 (defn hit-id-cell [hit-id {num :num}]
-  [:td
-   {:style {:width "100%" :display "table-cell" :font-weight "bold"}}
+  [:td.unselectable
+   {:style {:width "100%" :display "table-cell" :font-weight "bold"}
+    :on-double-click (on-double-click hit-id)}
    (if num (inc num) hit-id)])
 
-(defn hit-cell [{:keys [word match]} color-map]
-  (fn [{:keys [word match anns] :as token-map} color-map]
+(defn hit-cell [{:keys [word match]} hit-id color-map]
+  (fn [{:keys [word match anns] :as token-map} hit-id color-map]
     (let [color (when anns (highlight-annotation token-map @color-map))]
       [:td.unselectable
        {:class (when match "info")
+        :on-click #(re-frame/dispatch [:open-hit hit-id])
         :style {:box-shadow color}}
        word])))
 
@@ -38,10 +45,9 @@
   (fn [{hit :hit hit-id :id meta :meta} open-hits color-map]
     (into
      [:tr
-      {:style {:background-color "#f5f5f5" :cursor "pointer" :width "100%"}
-       :on-click #(re-frame/dispatch [:open-hit hit-id])}]
+      {:style {:background-color "#f5f5f5" :cursor "pointer" :width "100%"}}]
      (-> (for [{id :id :as token} hit]
-           ^{:key (str "hit" hit-id id)} [hit-cell token color-map])
+           ^{:key (str "hit" hit-id id)} [hit-cell token hit-id color-map])
          (prepend-cell {:key (str hit-id) :child hit-id-cell :opts [hit-id meta]})))))
 
 (defn open-annotation-component [hit open-hits color-map]

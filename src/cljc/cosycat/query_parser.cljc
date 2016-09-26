@@ -9,8 +9,8 @@
                :end   (.end m)}))
      :cljs (if-let [m (.exec re s)]
              {:group (first m)
-              :start (aget m "index")
-              :end   (aget (first m) "length")})))
+              :start (.-index m)
+              :end   (.-length (first m))})))
 
 (defn all-but [s but]
   (str/replace s but ""))
@@ -24,7 +24,6 @@
     (make-pattern re-str)))
 
 (defn make-end-pattern [anchor qs]
-  (print qs)
   (let [re-str (str "^[^" (all-but qs anchor) "]+?" anchor)]
     (make-pattern re-str)))
 
