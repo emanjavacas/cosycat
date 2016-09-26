@@ -61,7 +61,7 @@
             (handle-span-dispatch ann hit-id token-ids))
           (set! (.. pressed -target -value) ""))))))
 
-(defn input [hit-id token-id chans]
+(defn input-component [hit-id token-id chans]
   (let [tagsets (re-frame/subscribe [:selected-tagsets])]
     (fn [hit-id token-id chans]
       [:div.input-cell
@@ -81,7 +81,7 @@
           :on-mouse-down #(input-mouse-down metadata (get @chans token-id))
           :on-mouse-enter #(input-mouse-over token-id metadata chans)
           :on-double-click #(unmerge-cells token-id chans)}
-     [input hit-id token-id chans]]))
+     [input-component hit-id token-id chans]]))
 
 (defn input-cell [hit-id token-id metadata]
   (let [display (reagent/atom true)

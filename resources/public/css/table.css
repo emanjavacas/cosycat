@@ -65,9 +65,9 @@ table#table-annotation tr td {
     display: table-cell;
 }
 
-table#table-annotation tr td:first-child {
-    width: 50% !important;
-}
+/* table#table-annotation tr td:first-child { */
+/*     width: 90% !important; */
+/* } */
 
 table#table-annotation tr.queue-row:hover {
     opacity: 0.8;

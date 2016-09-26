@@ -81,6 +81,6 @@
         open-hits (re-frame/subscribe [:project-session :components :open-hits])]
     (fn []
       [:div.container-fluid
-       (doall (for [{hit-id :id :as hit} @marked-hits]
+       (doall (for [{hit-id :id :as hit} (sort-by #(get-in % [:meta :num]) @marked-hits)]
                 ^{:key (str hit-id)}
                 [:div.row [annotation-component hit open-hits]]))])))
