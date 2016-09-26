@@ -13,22 +13,49 @@
     The major goal of Cosycat is to enable synchronized multiuser annotation of corpora.
     While Cosycat can absolutely be used for annotating typical NLP resources (such as
     Part-of-Speech tagging a newspaper corpus), it is mostly geared towards (preferrably
-    team-based) Corpus Linguistic research aiming at statistically analyzing 
+    team-based) Corpus Linguistic research aimed at statistically analyzing 
     particular constructions that have to be first retrieved and annotated.
 
-    Cosycat allows multiple users to analize 
+    Cosycat allows multiple users to analize the same corpus in an interactive way,
+    keeping their annotations synchronized with each other and receiving live feedback
+    from each other actions. Each change to the current body of corpus annotations 
+    (e.g. each time an annotation is introduced, modified or removed by a user) is
+    recorded in a version control fashion which allows to easily backtrace the annotation
+    history.
 
 *** How does it work?
-
-**** User interaction
-
-**** Projects (access rights, pub/sub notifications)
-
-**** VCS
+    
+    Cosycat is built taking advantage of modern browser features such as WebSockets or LocalStorage,
+    recent developments in reactive UI programming (see the React framework), as well as the
+    flexibility of NoSQL databases.
 
 **** Architecture
 
-[[./doc/img/app-remote.jpg]]
+     Cosycat follows the following client-server architecture:
+
+     [[./doc/img/app-remote.jpg]]
+    
+     The client interacts with the local annotation database and with the (possibly) remote server
+     via HTTP. This gives you the advantage of not having to host corpus yourself (although, this
+     is certainly possible).
+
+**** User interaction
+     User activity is routed through the server and then propagated to the rest endpoints (users)
+     that are currently using the application. Cosycat informs users of each others activities using
+     a built-in notification system.
+
+**** Projects (access rights, pub/sub notifications)
+
+     A central organizatory piece of Cosycat is the "project". Projects serve multiple purposes:
+     - Control notification verbosity (subscribing/unsubscribing from projects)
+     - Grouping annotations into different 
+     - Advanced: (delayed merge) use projects as local working copies.
+
+**** Version Control
+     
+     Currently, Cosycat allows you to keep track of all changes effected over the annotation database.
+     This is done with a [[https://github.com/emanjavacas/cosycat/blob/master/src/clj/cosycat/vcs.clj][small module]], that stores changes to a MongoDB document in a version-controlled
+     collection using a traditional lock system for data consistency.
 
 ** Installation
 
@@ -123,59 +150,79 @@
     (documentation for each variable is shown in place as comments).
     
     #+BEGIN_SRC clojure
-    {:dynamic-resource-path "app-resources/"            ;where to store dynamic resources (imgs, logs, etc...)
-     :avatar-path "img/avatars/"                        ;where to store generated avatars
-     :database-url "mongodb://127.0.0.1:27017/cosycat"  ;path to mongodb
-     :pass "pass"                                       ;
-     :port 3000                                         ;port to serve the website on
-     :session-expires 900                               ;in minutes
-     :corpora []}                                       ;see below
+    {:dynamic-resource-path "app-resources/"            ;where to store dynamic resources (logs, etc...)
+    :avatar-path "img/avatars/"                        ;where to store generated avatars
+    :tagset-paths ["/dir/with/tagsets" "another/path"] ;paths with tagset json files
+    :database-url "mongodb://127.0.0.1:27017/cosycat"  ;path to mongodb
+    :pass "pass"                                       ;admin password
+    :port 3000                                         ;port to serve the website on
+    :session-expires 900                               ;in minutes
+    :corpora [... see below ...]}
     #+END_SRC
 
 **** Corpus configuration
     There are several formats for specifying corpora.
     
-- Corpora full format
+- Corpora full format. Specifies corpus, endpoint type and the corpus options needed by that type.
     #+BEGIN_SRC clojure
     [{:corpus "brown-tei"
       :type :blacklab-server
-      :args {:server "mbgserver.uantwerpen.be:8080"
-             :web-service "blacklab-server-1.4-SNAPSHOT"}}]
+      :args {:server "my-server.com:8080"
+      :web-service "blacklab-server-1.4-SNAPSHOT"}}]
     #+END_SRC
 
-- Corpora short format
+- Corpora short format. Require all corpora available at a given URL (composed of http://server/webservice).
     #+BEGIN_SRC clojure
-    [{:corpus "brown-tei"
-      :type :blacklab-server
-      :args {:server "mbgserver.uantwerpen.be:8080"
-             :web-service "blacklab-server-1.4-SNAPSHOT"}}]
+    [{:type :blacklab-server
+      :server "my-server.com:8080"
+      :web-service "blacklab-server-1.4-SNAPSHOT"}]
     #+END_SRC
 
-- Include only specific corpora from a given domain
+- Include only specific corpora from a given domain (TODO)
     #+BEGIN_SRC clojure
-    [{:corpus "brown-tei"
-      :type :blacklab-server
-      :args {:server "mbgserver.uantwerpen.be:8080"
-             :web-service "blacklab-server-1.4-SNAPSHOT"}}]
+    [{:type :blacklab-server
+      :server "my-server.com:8080"
+      :web-service "blacklab-server-1.4-SNAPSHOT"
+      :args {:corpora ["brown-tei"]}}]
     #+END_SRC
-
-	     
 
 *** Running the app
 
-    Once you have resolved the dependencies and 
+    Once you have resolved the dependencies and created your config file you can start the application
+    by running the following command.
+
     #+BEGIN_SRC bash
     java -Dconfig="path/to/config.edn" -jar cleebo-VERSION.jar start 
     #+END_SRC
 
+    Afterwards you should be able to navigate through your browser to your server's URL plus
+    the port specified in the "config.edn" file (or "localhost:PORT" if you are running the 
+    application locally) and see Cosycat's landing page.
+
 **** Tagsets
 
-** Contributing
+     When doing annotations, it is common to predefine a set of annotation keys and values that
+     have to be used for a given research question. For instance, if you want to annotate parts
+     of speech (POS), you want to make sure the research team follows the same standard, such as
+     the Penn Treebank tagset, or similar.
 
-*** Adding support for a new Corpus Query Engine
+     Furthermore, knowing the tagset allows the application to provide you with autocomplete
+     functionalities - as shown in the picture below -, which can save your team a lot of typing time.
+
+     [[./doc/img/autocomplete.png]]
+     
+     Cosycat allows you to input different tagsets using a simple tagset format.
+     See the following [[https://github.com/emanjavacas/cosycat/tree/master/resources/public/tagsets/pennTreebank.json][JSON file]] for an example.
+     You can specify as many JSON tagset files as you want.
+     In order for Cosycat to use the tagsets, you only need to add directories with
+     tagsets to your config file (see above).
+
+** TODO Contributing
+
+*** TODO Adding support for a new Corpus Query Engine
     <<sec:support>>
 
-*** TODOs (WIP)
+*** "TO DO"s (WIP)
 
 **** Bulk inserts (does this work atomically in MongoDB?)
    Span annotations always touch multiple documents (from B to O). In that case, we should try
@@ -183,5 +230,5 @@
 
 ** License
 
-Cosycat is released with a ... license.
+Cosycat is released with a [[https://www.gnu.org/licenses/gpl-3.0.html][GPL v.3.]] license.
 
