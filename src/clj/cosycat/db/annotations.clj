@@ -2,12 +2,9 @@
   (:require [monger.collection :as mc]
             [monger.operators :refer :all]
             [taoensso.timbre :as timbre]
-            [schema.core :as s]
-            [cosycat.app-utils :refer [deep-merge-with server-project-name]]
-            [cosycat.utils :refer [get-token-id assert-ex-info]]
-            [cosycat.vcs :as vcs]
-            [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
-            [schema.coerce :as coerce]))
+            [cosycat.app-utils :refer [server-project-name]]
+            [cosycat.utils :refer [assert-ex-info]]
+            [cosycat.vcs :as vcs]))
 
 ;;; Exceptions
 (defn span-or-token [{{B :B O :O :as scope} :scope}]

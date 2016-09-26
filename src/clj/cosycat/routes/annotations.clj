@@ -1,6 +1,5 @@
 (ns cosycat.routes.annotations
-  (:require [schema.core :as s]
-            [compojure.core :refer [routes context POST GET]]
+  (:require [compojure.core :refer [routes context POST GET]]
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.utils :refer [->int assert-ex-info]]
             [cosycat.app-utils :refer [deep-merge-with parse-token span->token-id]]
