@@ -8,6 +8,7 @@
                  [org.clojure/tools.namespace "0.2.11"]
                  [org.clojure/tools.cli "0.3.3"]
                  [com.novemberain/monger "3.0.0-rc2"]
+                 [org.slf4j/slf4j-nop "1.7.12"] ;deactivate MongoDB logging
                  [com.taoensso/timbre "4.1.4"]
                  [binaryage/devtools "0.5.2"]
                  [prismatic/schema "1.1.0"]
