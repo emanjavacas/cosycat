@@ -1,7 +1,8 @@
 (ns cosycat.schemas.route-schemas
   (:require [schema.core :as s]
             [schema.coerce :as coerce]
-            [cosycat.schemas.annotation-schemas :refer [annotation-schema span-schema cpos-schema]]
+            [cosycat.schemas.annotation-schemas
+             :refer [annotation-schema span-schema cpos-schema token-id-schema]]
             [cosycat.schemas.project-schemas
              :refer [project-schema update-schema project-user-schema]]
             [cosycat.schemas.user-schemas :refer [avatar-schema]]
@@ -25,7 +26,7 @@
   [{:keys [type] :as payload}]
   (case type
     :annotation (make-schema {:data {:hit-id (s/if vector? [hit-id-schema] hit-id-schema)
-                                     :anns {cpos-schema {s/Str annotation-schema}}
+                                     :anns {token-id-schema {s/Str annotation-schema}}
                                      :project s/Str}})
     :info (make-schema {:data {:message s/Str}})
     :login (make-schema {:data public-user-schema})

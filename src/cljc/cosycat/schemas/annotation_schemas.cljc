@@ -5,6 +5,8 @@
 
 (def cpos-schema s/Int)
 
+(def token-id-schema s/Any)
+
 (def token-span-schema
   {:type (s/enum "token")
    :scope cpos-schema
