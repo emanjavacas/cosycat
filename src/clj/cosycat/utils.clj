@@ -71,3 +71,9 @@
 
 (defn prn-format [s & args]
   (println (apply format s args)))
+
+(defn join-path [dir filename]
+  (-> dir
+      (-> io/file .getCanonicalPath)
+      (io/file filename)
+      (.getCanonicalPath)))
