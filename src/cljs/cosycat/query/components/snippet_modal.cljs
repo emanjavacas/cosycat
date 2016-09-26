@@ -31,6 +31,15 @@
       match]
      right]))
 
+(defn metadata [meta]
+  (fn [meta]
+    [:div.row
+     {:style {:padding "22px 0"
+              :background-color "#f9f6f6"
+              :overflow-y "scroll"
+              :max-height "200px"}}
+     [data-tree meta]]))
+
 (defn snippet-modal []
   (let [snippet-modal? (re-frame/subscribe [:modals :snippet])
         snippet-opts (re-frame/subscribe [:settings :query :snippet-opts])
@@ -59,6 +68,5 @@
              [metadata-button metadata-show]]
             [:div.col-sm-4]]
            (when @metadata-show
-             [:div.row {:style {:padding "22px 0" :background-color "#f9f6f6"}}
-              [data-tree meta]])
+             [metadata meta])
            [:div.row {:style {:padding "10px 0"}} [text-snippet left match right]]])]])))
