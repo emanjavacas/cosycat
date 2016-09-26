@@ -22,14 +22,11 @@
 
 ;;; normalizers
 (defn session-tagsets []
-  (if-let [dirs (seq (map (partial str "public/") (env :tagset-paths)))]
-    (->> (for [dir dirs
-               f (->> dir io/resource io/file file-seq)
-               :when (and (.isFile f) (.endsWith (.getName f) ".json"))
-               :let [public-path (str dir "/" (.getName f))
-                     [_ path] (str/split public-path #"public/")]]
-           path)
-         vec)))
+  (if-let [dirs ["/home/enrique/code/cosycat/resources/public/tagsets"]]
+    (vec (for [dir dirs
+               f (->> dir io/file file-seq)
+               :when (and (.isFile f) (.endsWith (.getName f) ".json"))]
+           (str dir (.getName f))))))
 
 (defn find-corpus-config-format [corpus-config]
   (cond (:endpoints corpus-config) :short
