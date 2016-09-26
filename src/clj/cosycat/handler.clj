@@ -66,7 +66,7 @@
   (let [msg "Oops! Something bad happened!"]
     (if (is-ajax req)
       {:status 500 :body {:message msg :data {:exception error :type :internal-error}}}
-      (error-page :status 500 :title msg :message error))))
+      (error-page {:status 500 :title msg :message error}))))
 
 (defn wrap-internal-error [handler]
   (fn [req]

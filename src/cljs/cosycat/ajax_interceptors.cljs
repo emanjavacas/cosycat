@@ -22,7 +22,7 @@
 (defn ajax-header-interceptor []
   (to-interceptor
    {:name "AJAX-Header interceptor"
-    :request #(assoc-in % [:header "X-Requested-With"] "XMLHttpRequest")}))
+    :request #(assoc-in % [:headers "X-Requested-With"] "XMLHttpRequest")}))
 
 (defn debug-interceptor []
   (to-interceptor
