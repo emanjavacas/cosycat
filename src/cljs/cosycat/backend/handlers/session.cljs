@@ -57,15 +57,12 @@
  :initialize-db
  standard-middleware
  (fn [_ [_ {:keys [me users corpora projects settings tagsets] :as payload}]]
-   (.log js/console (default-settings :corpora corpora))
-   (re-frame/dispatch [:fetch-tagsets tagsets])
    (-> payload
        (assoc :session default-session)
        (assoc :history default-history)
        (assoc :settings (deep-merge (default-settings :corpora corpora) settings))
        (assoc :projects (normalize-projects projects me))
-       (assoc-in [:session :init] true)
-       (dissoc :tagsets))))
+       (assoc-in [:session :init] true))))
 
 (re-frame/register-handler              ;load error
  :register-session-error

@@ -4,10 +4,12 @@
             [cosycat.db.users :refer [user-info users-info user-settings]]
             [cosycat.db.projects :refer [get-projects]]
             [cosycat.app-utils :refer [dekeyword]]
+            [cosycat.utils :refer [join-path]]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]
             [clojure.string :as str]
             [clojure.java.io :as io]
+            [clojure.walk :refer [keywordize-keys]]
             [clojure.data.json :as json]))
 
 ;;; exceptions
@@ -21,19 +23,21 @@
   (format "Ignoring entry for server [%s]. Reason: [%s]" server "unknown-corpus-type"))
 
 ;;; normalizers
-(defn session-tagsets []
-  (if-let [dirs ["/home/enrique/code/cosycat/resources/public/tagsets"]]
+
+(defn session-tagsets [tagset-paths]
+  (if-let [dirs tagset-paths]
     (vec (for [dir dirs
                f (->> dir io/file file-seq)
-               :when (and (.isFile f) (.endsWith (.getName f) ".json"))]
-           (str dir (.getName f))))))
+               :when (and (.isFile f) (.endsWith (.getName f) ".json"))
+               :let [abspath (join-path dir (.getName f))]]
+           (-> abspath slurp json/read-str keywordize-keys)))))
 
 (defn find-corpus-config-format [corpus-config]
   (cond (:endpoints corpus-config) :short
         (:type corpus-config) :full
         :else (throw (ex-wrong-format))))
 
-(defn ->corpora [{:keys [indices]}]
+(defn bl-payload->corpora [{:keys [indices]}]
   (reduce-kv
    (fn [l _ {corpus-name :displayName}]
      (conj l {:type :blacklab-server :corpus corpus-name}))
@@ -45,10 +49,13 @@
   [s & {:keys [protocol] :or {protocol "http"}}]
   (if (.startsWith protocol s) s (str protocol "://" s)))
 
-(defn fetch-all-bl-corpora [server web-service]
+(defmulti fetch-corpora (fn [endpoint server] (:type endpoint)))
+
+(defmethod fetch-corpora :blacklab-server
+  [{corpus-type :type {corpus :corpus web-service :web-service} :args} server]
   (try
     (let [in (slurp (str (ensure-http server) "/" web-service "?outputformat=json"))]
-      (->> in json/read-str clojure.walk/keywordize-keys ->corpora
+      (->> in json/read-str keywordize-keys bl-payload->corpora
            (mapv #(assoc % :args {:web-service web-service :server server}))))
     (catch Exception e
       (timbre/info (format "Failed fetching corpus info for server [%s]" server))
@@ -58,11 +65,9 @@
 
 (defmethod normalize-corpus :short
   [{:keys [server endpoints]}]
-  (mapcat (fn [{corpus-type :type {corpus :corpus web-service :web-service} :args :as endpoint}]
+  (mapcat (fn [{{corpus :corpus web-service :web-service} :args :as endpoint}]
             (if-not corpus
-              (if-not (= corpus-type :blacklab-server)
-                (timbre/info (unknown-corpus-type server))
-                (fetch-all-bl-corpora server web-service))
+              (fetch-corpora endpoint server)
               [(assoc-in endpoint [:args :server] server)]))
           endpoints))
 
@@ -70,13 +75,8 @@
   [corpus]
   [corpus])
 
-(defn normalize-corpora [corpora]
-  (->> corpora (mapcat normalize-corpus) distinct vec))
-
 (defn session-corpora []
-  (if-let [corpora (env :corpora)]
-    (normalize-corpora corpora)
-    []))
+  (or (->> (env :corpora) (mapcat normalize-corpus) distinct vec) []))
 
 (defn add-active-info [user active-users]
   (if (contains? active-users (:username user))
@@ -118,7 +118,7 @@
      :users (session-users db username active-users)
      :projects (session-projects db username me)
      :settings (session-settings me)
-     :tagsets (session-tagsets)
+     :tagsets (session-tagsets (env :tagset-paths))
      :corpora (session-corpora)}))
 
 (def session-route
