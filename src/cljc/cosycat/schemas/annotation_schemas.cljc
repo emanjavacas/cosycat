@@ -7,6 +7,8 @@
 
 (def token-id-schema s/Any)
 
+(def ann-key-schema s/Str)
+
 (def token-span-schema
   {:type (s/enum "token")
    :scope cpos-schema
@@ -22,7 +24,7 @@
                  #(= (:type %) "IOB")   iob-span-schema))
 
 (def history-schema
-  [{:ann {:key s/Str :value s/Str}
+  [{:ann {:key ann-key-schema :value s/Str}
     :username s/Str
     :timestamp s/Int
     :corpus s/Str

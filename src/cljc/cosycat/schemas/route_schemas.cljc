@@ -2,7 +2,7 @@
   (:require [schema.core :as s]
             [schema.coerce :as coerce]
             [cosycat.schemas.annotation-schemas
-             :refer [annotation-schema span-schema cpos-schema token-id-schema]]
+             :refer [annotation-schema span-schema cpos-schema token-id-schema ann-key-schema]]
             [cosycat.schemas.project-schemas
              :refer [project-schema update-schema project-user-schema]]
             [cosycat.schemas.user-schemas :refer [avatar-schema]]
@@ -28,6 +28,10 @@
     :annotation (make-schema {:data {:hit-id (s/if vector? [hit-id-schema] hit-id-schema)
                                      :anns {token-id-schema {s/Str annotation-schema}}
                                      :project s/Str}})
+    :remove-annotation (make-schema {:data {:key ann-key-schema
+                                            :span span-schema
+                                            :project s/Str
+                                            :hit-id hit-id-schema}})
     :info (make-schema {:data {:message s/Str}})
     :login (make-schema {:data public-user-schema})
     :logout (make-schema {:data {:username s/Str}})

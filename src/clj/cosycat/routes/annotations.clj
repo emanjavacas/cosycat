@@ -38,13 +38,14 @@
 ;;; Handlers
 (defn general-handler
   "abstraction over handlers to factor out code"
-  [db ws username project action f payload-f]
+  [db ws username project action f payload-f
+   & {:keys [message-type] :or {message-type :annotation}}]
   (try (check-user-rights db username project action)
        (let [users (->> (find-project-by-name db project) :users (map :username))
              out (f)
              data (payload-f out)]
          (send-clients
-          ws {:type :annotation :data data}
+          ws {:type message-type :data data}
           :source-client username :target-clients users)
          {:status :ok :data data})
        (catch clojure.lang.ExceptionInfo e
@@ -92,7 +93,8 @@
     {db :db ws :ws} :components}]
   (general-handler db ws username project :delete
    (fn [] (anns/remove-annotation db project ann-map))
-   (fn [_] {:project project :hit-id hit-id :key key :span span})))
+   (fn [_] {:project project :hit-id hit-id :key key :span span})
+   :message-type :remove-annotation))
 
 (defn fetch-annotation-range-handler
   [{{project :project corpus :corpus from :from size :size doc :doc hit-id :hit-id} :params
