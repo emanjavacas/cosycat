@@ -13,6 +13,7 @@
 (def creator "user")
 (def random-users
   [{:username "hello" :role "guest"}
+   {:username "guest" :role "guest"}
    {:username "howdy" :role "user"}
    {:username "whatssup" :role "project-lead"}])
 
@@ -35,6 +36,7 @@
 
 (defn insert-users []
   (doseq [{:keys [username]} check-roles]
+    (println (format "inserting [%s]" username))
     (users/new-user db (assoc boilerplate-user :username username :email (str (rand-int 100000))))))
 
 (defn remove-users []
@@ -46,8 +48,10 @@
 
 (defn insert-some-annotations []
   (let [ann (anns/insert-annotation db project-name token-ann)]
-    (anns/update-annotation db project-name (merge (select-keys ann [:username :query :_version :_id])
-                                                   {:value "randomnewvalue" :timestamp 12039102}))))
+    (anns/update-annotation
+     db project-name
+     (merge (select-keys ann [:username :query :_version :_id])
+            {:value "randomnewvalue" :timestamp 12039102}))))
 
 (defn project-fixture [f]
   (insert-users)
@@ -55,34 +59,40 @@
   (insert-some-annotations)
   (f)
   (proj/erase-project db project-name (mapv :username check-roles))
+  (mc/drop (:db db) (server-project-name project-name))
   (remove-users))
 
 (use-fixtures :once db-fixture project-fixture)
 
 (deftest project-test
-  (let [projects (proj/get-projects db "hello")]
+  (let [projects (proj/get-projects db "hello")
+        removed? (fn [] (let [projects (proj/get-projects db creator)]
+                          (and
+                           (empty? projects)
+                           (empty? (mc/find-maps (:db db) (server-project-name project-name) {})))))]
     (testing "retrieves project"
       (is (not (empty? projects))))
     (testing "user roles are alright"
       (let [{users :users :as project} (proj/get-project db creator project-name)]
-        (println "project!" project)
         (is (= (apply hash-set users) (apply hash-set check-roles)))))
     (testing "users not in project can't see project"
       (is (= (try (proj/get-project db "a random name!" project-name)
                   (catch clojure.lang.ExceptionInfo e
                     (:code (ex-data e))))
-             :user-not-in-project)))))
-
-(deftest remove-project-test
-  (let [removed? (fn [] (let [projects (proj/get-projects db creator)]
-                          (and
-                           (empty? projects)
-                           (empty? (mc/find-maps (:db db) (server-project-name project-name) {})))))]
+             :user-not-in-project)))
+    (testing "authorized user new role"
+      (let [{users :users :as project} (proj/update-user-role db creator project-name "hello" "user")
+            new-role (->> users (filter #(= "hello" (:username %))) first :role)]
+        (is (= new-role "user"))))
+    (testing "unauthorized update"
+      (is (= (try (proj/update-user-role db "hello" project-name creator "guest")
+                  (catch clojure.lang.ExceptionInfo e
+                    (-> e ex-data :code)))
+             :not-authorized)))
     (testing "user remove rights"
-      (is (= (-> (try (proj/remove-project db "hello" project-name)
-                      (catch clojure.lang.ExceptionInfo e
-                        (ex-data e)))
-                 :code)
+      (is (= (try (proj/remove-project db "guest" project-name)
+                  (catch clojure.lang.ExceptionInfo e
+                    (-> e ex-data :code)))
              :not-authorized)))
     (testing "remove-project adds username to updates type delete-project-agree"
       (let [_ (proj/remove-project db "howdy" project-name)
@@ -93,6 +103,7 @@
       (is (not (removed?))))
     (testing "all agree to remove, remove-project returns nil"
       (let [_ (proj/remove-project db "whatssup" project-name)
+            _ (proj/remove-project db "hello" project-name)
             res (proj/remove-project db creator project-name)]
         (is (nil? res))))
     (testing "actually removes; annotations are also removed"
@@ -102,14 +113,3 @@
         (is (not (empty? hist)))
         (is (every? :_remove hist))))))
 
-(deftest update-user-role-test
-  (testing "authorized user new role"
-    (let [{users :users :as project} (proj/update-user-role db creator project-name "hello" "user")
-          new-role (->> users (filter #(= "hello" (:username %))) first :role)]
-      (is (= new-role "user"))))
-  (testing "unauthorized update"
-    (is (= (-> (try (proj/update-user-role db "hello" project-name creator "guest")
-                    (catch clojure.lang.ExceptionInfo e
-                      (ex-data e)))
-               :code)
-           :not-authorized))))

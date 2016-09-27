@@ -19,11 +19,11 @@
                (select-keys [:username :roles]))
            {:username "foo-user" :roles #{"user"}})))
   (testing "adding existing user"
-    (is (= (-> (try (users/new-user db sample-user)
+    (is (= :user-exists
+           (-> (try (users/new-user db sample-user)
                     (catch clojure.lang.ExceptionInfo e
                       (ex-data e)))
-               :message)           
-           :user-exists)))
+               :code))))
   (testing "existing user"
     (is (= (boolean (users/is-user? db sample-user)) true)))
   (testing "user lookup"
