@@ -132,14 +132,14 @@ such as the following
 (documentation for each variable is shown in place as comments).
 
 ```clojure
-	{:dynamic-resource-path "app-resources/"            ;where to store dynamic resources (logs, etc...)
-	 :avatar-path "img/avatars/"                        ;where to store generated avatars
-	 :tagset-paths ["/dir/with/tagsets" "another/path"] ;paths with tagset json files
-	 :database-url "mongodb://127.0.0.1:27017/cosycat"  ;mongodb URL (do not change unless you run mongod on a different port)
-     :pass "pass"                                       ;admin password
-     :port 3000                                         ;port to serve the website on
-     :session-expires 900                               ;in minutes
-     :corpora [... see below ...]}
+{:dynamic-resource-path "app-resources/"            ;where to store dynamic resources (logs, etc...)
+ :avatar-path "img/avatars/"                        ;where to store generated avatars
+ :tagset-paths ["/dir/with/tagsets" "another/path"] ;paths with tagset json files
+ :database-url "mongodb://127.0.0.1:27017/cosycat"  ;mongodb URL (do not change unless you run mongod on a different port)
+ :pass "pass"                                       ;admin password
+ :port 3000                                         ;port to serve the website on
+ :session-expires 900                               ;in minutes
+ :corpora [... see below ...]}
 ```
 
 #### Corpus configuration
