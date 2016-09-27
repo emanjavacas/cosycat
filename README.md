@@ -33,7 +33,7 @@ flexibility of NoSQL databases.
 
     Cosycat follows the following client-server architecture:
     
-	<center><img src="./doc/img/app-remote.jpg" width="650px"></center>
+	<p align="center"><img src="./doc/img/app-remote.jpg" width="650px"></p>
     
     The client interacts with the local annotation database and with the (possibly) remote server
     via HTTP. This gives you the advantage of not having to host corpus yourself (although, this
@@ -177,7 +177,7 @@ There are several formats for specifying corpora.
 Once you have resolved the dependencies and created your configuration file you only need to grab
 the application from the release page.
 
----
+
 > Aditionally you can choose to **build the executable** yourself.
 > If you want to build the jar file yourself, you will need the handy Clojure project manager
 > [Leiningen](http://leiningen.org/) (see link for further installation instructions).
@@ -222,7 +222,7 @@ the Penn Treebank tagset, or similar.
 Furthermore, knowing the tagset allows the application to provide you with autocomplete
 functionalities - as shown in the picture below -, which can save your team a lot of typing time.
 
-<center><img src="./doc/img/autocomplete.png" width="450px"></center>
+<p align="center"><img src="./doc/img/autocomplete.png" width="450px"></p>
 		
 Cosycat allows you to input different tagsets using a simple tagset format.
 See the following
@@ -234,16 +234,16 @@ tagsets to your config file (see above).
 
 ## TODO Contributing
 
-### TODO Adding support for a new Corpus Query Engine
+### Adding support for a new Corpus Query Engine
 
-### WIP
+## TODO List
 
-Bulk inserts (does this work atomically in MongoDB?).
+- Bulk inserts (does this work atomically in MongoDB?).
 
-Span annotations always touch multiple documents (from B to O). In that case, we should try
-`$isolated` to ensure atomic updates, 
-see [atomicity](https://docs.mongodb.org/manual/core/write-operations-atomicity/) and
-[$isolated operator](https://docs.mongodb.org/manual/reference/operator/update/isolated/#up._S_isolated).
+- Span annotations always touch multiple documents (from B to O). In that case, we should try
+  `$isolated` to ensure atomic updates, 
+  see [atomicity](https://docs.mongodb.org/manual/core/write-operations-atomicity/) and
+  [$isolated operator](https://docs.mongodb.org/manual/reference/operator/update/isolated/#up._S_isolated).
 
 ## License
 
