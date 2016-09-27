@@ -1,4 +1,4 @@
-(defproject cosycat "0.1.0-SNAPSHOT"
+(defproject cosycat "0.1.0-alpha"
   :description "Corpus query interface plus annotations"
   :license {:name "GNU v3.0"}  
   :dependencies [[org.clojure/clojure "1.8.0"]
