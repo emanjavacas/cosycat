@@ -15,7 +15,8 @@
 
 (defn new-avatar-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components}]
-  (let [avatar (user-avatar username)]
+  (let [{:keys [email]} (users/user-info db username)
+        avatar (user-avatar username email)]
     (users/update-user-info db username {:avatar avatar})
     (send-clients ws {:type :new-user-avatar :data {:avatar avatar :username username}} :source-client username)
     avatar))

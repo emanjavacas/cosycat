@@ -37,12 +37,12 @@
 
 (defn- create-new-user
   "transforms client user payload into a db user doc"
-  [{:keys [username password roles] :as user-payload :or {roles ["user"]}}]
+  [{:keys [username password email roles] :as user-payload :or {roles ["user"]}}]
   (let [now (System/currentTimeMillis)]
     (-> user-payload
         (dissoc :csrf)
         (assoc :password (hashers/encrypt password {:alg :bcrypt+blake2b-512}))
-        (assoc :roles roles :created now :last-active now :avatar (user-avatar username)))))
+        (assoc :roles roles :created now :last-active now :avatar (user-avatar username email)))))
 
 (defn new-user
   "insert user into db"
