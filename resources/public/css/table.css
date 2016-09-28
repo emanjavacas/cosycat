@@ -9,6 +9,10 @@ table tr.marked {
     color: black !important;
 }
 
+table tr.break {
+    border-top: 2px solid rgba(154, 126, 126, 0.12);
+}
+
 /* checkbox */
 input[type=checkbox].checkbox-custom {
     opacity: 0;

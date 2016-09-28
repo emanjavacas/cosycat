@@ -6,7 +6,7 @@
             [goog.dom.classes :as gclass]
             [goog.dom.dataset :as gdataset]
             [react-bootstrap.components :as bs]
-            [cosycat.utils :refer [highlight-annotation]]))
+            [cosycat.utils :refer [highlight-annotation merge-classes]]))
 
 (defn is-in-checked-hit?
   "is current cell child inside a checked hit row"
@@ -69,36 +69,48 @@
     (.stopPropagation event)
     (re-frame/dispatch [:fetch-snippet hit-id])))
 
-(defn results-row [hit-num hit-map color-map token-field]
-  (fn [hit-num {hit :hit id :id {num :num marked :marked} :meta :as hit-map} color-map token-field]
-    [:tr {:class (when marked "marked") :data-hit id}
-     (concat
-      [^{:key (str hit-num "-check")}
-       [:td.ignore
-        {:class (if (:marked meta) "checked")
-         :style {:width "20px"
-                 :background-color "#F9F9F9"
-                 :cursor "pointer"
-                 :color (if (:marked meta) "#158CBA" "black")}}
-        [:input.checkbox-custom.ignore
-         {:id (str hit-num "-check")
-          :type "checkbox"
-          :checked marked
-          :on-change #(re-frame/dispatch [:mark-hit {:hit-id id :flag (not marked)}])}]
-        [:label.checkbox-custom-label.ignore
-         {:for (str hit-num "-check")
-          :tab-index (inc hit-num)}]]
-       ;; hit number
-       ^{:key (str hit-num "-num")}
-       [:td.ignore.snippet-trigger
-        {:style {:width "20px" :background-color "#F9F9F9" :cursor "pointer"}
-         :on-double-click (on-double-click id)}
-        [:label.ignore
-         {:style {:font-weight "bold" :cursor "pointer"}}
-         (inc (or num hit-num))]]]
-      ;; hit
-      (for [token hit]
-        ^{:key (str hit-num "-" (:id token))} [hit-token token color-map token-field]))]))
+(defn results-row [hit-num hit-map {:keys [color-map token-field break]}]
+  (fn [hit-num {hit :hit id :id {num :num marked :marked} :meta} {:keys [color-map token-field break]}]
+    (let [row-class (merge-classes (when marked "marked") (when break "break"))]
+      [:tr {:class row-class :data-hit id}
+       (concat
+        [^{:key (str hit-num "-check")}
+         [:td.ignore
+          {:class (if (:marked meta) "checked")
+           :style {:width "20px"
+                   :background-color "#F9F9F9"
+                   :cursor "pointer"
+                   :color (if (:marked meta) "#158CBA" "black")}}
+          [:input.checkbox-custom.ignore
+           {:id (str hit-num "-check")
+            :type "checkbox"
+            :checked marked
+            :on-change #(re-frame/dispatch [:mark-hit {:hit-id id :flag (not marked)}])}]
+          [:label.checkbox-custom-label.ignore
+           {:for (str hit-num "-check")
+            :tab-index (inc hit-num)}]]
+         ;; hit number
+         ^{:key (str hit-num "-num")}
+         [:td.ignore.snippet-trigger
+          {:style {:width "20px" :background-color "#F9F9F9" :cursor "pointer"}
+           :on-double-click (on-double-click id)}
+          [:label.ignore
+           {:style {:font-weight "bold" :cursor "pointer"}}
+           (inc (or num hit-num))]]]
+        ;; hit
+        (for [token hit]
+          ^{:key (str hit-num "-" (:id token))} [hit-token token color-map token-field]))])))
+
+(defn reduce-hits
+  "returns hits indexed by `idx` and with a flag `break` indicating whether current hit belongs
+   to different document than previous hit (as per `doc-id-field`)"
+  [results & {:keys [doc-id-field] :or {doc-id-field :title}}]
+  (reduce (fn [out [idx {{doc-id doc-id-field} :meta :as hit}]]
+            (let [[_ {{prev-doc-id doc-id-field} :meta :as prev-meta} _] (last out)
+                  break (and prev-meta (not= doc-id prev-doc-id))]
+              (conj out [idx hit break])))
+          []
+          (map-indexed vector results)))
 
 (defn results-table []
   (let [results (re-frame/subscribe [:results])
@@ -121,6 +133,7 @@
        [:thead]
        [:tbody {:style {:font-size "12px"}}
         (doall
-         (for [[idx {:keys [hit meta id] :as hit-map}] (map-indexed vector @results)
+         (for [[idx {:keys [hit meta id] :as hit-map} break] (reduce-hits @results)
                :let [hit-num (+ idx @from)]]
-           ^{:key hit-num} [results-row hit-num hit-map color-map @token-field]))]])))
+           ^{:key hit-num} [results-row hit-num hit-map
+                            {:color-map color-map :token-field @token-field :break break}]))]])))

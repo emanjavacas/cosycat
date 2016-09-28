@@ -76,6 +76,9 @@
 
 
 ;;; Component utilities
+(defn merge-classes [& classes]
+  (->> classes (filter identity) (interpose ".") (apply str)))
+
 (defn nbsp
   "computes a html entity blankspace string of given length"
   [& {:keys [n] :or {n 1}}]
@@ -140,26 +143,3 @@
         [user _] (first (sort-by second > (frequencies (map :username filt-anns))))]
     (if-let [color (get color-map user)]
       (->box color))))
-
-;;; Else
-(defn dominant-color
-  "http://stackoverflow.com/a/2541680"
-  [img-href & {:keys [block-size] :or {block-size 5}}]
-  (let [img-el (doto (.createElement js/document "img") (.setAttribute "src" img-href))
-        canvas (.createElement js/document "canvas")
-        context (doto (.getContext canvas "2d") (.drawImage img-el 0 0))
-        height (or (.-height canvas) (.-naturalHeight img-el)
-                   (.-offsetHeight img-el) (.-height img-el))
-        width (or (.-width canvas) (.-naturalWidth img-el)
-                  (.-offsetWidth img-el) (.-width img-el))]
-    (.drawImage context img-el 0 0)
-    (let [data (.getImageData context 0 0 width height)
-          length (.-length (.-data data))]
-      (loop [i 0 c 0 r 0 g 0 b 0]
-        (if (>= i length)
-          [(->int (/ r c)) (->int (/ g c)) (->int (/ b c))]
-          (recur (+ i (* block-size 4))
-                 (inc c)
-                 (+ r (aget (.-data data) i))
-                 (+ g (aget (.-data data) (inc i)))
-                 (+ b (aget (.-data data) (+ 2 i)))))))))
