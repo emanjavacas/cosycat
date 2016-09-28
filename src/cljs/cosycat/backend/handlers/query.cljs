@@ -93,14 +93,22 @@
  :query
  (fn [db [_ query-str]]
    (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:settings :query])]
-     (timbre/debug sort-opts filter-opts)
      (re-frame/dispatch [:start-throbbing :results-frame])
-     (re-frame/dispatch [:start-throbbing :fetch-annotations])
      ;; add update
      (re-frame/dispatch
       [:register-history [:user-events]
        {:type :query
         :data {:query-str query-str :corpus corpus}}])
+     (run-query query-str (find-corpus-config db corpus) query-opts sort-opts filter-opts)
+     db)))
+
+(re-frame/register-handler
+ :query-from
+ (fn [db [_ from]]
+   (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:settings :query])
+         {query-str :query-str} (current-results db)
+         query-opts (if from (assoc query-opts :from from) query-opts)]
+     (re-frame/dispatch [:start-throbbing :results-frame])
      (run-query query-str (find-corpus-config db corpus) query-opts sort-opts filter-opts)
      db)))
 

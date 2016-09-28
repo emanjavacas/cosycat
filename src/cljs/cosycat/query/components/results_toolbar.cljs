@@ -5,7 +5,7 @@
             [react-bootstrap.components :as bs]
             [goog.string :as gstr]
             [cosycat.utils :refer [->default-map by-id ->map]]
-            [cosycat.app-utils :refer [dekeyword]]
+            [cosycat.app-utils :refer [dekeyword ->int]]
             [cosycat.routes :refer [nav!]]
             [cosycat.components :refer [disabled-button-tooltip dropdown-select]]
             [cosycat.query.components.annotation-modal :refer [annotation-modal-button]]))
@@ -16,12 +16,43 @@
     :style {:font-size "12px" :height "34px" :width "70px"}}
    label])
 
+(defn on-key-press [open? value]
+  (fn [e]
+    (when (= 13 (.-charCode e))
+      (do (re-frame/dispatch [:query-from (dec (->int @value))])
+          (swap! open? not)))))
+
+(defn goto-button []
+  (let [open? (reagent/atom false)
+        value (reagent/atom 1)]
+    (fn []
+      [bs/dropdown-button
+       {:title "goto"
+        :noCaret true
+        :id "gotobutton"
+        :style {:height "34px"}
+        :open @open?
+        :onClick #(swap! open? not)}
+       [bs/menu-item
+        {:eventKey "1"}
+        [:input.form-control.form-control-no-border
+         {:style {:height "30px"}
+          :type "number"
+          :min 1
+          :autoFocus true               ;ensure blur onload
+          :value @value
+          :on-change #(reset! value (.. % -target -value))
+          :on-key-press (on-key-press open? value)
+          :on-key-down #(.stopPropagation %)
+          :on-blur #(swap! open? not)}]]])))
+
 (defn pager-buttons []
   [bs/button-toolbar
    {:justified true}
    [pager-button
     :direction :prev
-    :label [:div [:i.zmdi.zmdi-arrow-left {:style {:margin-right "10px"}}] "prev"]] 
+    :label [:div [:i.zmdi.zmdi-arrow-left {:style {:margin-right "10px"}}] "prev"]]
+   [goto-button]
    [pager-button
     :direction :next
     :label [:div "next" [:i.zmdi.zmdi-arrow-right {:style {:margin-left "10px"}}]]]])
