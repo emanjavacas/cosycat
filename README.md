@@ -16,7 +16,7 @@ Part-of-Speech tagging a newspaper corpus), it is mostly geared towards (preferr
 team-based) Corpus Linguistic research aimed at statistically analyzing 
 particular constructions that have to be first retrieved and annotated.
 
-Cosycat allows multiple users to analize the same corpus in an interactive way,
+Cosycat allows multiple users to analyze the same corpus in an interactive way,
 keeping their annotations synchronized with each other and receiving live feedback
 from each other actions. Each change to the current body of corpus annotations 
 (e.g. each time an annotation is introduced, modified or removed by a user) is
