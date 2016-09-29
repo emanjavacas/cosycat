@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
-            [cosycat.components :refer [user-profile-component]]
+            [cosycat.components :refer [user-profile-component compute-feedback]]
             [cosycat.roles :refer [project-user-roles]]
             [cosycat.utils :refer [human-time]]
             [cosycat.app-utils :refer [ceil pending-users]]
@@ -22,7 +22,8 @@
          "_")]]]))
 
 (def summary-help
-  "In order to remove a project all users have to agree. This summary shows the status of the collective decision.")
+  "In order to remove a project all users have to agree. 
+   This summary shows the status of the collective decision.")
 
 (defn pending-users-table [project]
   (fn [project]
@@ -44,11 +45,6 @@
       (do (timbre/info "removing project" project-name)
           (swap! delete-project-modal-show not)
           (re-frame/dispatch [:project-remove {:project-name project-name}])))))
-
-(defn compute-feedback [project-name project-name-atom]
-  (cond (empty? @project-name-atom) ""
-        (not= @project-name-atom project-name) "has-error"
-        :else "has-success"))
 
 (defn project-name-input [project-name project-name-atom delete-project-modal-show]
   (fn [project-name project-name-atom delete-project-modal-show]

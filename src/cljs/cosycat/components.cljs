@@ -176,6 +176,18 @@
      {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} "Active"])}
      [:div {:style (assoc style :border-radius "50%" :background-color color)}]]))
 
+(defn user-attributes [user]
+  (fn [{:keys [avatar username firstname lastname email created last-active active] :as user}]
+    [bs/table
+     {:style {:table-layout "fixed"}}
+     [:colgroup [:col {:span 1 :style {:width "10%"}}]]
+     [:tbody
+      [:tr [:td [bs/glyphicon {:glyph "envelope"}]] [text-td email]]
+      [:tr [:td [bs/glyphicon {:glyph "time"}]]
+       [text-td [:span "Joined on " [:span.text-muted (parse-time created)]]]]
+      [:tr [:td [bs/glyphicon {:glyph "exclamation-sign"}]]
+       [text-td [:span "Last active " [:span.text-muted (human-time last-active)]]]]]]))
+
 (defn user-profile-component
   "A component displaying basic user information. If `displayable?`, it requires an initial role,
    which is use to display an init view of the role, otherwise it presents the user as not
@@ -190,18 +202,13 @@
     [:div.container-fluid
      [:div.row
       [:div.col-sm-4.col-md-4
-       [:h4 [:img.img-rounded.img-responsive {:src (:href avatar)}]]]
+       [:h4 [:img.img-rounded.img-responsive
+             {:src (:href avatar) :style {:max-height "65.5px"}}]]] ;gravatar height
       [:div.col-sm-8.col-md-8
        [:h4 username [:br] [:span [:small [:cite (str firstname " " lastname)]]]]
        (when active [online-dot active])]]
      [:div.row {:style {:padding "0 15px"}}
-      [bs/table
-       {:style {:table-layout "fixed"}}
-       [:colgroup [:col {:span 1 :style {:width "25%"}}]]
-       [:tbody
-        [:tr [:td [bs/glyphicon {:glyph "envelope"}]] [text-td email]]
-        [:tr [:td [:span (str "Created:")]] [text-td (parse-time created)]]
-        [:tr [:td [:span (str "Active:") ]] [text-td (human-time last-active)]]]]]
+      [user-attributes user]]
      [:div.row {:style {:padding "0 15px"}}
       [select-role-btn user roles opts]]]))
 
@@ -322,3 +329,8 @@
           "Session message"]]]
        [bs/modal-body
         [bs/alert {:bsStyle "danger"} message]]])))
+
+(defn compute-feedback [project-name project-name-atom]
+  (cond (empty? @project-name-atom) ""
+        (not= @project-name-atom project-name) "has-error"
+        :else "has-success"))

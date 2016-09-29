@@ -30,11 +30,11 @@
        [user-profile-component user project-user-roles
         :on-change (on-new-user-role selected-users username)]])))
 
-(defn users-input-component [selected-users & {:keys [users-per-row] :or {users-per-row 3}}]
+(defn users-input-component [selected-users & {:keys [users-per-row] :or {users-per-row 2}}]
   (let [users (re-frame/subscribe [:users :exclude-me true])]
     (fn [selected-users]
       (when-not (empty? @users)
-        [:div (doall (for [row (partition-all users-per-row @users)
+        [:div.row (doall (for [row (partition-all users-per-row @users)
                            {:keys [username] :as user} row]
                        ^{:key username}
                        [:div

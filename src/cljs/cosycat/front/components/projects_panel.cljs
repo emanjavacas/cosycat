@@ -3,6 +3,7 @@
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
             [cosycat.routes :refer [nav!]]
+            [cosycat.utils :refer [human-time]]
             [cosycat.components :refer [user-selection-component]]
             [cosycat.front.components.new-project-panel :refer [new-project-btn]]
             [taoensso.timbre :as timbre]))
@@ -23,27 +24,33 @@
     [:table [:tbody [:tr (doall (for [{username :username :as user} users]
                                   ^{:key username} [user-cell user]))]]]))
 
-(defn project-row [{:keys [name description users]}]
+(defn spacer [& {:keys [height] :or {height 5}}]
+  [:div.row {:style {:height (str height "px")}}])
+
+(defn project-row [{:keys [name description users created]}]
   (let [creator (first (filter #(= "creator" (:role %)) users))
         creator-info (re-frame/subscribe [:user (:username creator)])]
-    (fn [{:keys [name description users]}]
+    (fn [{:keys [name description users created]}]
       [bs/list-group-item
-       {:onClick #(nav! (str "/project/" name))}
        (reagent/as-component
         [:div.container-fluid
          [:div.row
-          [:div.col-lg-8 [:p name]]]
+          [:div.col-lg-8
+           [:h4 [:a {:style {:cursor "pointer"} :on-click #(nav! (str "/project/" name))} name]]
+           [:div description]]]
+         [spacer :height 20]
          [:div.row
           [:div.col-lg-3 [:span.text-muted "Created by: "]]
           [:div.col-lg-9 [user-selection-component @creator-info]]]
-         [:div.row {:style {:height "5px"}}]
+         [spacer]
          [:div.row
           [:div.col-lg-3 [:span.text-muted "Users in project: "]]
           [:div.col-lg-9 [users-row creator users]]]
-         [:div.row {:style {:height "5px"}}]
+         [spacer :height 10]
          [:div.row
-          [:div.col-lg-3 [:span.text-muted "Project description: "]]
-          [:div.col-lg-9 description]]])])))
+          [:div.col-lg-3 [:span.text-muted "Created on: "]]
+          [:div.col-lg-9 [:span (human-time created)]]]
+         [spacer]])])))
 
 (defn projects-panel [projects]
   (fn [projects]

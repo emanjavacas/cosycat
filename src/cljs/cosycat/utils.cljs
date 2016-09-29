@@ -22,6 +22,10 @@
       (coll? m) (vec (map keywordify m))
       :else m)))
 
+(defn string-contains [s subs]
+  (let [n (.indexOf s subs)]
+    (>= n 0)))
+
 ;;; Time
 (defn timestamp []
   (-> (js/Date.)

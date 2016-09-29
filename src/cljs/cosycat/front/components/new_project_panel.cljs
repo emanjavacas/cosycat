@@ -1,4 +1,4 @@
-(ns cosycat.front.components.new-project-panel
+>(ns cosycat.front.components.new-project-panel
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
@@ -74,13 +74,13 @@
 
 (defn new-project-form [selected-users]
   (fn [selected-users]
-    [bs/well
-     [:div.container-fluid
-      [name-input-component]
-      [spacer]
-      [desc-input-component]
-      [spacer]
-      [users-input-component selected-users]]]))
+    [:div.container-fluid
+     {:style {:border "1px solid rgba(0, 0, 0, 0.05)" :padding "15px"}}
+     [name-input-component]
+     [spacer]
+     [desc-input-component]
+     [spacer]
+     [users-input-component selected-users]]))
 
 (defn submit-project [{:keys [name description users user-projects]}]
   (let [project {:name name :description description :users users}]
@@ -119,12 +119,8 @@
         users (re-frame/subscribe [:session :users])]
     (fn [open?]
       [:div
-       [css-transition-group
-        {:transition-name "notification"
-         :transition-enter-timeout 0
-         :transition-leave-timeout 0}
-        (when @open?
-          [:div
-           [:h2#new-project {:style {:padding-bottom "30px"}} "New Project"]
-           [new-project-form selected-users]])]
+       (when @open?
+         [:div
+          [:h3#new-project {:style {:padding-bottom "30px"}} "New Project"]
+          [new-project-form selected-users]])
        [project-btn open? selected-users]])))
