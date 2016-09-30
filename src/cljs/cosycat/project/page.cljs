@@ -82,11 +82,12 @@
      (when (can-delete-project? @my-role) [delete-project-btn])
      [leave-project-btn]]))
 
-(defn add-user-button [add-user-show?]
-  (fn [add-user-show?]
-    [bs/button
-     {:onClick #(swap! add-user-show? not)}
-     "Add User"]))
+(defn add-user-button []
+  (let [show? (re-frame/subscribe [:modals :add-user])]
+    (fn []
+      [bs/button
+       {:onClick #(re-frame/dispatch [(if @show? :close-modal :open-modal) :add-user])}
+       "Add User"])))
 
 (defn project-header [{:keys [creator]}]
   (let [creator (re-frame/subscribe [:user creator :username])]
@@ -101,8 +102,6 @@
 
 (defn project-panel []
   (let [active-project (re-frame/subscribe [:active-project])
-        delete-project-show? (re-frame/subscribe [:modals :delete-project])        
-        add-user-show? (re-frame/subscribe [:modals :delete-project])
         my-role (re-frame/subscribe [:active-project-role])
         me (re-frame/subscribe [:me :username])]
     (fn []
@@ -116,7 +115,7 @@
           [:div.row [:div.col-lg-12 [:hr]]]
           [:div.row
            [:div.col-lg-6
-            [:div [add-user-button add-user-show?]]]
+            [:div [add-user-button]]]
            [:div.col-lg-6
             [:div.pull-right [project-buttons my-role]]]]
           [:div-row {:style {:margin "20px"}}
