@@ -28,6 +28,7 @@
     (fn []
       [bs/dropdown-button
        {:title "goto"
+        :onToggle #()
         :noCaret true
         :id "gotobutton"
         :style {:height "34px"}
@@ -40,11 +41,11 @@
           :type "number"
           :min 1
           :autoFocus true               ;ensure blur onload
-          :value @value
+          :on-blur #(swap! open? not)
+          :value @value         
           :on-change #(reset! value (.. % -target -value))
           :on-key-press (on-key-press open? value)
-          :on-key-down #(.stopPropagation %)
-          :on-blur #(swap! open? not)}]]])))
+          :on-key-down #(.stopPropagation %)}]]])))
 
 (defn pager-buttons []
   [bs/button-toolbar
@@ -69,8 +70,8 @@
   (fn []
     [:div.container-fluid
      [:div.row
-      [:div.col-lg-3.col-sm-5 [query-result-label]]
-      [:div.col-lg-9.col-sm-7 [:div.pull-left [pager-buttons]]]]]))
+      [:div.col-lg-4.col-sm-5 [query-result-label]]
+      [:div.col-lg-8.col-sm-7 [:div.pull-left [pager-buttons]]]]]))
 
 (defn mark-hits-btn []
   [bs/button
