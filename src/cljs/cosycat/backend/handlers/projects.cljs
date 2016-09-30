@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [ajax.core :refer [POST]]
-            [cosycat.app-utils :refer [pending-users deep-merge]]
+            [cosycat.app-utils :refer [pending-users deep-merge update-coll]]
             [cosycat.routes :refer [nav!]]
             [cosycat.backend.middleware :refer [standard-middleware check-project-exists]]
             [cosycat.backend.db :refer [default-project-session default-project-history]]
@@ -23,10 +23,11 @@
    projects))
 
 (re-frame/register-handler
- :update-project-data
+ :update-project-user-role
  standard-middleware
- (fn [db [project-name path value]]
-   (assoc-in db (into [:projects project-name] path) value)))
+ (fn [db [_ project-name username new-role]]
+   (let [pred #(= username (:username %))]
+     (update-in db [:projects project-name :users] update-coll pred assoc :role new-role))))
 
 (re-frame/register-handler
  :remove-active-project
@@ -55,7 +56,7 @@
  (fn [db [_ project-name]]
    (update db :projects dissoc project-name)))
 
-(defn error-handler [{{:keys [message data]} :response}]
+(defn error-handler [{{:keys [message data code]} :response}]
   (re-frame/dispatch [:notify {:message message :meta data :status :error}]))
 
 (defn new-project-handler [{project-name :name :as project}]
@@ -117,17 +118,20 @@
 (re-frame/register-handler              ;remove user from project in client-db
  :remove-project-user
  standard-middleware
- (fn [db [_ [{:keys [user project-name]}]]]
+ (fn [db [_ {:keys [username project-name]}]]
    (update-in
     db [:projects project-name :users]
-    (fn [users] (vec (remove #(= (:username %) (:username user)) users))))))
+    (fn [users] (vec (remove #(= (:username %) username) users))))))
 
 (defn remove-user-handler [project-name]
-  #(re-frame/dispatch [:notify "Goodbye from project " project-name]))
+  (fn []
+    (nav! "/")
+    (re-frame/dispatch [:remove-project project-name])
+    (re-frame/dispatch [:notify {:message (str "Goodbye from project " project-name)}])))
 
 (re-frame/register-handler
  :project-remove-user
- (fn [db [_ {:keys [project-name]}]]
+ (fn [db [_ project-name]]
    (POST "/project/remove-user"
          {:params {:project-name project-name}
           :handler (remove-user-handler project-name)
@@ -167,11 +171,11 @@
    db))
 
 (defn handle-new-user-role [project-name]
-  (fn [users]
-    (re-frame/dispatch [:update-project-data project-name [:users] users])))
+  (fn [{:keys [username role]}]
+    (re-frame/dispatch [:update-project-user-role project-name username role])))
 
 (re-frame/register-handler
- :update-user-role
+ :user-role-update
  (fn [db [_ {:keys [username new-role]}]]
    (let [project-name (get-in db [:session :active-project])]
      (POST "/project/update-user-role"
@@ -179,4 +183,5 @@
                      :username username
                      :new-role new-role}
             :handler (handle-new-user-role project-name)
-            :error-handler error-handler}))))
+            :error-handler error-handler})
+     db)))

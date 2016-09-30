@@ -39,23 +39,22 @@
        [pending-user-row {:label "Pending users: " :usernames pending}]
        [pending-user-row {:label "Agreeing users: " :usernames agreed-users}]])))
 
-(defn trigger-remove-project [project-name project-name-atom delete-project-modal-show]
+(defn trigger-remove-project [project-name project-name-atom]
   (fn [event]
     (when (and (= 13 (.-charCode event)) (= project-name @project-name-atom))
       (do (timbre/info "removing project" project-name)
-          (swap! delete-project-modal-show not)
+          (re-frame/dispatch [:close-modal :delete-project])
           (re-frame/dispatch [:project-remove {:project-name project-name}])))))
 
-(defn project-name-input [project-name project-name-atom delete-project-modal-show]
-  (fn [project-name project-name-atom delete-project-modal-show]
+(defn project-name-input [project-name project-name-atom]
+  (fn [project-name project-name-atom]
     [:div.row
      [:div.form-group
       {:class (compute-feedback project-name project-name-atom)}
       [:input.form-control
        {:value @project-name-atom
         :type "text"
-        :on-key-press (trigger-remove-project
-                       project-name project-name-atom delete-project-modal-show)
+        :on-key-press (trigger-remove-project project-name project-name-atom)
         :on-change #(reset! project-name-atom (.. % -target -value))}]]]))
 
 (defn project-name-input-footer []
@@ -63,25 +62,26 @@
    [:div.text-center
     [:div.pull-right "Type in the name of the project you wish to delete"]]])
 
-(defn double-check-button [delete-project-modal-show project-name-input-show]
-  [:div.row.pull-right
-   [:div.text-center
-    [bs/button-group
-     [bs/button
-      {:bsStyle "primary"
-       :onClick #(swap! project-name-input-show not)}
-      "Yes"]
-     [bs/button
-      {:onClick #(swap! delete-project-modal-show not)}
-      "No"]]]])
+(defn double-check-button [project-name-input project-name-input-show?]
+  (fn [project-name-input project-name-input-show?]
+    [:div.row.pull-right
+     [:div.text-center
+      [bs/button-group
+       [bs/button
+        {:bsStyle "primary"
+         :onClick #(swap! project-name-input-show? not)}
+        "Yes"]
+       [bs/button
+        {:onClick #(re-frame/dispatch [:close-modal :delete-project])}
+        "No"]]]]))
 
 (defn on-hide
-  [project-name-atom project-name-input-show footer-alert-show delete-project-modal-show]
+  [project-name-atom project-name-input-show? footer-alert-show]
   (fn [e]
     (reset! project-name-atom "")
-    (reset! project-name-input-show false)
+    (reset! project-name-input-show? false)
     (js/setTimeout (fn [] (reset! footer-alert-show true)) 500)
-    (swap! delete-project-modal-show not)))
+    (re-frame/dispatch [:close-modal :delete-project])))
 
 (defn delete-project-modal-header [pending?]
   (fn [pending?]
@@ -104,37 +104,36 @@
       "Remember that this operation is non reversible!"]]))
 
 (defn delete-project-modal-body
-  [{:keys [project-name-atom delete-project-modal-show project-name-input-show project pending?]}]
-  (fn [{:keys [project-name-atom delete-project-modal-show project-name-input-show project pending?]}]
+  [{:keys [project-name-atom project-name-input-show? project pending?]}]
+  (fn [{:keys [project-name-atom project-name-input-show? project pending?]}]
     (let [{project-name :name :as project} @project]
       [bs/modal-body
        [:div.container-fluid
-        (when @project-name-input-show
-          [project-name-input project-name project-name-atom delete-project-modal-show])
-        (if-not @project-name-input-show [pending-users-table project])
-        (if @project-name-input-show
+        (when @project-name-input-show?
+          [project-name-input project-name project-name-atom])
+        (if-not @project-name-input-show? [pending-users-table project])
+        (if @project-name-input-show?
           [project-name-input-footer]
-          (when pending? [double-check-button delete-project-modal-show project-name-input-show]))]])))
+          (when pending? [double-check-button project-name-input project-name-input-show?]))]])))
 
-(defn delete-project-modal [project-name delete-project-modal-show]
-  (let [project-name-input-show (reagent/atom false)
+(defn delete-project-modal [project-name]
+  (let [project-name-input-show? (reagent/atom false)
         project-name-atom (reagent/atom "")
         footer-alert-show (reagent/atom true)
         project (re-frame/subscribe [:active-project])
+        show? (re-frame/subscribe [:modals :delete-project])
         me (re-frame/subscribe [:me :username])]
-    (fn [project-name delete-project-modal-show]
+    (fn [project-name]
       (let [{:keys [pending]} (pending-users @project)
             pending? (contains? (apply hash-set pending) @me)]
         [bs/modal
-         {:show @delete-project-modal-show
-          :onHide (on-hide project-name-atom project-name-input-show
-                           footer-alert-show delete-project-modal-show)}
+         {:show @show?
+          :onHide (on-hide project-name-atom project-name-input-show? footer-alert-show)}
          [delete-project-modal-header pending?]
          [delete-project-modal-body
           {:project project
            :project-name-atom project-name-atom
-           :delete-project-modal-show delete-project-modal-show
-           :project-name-input-show project-name-input-show
+           :project-name-input-show? project-name-input-show?
            :pending? pending?}]
-         (when (and @project-name-input-show @footer-alert-show)
+         (when (and @project-name-input-show? @footer-alert-show)
            [delete-project-modal-footer footer-alert-show])]))))

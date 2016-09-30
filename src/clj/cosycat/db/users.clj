@@ -4,30 +4,19 @@
             [buddy.hashers :as hashers]
             [taoensso.timbre :as timbre]
             [schema.core :as s]
-            [cosycat.db.utils :refer [->set-update-map]]
+            [cosycat.db.utils :refer [->set-update-map normalize-user is-user?]]
             [cosycat.schemas.user-schemas :refer [user-schema]]
             [cosycat.components.db :refer [new-db colls]]
             [cosycat.avatar :refer [user-avatar]]))
 
 (defn- ex-user-exists
   "returns a exception to be thrown in case user exists"
-  ([data] (ex-info "User already exist" {:code :user-exists :data data}))
+  ([data] (ex-info "User already exist" {:code :user-exists :data data :message "User already exist"}))
   ([{old-name :username old-email :email} {new-name :username new-email :email}]
    (cond
      (and (= new-name old-name) (= new-email old-email)) (ex-user-exists [:username :email])
      (= new-name old-name) (ex-user-exists :username)
      (= new-email old-email) (ex-user-exists :email))))
-
-(defn normalize-user
-  "transforms db user doc into public user (no private info)"
-  [user & ks]
-  (-> (apply dissoc user :password :_id ks)
-      (update-in [:roles] (partial apply hash-set))))
-
-(defn is-user?
-  [{db-conn :db :as db} {:keys [username email]}]
-  (some-> (mc/find-one-as-map db-conn (:users colls) {$or [{:username username} {:email email}]})
-          (normalize-user :settings)))
 
 (defn- check-user-exists
   "user check. returns nil or ex-info (in case a exception has to be thrown)"
@@ -97,10 +86,20 @@
   (check-user-exists db update-map)
   (-> (update-user db username update-map) normalize-user))
 
+(defn get-user-users [{db-conn :db :as db} username]      ;todo
+  (let [projects (->> (mc/find-maps db-conn (:projects colls) {"users.username" username}))]
+    (reduce (fn [acc {:keys [users creator]}]
+              (vec (concat acc (map :username users) [creator])))
+            []
+            projects)))
+
 (defn users-info
-  "retrieves all users processed as public users (no private info)"
-  [{db-conn :db}] ;todo, retrieve only users with which users has interactions
-  (->> (mc/find-maps db-conn (:users colls) {}) (map #(normalize-user % :projects))))
+  "retrieves all users that interact with user, processed as public users (no private info)"
+  [{db-conn :db :as db} username] ;todo, retrieve only users with which users has interactions
+  (let [usernames (get-user-users db username)]
+    (->> (mc/find-maps db-conn (:users colls) {}; {:username {$in usernames}}
+                       )
+         (map #(normalize-user % :projects :settings)))))
 
 ;;; user settings
 (defn user-settings

@@ -22,9 +22,10 @@
    :filtered-users #{s/Str}})             ;filter out annotations by other users
 
 (defn make-keys-optional [schema]
-  (reduce-kv (fn [m k v] (if (s/optional-key? k)
-                           m
-                           (-> m (assoc (s/optional-key k) v) (dissoc k))))
+  (reduce-kv (fn [m k v]
+               (if (s/optional-key? k)
+                 (assoc m k v)
+                 (-> m (assoc (s/optional-key k) v) (dissoc k))))
              {}
              schema))
 
@@ -40,10 +41,12 @@
   #?(:clj {:name s/Str
            :description s/Str
            :created s/Int
+           :creator s/Str
            :users project-users-schema
            (s/optional-key :updates) [update-schema]}
      :cljs {:name s/Str
             :description s/Str
+            :creator s/Str
             :created s/Int
             :users [{:username s/Str :role s/Str}]
             (s/optional-key :updates) [update-schema]

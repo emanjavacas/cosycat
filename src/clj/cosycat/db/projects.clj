@@ -7,31 +7,43 @@
             [cosycat.schemas.project-schemas
              :refer [project-schema update-schema project-user-schema]]
             [cosycat.roles :refer [check-project-role]]
-            [cosycat.db.users :refer [is-user?]]
+            [cosycat.db.utils :refer [is-user? normalize-project]]
             [cosycat.components.db :refer [new-db colls]]
             [taoensso.timbre :as timbre]))
 
 (defn ex-user [username]
-  (ex-info "User doesn't exist" {:code :missing-user :data {:username username}}))
+  (ex-info "User doesn't exist"
+           {:message "User doesn't exist" :code :missing-user
+            :data {:username username}}))
 
 (defn ex-project [project-name]
-  (ex-info "Project already exist" {:code :project-exists :data {:project project-name}}))
+  (ex-info "Project already exist"
+           {:code :project-exists :message "Project already exist"
+            :data {:project project-name}}))
 
 (defn ex-non-existing-project [project-name]
-  (ex-info "Project doesn't exist" {:code :missing-project  :data {:project project-name}}))
+  (ex-info "Project doesn't exist"
+           {:code :missing-project
+            :message "Project doesn't exist"
+            :data {:project project-name}}))
 
 (defn ex-user-project [username project-name]
   (ex-info "User is not in project"
            {:code :user-not-in-project
+            :message "User is not in project"
             :data {:username username :project project-name}}))
 
 (defn ex-rights [username action role]
   (ex-info (str username " doesn't have sufficient rights")
            {:code :not-authorized
+            :message (str username " doesn't have sufficient rights")
             :data {:username username :action action :role role}}))
 
-(defn normalize-project [project]
-  (dissoc project :_id))
+(defn ex-last-user [project-name]
+  (ex-info (str "Attempt to remove last user in project: " project-name)
+           {:code :last-user-in-project
+            :message (str "Attempt to remove last user in project: " project-name)
+            :data {:project-name project-name}}))
 
 (defn find-project-by-name [{db-conn :db} project-name]
   (mc/find-one-as-map db-conn (:projects colls) {:name project-name}))
@@ -60,6 +72,17 @@
       missing-username (throw (ex-user missing-username))
       (is-project? db project-name) (throw (ex-project project-name)))))
 
+(defn check-user-in-project [db username project-name]
+  (if-not (is-authorized? db project-name username :read)
+    (throw (ex-user-project username project-name))))
+
+(defn check-project-empty
+  [db project-name & {:keys [transform-f] :or {transform-f identity}}]
+  (let [project (find-project-by-name db project-name)]
+    (if-let [users (seq (-> project transform-f :users))]
+      :ok
+      (throw (ex-last-user project-name)))))
+
 (defn join-project-creator [creator users]
   (conj users {:username creator :role "creator"}))
 
@@ -72,12 +95,16 @@
        {:name project-name
         :description description
         :created (System/currentTimeMillis)
+        :creator creator
         :users (->> users (join-project-creator creator) (map #(select-keys % [:username :role])))})
       normalize-project))
 
-(defn check-user-in-project [db username project-name]
-  (if-not (is-authorized? db project-name username :read)
-    (throw (ex-user-project username project-name))))
+(defn get-project
+  "retrieves project by name"
+  [{db-conn :db :as db} username project-name]
+  (check-user-in-project db username project-name)
+  (-> (mc/find-one-as-map db-conn (:projects colls) {"name" project-name})
+      normalize-project))
 
 (defn update-project
   "adds a project update to `project.updates`"
@@ -101,22 +128,19 @@
        {:return-new true})
       normalize-project))
 
+(defn- remove-from-users [users username]
+  (remove #(= username (:username %)) users))
+
 (defn remove-user
   "removes user from project"
   [{db-conn :db :as db} username project-name]
   (check-user-in-project db username project-name)
+  (check-project-empty db project-name :transform-f #(update % :users remove-from-users username))
   (-> (mc/find-and-modify
        db-conn (:projects colls)
        {"name" project-name}
        {$pull {"users" {"username" username}}}
        {:return-new true})
-      normalize-project))
-
-(defn get-project
-  "retrieves project by name"
-  [{db-conn :db :as db} username project-name]
-  (check-user-in-project db username project-name)
-  (-> (mc/find-one-as-map db-conn (:projects colls) {"name" project-name})
       normalize-project))
 
 (defn get-projects
@@ -162,9 +186,11 @@
       (throw (ex-user username)))
     (when-not (check-project-role :write role)
       (throw (ex-rights issuer :write role)))
-    (-> (mc/find-and-modify
-         db-conn (:projects colls)
-         {"users.username" username}
-         {$set {"users.$.role" new-role}}
-         {:return-new true})
-        normalize-project)))
+    (->> (mc/find-and-modify
+          db-conn (:projects colls)
+          {"users.username" username}
+          {$set {"users.$.role" new-role}}
+          {:return-new true})
+         :users
+         (filter #(= username (:username %)))
+         first)))

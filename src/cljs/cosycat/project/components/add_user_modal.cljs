@@ -22,9 +22,9 @@
 (defn remove-project-users [users project-users]
   (remove #(contains? (apply hash-set (map :username project-users)) (:username %)) users))
 
-(defn selected-user-component [selected-user-atom current-selection-atom show?]
+(defn selected-user-component [selected-user-atom current-selection-atom]
   (let [active-project (re-frame/subscribe [:active-project :name])]
-    (fn [selected-user-atom current-selection-atom show?]
+    (fn [selected-user-atom current-selection-atom]
       [user-profile-component @selected-user-atom
        project-user-roles
        :editable? true
@@ -34,29 +34,29 @@
                      [:project-add-user
                       {:user {:username (:username user) :role role}
                        :project-name @active-project}])
-                    (swap! show? not)
+                    (re-frame/dispatch [:close-modal :add-user])
                     (reset! selected-user-atom nil))])))
 
-(defn display-user [selected-user-atom current-selection-atom show?]
-  (fn [selected-user-atom current-selection-atom show?]
+(defn display-user [selected-user-atom current-selection-atom]
+  (fn [selected-user-atom current-selection-atom]
     [bs/well
      (if @selected-user-atom
-       [selected-user-component selected-user-atom current-selection-atom show?]
+       [selected-user-component selected-user-atom current-selection-atom]
        [user-profile-component (or @current-selection-atom default-user)
         project-user-roles
         :editable? false :displayable? false])]))
 
-(defn add-user-component [project show?]
+(defn add-user-component [project]
   (let [current-selection-atom (reagent/atom nil)
         selected-user-atom (reagent/atom nil)
         users (re-frame/subscribe [:users])]
-    (fn [{project-users :users} show?]
+    (fn [{project-users :users}]
       (let [eligible-users (remove-project-users @users project-users)
             users-by-username (zipmap (map :username @users) @users)]
         [:div.container-fluid
          [:div.row
           [:div.col-lg-7
-           [display-user selected-user-atom current-selection-atom show?]]
+           [display-user selected-user-atom current-selection-atom]]
           [:div.col-lg-5
            [:div.container-fluid
             [:div.row
@@ -67,13 +67,14 @@
                :onKeyPress #(when (= 13 (.-charCode %))
                               (reset! selected-user-atom @current-selection-atom))}]]]]]]))))
 
-(defn add-user-modal [project add-user-show?]
-  (fn [project add-user-show?]
-    [bs/modal
-     {:show @add-user-show?
-      :onHide #(reset! add-user-show? false)}
-     [bs/modal-header
-      {:closeButton true}
-      [bs/modal-title "Add user to the project"]]
-     [bs/modal-body
-      [add-user-component project add-user-show?]]]))
+(defn add-user-modal [project]
+  (let [show? (re-frame/subscribe [:modals :add-user])]
+    (fn [project]
+      [bs/modal
+       {:show @show?
+        :onHide #(re-frame/dispatch [:close-modal :add-user])}
+       [bs/modal-header
+        {:closeButton true}
+        [bs/modal-title "Add user to the project"]]
+       [bs/modal-body
+        [add-user-component project]]])))

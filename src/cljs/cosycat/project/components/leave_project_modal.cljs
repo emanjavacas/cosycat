@@ -8,7 +8,8 @@
 
 (defn leave-project [project-name project-name-atom]
   (when (compute-feedback project-name project-name-atom)
-    (re-frame/dispatch [:leave-active-project])))
+    (do (re-frame/dispatch [:close-modal :leave-project])
+        (re-frame/dispatch [:project-remove-user project-name]))))
 
 (defn on-key-press [project-name project-name-atom]
   (fn [e]
@@ -34,11 +35,11 @@
        [:div.row {:style {:height "10px"}}]
        [:div.row.pull-right
         [bs/button
-         {:onClick #(leave-project project-name project-name-atom)}
+         {:onClick #(leave-project project-name project-name-atom )}
          [bs/glyphicon {:glyph "hand-right"}]]]])))
 
-(defn double-check-button [leave-project-show? project-input-show?]
-  (fn [leave-project-show? project-input-show?]
+(defn double-check-button [project-input-show?]
+  (fn [project-input-show?]
     [:div.text-center
      [bs/button-group
       [bs/button
@@ -46,15 +47,16 @@
         :onClick #(swap! project-input-show? not)}
        "Yes"]
       [bs/button
-       {:onClick #(swap! leave-project-show? not)}
+       {:onClick #(re-frame/dispatch [:close-modal :leave-project])}
        "No"]]]))
 
-(defn leave-project-modal [project-name leave-project-show?]
-  (let [project-input-show? (reagent/atom false)]
-    (fn [project-name leave-project-show?]
+(defn leave-project-modal [project-name]
+  (let [project-input-show? (reagent/atom false)
+        show? (re-frame/subscribe [:modals :leave-project])]
+    (fn [project-name]
       [bs/modal
-       {:show @leave-project-show?
-        :onHide #(reset! leave-project-show? false)}
+       {:show @show?
+        :onHide #(re-frame/dispatch [:close-modal :leave-project])}
        [bs/modal-header
         {:closeButton true}
         [bs/modal-title "Do you really want to leave?"]]
@@ -62,5 +64,5 @@
         [:div.container-fluid
          (if @project-input-show?
            [project-name-input project-name]
-           [double-check-button leave-project-show? project-input-show?])]]])))
+           [double-check-button project-input-show?])]]])))
 

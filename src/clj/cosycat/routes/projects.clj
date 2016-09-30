@@ -48,12 +48,11 @@
   [{{project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [project (proj/get-project db username project-name)]
-    (proj/remove-user db username project-name)
-    (send-clients
-     ws {:type :project-remove-user :data {:username username :project-name project-name}}
-     :source-client username
-     :target-clients (mapv :username (:users project)))))
+  (proj/remove-user db username project-name)
+  (send-clients
+   ws {:type :project-remove-user :data {:username username :project-name project-name}}
+   :source-client username
+   :target-clients (mapv :username (:users (proj/get-project db username project-name)))))
 
 (defn remove-project-route
   [{{project-name :project-name} :params
@@ -74,11 +73,12 @@
   [{{project-name :project-name target-username :username new-role :new-role} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [{users :users} (proj/update-user-role db username project-name target-username new-role)]
-    (send-clients ws {:type :new-user-role :data users}
+  (let [project-user (proj/update-user-role db username project-name target-username new-role)]
+    (send-clients ws {:type :new-project-user-role
+                      :data (assoc project-user :project-name project-name :by username)}
      :source-client username
-     :target-clients (mapv :username users))
-    users))
+     :target-clients (mapv :username (:users (proj/find-project-by-name db project-name))))
+    project-user))
 
 (defn project-routes []
   (routes

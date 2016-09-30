@@ -59,7 +59,7 @@
               :error "zmdi-alert-circle")}]])
 
 (defn right-href [href]
-  (if (.startsWith href "public")
+  (if (and href (.startsWith href "public"))
     (second (gstr/splitLimit href "/" 1))
     href))
 

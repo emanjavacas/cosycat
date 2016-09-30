@@ -138,17 +138,13 @@
   (fn [projects active-project]
     [navdropdown :no-panel "Projects" "zmdi-toys"
      :children
-     (concat
-      [{:label "Projects page" :href "#/"}
-       {:divider true}
-       {:label "Projects" :header true}]
-      (doall
-       (for [[project-name {:keys [project]}] @projects]
-         {:label project-name
-          :href #(merge-target-project-url project-name)
-          :style (when (= project-name @active-project)
-                   {:background-color "#e7e7e7"
-                    :color "black"})})))]))
+     (doall
+      (for [[project-name {:keys [project]}] @projects]
+        {:label project-name
+         :href #(merge-target-project-url project-name)
+         :style (when (= project-name @active-project)
+                  {:background-color "#e7e7e7"
+                   :color "black"})}))]))
 
 (defn navbar [active-panel]
   (let [active-project (re-frame/subscribe [:session :active-project])
@@ -161,15 +157,15 @@
         :fluid true}
        [bs/navbar-header [user-brand active-project]]
        [bs/nav {:pullRight true}
-        (when-not (= @active-panel :front-panel)
+        (when-not (or (not @active-project) (= @active-panel :front-panel))
           (let [url #(str "#/project/" @active-project "/query")]
             [navlink :query-panel url "Query" "zmdi-search"]))
-        (when-not (= @active-panel :front-panel)
+        (when-not (or (not @active-project) (= @active-panel :front-panel))
           [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"])
-        (when-not (= @active-panel :front-panel)
-          [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"])
         (when-not (or (= @active-panel :front-panel) (empty? @projects))
           [projects-dropdown projects active-project])
+        [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"]
+        [navlink :front-panel "#/" "Home" "zmdi-home"]
         [navlink :exit "#/exit" "Exit" "zmdi-power"]]])))
 
 (defn has-session-error? [session-error]

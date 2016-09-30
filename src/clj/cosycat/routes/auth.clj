@@ -5,8 +5,8 @@
             [ring.util.response :refer [redirect response]]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
             [cosycat.components.ws :refer [send-clients]]
-
-            [cosycat.db.users :refer [lookup-user is-user? new-user normalize-user]]
+            [cosycat.db.users :refer [lookup-user new-user]]
+            [cosycat.db.utils :refer [is-user? normalize-user]]
             [cosycat.views.login :refer [login-page]]
             [buddy.auth.backends.session :refer [session-backend]]
             [buddy.sign.jws :as jws]
@@ -51,7 +51,7 @@
         user {:username username :password password}]
     (if-let [user (lookup-user db user)]
       (let [user (assoc user :active true)]
-        (send-clients ws {:type :login :data (normalize-user user :project)})
+        (send-clients ws {:type :login :data (normalize-user user :settings :project)})
         (-> (redirect (or next-url "/"))
             (assoc-in [:session :identity] user)))
       (on-login-failure req))))

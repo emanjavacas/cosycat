@@ -19,7 +19,7 @@
 (defn col-class [users-per-row] "col-lg-6.col-sm-6.col-md-6")
 
 (defn can-edit-role? [my-role target-role]
-  (cond (some #{target-role} ["project-lead" "creator"]) false
+  (cond (some #{target-role} ["creator"]) false
         (some #{my-role} ["guest" "user"]) false
         :else true))
 
@@ -35,7 +35,8 @@
       [user-profile-component @user project-user-roles
        :role project-role
        ;; :on-submit TODO: send edit to project
-       :on-submit #(.log js/console % %2)
+       :on-submit (fn [{:keys [username]} role]
+                    (re-frame/dispatch [:user-role-update {:username username :new-role role}]))
        :displayable? true
        :editable? (can-edit-role? my-role project-role)])))
 
@@ -53,31 +54,33 @@
                              [:div.well {:style (when (= @me username) my-user-style)}
                               [project-user user role my-role]]]))]))]))))
 
-(defn delete-project-btn [show?]
-  (fn [show?]
-    [bs/overlay-trigger
-     {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} "Remove project"])
-      :placement "bottom"}
-     [bs/button
-      {:bsSize "small"
-       :onClick #(swap! show? not)}
-      [bs/glyphicon {:glyph "remove-sign"}]]]))
+(defn delete-project-btn []
+  (let [show? (re-frame/subscribe [:modals :delete-project])]
+    (fn []
+      [bs/overlay-trigger
+       {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} "Remove project"])
+        :placement "bottom"}
+       [bs/button
+        {:bsSize "small"
+         :onClick #(re-frame/dispatch [(if @show? :close-modal :open-modal) :delete-project])}
+        [bs/glyphicon {:glyph "remove-sign"}]]])))
 
-(defn leave-project-btn [show?]
-  (fn [show?]
-    [bs/overlay-trigger
-     {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} "Leave project"])
-      :placement "bottom"}
-     [bs/button
-      {:bsSize "small"
-       :onClick #(swap! show? not)}
-      [bs/glyphicon {:glyph "hand-right"}]]]))
+(defn leave-project-btn []
+  (let [show? (re-frame/subscribe [:modals :leave-project])]
+    (fn []
+      [bs/overlay-trigger
+       {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} "Leave project"])
+        :placement "bottom"}
+       [bs/button
+        {:bsSize "small"
+         :onClick #(re-frame/dispatch [(if @show? :close-modal :open-modal) :leave-project])}
+        [bs/glyphicon {:glyph "hand-right"}]]])))
 
-(defn project-buttons [my-role delete-project-show? leave-project-show?]
-  (fn [my-role delete-project-show? leave-project-show?]
+(defn project-buttons [my-role]
+  (fn [my-role]
     [bs/button-toolbar
-     (when (can-delete-project? @my-role) [delete-project-btn delete-project-show?])
-     [leave-project-btn leave-project-show?]]))
+     (when (can-delete-project? @my-role) [delete-project-btn])
+     [leave-project-btn]]))
 
 (defn add-user-button [add-user-show?]
   (fn [add-user-show?]
@@ -85,8 +88,8 @@
      {:onClick #(swap! add-user-show? not)}
      "Add User"]))
 
-(defn project-header [project]
-  (let [creator (re-frame/subscribe [:active-project-creator])]
+(defn project-header [{:keys [creator]}]
+  (let [creator (re-frame/subscribe [:user creator :username])]
     (fn [{:keys [name description created]}]
       [:div.container-fluid
        [:div.row
@@ -98,17 +101,16 @@
 
 (defn project-panel []
   (let [active-project (re-frame/subscribe [:active-project])
-        delete-project-show? (reagent/atom false)
-        leave-project-show? (reagent/atom false)
-        add-user-show? (reagent/atom false)
+        delete-project-show? (re-frame/subscribe [:modals :delete-project])        
+        add-user-show? (re-frame/subscribe [:modals :delete-project])
         my-role (re-frame/subscribe [:active-project-role])
         me (re-frame/subscribe [:me :username])]
     (fn []
       (let [{:keys [name users] :as project} @active-project]
         [:div.container
-         [delete-project-modal name delete-project-show?]
-         [leave-project-modal name leave-project-show?]
-         [add-user-modal project add-user-show?]
+         [delete-project-modal name]
+         [leave-project-modal name]
+         [add-user-modal project]
          [:div.container-fluid
           [:div.row [project-header project]]
           [:div.row [:div.col-lg-12 [:hr]]]
@@ -116,7 +118,7 @@
            [:div.col-lg-6
             [:div [add-user-button add-user-show?]]]
            [:div.col-lg-6
-            [:div.pull-right [project-buttons my-role delete-project-show? leave-project-show?]]]]
+            [:div.pull-right [project-buttons my-role]]]]
           [:div-row {:style {:margin "20px"}}
            [:div.text [:h4 "Users working in " [:span.text-muted name]]]]
           [:div.row {:style {:height "10px"}}]

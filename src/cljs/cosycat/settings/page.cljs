@@ -60,18 +60,21 @@
     true))
 
 (defn submit-settings-btns [active-tab settings]
-  (fn [active-tab settings]
-    [bs/button-toolbar
-     [bs/button
-      {:onClick #(re-frame/dispatch [:submit-settings (get-update-map @active-tab @settings)])
-       :class "pull-right"
-       :bsStyle "info"}
-      "Save globally"]
-     [bs/button
-      {:onClick #(re-frame/dispatch [:submit-project-settings (get-update-map @active-tab @settings)])
-       :class "pull-right"
-       :bsStyle "info"}
-      "Save for project"]]))
+  (let [active-project (re-frame/subscribe [:session :active-project])]
+    (fn [active-tab settings]
+      [bs/button-toolbar
+       [bs/button
+        {:onClick #(re-frame/dispatch [:submit-settings (get-update-map @active-tab @settings)])
+         :class "pull-right"
+         :bsStyle "info"}
+        "Save globally"]
+       (when @active-project
+         [bs/button
+          {:onClick
+           #(re-frame/dispatch [:submit-project-settings (get-update-map @active-tab @settings)])
+           :class "pull-right"
+           :bsStyle "info"}
+          "Save for project"])])))
 
 (defn settings-panel []
   (let [active-tab (reagent/atom :query)

@@ -59,6 +59,12 @@
   (re-frame/dispatch [:notify {:message (get-msg [:new-project] project-name by)}])
   db)
 
+(defmethod ws-handler :project-remove-user
+  [db {{:keys [username project-name]} :data}]
+  (re-frame/dispatch [:remove-project-user {:username username :project-name project-name}])
+  (re-frame/dispatch [:notify {:message (str username " has left project " project-name)}])
+  db)
+
 (defmethod ws-handler :project-new-user ;existing users get new user data
   [db {project-name :project-name {username :username :as user} :user by :by}]
   (re-frame/dispatch [:add-project-user {:user user :project-name project-name}])
@@ -86,6 +92,16 @@
    [:notify {:message (format "Project [%s] has an update by [%s]" project-name by)}])
   db)
 
+(defmethod ws-handler :new-project-user-role
+  [db {{username :username project-name :project-name role :role by :by} :data}]
+  (let [{{me :username} :me} db]
+    (re-frame/dispatch [:update-project-user-role project-name username role])
+    (re-frame/dispatch
+     [:notify
+      {:message (format "%s role in project %s has been changed to %s by %s"
+                        (if (= username me) "Your" username) project-name role by)
+       :by (if (= username me) by me)}])))
+
 (defmethod ws-handler :new-user-avatar
   [db {{username :username avatar :avatar} :data}]
   (re-frame/dispatch [:new-user-avatar {:username username :avatar avatar}])
@@ -95,7 +111,10 @@
 
 (defmethod ws-handler :new-user-info
   [db {{:keys [update-map username]} :data}]
-  (re-frame/dispatch [:update-users username update-map]))
+  (re-frame/dispatch
+   [:notify {:message (format "%s has updated their profile" username) :by username}])
+  (re-frame/dispatch [:update-users username update-map])
+  db)
 
 (re-frame/register-handler
  :ws

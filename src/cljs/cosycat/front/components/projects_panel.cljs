@@ -27,9 +27,8 @@
 (defn spacer [& {:keys [height] :or {height 5}}]
   [:div.row {:style {:height (str height "px")}}])
 
-(defn project-row [{:keys [name description users created]}]
-  (let [creator (first (filter #(= "creator" (:role %)) users))
-        creator-info (re-frame/subscribe [:user (:username creator)])]
+(defn project-row [{:keys [name description users created creator]}]
+  (let [creator-info (re-frame/subscribe [:user creator])]
     (fn [{:keys [name description users created]}]
       [bs/list-group-item
        (reagent/as-component

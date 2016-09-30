@@ -187,13 +187,6 @@
      (reaction (get-in @db (into [:projects @active-project-name] path))))))
 
 (re-frame/register-sub
- :active-project-creator
- (fn [db _]
-   (let [active-project-name (reaction (get-in @db [:session :active-project]))
-         users (reaction (get-in @db [:projects @active-project-name :users]))]
-     (reaction (-> (filter #(= "creator" (:role %)) @users) first :username)))))
-
-(re-frame/register-sub
  :active-project-role
  (fn [db _]
    (let [active-project-name (reaction (get-in @db [:session :active-project]))

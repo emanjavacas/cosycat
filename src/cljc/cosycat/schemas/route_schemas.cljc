@@ -22,16 +22,22 @@
   (make-schema {:data {:span (s/if vector? [span-schema] span-schema)
                        :hit-id (s/if vector? [hit-id-schema] hit-id-schema)}}))
 
+(def annotation-route-schema
+  (make-schema {:data {:hit-id (s/if vector? [hit-id-schema] hit-id-schema)
+                       :anns {token-id-schema {s/Str annotation-schema}}
+                       :project s/Str}}))
+
+(def remove-annotation-route-schema
+  (make-schema {:data {:key ann-key-schema
+                       :span span-schema
+                       :project s/Str
+                       :hit-id hit-id-schema}}))
+
 (defn ws-from-server
   [{:keys [type] :as payload}]
   (case type
-    :annotation (make-schema {:data {:hit-id (s/if vector? [hit-id-schema] hit-id-schema)
-                                     :anns {token-id-schema {s/Str annotation-schema}}
-                                     :project s/Str}})
-    :remove-annotation (make-schema {:data {:key ann-key-schema
-                                            :span span-schema
-                                            :project s/Str
-                                            :hit-id hit-id-schema}})
+    :annotation annotation-route-schema
+    :remove-annotation remove-annotation-route-schema
     :info (make-schema {:data {:message s/Str}})
     :login (make-schema {:data public-user-schema})
     :logout (make-schema {:data {:username s/Str}})
@@ -41,8 +47,9 @@
     :project-update (make-schema {:data update-schema})
     :project-add-user (make-schema {:data {:project project-schema}})
     :project-new-user (make-schema {:data {:user project-user-schema :project-name s/Str}})
-    :project-remove-user (make-schema {:data nil})
+    :project-remove-user (make-schema {:data {:username s/Str :project-name s/Str}})
     :new-user-avatar (make-schema {:data {:avatar avatar-schema :username s/Str}})
+    :new-project-user-role (make-schema {:data {:project-name s/Str :username s/Str :role s/Str}})
     :new-user-info (make-schema {:data {:update-map {s/Keyword s/Any} :username s/Str}})))
 
 (defn ws-from-client

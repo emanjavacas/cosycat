@@ -27,7 +27,7 @@
 (defn update-users
   [db name update-map]
   (let [pred (fn [{username :username}] (= username name))]
-    (update db :users update-coll pred deep-merge update-map)))
+    (update db :users update-coll pred deep-merge {:user update-map})))
 
 (re-frame/register-handler              ;set other users info
  :set-users
