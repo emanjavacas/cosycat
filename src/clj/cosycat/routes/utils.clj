@@ -3,6 +3,9 @@
             [buddy.auth :refer [authenticated?]]
             [taoensso.timbre :as timbre]))
 
+(defn normalize-me [me]
+  (dissoc me :settings :projects))
+
 (defn safe
   [handler & [rule-map]]
   (fn [req]

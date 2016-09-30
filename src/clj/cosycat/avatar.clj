@@ -48,6 +48,10 @@
   [username ext & {:keys [relpath] :or {relpath (:avatar-path env)}}]
   (str relpath username ".gravatar." ext))
 
+(defn is-gravatar?
+  [filename]
+  (.contains filename ".gravatar."))
+
 (defn gravatar
   "tries to get user avatar, returns url if successful and nil otherwise"
   [username email]

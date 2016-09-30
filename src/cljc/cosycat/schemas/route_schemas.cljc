@@ -42,7 +42,8 @@
     :project-add-user (make-schema {:data {:project project-schema}})
     :project-new-user (make-schema {:data {:user project-user-schema :project-name s/Str}})
     :project-remove-user (make-schema {:data nil})
-    :new-user-avatar (make-schema {:data {:avatar avatar-schema :username s/Str}})))
+    :new-user-avatar (make-schema {:data {:avatar avatar-schema :username s/Str}})
+    :new-user-info (make-schema {:data {:update-map {s/Keyword s/Any} :username s/Str}})))
 
 (defn ws-from-client
   [{:keys [type data] :as payload}]

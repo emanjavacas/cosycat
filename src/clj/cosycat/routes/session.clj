@@ -1,5 +1,5 @@
 (ns cosycat.routes.session
-  (:require [cosycat.routes.utils :refer [safe]]
+  (:require [cosycat.routes.utils :refer [safe normalize-me]]
             [cosycat.components.ws :refer [get-active-users]]
             [cosycat.db.users :refer [user-info users-info user-settings]]
             [cosycat.db.projects :refer [get-projects]]
@@ -114,7 +114,7 @@
     {db :db ws :ws} :components}]
   (let [active-users (get-active-users ws)
         {settings :settings user-projects :projects :as me} (user-info db username)]
-    {:me (dissoc me :settings :projects)
+    {:me (normalize-me me)
      :users (session-users db username active-users)
      :projects (session-projects db username me)
      :settings (session-settings me)

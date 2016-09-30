@@ -28,7 +28,8 @@
             [cosycat.routes.session :refer [session-route]]
             [cosycat.routes.projects :refer [project-routes]]
             [cosycat.routes.settings :refer [settings-routes]]
-            [cosycat.routes.annotations :refer [annotation-routes]]))
+            [cosycat.routes.annotations :refer [annotation-routes]]
+            [cosycat.routes.users :refer [users-routes]]))
 
 (defn static-routes []
   (routes
@@ -104,6 +105,6 @@
 
 (defn make-handler [component]
   (let [components (select-keys component (:components component))]
-    (-> (app-routes static-routes web-app-routes settings-routes annotation-routes project-routes base-routes)
+    (-> (app-routes static-routes web-app-routes settings-routes annotation-routes project-routes users-routes base-routes)
         (wrap-app-component components)
         (wrap-routes wrap-base))))

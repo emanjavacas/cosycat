@@ -6,6 +6,7 @@
             [cosycat.components :refer [throbbing-panel user-attributes]]
             [cosycat.front.components.new-project-panel :refer [new-project-btn]]
             [cosycat.front.components.projects-panel :refer [projects-panel]]
+            [cosycat.front.components.edit-user-modal :refer [edit-user-modal]]
             [taoensso.timbre :as timbre]))
 
 (defn no-projects []
@@ -23,25 +24,30 @@
         [:div [new-project-btn open?]]))))
 
 (defn user-col []
-  (let [user (re-frame/subscribe [:me])]
+  (let [user (re-frame/subscribe [:me])
+        edit-user-show? (reagent/atom false)]
     (fn []
       (let [{{href :href} :avatar
              firstname :firstname lastname :lastname username :username
              last-active :last-active created :created
              email :email :as user} @user]
-        [:div.container-fluid
-         [:div.row {:style {:height "20px"}}]
-         [:div.row.text-center
-          [:img.img-responsive.img-rounded {:src href :style {:width "75%"}}]]
-         [:div.row
-          [:h3 (str firstname " " lastname)]
-          [:h4.text-muted username]]
-         [:div.row {:style {:margin-top "30px"}}
-          [:div.col-lg-8 [:hr]]
-          [:div.col-lg-4 {:style {:line-height "3em"}}
-           [:span {:style {:cursor "pointer"}}
-            [bs/glyphicon {:glyph "pencil"}]]]]
-         [:div.row [user-attributes user]]]))))
+        [:div [:div.container-fluid
+               [:div.row {:style {:height "20px"}}]
+               [:div.row
+                [:img.img-responsive.img-rounded.pull-right {:src href :width "80"}]]
+               [:div.row.text-right
+                {:style {:text-align "right"}}
+                [:h3 (str firstname " " lastname)]
+                [:h4.text-muted username]]
+               [:div.row.text-right {:style {:height "100px"}}]
+               [:div.row.text-right
+                [:div.col-lg-2 {:style {:line-height "3em"}}
+                 [:span {:style {:cursor "pointer"}}
+                  [bs/glyphicon {:glyph "pencil" :onClick #(swap! edit-user-show? not)}]]]
+                [:div.col-lg-10 [:hr]]]
+               [:div.row.text-right
+                [user-attributes user :align :right]]]
+         [edit-user-modal user edit-user-show?]]))))
 
 (defn front-panel []
   [:div.container-fluid

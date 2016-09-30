@@ -83,7 +83,7 @@
        {:username username})
       normalize-user))
 
-(defn update-user-info
+(defn- update-user
   "perform an update based on update-map"
   [{db-conn :db :as db} username update-map]
   (mc/find-and-modify
@@ -91,6 +91,11 @@
    {:username username}
    {$set update-map}
    {:return-new true}))
+
+(defn update-user-info
+  [db username update-map]
+  (check-user-exists db update-map)
+  (-> (update-user db username update-map) normalize-user))
 
 (defn users-info
   "retrieves all users processed as public users (no private info)"
@@ -106,7 +111,7 @@
 (defn update-user-settings
   [{db-conn :db :as db} username update-map]
   ;; do a check on settings
-  (-> (update-user-info db username {:settings update-map})
+  (-> (update-user db username {:settings update-map})
       (get :settings {})))
 
 (defn user-project-settings

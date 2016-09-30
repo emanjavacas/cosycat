@@ -41,18 +41,6 @@
          (assoc-in (into [:settings] path) value)
          (assoc-in (into [:projects active-project :settings] path) value)))))
 
-(defn avatar-error-handler [& args]
-  (re-frame/dispatch [:notify {:message "Couldn't update avatar"}]))
-
-(re-frame/register-handler
- :regenerate-avatar
- (fn [db _]
-   (POST "settings/new-avatar"
-         {:params {}
-          :handler #(re-frame/dispatch [:set-user [:avatar] %])
-          :error-handler avatar-error-handler})
-   db))
-
 (defn submit-settings-error-handler []
   (re-frame/dispatch [:notify {:message "Couldn't save settings" :status :error}]))
 
