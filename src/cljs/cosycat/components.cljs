@@ -3,7 +3,7 @@
             [re-frame.core :as re-frame]
             [cosycat.roles :refer [project-user-roles-descs]]
             [cosycat.utils :refer [color-codes date-str->locale parse-time human-time]]
-            [cosycat.app-utils :refer [deep-merge]]
+            [cosycat.app-utils :refer [deep-merge dekeyword]]
             [cosycat.localstorage :refer [fetch-db get-backups]]
             [taoensso.timbre :as timbre]
             [goog.string :as gstr]
@@ -176,17 +176,34 @@
      {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} "Active"])}
      [:div {:style (assoc style :border-radius "50%" :background-color color)}]]))
 
-(defn user-attributes [user]
+(defn user-attributes [user & {:keys [align] :or {align :left}}]
   (fn [{:keys [avatar username firstname lastname email created last-active active] :as user}]
     [bs/table
      {:style {:table-layout "fixed"}}
-     [:colgroup [:col {:span 1 :style {:width "10%"}}]]
+     [:colgroup [:col {:span 1 :style {:width (if (= align :left) "10%" "90%")}}]]
      [:tbody
-      [:tr [:td [bs/glyphicon {:glyph "envelope"}]] [text-td email]]
-      [:tr [:td [bs/glyphicon {:glyph "time"}]]
-       [text-td [:span "Joined on " [:span.text-muted (parse-time created)]]]]
-      [:tr [:td [bs/glyphicon {:glyph "exclamation-sign"}]]
-       [text-td [:span "Last active " [:span.text-muted (human-time last-active)]]]]]]))
+      {:style {:text-align "right"}}
+      (if (= align :left)
+        [:tr
+         [:td [bs/glyphicon {:glyph "envelope"}]]
+         [text-td email]]
+        [:tr
+         [text-td email]
+         [:td [bs/glyphicon {:glyph "envelope"}]]])
+      (if (= align :left)
+        [:tr
+         [:td [bs/glyphicon {:glyph "time"}]]
+         [text-td [:span "Joined on " [:span.text-muted (parse-time created)]]]]
+        [:tr
+         [text-td [:span "Joined on " [:span.text-muted (parse-time created)]]]
+         [:td [bs/glyphicon {:glyph "time"}]]])
+      (if (= align :left)
+        [:tr
+         [:td [bs/glyphicon {:glyph "exclamation-sign"}]]
+         [text-td [:span "Last active " [:span.text-muted (human-time last-active)]]]]
+        [:tr
+         [text-td [:span "Last active " [:span.text-muted (human-time last-active)]]]
+         [:td [bs/glyphicon {:glyph "exclamation-sign"}]]])]]))
 
 (defn user-profile-component
   "A component displaying basic user information. If `displayable?`, it requires an initial role,
@@ -224,7 +241,7 @@
 (defn notification-child                ;add a button to display notification meta
   [message date status href meta]
   [:div.notification
-   {:class "success"}
+   {:class (dekeyword status)}
    [:div.illustration
     [user-thumb href]]
    [:div.text
