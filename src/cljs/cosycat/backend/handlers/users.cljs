@@ -81,10 +81,20 @@
 
 (re-frame/register-handler
  :update-user-profile
- standard-middleware
  (fn [db [_ update-map]]
    (POST "users/update-profile"
          {:params {:update-map update-map}
           :handler #(re-frame/dispatch [:update-user %])
           :error-handler update-user-profile-error-handler})
+   db))
+
+(re-frame/register-handler
+ :query-users
+ (fn [db [_ value users-atom]]
+   (let [active-project (get-in db [:session :active-project])
+         project-users (get-in db [:projects active-project :users])]
+     (GET "users/query-users"
+          {:params {:value value :project-users project-users}
+           :handler #(reset! users-atom %)
+           :error-handler #(.log js/console "Error" %)}))
    db))

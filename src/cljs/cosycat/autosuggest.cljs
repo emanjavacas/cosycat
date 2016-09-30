@@ -1,5 +1,6 @@
 (ns cosycat.autosuggest
   (:require [reagent.core :as reagent]
+            [re-frame.core :as re-frame]
             [goog.string :as gstr]
             [cosycat.utils :refer [string-contains]]
             [cosycat.components :refer [user-thumb]]
@@ -124,17 +125,10 @@
                                {:onChange (on-change-suggest value-atom on-change)
                                 :value @value-atom})}]]]))))
 
-(defn filter-users [users value]
-  (filter
-   (fn [{:keys [firstname lastname username email]}]
-     (some #(string-contains % value) [firstname lastname username email]))
-   users))
-
-(defn fetch-requested-user [users]
-  (fn [value]
-    (if-let [selected (seq (filter-users users value))]
-      (vec selected)
-      [])))
+(defn fetch-remote [sugg-atom]
+  (fn [arg]
+    (let [value (.-value arg)]
+      (re-frame/dispatch [:query-users value sugg-atom]))))
 
 (defn render-user-suggestion [value-atom]
   (fn [arg]
@@ -146,15 +140,15 @@
          {:style {:padding-left "10px"}}
          username]]))))
 
-(defn suggest-users [users {:keys [value on-change] :as props}]
+(defn suggest-users [{:keys [value on-change] :as props}]
   (let [sugg-atom (reagent/atom [])
         value-atom (or value (reagent/atom ""))]
-    (fn [users {:keys [value on-change] :as props}]
+    (fn [{:keys [value on-change] :as props}]
       [:div.container-fluid
        [:div.row
         [autosuggest
          {:suggestions @sugg-atom
-          :onSuggestionsUpdateRequested (wrap-react sugg-atom (fetch-requested-user users))
+          :onSuggestionsUpdateRequested (fetch-remote sugg-atom)
           :onSuggestionsClearRequested #(reset! sugg-atom [])
           :getSuggestionValue #(aget % "username")
           :shouldRenderSuggestions (fn [value] true)

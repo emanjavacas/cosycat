@@ -5,8 +5,29 @@
             [cosycat.db.utils :refer [normalize-user]]
             [cosycat.avatar :refer [user-avatar is-gravatar?]]
             [cosycat.components.ws :refer [send-clients]]
+            [cosycat.components.db :refer [colls]]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
+
+(defn filter-users [value users]
+  (filter
+   (fn [{:keys [firstname lastname username email]}]
+     (some #(.contains % value) [firstname lastname username email]))
+   users))
+
+(defn remove-project-users [project-users users]
+  (remove (fn [{:keys [username]}]
+            ((apply hash-set (map :username project-users)) username))
+          users))
+
+(defn query-users-route
+  [{{{username :username} :identity} :session {{db-conn :db} :db} :components
+    {value :value project-users :project-users} :params}]
+  (or (->> (monger.collection/find-maps db-conn (:users colls) {})
+           (remove-project-users project-users)
+           (filter-users value)
+           (mapv normalize-user))
+      []))
 
 (defn maybe-update-avatar
   [{new-email :email username :username {href :href} :avatar :as update-map} old-email]
@@ -40,5 +61,6 @@
 (defn users-routes []
   (routes
    (context "/users" []
+     (GET "/query-users" [] (make-default-route query-users-route))
      (POST "/update-profile" [] (make-default-route update-profile-route))
      (POST "/new-avatar" [] (make-default-route new-avatar-route)))))

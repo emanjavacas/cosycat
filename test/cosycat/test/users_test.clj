@@ -1,6 +1,7 @@
 (ns cosycat.test.users-test
   (:require [clojure.test :refer [deftest testing is use-fixtures]]
             [cosycat.test.test-config :refer [db-fixture db]]
+            [cosycat.db.utils :refer [is-user?]]
             [cosycat.db.users :as users]))
 
 (use-fixtures :once db-fixture)
@@ -25,7 +26,7 @@
                       (ex-data e)))
                :code))))
   (testing "existing user"
-    (is (= (boolean (users/is-user? db sample-user)) true)))
+    (is (= (boolean (is-user? db sample-user)) true)))
   (testing "user lookup"
     (is (= (-> (users/lookup-user db sample-user)
                (select-keys [:username :roles]))
@@ -33,7 +34,7 @@
   (testing "remove existing user"
     (is (not (nil? (users/remove-user db "foo-user")))))
   (testing "remove non-existing user"
-    (is (nil? (do (users/remove-user db "foo-user") (users/is-user? db {:username "username"})))))
+    (is (nil? (do (users/remove-user db "foo-user") (is-user? db {:username "username"})))))
   (testing "user with admin role"
     (is (= (-> (users/new-user db (assoc sample-user :roles ["admin"]))
                (select-keys [:username :roles]))

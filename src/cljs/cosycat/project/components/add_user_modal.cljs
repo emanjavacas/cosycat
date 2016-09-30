@@ -51,8 +51,7 @@
         selected-user-atom (reagent/atom nil)
         users (re-frame/subscribe [:users])]
     (fn [{project-users :users}]
-      (let [eligible-users (remove-project-users @users project-users)
-            users-by-username (zipmap (map :username @users) @users)]
+      (let [users-by-username (zipmap (map :username @users) @users)]
         [:div.container-fluid
          [:div.row
           [:div.col-lg-7
@@ -60,7 +59,7 @@
           [:div.col-lg-5
            [:div.container-fluid
             [:div.row
-             [suggest-users eligible-users
+             [suggest-users
               {:class "form-control form-control-no-border"
                :on-change #(reset! current-selection-atom (get users-by-username %))
                :onKeyDown #(.stopPropagation %)
