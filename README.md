@@ -244,6 +244,9 @@ tagsets to your config file (see above).
   `$isolated` to ensure atomic updates, 
   see [atomicity](https://docs.mongodb.org/manual/core/write-operations-atomicity/) and
   [$isolated operator](https://docs.mongodb.org/manual/reference/operator/update/isolated/#up._S_isolated).
+  
+- Change user's role should be restricted in case that user has pending requests
+  (e.g remove project, annotation issues, etc...)
 
 ## License
 
