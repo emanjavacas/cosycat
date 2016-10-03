@@ -43,7 +43,7 @@
 (defn project-users [users my-role]
   (let [me (re-frame/subscribe [:me :username])]
     (fn [users my-role]
-      (let [users-per-row (if (> 992 (:width @viewport)) 2 3)]
+      (let [users-per-row (if (> (:width @viewport) 1185) 3 2)]
         [:div.container-fluid
          (doall (for [[idx row] (map-indexed vector (partition-all users-per-row users))]
                   ^{:key (str "row." idx)}
