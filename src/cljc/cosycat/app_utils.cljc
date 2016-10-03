@@ -97,7 +97,17 @@
 
 (defn dekeyword [k] (apply str (rest (str k))))
 
+(defn string-contains [s subs]
+  #?(:cljs (let [n (.indexOf s subs)]
+             (>= n 0))
+     :clj (.contains s subs)))
+
 ;;; logic
+(defn query-user [value]
+  (fn [{:keys [firstname lastname username email]}]
+    (some (fn [[k v]] (when (string-contains v value) [k v]))
+          [[:firstname firstname] [:lastname lastname] [:username username] [:email email]])))
+
 (defn invalid-project-name [s]
   (or #?(:clj  (re-find #"[ ^\W+]" s)
          :cljs (gpattern/matchStringOrRegex (js/RegExp "[ ^\\W+]") s))

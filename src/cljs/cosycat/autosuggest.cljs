@@ -1,8 +1,10 @@
 (ns cosycat.autosuggest
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
+            [cljs.core.async :refer [put!]]
             [goog.string :as gstr]
-            [cosycat.utils :refer [string-contains]]
+            [cosycat.utils :refer [debounce]]
+            [cosycat.app-utils :refer [query-user dekeyword]]
             [cosycat.components :refer [user-thumb]]
             [react-bootstrap.components :as bs]
             [react-autosuggest.core :refer [autosuggest]]))
@@ -128,27 +130,38 @@
 (defn fetch-remote [sugg-atom]
   (fn [arg]
     (let [value (.-value arg)]
-      (re-frame/dispatch [:query-users value sugg-atom]))))
+      (when-not (empty? value)
+        (re-frame/dispatch [:query-users value sugg-atom])))))
+
+(defn split-on-match [s subs]
+  (when s
+    (let [match-start (.indexOf s subs)
+          match-end (+ match-start (count subs))
+          pre  (.substring s 0 match-start)
+          post (.substring s match-end)]
+      [pre subs post])))
 
 (defn render-user-suggestion [value-atom]
   (fn [arg]
-    (let [{{href :href} :avatar username :username} (js->clj arg :keywordize-keys true)]
+    (let [{:keys [username firstname lastname email avatar] :as user} (js->clj arg :keywordize-keys true)
+          [field v] ((query-user @value-atom) user)]
       (reagent/as-element
        [:div {:style {:margin "10px 0"}}
-        [user-thumb href {:height "25px" :width "25px"}]
-        [:span
-         {:style {:padding-left "10px"}}
-         username]]))))
+        [user-thumb (:href avatar) {:height "25px" :width "25px"}]
+        [:span {:style {:padding-left "10px"}} username]
+        (when-let [[pre match post] (split-on-match v @value-atom)]
+          [:span (str "  [" (dekeyword field) ":" pre) [:strong match] (str post "]")])]))))
 
 (defn suggest-users [{:keys [value on-change] :as props}]
   (let [sugg-atom (reagent/atom [])
-        value-atom (or value (reagent/atom ""))]
+        value-atom (or value (reagent/atom ""))
+        fetch-sugg (debounce (fetch-remote sugg-atom) 500)]
     (fn [{:keys [value on-change] :as props}]
       [:div.container-fluid
        [:div.row
         [autosuggest
          {:suggestions @sugg-atom
-          :onSuggestionsUpdateRequested (fetch-remote sugg-atom)
+          :onSuggestionsUpdateRequested fetch-sugg
           :onSuggestionsClearRequested #(reset! sugg-atom [])
           :getSuggestionValue #(aget % "username")
           :shouldRenderSuggestions (fn [value] true)

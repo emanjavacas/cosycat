@@ -1,11 +1,11 @@
 (ns cosycat.utils
-  (:require [re-frame.core :as re-frame]
-            [schema.core :as s]
-            [reagent.core :as reagent]
+  (:require [schema.core :as s]
+            [cljs.core.async :refer [chan timeout alts! <! close! put!]]
             [goog.dom.dataset :as gdataset]
-            [goog.string :as gstr]
-            [cosycat.app-utils :refer [->int]]
-            [taoensso.timbre :as timbre]))
+            [goog.string :as gstr]            
+            [cosycat.app-utils :refer [->int string-contains]]
+            [taoensso.timbre :as timbre])
+  (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
 ;;; JS-interop
 (defn format [fmt & args]
@@ -22,9 +22,24 @@
       (coll? m) (vec (map keywordify m))
       :else m)))
 
-(defn string-contains [s subs]
-  (let [n (.indexOf s subs)]
-    (>= n 0)))
+(defn debounce-ch [f millis]
+  (let [out (chan), in (chan)]
+    (go-loop [last-val nil]
+      (let [current (or last-val (<! in))
+            timer (timeout millis)
+            [new-val ch] (alts! [in timer])]
+        (condp = ch
+          timer (do (>! out current) (recur nil))
+          in (if new-val (recur new-val) (close! out)))))
+    (go-loop []
+      (let [current (<! out)]
+        (f current)
+        (recur)))
+    in))
+
+(defn debounce [f millis]
+  (let [ch (debounce-ch f millis)]
+    (fn [arg] (put! ch arg))))
 
 ;;; Time
 (defn timestamp []
@@ -49,35 +64,6 @@
 
 (defn date-str->locale [date-str]
   (.toLocaleString (js/Date. date-str) "en-GB"))
-
-;;; Resources
-(def color-codes
-  {:info "#72a0e5"
-   :error "#ff0000"
-   :ok "#00ff00"})
-
-(def notification-msgs
-  {:annotation
-   {:ok {:me {:token "Stored annotation for token [%d]"
-              :IOB "Stored span annotation for range [%d-%d]"
-              :mult "Stored %d annotations!"}
-         :other {:token "[%s] inserted an annotation for token [%d]"
-                 :IOB "[%s] inserted a span annotation for range [%d-%d]"
-                 :mult "[%s] inserted %d annotations!"}}
-    :error {:token "Couldn't store annotation with id %d. Reason: [%s]"
-            :IOB "Couldn't store span annotation for range [%d-%d]. Reason: [%s]"
-            :mult   "Couldn't store %d annotations! Reason: [%s]"}}
-   :info  "%s says: %s"
-   :signup "Hooray! %s has joined the team!"
-   :login "%s is ready for science"
-   :logout "%s is leaving us..."
-   :new-project "You've been added to project [%s] by user [%s]"})
-
-(defn get-msg [path & args]
-  (let [fmt (get-in notification-msgs path)]
-    (cond (fn? fmt)     (apply format (apply fmt args) args)
-          (string? fmt) (apply format fmt args))))
-
 
 ;;; Component utilities
 (defn merge-classes [& classes]
@@ -147,3 +133,31 @@
         [user _] (first (sort-by second > (frequencies (map :username filt-anns))))]
     (if-let [color (get color-map user)]
       (->box color))))
+
+;;; Resources
+(def color-codes
+  {:info "#72a0e5"
+   :error "#ff0000"
+   :ok "#00ff00"})
+
+(def notification-msgs
+  {:annotation
+   {:ok {:me {:token "Stored annotation for token [%d]"
+              :IOB "Stored span annotation for range [%d-%d]"
+              :mult "Stored %d annotations!"}
+         :other {:token "[%s] inserted an annotation for token [%d]"
+                 :IOB "[%s] inserted a span annotation for range [%d-%d]"
+                 :mult "[%s] inserted %d annotations!"}}
+    :error {:token "Couldn't store annotation with id %d. Reason: [%s]"
+            :IOB "Couldn't store span annotation for range [%d-%d]. Reason: [%s]"
+            :mult   "Couldn't store %d annotations! Reason: [%s]"}}
+   :info  "%s says: %s"
+   :signup "Hooray! %s has joined the team!"
+   :login "%s is ready for science"
+   :logout "%s is leaving us..."
+   :new-project "You've been added to project [%s] by user [%s]"})
+
+(defn get-msg [path & args]
+  (let [fmt (get-in notification-msgs path)]
+    (cond (fn? fmt)     (apply format (apply fmt args) args)
+          (string? fmt) (apply format fmt args))))

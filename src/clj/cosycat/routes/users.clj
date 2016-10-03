@@ -3,29 +3,24 @@
             [cosycat.routes.utils :refer [make-default-route]]
             [cosycat.db.users :as users]
             [cosycat.db.utils :refer [normalize-user]]
+            [cosycat.app-utils :refer [query-user]]
             [cosycat.avatar :refer [user-avatar is-gravatar?]]
             [cosycat.components.ws :refer [send-clients]]
             [cosycat.components.db :refer [colls]]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
-(defn filter-users [value users]
-  (filter
-   (fn [{:keys [firstname lastname username email]}]
-     (some #(.contains % value) [firstname lastname username email]))
-   users))
-
 (defn remove-project-users [project-users users]
   (remove (fn [{:keys [username]}]
-            ((apply hash-set (map :username project-users)) username))
+            (contains? (apply hash-set (map :username project-users)) username))
           users))
 
 (defn query-users-route
   [{{{username :username} :identity} :session {{db-conn :db} :db} :components
     {value :value project-users :project-users} :params}]
   (or (->> (monger.collection/find-maps db-conn (:users colls) {})
-           (remove-project-users project-users)
-           (filter-users value)
+           (remove-project-users (vals project-users))
+           (filter (query-user value))
            (mapv normalize-user))
       []))
 
