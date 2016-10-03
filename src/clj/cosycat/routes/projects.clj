@@ -48,11 +48,12 @@
   [{{project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (proj/remove-user db username project-name)
-  (send-clients
-   ws {:type :project-remove-user :data {:username username :project-name project-name}}
-   :source-client username
-   :target-clients (mapv :username (:users (proj/get-project db username project-name)))))
+  (let [project (proj/get-project db username project-name)]
+    (proj/remove-user db username project-name)
+    (send-clients
+     ws {:type :project-remove-user :data {:username username :project-name project-name}}
+     :source-client username
+     :target-clients (mapv :username (:users project)))))
 
 (defn remove-project-route
   [{{project-name :project-name} :params
