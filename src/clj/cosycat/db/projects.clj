@@ -5,7 +5,7 @@
             [cosycat.vcs :as vcs]
             [cosycat.app-utils :refer [server-project-name pending-users]]
             [cosycat.schemas.project-schemas
-             :refer [project-schema update-schema project-user-schema]]
+             :refer [project-schema project-user-schema issue-schema]]
             [cosycat.roles :refer [check-project-role]]
             [cosycat.db.utils :refer [is-user? normalize-project]]
             [cosycat.components.db :refer [new-db colls]]
@@ -44,6 +44,17 @@
            {:code :last-user-in-project
             :message (str "Attempt to remove last user in project: " project-name)
             :data {:project-name project-name}}))
+
+(defn ex-pending [project-name username]
+  (ex-info (str username "'s role can't be updated because of pending issues")
+           {:code :pending-issues
+            :message (str username "'s role can't be updated because of pending issues")
+            :data {:project-name project-name :username username}}))
+
+(defn has-pending-issue? [{:keys [issues] :as project} username]
+  (some (fn [{issue-users :users :as issue}]
+          (contains? (apply hash-set issue-users) username))
+        issues))
 
 (defn find-project-by-name [{db-conn :db} project-name]
   (mc/find-one-as-map db-conn (:projects colls) {:name project-name}))
@@ -110,10 +121,11 @@
   "adds a project update to `project.updates`"
   [{db-conn :db :as db} username project-name update-payload]
   (check-user-in-project db username project-name)
+  (s/validate issue-schema update-payload)
   (-> (mc/find-and-modify
        db-conn (:projects colls)
        {:name project-name}
-       {$push {:updates update-payload}}
+       {$push {:issues update-payload}}
        {:return-new true})
       normalize-project))
 
@@ -159,7 +171,8 @@
 
 (defn delete-payload [username]
   {:type "delete-project-agree"
-   :username username
+   :status "open"
+   :users [username]
    :timestamp (System/currentTimeMillis)})
 
 (defn remove-project
@@ -184,6 +197,8 @@
         role (get-user-role db project-name issuer)]
     (when-not role
       (throw (ex-user username)))
+    (when (has-pending-issue? project username)
+      (throw (ex-pending project-name username)))
     (when-not (check-project-role :write role)
       (throw (ex-rights issuer :write role)))
     (->> (mc/find-and-modify

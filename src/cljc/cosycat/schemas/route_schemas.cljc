@@ -4,7 +4,7 @@
             [cosycat.schemas.annotation-schemas
              :refer [annotation-schema span-schema cpos-schema token-id-schema ann-key-schema]]
             [cosycat.schemas.project-schemas
-             :refer [project-schema update-schema project-user-schema]]
+             :refer [project-schema issue-schema project-user-schema]]
             [cosycat.schemas.user-schemas :refer [avatar-schema]]
             [cosycat.schemas.app-state-schemas :refer [public-user-schema]]
             [cosycat.schemas.results-schemas :refer [hit-id-schema]]
@@ -44,7 +44,7 @@
     :signup (make-schema {:data public-user-schema})
     :new-project (make-schema {:data {:project project-schema}})
     :project-remove (make-schema {:data {:project-name s/Str}})
-    :project-update (make-schema {:data update-schema})
+    :project-update (make-schema {:data issue-schema})
     :project-add-user (make-schema {:data {:project project-schema}})
     :project-new-user (make-schema {:data {:user project-user-schema :project-name s/Str}})
     :project-remove-user (make-schema {:data {:username s/Str :project-name s/Str}})

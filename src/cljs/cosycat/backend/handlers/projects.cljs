@@ -6,11 +6,10 @@
             [cosycat.routes :refer [nav!]]
             [cosycat.backend.middleware :refer [standard-middleware check-project-exists]]
             [cosycat.backend.db :refer [default-project-session default-project-history]]
-            [cosycat.schemas.project-schemas :refer [project-schema update-schema]]
             [taoensso.timbre :as timbre]))
 
 (defn normalize-projects
-  "transforms server project schema to client project schema"
+  "transforms server project to client project"
   [projects user]
   (reduce
    (fn [acc {:keys [name] :as project}]
@@ -80,7 +79,7 @@
  :add-project-update
  standard-middleware
  (fn [db [_ {:keys [payload project-name]}]]
-   (update-in db [:projects project-name :updates] conj payload)))
+   (update-in db [:projects project-name :issues] conj payload)))
 
 (defn project-update-handler [project-update]
   (re-frame/dispatch [:add-project-update project-update]))
@@ -154,7 +153,7 @@
            [:notify {:message (str "Project " project-name " was successfully deleted")}])
           (nav! "/"))
       :added-project-remove-agree
-      (let [updated-project (update-in project [:updates] conj payload)
+      (let [updated-project (update-in project [:issues] conj payload)
             {:keys [pending]} (pending-users updated-project)] ;still users
         (re-frame/dispatch [:add-project-update {:payload payload :project-name project-name}])
         (re-frame/dispatch

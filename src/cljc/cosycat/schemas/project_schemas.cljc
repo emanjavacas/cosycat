@@ -6,9 +6,11 @@
             [cosycat.schemas.user-schemas :refer [settings-schema project-history-schema]]
             [cosycat.schemas.results-schemas :refer [query-results-schema]]))
 
-(def update-schema
+(def issue-schema
   {:type s/Str
    :timestamp s/Int
+   :status (s/enum "open" "closed")
+   :users [s/Str]
    s/Any s/Any})
 
 (def status-schema
@@ -43,13 +45,13 @@
            :created s/Int
            :creator s/Str
            :users project-users-schema
-           (s/optional-key :updates) [update-schema]}
+           (s/optional-key :issues) [issue-schema]}
      :cljs {:name s/Str
             :description s/Str
             :creator s/Str
             :created s/Int
             :users [{:username s/Str :role s/Str}]
-            (s/optional-key :updates) [update-schema]
+            (s/optional-key :issues) [issue-schema]
             (s/optional-key :settings) project-settings-schema
             (s/optional-key :session) project-session-schema
             (s/optional-key :history) project-history-schema}))
