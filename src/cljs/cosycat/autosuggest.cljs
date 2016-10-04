@@ -84,12 +84,11 @@
     (reset! my-atom (f (.-value arg)))))
 
 (defn on-change-suggest
-  ([value-atom] (on-change-suggest value-atom identity))
-  ([value-atom f]
+  ([value-atom sugg-atom] (on-change-suggest value-atom sugg-atom (fn [& args])))
+  ([value-atom sugg-atom f]
    (fn [e new-val]
-     (let [callback (or f identity)]
-       (callback (.-newValue new-val))
-       (reset! value-atom (.-newValue new-val))))))
+     (f (.-newValue new-val) @sugg-atom)
+     (reset! value-atom (.-newValue new-val)))))
 
 (defn get-suggestion-value [value-atom]
   (fn [arg]
@@ -127,11 +126,13 @@
                                {:onChange (on-change-suggest value-atom on-change)
                                 :value @value-atom})}]]]))))
 
-(defn fetch-remote [sugg-atom]
+(defn fetch-remote
+  [sugg-atom & {:keys [remove-project-users] :or {remove-project-users true}}]
   (fn [arg]
     (let [value (.-value arg)]
       (when-not (empty? value)
-        (re-frame/dispatch [:query-users value sugg-atom])))))
+        (re-frame/dispatch
+         [:query-users value sugg-atom :remove-project-users remove-project-users])))))
 
 (defn split-on-match [s subs]
   (when s
@@ -143,7 +144,8 @@
 
 (defn render-user-suggestion [value-atom]
   (fn [arg]
-    (let [{:keys [username firstname lastname email avatar] :as user} (js->clj arg :keywordize-keys true)
+    (let [{:keys [username firstname lastname email avatar] :as user}
+          (js->clj arg :keywordize-keys true)
           [field v] ((query-user @value-atom) user)]
       (reagent/as-element
        [:div {:style {:margin "10px 0"}}
@@ -152,10 +154,11 @@
         (when-let [[pre match post] (split-on-match v @value-atom)]
           [:span (str "  [" (dekeyword field) ":" pre) [:strong match] (str post "]")])]))))
 
-(defn suggest-users [{:keys [value on-change] :as props}]
+(defn suggest-users
+  [{:keys [value on-change remove-project-users] :as props :or {remove-project-users false}}]
   (let [sugg-atom (reagent/atom [])
         value-atom (or value (reagent/atom ""))
-        fetch-sugg (debounce (fetch-remote sugg-atom) 500)]
+        fetch-sugg (debounce (fetch-remote sugg-atom remove-project-users) 500)]
     (fn [{:keys [value on-change] :as props}]
       [:div.container-fluid
        [:div.row
@@ -166,6 +169,8 @@
           :getSuggestionValue #(aget % "username")
           :shouldRenderSuggestions (fn [value] true)
           :renderSuggestion (render-user-suggestion value-atom)
-          :inputProps (merge props
-                             {:onChange (on-change-suggest value-atom on-change)
-                              :value @value-atom})}]]])))
+          :inputProps
+          (merge
+           props
+           {:onChange (on-change-suggest value-atom sugg-atom on-change)
+            :value @value-atom})}]]])))
