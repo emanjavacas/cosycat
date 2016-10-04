@@ -5,7 +5,7 @@
             [cosycat.components :refer [user-profile-component]]
             [cosycat.roles :refer [project-user-roles]]
             [cosycat.autosuggest :refer [suggest-users]]
-            [cosycat.utils :refer [human-time]]
+            [cosycat.utils :refer [human-time wrap-key]]
             [cosycat.app-utils :refer [ceil pending-users]]
             [taoensso.timbre :as timbre]))
 
@@ -23,19 +23,18 @@
   (remove #(contains? (apply hash-set (map :username project-users)) (:username %)) users))
 
 (defn selected-user-component [selected-user-atom current-selection-atom]
-  (let [active-project (re-frame/subscribe [:active-project :name])]
-    (fn [selected-user-atom current-selection-atom]
-      [user-profile-component @selected-user-atom
-       project-user-roles
-       :editable? true
-       :on-dismiss #(do (reset! current-selection-atom nil) (reset! selected-user-atom nil))
-       :on-submit (fn [user role]
-                    (re-frame/dispatch
-                     [:project-add-user
-                      {:user {:username (:username user) :role role}
-                       :project-name @active-project}])
-                    (re-frame/dispatch [:close-modal :add-user])
-                    (reset! selected-user-atom nil))])))
+  (fn [selected-user-atom current-selection-atom]
+    [user-profile-component @selected-user-atom
+     project-user-roles
+     :editable? true
+     :on-dismiss #(do (reset! current-selection-atom nil) (reset! selected-user-atom nil))
+     :on-submit (fn [user role]
+                  (re-frame/dispatch
+                   [:project-add-user
+                    {:user {:username (:username user) :role role}}])
+                  (re-frame/dispatch [:add-user @selected-user-atom]) ;WIP
+                  (re-frame/dispatch [:close-modal :add-user])
+                  (reset! selected-user-atom nil))]))
 
 (defn display-user [selected-user-atom current-selection-atom]
   (fn [selected-user-atom current-selection-atom]
@@ -46,12 +45,11 @@
         project-user-roles
         :editable? false :displayable? false])]))
 
-(defn add-user-component [project]
+(defn add-user-component [& {:keys [remove-project-users] :or {remove-project-users true}}]
   (let [current-selection-atom (reagent/atom nil)
-        selected-user-atom (reagent/atom nil)
-        users (re-frame/subscribe [:users])]
-    (fn [{project-users :users}]
-      (let [users-by-username (zipmap (map :username @users) @users)]
+        selected-user-atom (reagent/atom nil)]
+    (fn []
+      (let []
         [:div.container-fluid
          [:div.row
           [:div.col-lg-7
@@ -61,10 +59,12 @@
             [:div.row
              [suggest-users
               {:class "form-control form-control-no-border"
-               :on-change #(reset! current-selection-atom (get users-by-username %))
-               :onKeyDown #(.stopPropagation %)
+               :remove-project-users remove-project-users
+               :on-change #(reset! current-selection-atom (get (zipmap (map :username %2) %2) %)) ;WIP
                :onKeyPress #(when (= 13 (.-charCode %))
-                              (reset! selected-user-atom @current-selection-atom))}]]]]]]))))
+                              (let [u (reset! selected-user-atom @current-selection-atom)]
+                                (.log js/console "selected" @selected-user-atom)))
+               :onKeyDown #(.stopPropagation %)}]]]]]]))))
 
 (defn add-user-modal [project]
   (let [show? (re-frame/subscribe [:modals :add-user])]

@@ -107,11 +107,12 @@
 (re-frame/register-handler
  :project-add-user
  standard-middleware
- (fn [db [_ {:keys [user project-name]}]]
-   (POST "/project/add-user"
-         {:params {:user user :project-name project-name}
-          :handler new-user-handler
-          :error-handler error-handler})
+ (fn [db [_ {:keys [user]}]]
+   (let [project-name (get-in db [:session :active-project])]
+     (POST "/project/add-user"
+           {:params {:user user :project-name project-name}
+            :handler new-user-handler
+            :error-handler error-handler}))
    db))
 
 (re-frame/register-handler              ;remove user from project in client-db
