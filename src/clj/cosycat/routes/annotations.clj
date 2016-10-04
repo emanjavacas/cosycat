@@ -3,7 +3,7 @@
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.utils :refer [->int assert-ex-info]]
             [cosycat.app-utils :refer [deep-merge-with span->token-id]]
-            [cosycat.routes.utils :refer [make-safe-route make-default-route]]
+            [cosycat.routes.utils :refer [make-safe-route make-default-route unwrap-arraymap]]
             [cosycat.db.annotations :as anns]
             [cosycat.db.projects :refer [find-project-by-name]]
             [cosycat.components.ws :refer [send-clients]]
@@ -118,7 +118,7 @@
     {{username :username} :identity} :session
     {db :db} :components}]
   (check-user-rights db username project :read)
-  (->> (map (fetch-from-range db project corpus) (vals page-margins)) ;don't know why this happens
+  (->> (map (fetch-from-range db project corpus) (unwrap-arraymap page-margins))
        (filter identity)
        vec))
 

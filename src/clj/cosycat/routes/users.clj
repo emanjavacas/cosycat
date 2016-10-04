@@ -1,6 +1,6 @@
 (ns cosycat.routes.users
   (:require [compojure.core :refer [routes context POST GET]]
-            [cosycat.routes.utils :refer [make-default-route]]
+            [cosycat.routes.utils :refer [make-default-route unwrap-arraymap]]
             [cosycat.db.users :as users]
             [cosycat.db.utils :refer [normalize-user]]
             [cosycat.app-utils :refer [query-user]]
@@ -19,7 +19,7 @@
   [{{{username :username} :identity} :session {{db-conn :db} :db} :components
     {value :value project-users :project-users} :params}]
   (or (->> (monger.collection/find-maps db-conn (:users colls) {})
-           (remove-project-users (vals project-users))
+           (remove-project-users (unwrap-arraymap project-users)) ;wierd bug
            (filter (query-user value))
            (mapv normalize-user))
       []))
