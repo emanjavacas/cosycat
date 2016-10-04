@@ -86,10 +86,10 @@
   (check-user-exists db update-map)
   (-> (update-user db username update-map) normalize-user))
 
-(defn get-user-users [{db-conn :db :as db} username]      ;todo
+(defn get-user-users [{db-conn :db :as db} username]
   (let [projects (->> (mc/find-maps db-conn (:projects colls) {"users.username" username}))]
-    (reduce (fn [acc {:keys [users creator]}]
-              (vec (concat acc (map :username users) [creator])))
+    (reduce (fn [acc {:keys [users creator]}]            
+              (into acc (conj (map :username users) creator)))
             []
             projects)))
 
@@ -97,8 +97,7 @@
   "retrieves all users that interact with user, processed as public users (no private info)"
   [{db-conn :db :as db} username] ;todo, retrieve only users with which users has interactions
   (let [usernames (get-user-users db username)]
-    (->> (mc/find-maps db-conn (:users colls) {}; {:username {$in usernames}}
-                       )
+    (->> (mc/find-maps db-conn (:users colls) {:username {$in usernames}})
          (map #(normalize-user % :projects :settings)))))
 
 ;;; user settings

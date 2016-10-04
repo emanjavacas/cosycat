@@ -32,3 +32,7 @@
                     :body {:message message :data {:e (str ex) :stacktrace stacktrace}}}))))
         rule-map))
 
+(defn unwrap-arraymap
+  "somehow cljs vectors are parsed as arraymaps at the server (transit bug?)"
+  [a]
+  (if (vector? a) a (vals a)))
