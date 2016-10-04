@@ -3,7 +3,7 @@
             [cljs.core.async :refer [chan timeout alts! <! close! put!]]
             [goog.dom.dataset :as gdataset]
             [goog.string :as gstr]            
-            [cosycat.app-utils :refer [->int string-contains]]
+            [cosycat.app-utils :refer [->int]]
             [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 

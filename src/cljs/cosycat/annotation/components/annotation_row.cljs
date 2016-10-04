@@ -3,7 +3,7 @@
             [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cosycat.utils :refer [human-time ->box]]
-            [cosycat.app-utils :refer [parse-token]]
+            [cosycat.app-utils :refer [parse-token-id]]
             [cosycat.components :refer [user-thumb prepend-cell dummy-cell]]
             [cosycat.annotation.components.annotation-popover :refer [annotation-popover]]
             [taoensso.timbre :as timbre]))
@@ -49,7 +49,7 @@
   [:td [bs/label {:style {:font-size "90%"}} key]])
 
 (defn is-B-IOB? [{{{B :B O :O} :scope type :type} :span} token-id]
-  (and (= type "IOB") (= B (-> (parse-token token-id) :id))))
+  (and (= type "IOB") (= B (-> (parse-token-id token-id) :id))))
 
 (defn with-colspans [hit ann-key]
   (reduce (fn [acc {token-id :id anns :anns :as token}]

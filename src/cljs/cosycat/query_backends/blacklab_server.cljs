@@ -4,7 +4,7 @@
             [cosycat.ajax-jsonp :refer [jsonp]]
             [cosycat.query-backends.protocols :as p]
             [cosycat.utils :refer [keywordify]]
-            [cosycat.app-utils :refer [->int]]
+            [cosycat.app-utils :refer [->int parse-hit-id]]
             [cosycat.localstorage :refer [with-ls-cache]]
             [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -25,7 +25,6 @@
 (declare bl-server-url bl-server-sort-str bl-server-filter-str)
 
 ;;; normalize blacklab-out -> cosycat app-schemas
-(declare parse-hit-id)
 (declare normalize-results normalize-results-summary normalize-corpus-info normalize-snippet)
 
 ;;; handle counting callbacks
@@ -165,11 +164,6 @@
 ;;; normalize blacklab-out -> cosycat app-schemas
 (defn normalize-meta [num doc]
   (assoc doc :num num))
-
-(defn parse-hit-id
-  [hit-id]
-  (let [[doc-id hit-start hit-end] (clojure.string/split hit-id #"\.")]
-    {:doc-id doc-id :hit-start hit-start :hit-end hit-end}))
 
 (defn ->bl-token-id [doc-id token-id]
   {:doc doc-id :token token-id})

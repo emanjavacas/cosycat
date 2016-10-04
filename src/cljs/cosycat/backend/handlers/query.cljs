@@ -5,7 +5,7 @@
             [cosycat.query-backends.core :refer [ensure-corpus]]
             [cosycat.query-backends.protocols :refer [query query-sort snippet]]
             [cosycat.utils :refer [filter-marked-hits]]
-            [cosycat.app-utils :refer [parse-token]]
+            [cosycat.app-utils :refer [parse-token-id]]
             [taoensso.timbre :as timbre]))
 
 (defn pager-next
@@ -38,8 +38,8 @@
 
 (defn page-margins [results]
   (-> (for [{hit :hit id :id} results   ;seq; avoid empty seq
-            :let [{doc :doc start :id} (parse-token (:id (first hit)))
-                  {end :id} (parse-token (:id (last hit)))]]
+            :let [{doc :doc start :id} (parse-token-id (:id (first hit)))
+                  {end :id} (parse-token-id (:id (last hit)))]]
         {:start start :end end :hit-id id :doc doc})
       vec))
 
@@ -140,13 +140,13 @@
 
 (re-frame/register-handler
  :fetch-snippet
- (fn [db [_ hit-id {user-snippet-delta :snippet-delta dir :dir}]]
-   (let [{{snippet-delta :snippet-delta :as snippet-opts} :snippet-opts
-          corpus :corpus} (get-in db [:settings :query])
+ (fn [db [_ hit-id {user-delta :snippet-delta dir :dir}]]
+   (let [{:keys [snippet-opts corpus]} (get-in db [:settings :query])
          {query-str :query-str} (current-results db)
          corpus (ensure-corpus (find-corpus-config db corpus))
-         snippet-opts (assoc snippet-opts :snippet-delta (or user-snippet-delta snippet-delta))]
+         snippet-opts (assoc snippet-opts :snippet-delta (or user-delta (:snippet-delta snippet-opts)))]
      ;; add update
+     (timbre/debug snippet-opts)
      (when-not dir                      ;only register first request
        (re-frame/dispatch
         [:register-history [:user-events]

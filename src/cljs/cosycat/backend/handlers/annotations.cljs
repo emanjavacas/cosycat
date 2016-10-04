@@ -3,7 +3,7 @@
             [schema.core :as s]
             [ajax.core :refer [POST GET]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
-            [cosycat.app-utils :refer [deep-merge is-last-partition parse-token token-id->span span->token-id]]
+            [cosycat.app-utils :refer [deep-merge is-last-partition token-id->span span->token-id]]
             [cosycat.utils :refer [format get-msg now]]
             [cosycat.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [taoensso.timbre :as timbre]))

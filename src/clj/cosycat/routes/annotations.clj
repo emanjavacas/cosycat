@@ -2,7 +2,7 @@
   (:require [compojure.core :refer [routes context POST GET]]
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.utils :refer [->int assert-ex-info]]
-            [cosycat.app-utils :refer [deep-merge-with parse-token span->token-id]]
+            [cosycat.app-utils :refer [deep-merge-with span->token-id]]
             [cosycat.routes.utils :refer [make-safe-route make-default-route]]
             [cosycat.db.annotations :as anns]
             [cosycat.db.projects :refer [find-project-by-name]]

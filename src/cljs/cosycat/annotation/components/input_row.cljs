@@ -3,7 +3,7 @@
             [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cosycat.utils :refer [parse-annotation nbsp]]
-            [cosycat.app-utils :refer [->int parse-token]]
+            [cosycat.app-utils :refer [->int parse-token-id]]
             [cosycat.components :refer [prepend-cell dummy-cell]]
             [cosycat.autosuggest :refer [suggest-annotations]]
             [taoensso.timbre :as timbre])
@@ -43,7 +43,7 @@
       (recur))))
 
 (defn handle-span-dispatch [ann-map hit-id token-ids]
-  (let [sorted-ids (sort-by #(-> % parse-token :id) token-ids)
+  (let [sorted-ids (sort-by #(-> % parse-token-id :id) token-ids)
         from (first sorted-ids)
         to (last sorted-ids)]
     (re-frame/dispatch [:dispatch-annotation ann-map hit-id from to])))
