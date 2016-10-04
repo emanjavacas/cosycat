@@ -41,6 +41,9 @@
   (let [ch (debounce-ch f millis)]
     (fn [arg] (put! ch arg))))
 
+(defn wrap-key [key-code f]
+  (fn [e] (when (= key-code (.-charCode e)) (f))))
+
 ;;; Time
 (defn timestamp []
   (-> (js/Date.)

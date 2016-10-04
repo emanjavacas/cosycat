@@ -1,7 +1,7 @@
 (ns cosycat.query.components.annotation-modal
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [cosycat.utils :refer [by-id parse-annotation nbsp format]]
+            [cosycat.utils :refer [by-id parse-annotation nbsp format wrap-key]]
             [cosycat.app-utils :refer [dekeyword]]
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.components :refer [disabled-button-tooltip]]
@@ -67,9 +67,6 @@
                     (deselect-tokens empty-annotation)
                     (deselect-tokens existing-annotation-owner)))
       (swap! annotation-modal-show not))))
-
-(defn wrap-key [key-code f]
-  (fn [e] (when (= key-code (.-charCode e)) (f))))
 
 (defn update-current-ann [current-ann value]
   (fn [target]

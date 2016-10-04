@@ -4,24 +4,26 @@
             [react-bootstrap.components :as bs]
             [cosycat.routes :refer [nav!]]
             [cosycat.components :refer [throbbing-panel user-attributes]]
-            [cosycat.front.components.new-project-panel :refer [new-project-btn]]
+            [cosycat.front.components.new-project-panel :refer [new-project-btn new-project-panel]]
             [cosycat.front.components.projects-panel :refer [projects-panel]]
             [cosycat.front.components.edit-user-modal :refer [edit-user-modal]]
             [taoensso.timbre :as timbre]))
 
-(defn no-projects []
-  [:div [:p "You don't have current projects. Start one right now."]])
-
 (defn projects-col []
-  (let [projects (re-frame/subscribe [:projects])
+  (let [selected-users (reagent/atom {})
         open? (reagent/atom false)]
     (fn []
-      (if-not @open?
-        [:div [:h3#projects {:style {:padding-bottom "30px"}} "Projects"]
-         (if (zero? (count @projects))
-           [:div [no-projects] [new-project-btn open?]]
-           [:div [projects-panel projects] [new-project-btn open?]])]
-        [:div [new-project-btn open?]]))))
+      [:div.container-fluid
+       [:div.row.pad                    ;header
+        [:h3#projects {:style {:padding-bottom "30px"}}
+         (if @open? "New project" "Projects")]]
+       [:div.row.pad                    ;btn
+        [new-project-btn open? selected-users]]
+       [:div.row {:style {:height "10px"}}]
+       [:div.row.pad                    ;panel
+        (if @open?
+          [new-project-panel selected-users]
+          [projects-panel])]])))
 
 (defn user-col []
   (let [user (re-frame/subscribe [:me])
@@ -53,7 +55,10 @@
   [:div.container-fluid
    [:div.row
     [:div.col-lg-1.visible-lg]
-    [:div.col-lg-3.col-md-4.col-sm-4 [user-col]]
-    [:div.col-lg-7.col-md-8.col-sm-8 [projects-col]]
+    [:div.col-lg-3.col-md-4.col-sm-4
+     {:style {:border-right "1px solid #eeeeee"}}
+     [user-col]]
+    [:div.col-lg-7.col-md-8.col-sm-8
+     [projects-col]]
     [:div.col-lg-1.visible-lg]]])
 

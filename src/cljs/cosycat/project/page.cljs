@@ -114,9 +114,9 @@
           [:div.row [project-header project]]
           [:div.row [:div.col-lg-12 [:hr]]]
           [:div.row
-           [:div.col-lg-6
+           [:div.col-lg-6.col-md-6.col-sm-6
             [:div [add-user-button]]]
-           [:div.col-lg-6
+           [:div.col-lg-6.col-md-6.col-sm-6
             [:div.pull-right [project-buttons my-role]]]]
           [:div-row {:style {:margin "20px"}}
            [:div.text [:h4 "Users working in " [:span.text-muted name]]]]

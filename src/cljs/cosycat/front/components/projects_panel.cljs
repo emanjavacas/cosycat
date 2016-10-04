@@ -51,10 +51,20 @@
           [:div.col-lg-9 [:span (human-time created)]]]
          [spacer]])])))
 
-(defn projects-panel [projects]
+(defn projects-panel* [projects]
   (fn [projects]
     [:div.container-fluid
      [:div.row
       [bs/list-group
        (doall (for [[name project] @projects]
                 ^{:key (str name)} [project-row project]))]]]))
+
+(defn no-projects []
+  [:div [:p "You don't have current projects. Start one right now."]])
+
+(defn projects-panel []
+  (let [projects (re-frame/subscribe [:projects])]
+    (fn []
+      (if (zero? (count @projects))
+        [:div [no-projects]]
+        [:div [projects-panel* projects]]))))

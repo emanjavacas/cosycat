@@ -90,9 +90,9 @@
 
 (re-frame/register-handler
  :query-users
- (fn [db [_ value users-atom]]
+ (fn [db [_ value users-atom & {:keys [remove-project-users] :or {remove-project-users true}}]]
    (let [active-project (get-in db [:session :active-project])
-         project-users (get-in db [:projects active-project :users])]
+         project-users (if-not remove-project-users [] (get-in db [:projects active-project :users]))]
      (GET "users/query-users"
           {:params {:value value :project-users project-users}
            :handler #(reset! users-atom %)
