@@ -29,12 +29,13 @@
 (defn merge-fn
   "on new results, update current results preserving marked metadata"
   [old-results results]
-  (reduce-kv (fn [m k v]
-               (if (and (get m k) (get-in m [k :meta :marked]))
-                 (assoc m k (assoc-in v [:meta :marked] true))
-                 (assoc m k v)))
-             old-results
-             (zipmap (map :id results) results))) ;normalize results
+  (let [new-results (zipmap (map :id results) results)] ;normalized results
+    (reduce-kv (fn [m k v]
+                 (if (get-in old-results [k :meta :marked])
+                   (assoc m k (assoc-in v [:meta :marked] true))
+                   m))
+               new-results
+               old-results)))
 
 (defn page-margins [results]
   (-> (for [{hit :hit id :id} results   ;seq; avoid empty seq
