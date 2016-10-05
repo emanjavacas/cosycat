@@ -43,7 +43,6 @@
  standard-middleware
  (fn [db [_ path value]]
    (let [active-project (get-in db [:session :active-project])]
-     ;; TODO: this should update general settings {:settings}
      (-> db
          (assoc-in (into [:settings] path) value)
          (assoc-in (into [:projects active-project :settings] path) value)))))
