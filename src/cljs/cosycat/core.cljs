@@ -73,8 +73,8 @@
       (when username                    ;wait until loaded
         [:div.row
          {:style {:line-height "35px" :text-align "right"}}
-         [:div.col-sm-8 
-          [user-brand-span username active-project]]
+         [:div.col-sm-8
+           [user-brand-span username active-project]]
          [:div.col-sm-4
           [user-thumb href {:height "30px" :width "30px"}]]]))))
 
@@ -82,7 +82,7 @@
   (let [user (re-frame/subscribe [:me])
         users (re-frame/subscribe [:active-project :users])]
     (fn [active-project]
-      (let [{username :username {href :href} :avatar} @user
+      (let [{username :username} @user
             my-role (->> @users (filter #(= username (:username %))) first :role)
             tooltip (format "Your role is [%s] in this project" my-role)]
         [bs/navbar-brand
@@ -94,7 +94,7 @@
              [:div [user-brand-component active-project user]]]
             [:div [user-brand-component active-project user]])]]))))
 
-(defn navlink [target href label icon]
+(defn navlink [{:keys [target href label icon]}]
   (let [active (re-frame/subscribe [:active-panel])]
     (fn []
       [bs/nav-item
@@ -109,7 +109,6 @@
       [bs/nav-dropdown
        {:eventKey target
         :id "dropdown"
-        :class (if (= @active target) "active")
         :title (reagent/as-component [icon-label icon label])}
        (for [[idx {:keys [label href on-select style] :as args}]
              (map-indexed vector children)
@@ -130,13 +129,16 @@
   [project-name]
   (let [prefix (str "#/project/" project-name)
         origin (.-lastToken_ cosycat.routes/history)]
-    (if (and origin (.endsWith origin "query"))
-      (str prefix "/query")
-      prefix)))
+    (if-not origin
+      prefix
+      (cond (.endsWith origin "query") (str prefix "/query")
+            (.endsWith origin "settings") (str prefix "/settings")
+            (.endsWith origin "updates") (str prefix "/updates")
+            :else prefix))))
 
 (defn projects-dropdown [projects active-project]
   (fn [projects active-project]
-    [navdropdown :no-panel "Projects" "zmdi-toys"
+    [navdropdown :no-panel "Switch project" "zmdi-toys"
      :children
      (doall
       (for [[project-name {:keys [project]}] @projects]
@@ -157,16 +159,35 @@
         :fluid true}
        [bs/navbar-header [user-brand active-project]]
        [bs/nav {:pullRight true}
-        (when-not (or (not @active-project) (= @active-panel :front-panel))
-          (let [url #(str "#/project/" @active-project "/query")]
-            [navlink :query-panel url "Query" "zmdi-search"]))
-        (when-not (or (not @active-project) (= @active-panel :front-panel))
-          [navlink :updates-panel "#/updates" "Updates" "zmdi-notifications"])
-        (when-not (or (= @active-panel :front-panel) (empty? @projects))
+        (when-not (or (not @active-project) (empty? @projects))
           [projects-dropdown projects active-project])
-        [navlink :settings-panel "#/settings" "Settings" "zmdi-settings"]
-        [navlink :front-panel "#/" "Home" "zmdi-home"]
-        [navlink :exit "#/exit" "Exit" "zmdi-power"]]])))
+        (when-not (or (not @active-project) (= @active-panel :front-panel))
+          (let [href #(str "#/project/" @active-project "/query")]
+            [navlink {:target :query-panel
+                      :href href
+                      :label "Query"
+                      :icon "zmdi-search"}]))
+        (when-not (or (not @active-project) (= @active-panel :front-panel))
+          [navlink {:target :updates-panel
+                    :href #(if @active-project
+                             (str "#/project/" @active-project "/updates")
+                             "#/updates")
+                    :label "Updates"
+                    :icon "zmdi-notifications"}])
+        [navlink {:target :settings-panel
+                  :href #(if @active-project
+                           (str "#/project/" @active-project "/settings")
+                           "#/settings")
+                  :label "Settings"
+                  :icon "zmdi-settings"}]
+        [navlink {:target :front-panel
+                  :href "#/"
+                  :label "Home"
+                  :icon "zmdi-home"}]
+        [navlink {:target :exit
+                  :href "#/exit"
+                  :label "Exit"
+                  :icon "zmdi-power"}]]])))
 
 (defn has-session-error? [session-error]
   session-error)

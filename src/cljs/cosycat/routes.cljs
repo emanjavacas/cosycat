@@ -44,14 +44,18 @@
   (defroute "/project/:project-name/query" {project-name :project-name}
     (re-frame/dispatch [:set-active-project {:project-name project-name}])
     (re-frame/dispatch [:set-active-panel :query-panel]))
+  (defroute "/project/:project-name/settings" {project-name :project-name}
+    (re-frame/dispatch [:set-active-project {:project-name project-name}])
+    (re-frame/dispatch [:set-active-panel :settings-panel]))
+  (defroute "/project/:project-name/updates" {project-name :project-name}
+    (re-frame/dispatch [:set-active-project {:project-name project-name}])
+    (re-frame/dispatch [:set-active-panel :updates-panel]))
   (defroute "/settings" []
     (re-frame/dispatch [:set-active-panel :settings-panel]))
   (defroute "/debug" []
     (re-frame/dispatch [:set-active-panel :debug-panel]))
   (defroute "/updates" []
     (re-frame/dispatch [:set-active-panel :updates-panel]))
-  (defroute "/annotation" []
-    (re-frame/dispatch [:set-active-panel :annotation-panel]))
   (defroute "/exit" []
     (.assign js/location "/logout"))
   (hook-browser-navigation!))
