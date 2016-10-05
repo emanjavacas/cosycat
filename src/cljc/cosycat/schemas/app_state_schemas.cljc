@@ -41,13 +41,36 @@
 
 ;;; full db-schema
 (def db-schema
-  {;; dynamic app data
-   :session session-schema              ;mutable component-related data
-   :settings settings-schema            ;mutable global session-settings (in case outside project)
-   :history history-schema              ;keeps track of events(could go into session/user?)
-   ;; static app data (might of course change, but less so)
-   :me user-schema                     ;client user
+  {;; ----------------
+   ;; dynamic app data
+   ;; ----------------
+   
+   ;; mutable component-related data
+   :session session-schema
+   
+   ;; current session-settings (ev. overridden by project-settings)
+   :settings settings-schema
+   
+   ;; keeps track of events(could go into session/user?)
+   :history history-schema
+   
+   ;; ---------------
+   ;; static app data
+   ;; ---------------
+   
+   ;; client user data
+   ;; - not strictly identical with user db data (db user settings are merged with projects)
+   :me user-schema
+   
+   ;; public users info
    :users [{:username s/Str :user public-user-schema}]
-   :corpora [s/Any]                     ;see query-backends/Corpus
+   
+   ;; corpus config info (from config.edn) plus
+   ;; corpus-backend specific info (from cosycat.query-backends.protocol/corpus-info)
+   :corpora [s/Any]
+   
+   ;; tagsets included in the dataset (from config.edn)
    :tagsets [s/Any]
+   
+   ;; project related data
    :projects {s/Any project-schema}})

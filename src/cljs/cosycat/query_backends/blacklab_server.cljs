@@ -35,9 +35,6 @@
 
 (defn- -base-query
   ([corpus query-str {:keys [context from page-size] :as query-opts} sort-opts filter-opts]
-   (.log js/console
-         "sort" sort-opts (bl-server-sort-str sort-opts)
-         "filter" filter-opts (bl-server-filter-str filter-opts))
    (let [server (.-server corpus) web-service (.-web-service corpus) index (.-index corpus)]
      (p/handle-query corpus (bl-server-url server web-service index)
                      (cond-> {:patt query-str

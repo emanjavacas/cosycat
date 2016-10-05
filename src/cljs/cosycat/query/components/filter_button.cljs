@@ -71,7 +71,6 @@
         corpus-metadata (re-frame/subscribe [:corpus-config :info :corpus-info :metadata])
         filter-opts (re-frame/subscribe [:settings :query :filter-opts])]
     (fn []
-      (.log js/console @filter-opts)
       [:div.text-right
        [bs/button
         {:onClick #(do (swap! show? not) (reset! target (.-target %)))

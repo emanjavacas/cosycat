@@ -5,7 +5,6 @@
 
 (defn error-panel []
   (let [error-data (re-frame/subscribe [:session-has-error?])]
-    (.log js/console @error-data)
     (fn []
       (let [{:keys [code message]} @error-data]
         [:div.container

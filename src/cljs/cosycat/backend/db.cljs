@@ -6,7 +6,7 @@
     :filter-opts {:attribute "title" :value "random"}))
 
 (defn default-settings
-  [& {:keys [corpora] :or {corpora []}}] ;TODO: settings should be adapted to corpus config
+  [& {:keys [corpora] :or {corpora []}}]
   (let [corpus (first (map :corpus corpora))]
     {:notifications {:delay 7500}
      :query {:query-opts {:context 5 :from 0 :page-size 5}
