@@ -5,7 +5,8 @@
             [cosycat.app-utils :refer [pending-users deep-merge update-coll]]
             [cosycat.routes :refer [nav!]]
             [cosycat.backend.middleware :refer [standard-middleware check-project-exists]]
-            [cosycat.backend.db :refer [default-project-session default-project-history]]
+            [cosycat.backend.db
+             :refer [default-project-session default-project-history default-settings]]
             [taoensso.timbre :as timbre]))
 
 (defn normalize-projects
@@ -38,7 +39,9 @@
  :set-active-project
  (conj standard-middleware check-project-exists)
  (fn [db [_ {:keys [project-name]}]]
-   (let [project-settings (get-in db [:projects project-name :settings] {})]
+   (let [project-settings (or (get-in db [:projects project-name :settings])
+                              (get-in db [:me :settings])
+                              (default-settings :corpora (:corpora db)))]
      (-> db
          (assoc-in [:session :active-project] project-name)
          (update-in [:settings] deep-merge project-settings)))))

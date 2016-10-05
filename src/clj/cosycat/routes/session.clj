@@ -24,7 +24,6 @@
   (format "Ignoring entry for server [%s]. Reason: [%s]" server "unknown-corpus-type"))
 
 ;;; normalizers
-
 (defn session-tagsets [tagset-paths]
   (if-let [dirs tagset-paths]
     (vec (for [dir dirs
@@ -106,8 +105,8 @@
 (defn session-projects [db username {user-projects :projects :as me}]
   (-> (get-projects db username) (merge-project-settings user-projects)))
 
-(defn session-settings [{settings :settings :as me}]
-  (or settings {}))
+(defn session-settings [me]
+  (get me :settings {}))
 
 (defn session-router
   [{{{username :username roles :roles} :identity} :session

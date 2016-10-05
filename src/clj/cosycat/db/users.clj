@@ -124,4 +124,4 @@
         {:username username}
         {$set (->set-update-map (format "projects.%s.settings" project-name) update-map)}
         {:return-new true})
-      (get-in [:projects project-name :settings] {})))
+      (get-in [:projects (keyword project-name) :settings] {})))

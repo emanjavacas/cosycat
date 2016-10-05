@@ -60,7 +60,7 @@
    (-> payload
        (assoc :session default-session)
        (assoc :history default-history)
-       (assoc :settings (deep-merge (default-settings :corpora corpora) settings))
+       (assoc :settings (deep-merge settings (default-settings :corpora corpora)))
        (assoc :projects (normalize-projects projects me))
        (assoc-in [:session :init] true))))
 
