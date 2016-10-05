@@ -9,16 +9,6 @@
             [cosycat.app-utils :refer [ceil pending-users]]
             [taoensso.timbre :as timbre]))
 
-(def default-user
-  {:username "JohnDoe"
-   :firstname "John"
-   :lastname "Doe"
-   :email "john@doe.com"
-   :created 123456789
-   :last-active 123456789
-   :active false
-   :avatar {:href "img/avatars/default.png"}})
-
 (defn remove-project-users [users project-users]
   (remove #(contains? (apply hash-set (map :username project-users)) (:username %)) users))
 
@@ -38,12 +28,17 @@
 
 (defn display-user [selected-user-atom current-selection-atom]
   (fn [selected-user-atom current-selection-atom]
-    [bs/well
+    [:div
      (if @selected-user-atom
-       [selected-user-component selected-user-atom current-selection-atom]
-       [user-profile-component (or @current-selection-atom default-user)
-        project-user-roles
-        :editable? false :displayable? false])]))
+       [bs/well [selected-user-component selected-user-atom current-selection-atom]]
+       (when @current-selection-atom
+         [bs/well
+          [user-profile-component @current-selection-atom 
+           project-user-roles
+           :editable? false :displayable? false]]))]))
+
+(defn find-user-by-name [username users]
+  (some #(when (= username (:username %)) %) users))
 
 (defn add-user-component [& {:keys [remove-project-users] :or {remove-project-users true}}]
   (let [current-selection-atom (reagent/atom nil)
@@ -59,12 +54,12 @@
             [:div.row
              [suggest-users
               {:class "form-control form-control-no-border"
+               :placeholder "Search for user (username, email, etc.)"
                :remove-project-users remove-project-users
-               :on-change #(reset! current-selection-atom (get (zipmap (map :username %2) %2) %)) ;WIP
+               :on-change #(reset! current-selection-atom (find-user-by-name % %2))
+               :onKeyDown #(.stopPropagation %)
                :onKeyPress #(when (= 13 (.-charCode %))
-                              (let [u (reset! selected-user-atom @current-selection-atom)]
-                                (.log js/console "selected" @selected-user-atom)))
-               :onKeyDown #(.stopPropagation %)}]]]]]]))))
+                              (reset! selected-user-atom @current-selection-atom))}]]]]]]))))
 
 (defn add-user-modal [project]
   (let [show? (re-frame/subscribe [:modals :add-user])]

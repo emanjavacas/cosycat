@@ -105,6 +105,8 @@
 
 (defn make-handler [component]
   (let [components (select-keys component (:components component))]
-    (-> (app-routes static-routes web-app-routes settings-routes annotation-routes project-routes users-routes base-routes)
+    (-> (app-routes static-routes web-app-routes
+                    settings-routes annotation-routes project-routes users-routes
+                    base-routes)
         (wrap-app-component components)
         (wrap-routes wrap-base))))
