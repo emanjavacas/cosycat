@@ -92,10 +92,11 @@
       wrap-nested-params
       wrap-params
       (wrap-transit-response {:encoding :json-verbose})
-      ((fn [handler]
-         (if (:dev? env)
-           (wrap-exceptions handler)
-           (wrap-internal-error handler))))))
+      ;; ((fn [handler]
+      ;;    (if (:dev? env)
+      ;;      (wrap-exceptions handler)
+      ;;      (wrap-internal-error handler))))
+      ))
 
 (defn wrap-app-component [handler components]
   (fn [req]
