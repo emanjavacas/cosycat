@@ -75,18 +75,15 @@
      [:tbody
       [hit-row hit open-hits color-map]]]))
 
-(defn annotation-component [hit open-hits]
-  (let [color-map (re-frame/subscribe [:filtered-users-colors])]
-    (fn [hit open-hits]
-      (if (contains? @open-hits (:id hit))
-        [open-annotation-component hit open-hits color-map]
-        [closed-annotation-component hit open-hits color-map]))))
-
 (defn annotation-panel []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])
+        color-map (re-frame/subscribe [:filtered-users-colors])
         open-hits (re-frame/subscribe [:project-session :components :open-hits])]
     (fn []
       [:div.container-fluid
        (doall (for [{hit-id :id :as hit} (sort-by #(get-in % [:meta :num]) @marked-hits)]
                 ^{:key (str hit-id)}
-                [:div.row [annotation-component hit open-hits]]))])))
+                [:div.row
+                 (if (contains? @open-hits hit-id)
+                   [open-annotation-component hit open-hits color-map]
+                   [closed-annotation-component hit open-hits color-map])]))])))
