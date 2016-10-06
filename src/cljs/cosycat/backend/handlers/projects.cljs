@@ -2,6 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [ajax.core :refer [POST]]
+            [cosycat.utils :refer [format]]
             [cosycat.app-utils :refer [pending-users deep-merge update-coll]]
             [cosycat.routes :refer [nav!]]
             [cosycat.backend.middleware :refer [standard-middleware check-project-exists]]
