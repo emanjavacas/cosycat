@@ -123,7 +123,7 @@
             [:span.input-group-btn
              [:button.btn.btn-default
               {:type "button"
-               :on-click #(on-submit user current-role)}
+               :on-click #(do (swap! editing not) (on-submit user current-role))}
               [bs/glyphicon {:glyph "ok"}]]])
           (when editable?
             [:span.input-group-btn
