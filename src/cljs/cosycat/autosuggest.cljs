@@ -87,7 +87,7 @@
   ([value-atom sugg-atom] (on-change-suggest value-atom sugg-atom (fn [& args])))
   ([value-atom sugg-atom f]
    (fn [e new-val]
-     (f (.-newValue new-val) @sugg-atom)
+     (when f (f (.-newValue new-val) @sugg-atom))
      (reset! value-atom (.-newValue new-val)))))
 
 (defn get-suggestion-value [value-atom]
@@ -123,7 +123,7 @@
             :getSectionSuggestions #(aget % "tags")
             :renderSectionTitle #(reagent/as-element [:strong (aget % "name")])
             :inputProps (merge props
-                               {:onChange (on-change-suggest value-atom on-change)
+                               {:onChange (on-change-suggest value-atom sugg-atom on-change)
                                 :value @value-atom})}]]]))))
 
 (defn fetch-remote

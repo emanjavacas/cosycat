@@ -5,7 +5,7 @@
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
             [cosycat.app-utils :refer [deep-merge is-last-partition token-id->span span->token-id]]
             [cosycat.utils :refer [format get-msg now]]
-            [cosycat.backend.middleware :refer [standard-middleware no-debug-middleware]]
+            [cosycat.backend.middleware :refer [standard-middleware]]
             [taoensso.timbre :as timbre]))
 
 ;;; Incoming annotations
@@ -16,9 +16,14 @@
             token))
         hit))
 
-(defn delete-ann [hit token-id key]
+(defn is-token? [id token-id-or-ids]
+  (if (sequential? token-id-or-ids)
+    (contains? (apply hash-set token-id-or-ids) id)
+    (= id token-id-or-ids)))
+
+(defn delete-ann [hit token-id-or-ids key]
   (mapv (fn [{id :id anns :anns :as token}]
-          (if (contains? anns key)
+          (if (and (is-token? id token-id-or-ids) (contains? anns key))
             (assoc token :anns (dissoc anns key))
             token))
         hit))
@@ -100,7 +105,6 @@
 ;;; Outgoing annotations
 (s/defn make-annotation :- annotation-schema
   ([ann-map hit-id token-id]
-   (timbre/debug token-id)
    (merge ann-map {:hit-id hit-id :span (token-id->span token-id) :timestamp (now)}))
   ([ann-map hit-id token-from token-to]
    (merge ann-map {:hit-id hit-id :span (token-id->span token-from token-to) :timestamp (now)})))
@@ -224,7 +228,6 @@
 (defmethod package-annotation
   [cljs.core/PersistentVector true]
   [anns project hit-ids token-ids]
-  (timbre/debug "anns" anns "hit-ids" hit-ids)
   (assert (apply = (map count [anns hit-ids])) "Each ann must have a hit-id")
   (->> (mapv (fn [ann hit-id token-id] (make-annotation ann hit-id token-id)) anns hit-ids token-ids)
        (assoc {:project project} :ann-map)))
