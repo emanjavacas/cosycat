@@ -28,18 +28,21 @@ cd $ROOT_DIR;
 
 echo "Fetching last release";
 echo "------------";
-git pull
-printf "Done...\n";
+git pull;
+echo "Done...";
+echo;
 
-echo "Cleaning up:";
+echo "Cleaning up";
 echo "------------";
 lein clean || { echo "Couldn't run 'lein', is leiningen installed?"; exit 1; }
-printf "Done...\n"
+echo "Done...";
+echo "";
 
 echo "Compiling JAR file";
 echo "------------";
 lein uberjar || { echo "Couldn't compile, is leiningen installed?"; exit 1; }
-printf "Done...\n"
+echo "Done...";
+echo "";
 
 echo "Moving JAR to $TARGET_DIR"
 echo "------------"
@@ -56,7 +59,8 @@ if [ -n "$SYMLINK" ]; then
     echo "Symlinking to $SYMLINK";
     echo "-----------"
     ln -fs $TARGET_DIR/`basename $JAR` $SYMLINK;
-    printf "Done...\n";
+    echo "Done...";
+    echo "";
 fi
 
 echo "Bye!"
