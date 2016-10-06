@@ -138,7 +138,7 @@
 
 (defn projects-dropdown [projects active-project]
   (fn [projects active-project]
-    [navdropdown :no-panel "Switch project" "zmdi-toys"
+    [navdropdown :no-panel "Project" ""
      :children
      (doall
       (for [[project-name {:keys [project]}] @projects]

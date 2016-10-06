@@ -16,10 +16,8 @@
                  [prone "0.8.2"]
                  [yogthos/config "0.8"]
                  [hiccup "1.0.5"]
-                 [reagent "0.6.0-alpha"
-                  :exclusions [cljsjs/react]]
-                 [cljsjs/react-bootstrap "0.28.1-1"
-                  :exclusions [org.webjars.bower/jquery cljsjs/react]]
+                 [reagent "0.6.0-alpha" :exclusions [cljsjs/react]]
+                 [cljsjs/react-bootstrap "0.28.1-1" :exclusions [org.webjars.bower/jquery cljsjs/react]]
                  [cljsjs/react-with-addons "0.14.3-0"]
                  [cljsjs/react-autosuggest "3.5.1-0"]
                  [re-frame "0.7.0-alpha"]
