@@ -4,6 +4,8 @@ TARGET_DIR=$1
 SYMLINK=$2
 SOURCE_DIR=$(pwd)
 
+HELP="bash /path/to/cosycat/scripts/cosycat_update.sh deploy-to-dir [symlink-to-jar]"
+
 if [ ! -d "$TARGET_DIR" ]; then
     echo "Couldn't find target dir $TARGET_DIR";
     exit 1;
@@ -31,12 +33,12 @@ printf "Done...\n";
 
 echo "Cleaning up:";
 echo "------------";
-# lein clean || { echo "Couldn't run 'lein', is leiningen installed?"; exit 1; }
+lein clean || { echo "Couldn't run 'lein', is leiningen installed?"; exit 1; }
 printf "Done...\n"
 
 echo "Compiling JAR file";
 echo "------------";
-# lein uberjar || { echo "Couldn't compile, is leiningen installed?"; exit 1; }
+lein uberjar || { echo "Couldn't compile, is leiningen installed?"; exit 1; }
 printf "Done...\n"
 
 echo "Moving JAR to $TARGET_DIR"
