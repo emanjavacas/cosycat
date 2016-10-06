@@ -13,13 +13,13 @@
       (do (timbre/debug "Closing connection to server in " timeout)
           (server :timeout 10)))))
 
-(defrecord HttpServer [port http-server components]
+(defrecord HttpServer [port debug http-server components]
   component/Lifecycle
   (start [component]
     (timbre/info "Starting web server in port " port)
     (if http-server
       component
-      (assoc component :http-server (start-http-server (make-handler component) port))))
+      (assoc component :http-server (start-http-server (make-handler component :debug debug) port))))
   (stop [component]
     (timbre/info "Shutting down web server")
     (let [the-server (:http-server component)]
@@ -27,6 +27,6 @@
         component
         (assoc component :http-server (stop-http-server the-server))))))
 
-(defn new-http-server [{:keys [port components]}]
-  (map->HttpServer {:port port :components components}))
+(defn new-http-server [{:keys [port components debug]}]
+  (map->HttpServer {:port port :debug debug :components components}))
 

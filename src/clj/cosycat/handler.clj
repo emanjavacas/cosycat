@@ -74,8 +74,10 @@
     (try
       (handler req)
       (catch clojure.lang.ExceptionInfo e
+        (println (str e))
         (->> e ex-data :error (format-exception req)))
       (catch Throwable t
+        (println (str t))
         (->> t class str (format-exception req))))))
 
 (defn wrap-base [handler]
@@ -90,7 +92,10 @@
       wrap-nested-params
       wrap-params
       (wrap-transit-response {:encoding :json-verbose})
-      ((fn [handler] (if (:dev? env) (wrap-exceptions handler) (wrap-internal-error handler))))))
+      ((fn [handler]
+         (if (:dev? env)
+           (wrap-exceptions handler)
+           (wrap-internal-error handler))))))
 
 (defn wrap-app-component [handler components]
   (fn [req]
@@ -103,7 +108,7 @@
   [& route-fns]
   (apply routes (map #(%) route-fns)))
 
-(defn make-handler [component]
+(defn make-handler [component & {:keys [debug]}]
   (let [components (select-keys component (:components component))]
     (-> (app-routes static-routes web-app-routes
                     settings-routes annotation-routes project-routes users-routes
