@@ -50,14 +50,16 @@
 (defn is-B-IOB? [{{{B :B O :O} :scope type :type} :span} token-id]
   (and (= type "IOB") (= B (-> (parse-token-id token-id) :id))))
 
+(defn cell-colspan [token-id {{{B :B O :O} :scope type :type} :span :as ann}]
+  (cond (not ann)                1 ;; no annotation
+        (is-B-IOB? ann token-id) (inc (- O B)) ;; B IOB
+        (= type "token")         1)) ;; token
+
 (defn with-colspans [hit ann-key]
   (reduce (fn [acc {token-id :id anns :anns :as token}]
-            (let [{{{B :B O :O} :scope type :type} :span :as ann} (get anns ann-key)]
-              (if-let [colspan (cond (not type)               1 ;no annotation
-                                     (is-B-IOB? ann token-id) (inc (- O B)) ;B IOB
-                                     (= type "token")         1)] ;token
-                (conj acc {:colspan colspan :token token})
-                acc)));no-B IOB
+            (if-let [colspan (cell-colspan token-id (get anns ann-key))]
+              (conj acc {:colspan colspan :token token})
+              acc))
           []
           hit))
 

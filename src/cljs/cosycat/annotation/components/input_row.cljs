@@ -52,7 +52,7 @@
   [hit-id token-ids]
   (fn [pressed]
     (.stopPropagation pressed)
-    (if (= 13 (.-keyCode pressed))
+    (when (= 13 (.-keyCode pressed))
       (if-let [[key val] (parse-annotation (.. pressed -target -value))]
         (let [ann {:key key :value val}]
           (condp = (count token-ids)
