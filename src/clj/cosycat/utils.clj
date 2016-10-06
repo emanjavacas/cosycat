@@ -2,13 +2,19 @@
   (:require [cognitect.transit :as transit]
             [clojure.java.io :as io]
             [clojure.edn :as edn]
-            [schema.core :as s]))
+            [schema.core :as s]
+            [config.core :refer [env]]))
 
 ;;; RESOURCES
 (def ^:dynamic *encoding* "UTF-8")
 
 (defn project-version []
-  (-> "project.clj" slurp edn/read-string (nth 2)))
+  (-> (if (:dev? env)
+        "project.clj"        
+        (io/resource "project.clj"))
+      slurp
+      edn/read-string
+      (nth 2)))
 
 ;;; SYNTAX
 (defn read-str
