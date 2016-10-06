@@ -74,11 +74,12 @@
   [{{project-name :project-name target-username :username new-role :new-role} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [project-user (proj/update-user-role db username project-name target-username new-role)]
+  (let [{:keys [users]} (proj/find-project-by-name db project-name)
+        project-user (proj/update-user-role db username project-name target-username new-role)]
     (send-clients ws {:type :new-project-user-role
                       :data (assoc project-user :project-name project-name :by username)}
      :source-client username
-     :target-clients (mapv :username (:users (proj/find-project-by-name db project-name))))
+     :target-clients (mapv :username users))
     project-user))
 
 (defn project-routes []

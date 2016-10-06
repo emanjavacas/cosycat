@@ -175,6 +175,8 @@
 
 (defn handle-new-user-role [project-name]
   (fn [{:keys [username role]}]
+    (re-frame/dispatch
+     [:notify {:message (format "Succesfully updated %s's role to [%s]" username role)}])
     (re-frame/dispatch [:update-project-user-role project-name username role])))
 
 (re-frame/register-handler
