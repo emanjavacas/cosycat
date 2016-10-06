@@ -1,11 +1,13 @@
 (ns cosycat.views.cosycat
-  (:require [hiccup.page :refer [html5 include-js include-css]]))
+  (:require [hiccup.page :refer [html5 include-js include-css]]
+            [cosycat.utils :refer [project-version]]))
 
 (defn cosycat-page [& {:keys [csrf]}]
   (html5
    [:html
     {:lang "en"}
     [:head
+     [:title (format "Cosycat (%s)" (project-version))]
      [:meta {:charset "utf-8"}]
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
      (include-css "vendor/css/bootstrap.lumen.min.css")
@@ -22,5 +24,5 @@
      [:div#app]
      (include-js "vendor/js/jquery/jquery-1.11.2.min.js")
      (include-js "js/defaultTagset.js")
-     [:script (str "var csrf =\"" csrf "\";")]
+     [:script (format "var csrf = \"%s\"; var cosycatVersion = \"%s\"" (str csrf) (project-version))]
      (include-js "js/compiled/app.js")]]))
