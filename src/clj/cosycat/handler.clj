@@ -80,6 +80,12 @@
         (println (str t))
         (->> t class str (format-exception req))))))
 
+(defn wrap-error [handler]
+  (fn [req]
+    (if (:dev? env)
+      ((wrap-exceptions handler) req)
+      ((wrap-internal-error handler) req))))
+
 (defn wrap-base [handler]
   (-> handler
       wrap-reload
@@ -92,11 +98,7 @@
       wrap-nested-params
       wrap-params
       (wrap-transit-response {:encoding :json-verbose})
-      ;; ((fn [handler]
-      ;;    (if (:dev? env)
-      ;;      (wrap-exceptions handler)
-      ;;      (wrap-internal-error handler))))
-      ))
+      wrap-error))
 
 (defn wrap-app-component [handler components]
   (fn [req]
