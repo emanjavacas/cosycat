@@ -10,6 +10,11 @@
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
+(defn user-info-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {username :username project-name :project-name} :params}]
+  (users/user-public-info db username))
+
 (defn remove-project-users [project-users users]
   (remove (fn [{:keys [username]}]
             (contains? (apply hash-set (map :username project-users)) username))
@@ -35,7 +40,7 @@
 (defn update-profile-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components
     {update-map :update-map} :params}]
-  (let [{old-email :email} (users/user-info db username)
+  (let [{old-email :email} (users/user-public-info db username)
         new-user-info (-> (users/update-user-info db username update-map)
                           (maybe-update-avatar old-email)
                           normalize-user)]
@@ -46,7 +51,7 @@
 
 (defn new-avatar-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components}]
-  (let [{:keys [email]} (users/user-info db username)
+  (let [{:keys [email]} (users/user-public-info db username)
         avatar (user-avatar username email)]
     (users/update-user-info db username {:avatar avatar})
     (send-clients
@@ -56,6 +61,7 @@
 (defn users-routes []
   (routes
    (context "/users" []
+     (GET "/user-info" [] (make-default-route user-info-route))
      (GET "/query-users" [] (make-default-route query-users-route))
      (POST "/update-profile" [] (make-default-route update-profile-route))
      (POST "/new-avatar" [] (make-default-route new-avatar-route)))))

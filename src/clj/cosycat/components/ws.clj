@@ -11,7 +11,7 @@
             [cosycat.utils :refer [write-str read-str ->int]]))
 
 (def messages
-  {:shutting-down {:type :info :data {:message "Server is going to sleep!" :by "server"}}
+  {:shutting-down {:type :info :data {:message "Server is going to sleep!"} :by "server"}
    :goodbye       {:type :info :data {:message "Goodbye world!"}}
    :hello         {:type :info :data {:message "Hello world!"}}})
 

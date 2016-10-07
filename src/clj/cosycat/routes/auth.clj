@@ -14,6 +14,9 @@
 
 (def secret "mysupercomplexsecret")
 
+(defn add-user-active [user]
+  (assoc user :active true))
+
 (defn on-login-failure [req]
   (render
    (login-page
@@ -37,9 +40,11 @@
     (cond
       (not (= password repeatpassword)) (on-signup-failure req "Password mismatch")
       (is-user? db user)                (on-signup-failure req "User already exists")
-      :else (let [user (-> (new-user db user) (assoc :active true))]
-              (send-clients ws {:type :signup :data (normalize-user user :projects)})
-              (-> (redirect (or next-url "/")) (assoc-in [:session :identity] user))))))
+      :else (let [user (new-user db user)]
+              (send-clients ws
+               {:type :signup :data (-> user (normalize-user :settings :projects) add-user-active)})
+              (-> (redirect (or next-url "/"))
+                  (assoc-in [:session :identity] user))))))
 
 (defn login-route
  [{{username :username password :password} :params
@@ -49,11 +54,10 @@
   (let [username (or username username-form)
         password (or password password-form)
         user {:username username :password password}]
-    (if-let [user (lookup-user db user)]
-      (let [user (assoc user :active true)]
-        (send-clients ws {:type :login :data (normalize-user user :settings :project)})
-        (-> (redirect (or next-url "/"))
-            (assoc-in [:session :identity] user)))
+    (if-let [public-user (lookup-user db user)]
+      (do
+        (send-clients ws {:type :login :data (add-user-active public-user)})
+        (-> (redirect (or next-url "/")) (assoc-in [:session :identity] public-user)))
       (on-login-failure req))))
 
 (defn logout-route

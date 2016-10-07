@@ -105,9 +105,6 @@
    (re-frame/dispatch [:register-history [:project-events] {:type :add-project-user :data data}])
    (update-in db [:projects project-name :users] conj user)))
 
-(defn new-user-handler [user]
-  (re-frame/dispatch [:add-project-user user]))
-
 (re-frame/register-handler
  :project-add-user
  standard-middleware
@@ -115,7 +112,7 @@
    (let [project-name (get-in db [:session :active-project])]
      (POST "/project/add-user"
            {:params {:user user :project-name project-name}
-            :handler new-user-handler
+            :handler #(re-frame/dispatch [:add-project-user %])
             :error-handler error-handler}))
    db))
 
@@ -147,20 +144,16 @@
       :added-project-remove-agree))
 
 (defn remove-project-handler [{project-name :name :as project}]
-  (fn [payload]
-    (case (parse-remove-project-payload payload)
+  (fn [delete-payload]
+    (case (parse-remove-project-payload delete-payload)
       :project-removed
-      (do (re-frame/dispatch
-           [:remove-project project-name])
-          (re-frame/dispatch
-           [:register-history [:app-events] {:type :remove-project :data project-name}])
-          (re-frame/dispatch
-           [:notify {:message (str "Project " project-name " was successfully deleted")}])
+      (do (re-frame/dispatch [:remove-project project-name])
+          (re-frame/dispatch [:notify {:message (str "Project " project-name " was deleted")}])
           (nav! "/"))
       :added-project-remove-agree
-      (let [updated-project (update-in project [:issues] conj payload)
+      (let [updated-project (update project :issues conj delete-payload)
             {:keys [pending]} (pending-users updated-project)] ;still users
-        (re-frame/dispatch [:add-project-update {:payload payload :project-name project-name}])
+        (re-frame/dispatch [:add-project-update {:payload delete-payload :project-name project-name}])
         (re-frame/dispatch
          [:notify {:message (str (count pending) " users pending to remove project")}]))
       (throw (js/Error. "Couldn't parse remove-project payload")))))
@@ -177,7 +170,7 @@
 (defn handle-new-user-role [project-name]
   (fn [{:keys [username role]}]
     (re-frame/dispatch
-     [:notify {:message (format "Succesfully updated %s's role to [%s]" username role)}])
+     [:notify {:message (format "Succesfully updated %s's role to \"%s\"" username role)}])
     (re-frame/dispatch [:update-project-user-role project-name username role])))
 
 (re-frame/register-handler

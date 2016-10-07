@@ -1,7 +1,7 @@
 (ns cosycat.routes.session
   (:require [cosycat.routes.utils :refer [safe]]
             [cosycat.components.ws :refer [get-active-users]]
-            [cosycat.db.users :refer [user-info users-info user-settings]]
+            [cosycat.db.users :refer [user-login-info users-public-info user-settings]]
             [cosycat.db.projects :refer [get-projects]]
             [cosycat.db.utils :refer [normalize-user]]
             [cosycat.app-utils :refer [dekeyword]]
@@ -90,7 +90,7 @@
                          :user (add-active-info user active-users)}))))
 
 (defn session-users [db username active-users]
-  (normalize-users (users-info db username) username active-users))
+  (normalize-users (users-public-info db username) username active-users))
 
 (defn- get-user-project-settings [user-projects project-name]
   (get-in user-projects [(keyword project-name) :settings]))
@@ -112,7 +112,7 @@
   [{{{username :username roles :roles} :identity} :session
     {db :db ws :ws} :components}]
   (let [active-users (get-active-users ws)
-        {settings :settings user-projects :projects :as me} (user-info db username)]
+        {settings :settings user-projects :projects :as me} (user-login-info db username)]
     {:me (normalize-user me :settings :projects)
      :users (session-users db username active-users)
      :projects (session-projects db username me)

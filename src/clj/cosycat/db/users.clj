@@ -46,8 +46,8 @@
   (if-let [db-user (mc/find-one-as-map
                     db-conn (:users colls)
                     {$or [{:username username} {:email email}]})]
-    (if (hashers/check password (:password db-user))
-      (-> db-user (normalize-user :settings)))))
+    (when (hashers/check password (:password db-user))
+      (-> db-user (normalize-user :settings :projects)))))
 
 (defn remove-user
   "remove user from database"           ;TODO: remove all info related to user
@@ -64,13 +64,24 @@
      {$set {:last-active (System/currentTimeMillis)}}
      {:return-new true})))
 
-(defn user-info
-  "retrieve client info as public user (no private info)"
+(defn- user-info
+  "retrieve client"
   [{db-conn :db :as db} username]
   (-> (mc/find-one-as-map
        db-conn (:users colls)
        {:username username})
       normalize-user))
+
+(defn user-login-info
+  [db username] (user-info db username))
+
+(defn user-public-info
+  "retrieve user info as public user"
+  [{db-conn :db :as db} username]
+  (-> (mc/find-one-as-map
+       db-conn (:users colls)
+       {:username username})
+      (normalize-user :settings :projects)))
 
 (defn- update-user
   "perform an update based on update-map"
@@ -86,17 +97,17 @@
   (check-user-exists db update-map)
   (-> (update-user db username update-map) normalize-user))
 
-(defn get-user-users [{db-conn :db :as db} username]
+(defn get-related-users [{db-conn :db :as db} username]
   (let [projects (->> (mc/find-maps db-conn (:projects colls) {"users.username" username}))]
     (reduce (fn [acc {:keys [users creator]}]            
               (into acc (conj (map :username users) creator)))
             []
             projects)))
 
-(defn users-info
+(defn users-public-info
   "retrieves all users that interact with user, processed as public users (no private info)"
   [{db-conn :db :as db} username] ;todo, retrieve only users with which users has interactions
-  (let [usernames (get-user-users db username)]
+  (let [usernames (get-related-users db username)]
     (->> (mc/find-maps db-conn (:users colls) {:username {$in usernames}})
          (map #(normalize-user % :projects :settings)))))
 
@@ -113,8 +124,8 @@
       (get :settings {})))
 
 (defn user-project-settings
-  [{db-conn :db} username project-name]
-  (-> (mc/find-maps db-conn (:users colls) {:username username})
+  [db username project-name]
+  (-> (user-info db username)
       (get-in [:projects project-name :settings] {})))
 
 (defn update-user-project-settings

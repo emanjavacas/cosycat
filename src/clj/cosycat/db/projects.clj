@@ -118,14 +118,14 @@
       normalize-project))
 
 (defn update-project
-  "adds a project update to `project.updates`"
-  [{db-conn :db :as db} username project-name update-payload]
+  "adds issue to `project.issues`"
+  [{db-conn :db :as db} username project-name issue-payload]
   (check-user-in-project db username project-name)
-  (s/validate issue-schema update-payload)
+  (s/validate issue-schema issue-payload)
   (-> (mc/find-and-modify
        db-conn (:projects colls)
        {:name project-name}
-       {$push {:issues update-payload}}
+       {$push {:issues issue-payload}}
        {:return-new true})
       normalize-project))
 
@@ -169,7 +169,7 @@
   (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}})
   nil)
 
-(defn delete-payload [username]
+(defn get-delete-payload [username]
   {:type "delete-project-agree"
    :status "open"
    :username username
@@ -186,12 +186,12 @@
       (throw (ex-non-existing-project project-name)))
     (when-not (check-project-role :delete role)
       (throw (ex-rights username :delete role)))
-    (let [payload (delete-payload username)
-          {:keys [updates users] :as project} (update-project db username project-name payload)
+    (let [delete-payload (get-delete-payload username)
+          {:keys [users] :as project} (update-project db username project-name delete-payload)
           {:keys [pending non-app agreed-users]} (pending-users project)]
       (if (empty? pending)
-        (erase-project db project-name (:users project))
-        payload))))
+        (erase-project db project-name users)
+        delete-payload))))
 
 (defn update-user-role [{db-conn :db :as db} issuer project-name username new-role]
   (let [project (find-project-by-name db project-name)

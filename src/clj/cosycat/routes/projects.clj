@@ -11,21 +11,21 @@
     {db :db ws :ws} :components}]
   (let [project (proj/new-project db username project-name desc users)]
     (send-clients
-     ws {:type :new-project :data {:project project}}
+     ws {:type :new-project :data {:project project} :by username}
      :source-client username
      :target-clients (map :username users))
     project))
 
 (defn update-project-route
-  [{{update-payload :payload project-name :project-name :as payload} :params
+  [{{payload :payload project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [project (proj/get-project db username project-name)]
-    (proj/update-project db username project-name update-payload)
+  (let [{:keys [users]} (proj/get-project db username project-name)]
+    (proj/update-project db username project-name payload)
     (send-clients
-     ws {:type :project-update :data payload}
+     ws {:type :project-update :data {:payload payload :project-name project-name} :by username}
      :source-client username
-     :target-clients (map :username (:users project)))
+     :target-clients (map :username users))
     payload))
 
 (defn add-user-route
@@ -33,52 +33,57 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [{:keys [users] :as project} (proj/get-project db username project-name)
-        data {:user user :project-name project-name}
-        updated-project (proj/add-user db username project-name user)]
+        updated-project (proj/add-user db username project-name user)
+        added-user-data {:project updated-project}
+        client-data {:project-name project-name :user user}]
     (send-client                        ;send user
      ws (:username user)
-     {:type :project-add-user :data {:project updated-project :by username}})
-    (send-clients                       ;send project
-     ws {:type :project-new-user :data (assoc data :by username)}
+     {:type :project-add-user :data added-user-data :by username})
+    (send-clients
+     ws {:type :project-new-user :data client-data :by username}
      :source-client username
      :target-clients (mapv :username users))
-    data))
+    client-data))
 
 (defn remove-user-route
   [{{project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [project (proj/get-project db username project-name)]
+  (let [{:keys [users]} (proj/get-project db username project-name)]
     (proj/remove-user db username project-name)
     (send-clients
      ws {:type :project-remove-user :data {:username username :project-name project-name}}
      :source-client username
-     :target-clients (mapv :username (:users project)))))
+     :target-clients (mapv :username users))))
 
 (defn remove-project-route
   [{{project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [project (proj/find-project-by-name db project-name)]
-    (if-let [project-update (proj/remove-project db username project-name)]
-      (let [update-payload (assoc project-update :by username)]
-        (send-clients ws {:type :project-update :data update-payload}
+  (let [{:keys [users]} (proj/find-project-by-name db project-name)]
+    (if-let [delete-payload (proj/remove-project db username project-name)]
+      (let [client-payload {:type :project-update
+                            :data {:project-name project-name :payload delete-payload}
+                            :by username}]
+        (send-clients ws client-payload
          :source-client username
-         :target-clients (mapv :username (:users project)))
-        update-payload)
+         :target-clients (mapv :username users))
+        delete-payload)
       (send-clients ws {:type :project-remove :data {:project-name project-name}}
        :source-client username
-       :target-clients (mapv :username (:users project))))))
+       :target-clients (mapv :username users)))))
 
 (defn update-user-role
-  [{{project-name :project-name target-username :username new-role :new-role} :params
-    {{username :username} :identity} :session
+  [{{project-name :project-name username :username new-role :new-role} :params
+    {{issuer :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [{:keys [users]} (proj/find-project-by-name db project-name)
-        project-user (proj/update-user-role db username project-name target-username new-role)]
-    (send-clients ws {:type :new-project-user-role
-                      :data (assoc project-user :project-name project-name :by username)}
-     :source-client username
+        project-user (proj/update-user-role db issuer project-name username new-role)
+        client-payload {:type :new-project-user-role
+                        :data {:username username :project-name project-name :role new-role}
+                        :by issuer}]
+    (send-clients ws client-payload
+     :source-client issuer
      :target-clients (mapv :username users))
     project-user))
 

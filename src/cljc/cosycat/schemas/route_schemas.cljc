@@ -13,7 +13,8 @@
 
 (def blueprint-from-server
   {:type   s/Keyword
-   :data {(s/optional-key :by) s/Str}})
+   :data {s/Any s/Any}
+   (s/optional-key :by) s/Str})
 
 (defn make-schema [m]
   (deep-merge blueprint-from-server m))

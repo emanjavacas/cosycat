@@ -32,7 +32,7 @@
   (let [new-results (zipmap (map :id results) results)] ;normalized results
     (reduce-kv (fn [m k v]
                  (if (get-in old-results [k :meta :marked])
-                   (assoc m k (assoc-in v [:meta :marked] true))
+                   (assoc m k (assoc-in (get new-results k) [:meta :marked] true))
                    m))
                new-results
                old-results)))
