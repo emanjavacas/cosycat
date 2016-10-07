@@ -10,7 +10,7 @@
   {:type s/Str
    :timestamp s/Int
    :status (s/enum "open" "closed")
-   :users [s/Str]
+   :users [(s/conditional keyword? (s/enum :all) :else s/Str)]
    s/Any s/Any})
 
 (def status-schema

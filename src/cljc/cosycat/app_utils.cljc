@@ -114,11 +114,11 @@
 
 (defn server-project-name [s] (str "_" s))
 
-(defn pending-users [{:keys [updates users] :as project}]
+(defn pending-users [{:keys [issues users] :as project}]
   (let [non-app (->> users (filter #(= "guest" (:role %))) (map :username))
         rest-users (remove (apply hash-set non-app) (map :username users))
         agreed-users (filter (apply hash-set rest-users)
-                             (->> updates (filter #(= "delete-project-agree" (:type %)))
+                             (->> issues (filter #(= "delete-project-agree" (:type %)))
                                   (map :username)))
         pending (remove (apply hash-set agreed-users) rest-users)]
     {:non-app non-app :agreed-users (vec (apply hash-set agreed-users)) :pending pending}))

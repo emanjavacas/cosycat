@@ -35,10 +35,10 @@
   (let [{:keys [users] :as project} (proj/get-project db username project-name)
         data {:user user :project-name project-name}
         updated-project (proj/add-user db username project-name user)]
-    (send-client
+    (send-client                        ;send user
      ws (:username user)
      {:type :project-add-user :data {:project updated-project :by username}})
-    (send-clients
+    (send-clients                       ;send project
      ws {:type :project-new-user :data (assoc data :by username)}
      :source-client username
      :target-clients (mapv :username users))

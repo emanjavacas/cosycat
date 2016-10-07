@@ -22,6 +22,7 @@
    :username "howdy",
    :span     {:type "token", :scope 166},
    :corpus "my-corpus"
+   :hit-id "0.1.2"
    :query "my-query"
    :timestamp 1461920859355})
 
@@ -50,7 +51,7 @@
   (let [ann (anns/insert-annotation db project-name token-ann)]
     (anns/update-annotation
      db project-name
-     (merge (select-keys ann [:username :query :_version :_id])
+     (merge (select-keys ann [:username :query :_version :_id :corpus :hit-id])
             {:value "randomnewvalue" :timestamp 12039102}))))
 
 (defn project-fixture [f]
@@ -81,9 +82,8 @@
                     (:code (ex-data e))))
              :user-not-in-project)))
     (testing "authorized user new role"
-      (let [{users :users :as project} (proj/update-user-role db creator project-name "hello" "user")
-            new-role (->> users (filter #(= "hello" (:username %))) first :role)]
-        (is (= new-role "user"))))
+      (let [{:keys [username role]} (proj/update-user-role db creator project-name "hello" "user")]
+        (is (= role "user"))))
     (testing "unauthorized update"
       (is (= (try (proj/update-user-role db "hello" project-name creator "guest")
                   (catch clojure.lang.ExceptionInfo e
@@ -96,9 +96,11 @@
              :not-authorized)))
     (testing "remove-project adds username to updates type delete-project-agree"
       (let [_ (proj/remove-project db "howdy" project-name)
-            {:keys [updates] :as project} (proj/get-project db "howdy" project-name)]
-        (is (not (empty? updates)))
-        (is (some #{"howdy"} (->> updates (filter #(= "delete-project-agree" (:type %))) (map :username))))))
+            {:keys [issues] :as project} (proj/get-project db "howdy" project-name)]
+        (is (not (empty? issues)))
+        (is (some #{"howdy"} (->> issues
+                                  (filter #(= "delete-project-agree" (:type %)))
+                                  (map :username))))))
     (testing "project is not yet removed"
       (is (not (removed?))))
     (testing "all agree to remove, remove-project returns nil"

@@ -172,7 +172,8 @@
 (defn delete-payload [username]
   {:type "delete-project-agree"
    :status "open"
-   :users [username]
+   :username username
+   :users [:all]
    :timestamp (System/currentTimeMillis)})
 
 (defn remove-project
