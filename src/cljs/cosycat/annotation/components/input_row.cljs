@@ -42,14 +42,15 @@
         :merge   (swap! chans merge data))
       (recur))))
 
-(defn handle-span-dispatch [ann-map hit-id token-ids]
+(defn handle-span-dispatch [ann-map hit-id token-ids chans]
   (let [sorted-ids (sort-by #(-> % parse-token-id :id) token-ids)
         from (first sorted-ids)
         to (last sorted-ids)]
+    (unmerge-cells (first token-ids) chans)
     (re-frame/dispatch [:dispatch-annotation ann-map hit-id from to])))
 
 (defn on-key-down
-  [hit-id token-ids]
+  [hit-id token-ids {:keys [value chans]}]
   (fn [pressed]
     (.stopPropagation pressed)
     (when (= 13 (.-keyCode pressed))
@@ -58,18 +59,21 @@
           (condp = (count token-ids)
             0 (re-frame/dispatch [:notify {:message "Empty selection"}])
             1 (re-frame/dispatch [:dispatch-annotation ann hit-id (first token-ids)])
-            (handle-span-dispatch ann hit-id token-ids))
-          (set! (.. pressed -target -value) ""))))))
+            (handle-span-dispatch ann hit-id token-ids chans))
+          (reset! value ""))))))
 
 (defn input-component [hit-id token-id chans]
-  (let [tagsets (re-frame/subscribe [:selected-tagsets])]
+  (let [tagsets (re-frame/subscribe [:selected-tagsets])
+        value (reagent/atom "")]
     (fn [hit-id token-id chans]
       [:div.input-cell
        [suggest-annotations
         @tagsets
         {:id (str "input-" hit-id)
-         :class "form-control input-cell"
-         :onKeyDown (on-key-down hit-id (keys @chans))}]])))
+         :class "form-control input-cell"         
+         :value value
+         :onChange #(reset! value (.. % -target -value))
+         :onKeyDown (on-key-down hit-id (keys @chans) {:value value :chans chans})}]])))
 
 (defn hidden-input-cell []
   (fn [] [:td {:style {:display "none"}}]))
