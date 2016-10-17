@@ -61,32 +61,42 @@
 (defmulti fetch-span-annotation-by-key (fn [db project corpus ann-key {type :type}] type))
 
 (defmethod fetch-span-annotation-by-key "token"
-  [{db-conn :db} project corpus ann-key {scope :scope}]
+  [{db-conn :db} project corpus ann-key {scope :scope doc :doc}]
   (mc/find-one-as-map
    db-conn (server-project-name project)
-   {"ann.key" ann-key "corpus" corpus
+   {"ann.key" ann-key
+    "corpus" corpus
+    "span.doc" doc
     $and [{"span.scope.B" {$lte scope}} {"span.scope.O" {$gte scope}}]}))
 
 (defmethod fetch-span-annotation-by-key "IOB"
-  [{db-conn :db} project corpus ann-key {{B :B O :O} :scope}]
+  [{db-conn :db} project corpus ann-key {{B :B O :O} :scope doc :doc}]
   (mc/find-one-as-map
    db-conn (server-project-name project)
-   {"ann.key" ann-key "corpus" corpus
+   {"ann.key" ann-key
+    "corpus" corpus
+    "span.doc" doc
     $and [{"span.scope.B" {$lte O}} {"span.scope.O" {$gte B}}]}))
 
 (defmulti fetch-token-annotation-by-key (fn [db project corpus ann-key {type :type}] type))
 
 (defmethod fetch-token-annotation-by-key "token"
-  [{db-conn :db} project corpus ann-key {scope :scope}]
+  [{db-conn :db} project corpus ann-key {scope :scope doc :doc}]
   (mc/find-one-as-map
    db-conn (server-project-name project)
-   {"ann.key" ann-key "corpus" corpus "span.scope" scope}))
+   {"ann.key" ann-key
+    "corpus" corpus
+    "span.doc" doc
+    "span.scope" scope}))
 
 (defmethod fetch-token-annotation-by-key "IOB"
-  [{db-conn :db} project corpus key {{B :B O :O} :scope}]
+  [{db-conn :db} project corpus key {{B :B O :O} :scope doc :doc}]
   (mc/find-one-as-map
    db-conn (server-project-name project)
-   {"ann.key" key "corpus" corpus "span.scope" {$in (range B (inc O))}}))
+   {"ann.key" key
+    "corpus" corpus
+    "span.doc" doc
+    "span.scope" {$in (range B (inc O))}}))
 
 (defn with-history
   "aux func to avoid sending bson-objectids to the client"
