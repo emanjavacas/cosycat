@@ -46,20 +46,16 @@
     (fn []
       (let []
         [:div.container-fluid
+         [:div.row [display-user selected-user-atom current-selection-atom]]
          [:div.row
-          [:div.col-lg-7
-           [display-user selected-user-atom current-selection-atom]]
-          [:div.col-lg-5
-           [:div.container-fluid
-            [:div.row
-             [suggest-users
-              {:class "form-control form-control-no-border"
-               :placeholder "Search for user (username, email, etc.)"
-               :remove-project-users remove-project-users
-               :on-change #(reset! current-selection-atom (find-user-by-name % %2))
-               :onKeyDown #(.stopPropagation %)
-               :onKeyPress #(when (= 13 (.-charCode %))
-                              (reset! selected-user-atom @current-selection-atom))}]]]]]]))))
+          [suggest-users
+           {:class "form-control form-control-no-border"
+            :placeholder "Search for user (username, email, etc.)"
+            :remove-project-users remove-project-users
+            :on-change #(reset! current-selection-atom (find-user-by-name % %2))
+            :onKeyDown #(.stopPropagation %)
+            :onKeyPress #(when (= 13 (.-charCode %))
+                           (reset! selected-user-atom @current-selection-atom))}]]]))))
 
 (defn add-user-modal [project]
   (let [show? (re-frame/subscribe [:modals :add-user])]
