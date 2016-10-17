@@ -92,7 +92,7 @@
    (let [project (get-in db [:session :active-project])
          corpus (get-in db [:projects project :session :query :results-summary :corpus])
          margins (count page-margins)
-         partition-size 35]
+         partition-size 20]
      (re-frame/dispatch [:start-throbbing :fetch-annotations])
      (doseq [[i subpage-margins] (map-indexed vector (partition-all partition-size page-margins))
              :let [is-last (is-last-partition margins partition-size i)]]
