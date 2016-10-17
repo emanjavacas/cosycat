@@ -109,9 +109,10 @@
       [bs/nav-dropdown
        {:eventKey target
         :id "dropdown"
+        ;; deref active to force rerender and rerun of (href)
+        :class (if (= @active target) "active") 
         :title (reagent/as-component [icon-label icon label])}
-       (for [[idx {:keys [label href on-select style] :as args}]
-             (map-indexed vector children)
+       (for [[idx {:keys [label href on-select style] :as args}] (map-indexed vector children)
              :let [k (str label idx)]]
          ^{:key k}
          [bs/menu-item
@@ -129,6 +130,7 @@
   [project-name]
   (let [prefix (str "#/project/" project-name)
         origin (.-lastToken_ cosycat.routes/history)]
+    (timbre/debug "origin" origin)
     (if-not origin
       prefix
       (cond (.endsWith origin "query") (str prefix "/query")
@@ -159,14 +161,16 @@
         :fluid true}
        [bs/navbar-header [user-brand active-project]]
        [bs/nav {:pullRight true}
+        ;; projects
         (when-not (or (not @active-project) (empty? @projects))
           [projects-dropdown projects active-project])
+        ;; query
         (when-not (or (not @active-project) (= @active-panel :front-panel))
-          (let [href #(str "#/project/" @active-project "/query")]
-            [navlink {:target :query-panel
-                      :href href
-                      :label "Query"
-                      :icon "zmdi-search"}]))
+          [navlink {:target :query-panel
+                    :href #(str "#/project/" @active-project "/query")
+                    :label "Query"
+                    :icon "zmdi-search"}])
+        ;; updates
         (when-not (or (not @active-project) (= @active-panel :front-panel))
           [navlink {:target :updates-panel
                     :href #(if @active-project
@@ -174,16 +178,19 @@
                              "#/updates")
                     :label "Updates"
                     :icon "zmdi-notifications"}])
+        ;; settings
         [navlink {:target :settings-panel
                   :href #(if @active-project
                            (str "#/project/" @active-project "/settings")
                            "#/settings")
                   :label "Settings"
                   :icon "zmdi-settings"}]
+        ;; home
         [navlink {:target :front-panel
                   :href "#/"
                   :label "Home"
                   :icon "zmdi-home"}]
+        ;; exit
         [navlink {:target :exit
                   :href "#/exit"
                   :label "Exit"
