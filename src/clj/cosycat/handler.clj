@@ -29,7 +29,8 @@
             [cosycat.routes.projects :refer [project-routes]]
             [cosycat.routes.settings :refer [settings-routes]]
             [cosycat.routes.annotations :refer [annotation-routes]]
-            [cosycat.routes.users :refer [users-routes]]))
+            [cosycat.routes.users :refer [users-routes]]
+            [cosycat.routes.events :refer [events-routes]]))
 
 (defn static-routes []
   (routes
@@ -74,10 +75,10 @@
     (try
       (handler req)
       (catch clojure.lang.ExceptionInfo e
-        (println (str e))
+        (timbre/error (str e))
         (->> e ex-data :error (format-exception req)))
       (catch Throwable t
-        (println (str t))
+        (timbre/error (str t))
         (->> t class str (format-exception req))))))
 
 (defn wrap-error [handler]
@@ -113,8 +114,7 @@
 
 (defn make-handler [component & {:keys [debug]}]
   (let [components (select-keys component (:components component))]
-    (-> (app-routes static-routes web-app-routes
-                    settings-routes annotation-routes project-routes users-routes
-                    base-routes)
+    (-> (app-routes static-routes web-app-routes settings-routes annotation-routes
+                    project-routes users-routes events-routes base-routes)
         (wrap-app-component components)
         (wrap-routes wrap-base))))
