@@ -121,15 +121,10 @@
          "IOB" (get-msg [:annotation :error :IOB] B O message))
        (assoc {} :message)))
 
-(defn dispatch-annotation-history [data] ;data should be anns
-  (re-frame/dispatch [:register-history [:project-events] {:type :annotation :data data}]))
-
 (defmethod dispatch-annotation-handler cljs.core/PersistentArrayMap
   [{status :status message :message data :data}]
   (case status
     :ok (do (re-frame/dispatch [:add-annotation data])
-            ;; add update
-            (dispatch-annotation-history data)
             (re-frame/dispatch [:notify {:message (str "Added 1 annotation")}]))
     :error (re-frame/dispatch [:notify (notification-message data message)])))
 
@@ -139,8 +134,6 @@
         message (str "Added " (count oks) " annotations with " (count errors) " errors")]
     (when-not (empty? oks)
       (do (re-frame/dispatch [:add-annotation (mapv :data oks)])
-          ;; add update
-          (dispatch-annotation-history (mapv :data oks))
           (re-frame/dispatch [:notify {:message message}])))
     (doseq [{data :data message :message} errors]
       (re-frame/dispatch [:notify (notification-message data message)]))))
@@ -169,7 +162,7 @@
 (defn update-annotation-handler
   [{status :status message :message data :data}]
   (condp = status
-    :ok (do (re-frame/dispatch [:add-annotation data]) (dispatch-annotation-history data))
+    :ok (re-frame/dispatch [:add-annotation data])
     :error (re-frame/dispatch
             [:notify
              {:message (format "Couldn't update annotation! Reason: [%s]" message)

@@ -63,7 +63,7 @@
   (re-frame/dispatch [:notify {:message message :meta data :status :error}]))
 
 (defn new-project-handler [{project-name :name :as project}]
-  (re-frame/dispatch [:register-history [:app-events] {:type :new-project :data project}])
+  ;; register
   (re-frame/dispatch [:add-project project])
   (nav! (str "/project/" project-name)))
 
@@ -102,7 +102,7 @@
  :add-project-user
  standard-middleware
  (fn [db [_ {:keys [user project-name] :as data}]]
-   (re-frame/dispatch [:register-history [:project-events] {:type :add-project-user :data data}])
+   ;; register this
    (update-in db [:projects project-name :users] conj user)))
 
 (re-frame/register-handler

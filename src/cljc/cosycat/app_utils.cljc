@@ -101,6 +101,9 @@
   #?(:clj (.contains s substr)
      :cljs (not= -1 (.indexOf s substr))))
 
+(defn not-implemented []
+  (ex-info "Action not implemented" {:code :not-implemented}))
+
 ;;; logic
 (defn query-user [value]
   (fn [{:keys [firstname lastname username email]}]

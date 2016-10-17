@@ -94,8 +94,8 @@
     (fn [{:keys [name description created]}]
       [:div.container-fluid
        [:div.row
-        [:div.col-lg-8 {:style {:font-size "32px"}} name]
-        [:div.col-lg-4 {:style {:text-align "bottom"}}
+        [:div.col-lg-8.col-md-7.col-sm-7 {:style {:font-size "32px"}} name]
+        [:div.col-lg-4.col-md-5.col-sm-5 {:style {:text-align "bottom"}}
          [:p.text-right
           "Created by " [:strong @creator] " on " [:span.text-muted (human-time created)]]]]
        [:div.row [:div.col-lg-12 [:p.text-muted description]]]])))

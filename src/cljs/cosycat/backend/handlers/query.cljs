@@ -95,11 +95,7 @@
  (fn [db [_ query-str]]
    (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:settings :query])]
      (re-frame/dispatch [:start-throbbing :results-frame])
-     ;; add update
-     (re-frame/dispatch
-      [:register-history [:user-events]
-       {:type :query
-        :data {:query-str query-str :corpus corpus}}])
+     (re-frame/dispatch [:register-user-project-event {:data {:query-str query-str} :type :query}])
      (run-query query-str (find-corpus-config db corpus) query-opts sort-opts filter-opts)
      db)))
 
@@ -149,9 +145,7 @@
      ;; add update
      (timbre/debug snippet-opts)
      (when-not dir                      ;only register first request
-       (re-frame/dispatch
-        [:register-history [:user-events]
-         {:type :fetch-snippet
-          :data {:query-str query-str :corpus corpus :hit-id hit-id}}]))
+       ;; register
+       )
      (snippet corpus query-str snippet-opts hit-id dir)
      db)))

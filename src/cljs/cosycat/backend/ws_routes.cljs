@@ -34,7 +34,6 @@
   [db {{username :username :as user} :data type :type}]
   (re-frame/dispatch [:add-user user])
   (re-frame/dispatch [:notify {:message (get-msg [:signup] username) :by username}])
-  (re-frame/dispatch [:register-history [:app-events] {:type type :data user}])
   db)
 
 (defmethod ws-handler :login

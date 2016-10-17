@@ -7,6 +7,7 @@
             [cosycat.db.annotations :as anns]
             [cosycat.db.projects :refer [find-project-by-name]]
             [cosycat.components.ws :refer [send-clients]]
+            [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
 ;;; Exceptions
@@ -49,12 +50,15 @@
           :source-client username :target-clients users)
          {:status :ok :data data})
        (catch clojure.lang.ExceptionInfo e
-         (let [{:keys [message data]} (bean e)]
-           (clojure.pprint/pprint (bean e))
-           {:status :error :message message :data data}))
+         (let [{:keys [message data] :as exception} (bean e)
+               payload {:message message :data data}]           
+           (timbre/error (if (:dev? env) (str exception) (str payload)))
+           (assoc payload :status :error)))
        (catch Exception e
-         (let [{message :message ex :class} (bean e)]
-           {:status :error :message message :data {:exception ex}}))))
+         (let [{message :message exception-class :class :as exception} (bean e)
+               payload {:message message :data {:exception exception-class}}]
+           (timbre/error (if (:dev? env) (str exception) (str payload)))
+           (assoc payload :status :error)))))
 
 (defn insert-annotation-handler*
   "handles errors within the success callback to ease polymorphic payloads (bulk inserts)"
@@ -110,7 +114,8 @@
   (fn [{:keys [start end hit-id doc]}]
     (let [from (->int start)
           size (- (->int end) from)
-          anns (->> (anns/fetch-annotations db project corpus from size :doc doc) (apply normalize-anns))]
+          anns (->> (anns/fetch-annotations db project corpus from size :doc doc)
+                    (apply normalize-anns))]
       (when anns {:hit-id hit-id :project project :anns anns}))))
 
 (defn fetch-annotation-page-handler

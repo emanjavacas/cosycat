@@ -5,17 +5,6 @@
             [cosycat.schemas.project-schemas :refer [project-schema]]
             [cosycat.schemas.user-schemas :refer [user-schema settings-schema]]))
 
-;;; history
-(def event-schema
-  [{:received s/Int
-    :type s/Keyword
-    :data {s/Any s/Any}}])
-
-(def history-schema
-  {:app-events event-schema       ;general, non-project-dependent event (eg. signup)
-   :project-events event-schema   ;project-dependent event (eg. ann update)
-   :user-events event-schema})    ;client event - might be project dependent (eg. query, settings)
-
 ;;; users
 (def public-user-schema
   (-> user-schema (assoc :active s/Bool) (dissoc :projects)))
@@ -50,9 +39,6 @@
    
    ;; current session-settings (ev. overridden by project-settings)
    :settings settings-schema
-   
-   ;; keeps track of events(could go into session/user?)
-   :history history-schema
    
    ;; ---------------
    ;; static app data

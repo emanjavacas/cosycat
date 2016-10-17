@@ -3,7 +3,8 @@
             [schema.coerce :as coerce]
             [taoensso.timbre :as timbre]
             [cosycat.app-utils :refer [deep-merge]]
-            [cosycat.schemas.user-schemas :refer [settings-schema project-history-schema]]
+            [cosycat.schemas.user-schemas :refer [settings-schema]]
+            [cosycat.schemas.event-schemas :refer [event-schema]]
             [cosycat.schemas.results-schemas :refer [query-results-schema]]))
 
 (def issue-schema
@@ -45,13 +46,18 @@
            :created s/Int
            :creator s/Str
            :users project-users-schema
-           (s/optional-key :issues) [issue-schema]}
+           (s/optional-key :issues) [issue-schema]
+           (s/optional-key :events) [event-schema]}
      :cljs {:name s/Str
             :description s/Str
             :creator s/Str
             :created s/Int
             :users [{:username s/Str :role s/Str}]
+            ;; things that need to be resolved
+            ;; coming from projects collection
             (s/optional-key :issues) [issue-schema]
+            ;; things that inform about events (new user, queryetc.)
+            ;; merged from both collections users and projects
+            (s/optional-key :events) [event-schema]
             (s/optional-key :settings) project-settings-schema
-            (s/optional-key :session) project-session-schema
-            (s/optional-key :history) project-history-schema}))
+            (s/optional-key :session) project-session-schema}))

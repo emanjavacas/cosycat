@@ -30,6 +30,6 @@
                 :token-field :word}
    :filtered-users (into #{} (map :username (:users project)))})
 
-(def default-history {:app-events [] :project-events [] :user-events []})
+(def default-history {:app-events []})
 
 (def default-project-history {:query []})
