@@ -13,8 +13,8 @@
        [css-transition-group {:transition-name "updates"
                               :transition-enter-timeout 650
                               :transition-leave-timeout 650}
-        (doall (for [{:keys [timestamp type payload] :as event} (sort-by :timestamp > @events)]
-                 ^{:key timestamp} [event-component event]))]])))
+        (doall (for [{:keys [id type payload] :as event} (sort-by :timestamp > (vals @events))]
+                 ^{:key id} [event-component event]))]])))
 
 (defn updates-panel []
   (let [active-project (re-frame/subscribe [:active-project :name])]

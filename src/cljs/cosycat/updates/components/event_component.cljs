@@ -31,7 +31,7 @@
             :margin-left "7px"}}
    (human-time timestamp)])
 
-(defn event-item [{:keys [header-text source-user event-text timestamp] :as args}]
+(defn event-item [{:keys [header-text source-user event-child timestamp] :as args}]
   [bs/list-group-item
    (reagent/as-component
     [:div.container-fluid
@@ -40,26 +40,37 @@
        [:div.container-fluid
         [:div.row
          [:h4 header-text (timestamp-text timestamp)]]
-        [:div.row [:span event-text]]]]
+        [:div.row [:span event-child]]]]
       [:div.col-sm-2.text-right [event-source source-user]]]])])
 
-(defmulti event-component (fn [{event-type :type}] event-type))
+(defmulti event-component (fn [{event-type :type}] (keyword event-type)))
 
 (defmethod event-component :annotation
-  [{{:keys [anns project hit-id]} :data event-type :type timestamp :received}]
-  (fn [{{:keys [anns project hit-id]} :data event-type :type timestamp :received}]
+  [{{:keys [anns project hit-id]} :data event-type :type timestamp :timestamp}]
+  (fn [{{:keys [anns project hit-id]} :data event-type :type timestamp :timestamp}]
     (let [[ann-key {:keys [_version username] :as ann-data}] (extract-ann-data anns)]
-      [event-item {:header-text (dekeyword event-type)
+      [event-item {:header-text event-type
                    :source-user username
-                   :event-text (str ann-data)
+                   :event-child (str ann-data)
+                   :timestamp timestamp}])))
+
+(defmethod event-component :query
+  [{{query-str :query-str corpus :corpus} :data event-type :type timestamp :timestamp}]
+  (let [me (re-frame/subscribe [:me :username])]
+    (fn [{{query-str :query-str corpus :corpus} :data event-type :type timestamp :timestamp}]
+      [event-item {:header-text event-type
+                   :source-user @me
+                   :event-child [:div.container-fluid
+                                 [:div.row [:span "Corpus: " [:code corpus]]]
+                                 [:div.row [:span "Query string: " [:code query-str]]]]
                    :timestamp timestamp}])))
 
 (defmethod event-component :default
-  [{data :data event-type :type timestamp :received}]
-  (fn [{data :data event-type :type timestamp :received}]
-    [event-item {:header-text (dekeyword event-type)
+  [{data :data event-type :type timestamp :timestamp}]
+  (fn [{data :data event-type :type timestamp :timestamp}]
+    [event-item {:header-text event-type
                  :source-user ""
-                 :event-text (str data)
+                 :event-child (str data)
                  :timestamp timestamp}]))
 
 
