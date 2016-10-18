@@ -3,6 +3,7 @@
             [monger.operators :refer :all]
             [schema.core :as s]
             [cosycat.vcs :as vcs]
+            [cosycat.utils :refer [new-uuid]]
             [cosycat.app-utils :refer [server-project-name pending-users]]
             [cosycat.schemas.project-schemas
              :refer [project-schema project-user-schema issue-schema]]
@@ -11,6 +12,7 @@
             [cosycat.components.db :refer [new-db colls]]
             [taoensso.timbre :as timbre]))
 
+;;; Exceptions
 (defn ex-user [username]
   (ex-info "User doesn't exist"
            {:message "User doesn't exist" :code :missing-user
@@ -51,11 +53,7 @@
             :message (str username "'s role can't be updated because of pending issues")
             :data {:project-name project-name :username username}}))
 
-(defn has-pending-issue? [{:keys [issues] :as project} username]
-  (some (fn [{issue-users :users :as issue}]
-          (contains? (apply hash-set issue-users) username))
-        issues))
-
+;;; Checkers
 (defn find-project-by-name [{db-conn :db} project-name]
   (mc/find-one-as-map db-conn (:projects colls) {:name project-name}))
 
@@ -77,6 +75,11 @@
    (let [project (find-project-by-name db project-name)]
      (is-authorized? project username action))))
 
+(defn has-pending-issue? [{:keys [issues] :as project} username]
+  (some (fn [{issue-users :users :as issue}]
+          (contains? (apply hash-set issue-users) username))
+        issues))
+
 (defn check-new-project [db project-name & [users]]
   (let [missing-username (some #(when (not (is-user? db {:username %})) %) (map :username users))]
     (cond
@@ -94,6 +97,7 @@
       :ok
       (throw (ex-last-user project-name)))))
 
+;;; Setters
 (defn join-project-creator [creator users]
   (conj users {:username creator :role "creator"}))
 
@@ -110,22 +114,15 @@
         :users (->> users (join-project-creator creator) (map #(select-keys % [:username :role])))})
       normalize-project))
 
-(defn get-project
-  "retrieves project by name"
-  [{db-conn :db :as db} username project-name]
-  (check-user-in-project db username project-name)
-  (-> (mc/find-one-as-map db-conn (:projects colls) {"name" project-name})
-      normalize-project))
-
-(defn update-project
+(defn add-project-issue
   "adds issue to `project.issues`"
   [{db-conn :db :as db} username project-name issue-payload]
   (check-user-in-project db username project-name)
-  (s/validate issue-schema issue-payload)
+  (s/validate (dissoc issue-schema :id) issue-payload)
   (-> (mc/find-and-modify
        db-conn (:projects colls)
        {:name project-name}
-       {$push {:issues issue-payload}}
+       {$push {:issues (assoc issue-payload :id (new-uuid))}}
        {:return-new true})
       normalize-project))
 
@@ -139,59 +136,6 @@
        {$push {"users" user}}
        {:return-new true})
       normalize-project))
-
-(defn- remove-from-users [users username]
-  (remove #(= username (:username %)) users))
-
-(defn remove-user
-  "removes user from project"
-  [{db-conn :db :as db} username project-name]
-  (check-user-in-project db username project-name)
-  (check-project-empty db project-name :transform-f #(update % :users remove-from-users username))
-  (-> (mc/find-and-modify
-       db-conn (:projects colls)
-       {"name" project-name}
-       {$pull {"users" {"username" username}}}
-       {:return-new true})
-      normalize-project))
-
-(defn get-projects
-  "retrieves data of projects in which `username` is involved"
-  [{db-conn :db} username]
-  (->> (mc/find-maps db-conn (:projects colls) {"users.username" username})
-       (mapv normalize-project)))
-
-(defn erase-project
-  "drops the project annotations and removes the project info from users"
-  [{db-conn :db :as db} project-name users]
-  (vcs/drop db-conn (server-project-name project-name))
-  (mc/remove db-conn (:projects colls) {:name project-name})
-  (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}})
-  nil)
-
-(defn get-delete-payload [username]
-  {:type "delete-project-agree"
-   :status "open"
-   :username username
-   :users [:all]
-   :timestamp (System/currentTimeMillis)})
-
-(defn remove-project
-  "drops the collections and removes project from users info (as per `erase-project`) if all users
-  agree to delete the project, otherwise adds user to agreeing"
-  [{db-conn :db :as db} username project-name]
-  (let [project (find-project-by-name db project-name)
-        role (get-user-role project username)]
-    (when-not project
-      (throw (ex-non-existing-project project-name)))
-    (when-not (check-project-role :delete role)
-      (throw (ex-rights username :delete role)))
-    (let [delete-payload (get-delete-payload username)
-          {:keys [users] :as project} (update-project db username project-name delete-payload)
-          {:keys [pending non-app agreed-users]} (pending-users project)]
-      (if (empty? pending)
-        (erase-project db project-name users)
-        delete-payload))))
 
 (defn update-user-role [{db-conn :db :as db} issuer project-name username new-role]
   (let [project (find-project-by-name db project-name)
@@ -210,4 +154,66 @@
          :users
          (filter #(= username (:username %)))
          first)))
+
+(defn- remove-from-users [users username]
+  (remove #(= username (:username %)) users))
+
+(defn remove-user
+  "removes user from project"
+  [{db-conn :db :as db} username project-name]
+  (check-user-in-project db username project-name)
+  (check-project-empty db project-name :transform-f #(update % :users remove-from-users username))
+  (-> (mc/find-and-modify
+       db-conn (:projects colls)
+       {"name" project-name}
+       {$pull {"users" {"username" username}}}
+       {:return-new true})
+      normalize-project))
+
+(defn get-delete-payload [username]
+  {:type "delete-project-agree"
+   :status "open"
+   :username username
+   :users [:all]
+   :timestamp (System/currentTimeMillis)})
+
+(defn erase-project
+  "drops the project annotations and removes the project info from users"
+  [{db-conn :db :as db} project-name users]
+  (vcs/drop db-conn (server-project-name project-name))
+  (mc/remove db-conn (:projects colls) {:name project-name})
+  (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}})
+  nil)
+
+(defn remove-project
+  "drops the collections and removes project from users info (as per `erase-project`) if all users
+  agree to delete the project, otherwise adds user to agreeing"
+  [{db-conn :db :as db} username project-name]
+  (let [project (find-project-by-name db project-name)
+        role (get-user-role project username)]
+    (when-not project
+      (throw (ex-non-existing-project project-name)))
+    (when-not (check-project-role :delete role)
+      (throw (ex-rights username :delete role)))
+    (let [delete-payload (get-delete-payload username)
+          {:keys [users] :as project} (add-project-issue db username project-name delete-payload)
+          {:keys [pending non-app agreed-users]} (pending-users project)]
+      (println pending agreed-users)
+      (if (empty? pending)
+        (do (timbre/info "Erasing project" project-name) (erase-project db project-name users))
+        (do (timbre/info "Pending users to project remove" project-name) delete-payload)))))
+
+;;; Getters
+(defn get-project
+  "retrieves project by name"
+  [{db-conn :db :as db} username project-name]
+  (check-user-in-project db username project-name)
+  (-> (mc/find-one-as-map db-conn (:projects colls) {"name" project-name})
+      normalize-project))
+
+(defn get-projects
+  "retrieves data of projects in which `username` is involved"
+  [{db-conn :db} username]
+  (->> (mc/find-maps db-conn (:projects colls) {"users.username" username})
+       (mapv normalize-project)))
 

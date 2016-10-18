@@ -16,12 +16,12 @@
      :target-clients (map :username users))
     project))
 
-(defn update-project-route
+(defn add-project-issue-route
   [{{payload :payload project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [{:keys [users]} (proj/get-project db username project-name)]
-    (proj/update-project db username project-name payload)
+    (proj/add-project-issue db username project-name payload)
     (send-clients
      ws {:type :project-update :data {:payload payload :project-name project-name} :by username}
      :source-client username
@@ -91,7 +91,7 @@
   (routes
    (context "/project" []
     (POST "/new" [] (make-default-route new-project-route))
-    (POST "/update" [] (make-default-route update-project-route))
+    (POST "/issue" [] (make-default-route add-project-issue-route))
     (POST "/add-user" [] (make-default-route add-user-route))
     (POST "/remove-user" [] (make-default-route remove-user-route))
     (POST "/remove-project" [] (make-default-route remove-project-route))

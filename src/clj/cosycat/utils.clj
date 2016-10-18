@@ -44,6 +44,13 @@
     `(when-not ~x
        (throw (ex-info ~@args)))))
 
+(defn new-uuid
+  "Computes a random id which can be used as a uuid for a new document"
+  []
+  (str (java.util.UUID/randomUUID))
+  ;; (ObjectId.) ;or just use mongodb's id
+  )
+
 ;;; ANNS
 (defn new-token-id
   "returns new id for a dummy token"

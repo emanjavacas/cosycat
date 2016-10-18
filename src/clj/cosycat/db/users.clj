@@ -4,6 +4,7 @@
             [buddy.hashers :as hashers]
             [taoensso.timbre :as timbre]
             [schema.core :as s]
+            [cosycat.utils :refer [new-uuid]]
             [cosycat.app-utils :refer [not-implemented]]
             [cosycat.db.utils :refer [->set-update-map normalize-user is-user?]]
             [cosycat.schemas.user-schemas :refer [user-schema]]
@@ -140,26 +141,49 @@
       (get-in [:projects (keyword project-name) :settings] {})))
 
 ;;; user-dependent history
-(defn register-user-project-event
-  [{db-conn :db :as db} username project event]
-  (let [now (System/currentTimeMillis)]
-    (mc/find-and-modify
-     db-conn (:users colls)
-     {:username username}
-     {$push {(format "projects.%s.events" project) (assoc event :timestamp now)}})))
-
 (defn user-project-events
+  "find at most `max-events` last user project events that are older than `from`"
   [{db-conn :db :as db} username project & {:keys [from max-events] :or {max-events 10}}]
   (let [from (or from (System/currentTimeMillis))
-        project-str (format "$projects.%s.events" project)]
+        project-events-str (format "$projects.%s.events" project)]
     (mc/aggregate
      db-conn (:users colls)
      [{$match {:username username}}
-      {$unwind project-str}
-      {$project {:data (str project-str ".data")
-                 :timestamp (str project-str ".timestamp")
-                 :type (str project-str ".type")
-                 :_id 0}}
+      {$unwind project-events-str}
+      {$project {:data (str project-events-str ".data")
+                 :timestamp (str project-events-str ".timestamp")
+                 :repeated (str project-events-str ".received")
+                 :type (str project-events-str ".type")
+                 :id (str project-events-str ".id")
+                 :_id 0}}               ;remove MongoDB id
       {$match {:timestamp {$lte from}}}
-      {$sort {:timestamp -1}}
+      {$sort {:timestamp -1 :repeated -1}}
       {$limit max-events}])))
+
+(defn- register-same-user-project-event
+  [{db-conn :db :as db} username project {event-type :type :as event} {timestamp :timestamp :as old-event}]
+  (let [project-events-str (format "projects.%s.events" project)]
+    (mc/find-and-modify
+     db-conn (:users colls)
+     {:username username
+      $and [{(str project-events-str ".type") event-type}
+            {$or [{(str project-events-str ".timestamp") timestamp}
+                  {(str project-events-str ".repeated") timestamp}]}]}
+     {$push {(str project-events-str ".$.repeated") (System/currentTimeMillis)}}
+     {:return-new false})))
+
+(defn- register-new-user-project-event
+  [{db-conn :db :as db} username project event]
+  (let [project-events-str (format "projects.%s.events" project)]
+    (mc/find-and-modify
+     db-conn (:users colls)
+     {:username username}
+     {$push {project-events-str (assoc event :timestamp (System/currentTimeMillis) :id (new-uuid))}}
+     {:return-new false})))
+
+(defn register-user-project-event
+  [{db-conn :db :as db} username project {event-type :type event-data :data :as event}]
+  (let [{:keys [timestamp type data] :as last} (first (user-project-events db username project :max-events 1))]
+    (if (and last (= event-type type) (= data event-data))
+      (register-same-user-project-event db username project event last)
+      (register-new-user-project-event db username project event))))

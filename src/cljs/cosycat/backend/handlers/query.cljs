@@ -95,7 +95,7 @@
  (fn [db [_ query-str]]
    (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:settings :query])]
      (re-frame/dispatch [:start-throbbing :results-frame])
-     (re-frame/dispatch [:register-user-project-event {:data {:query-str query-str} :type :query}])
+     (re-frame/dispatch [:register-user-project-event {:data {:query-str query-str :corpus corpus} :type "query"}])
      (run-query query-str (find-corpus-config db corpus) query-opts sort-opts filter-opts)
      db)))
 

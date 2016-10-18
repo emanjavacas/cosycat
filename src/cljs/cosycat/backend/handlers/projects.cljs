@@ -80,21 +80,21 @@
    db))
 
 (re-frame/register-handler              ;add project update to client-db
- :add-project-update
+ :add-project-issue
  standard-middleware
- (fn [db [_ {:keys [payload project-name]}]]
-   (update-in db [:projects project-name :issues] conj payload)))
+ (fn [db [_ {{id :id :as payload} :payload project-name :project-name}]]
+   (update-in db [:projects project-name :issues] assoc id payload)))
 
-(defn project-update-handler [project-update]
-  (re-frame/dispatch [:add-project-update project-update]))
+(defn project-add-issue-handler [project-issue]
+  (re-frame/dispatch [:add-project-issue project-issue]))
 
 (re-frame/register-handler
- :project-update
+ :project-issue
  standard-middleware
  (fn [db [_ {:keys [payload project-name]}]]
-   (POST "/project/update"
+   (POST "/project/issue"
          {:params {:project-name project-name :payload payload}
-          :handler project-update-handler
+          :handler project-add-issue-handler
           :error-handler error-handler})
    db))
 
@@ -144,16 +144,16 @@
       :added-project-remove-agree))
 
 (defn remove-project-handler [{project-name :name :as project}]
-  (fn [delete-payload]
+  (fn [{:keys [id] :as delete-payload}]
     (case (parse-remove-project-payload delete-payload)
       :project-removed
       (do (re-frame/dispatch [:remove-project project-name])
           (re-frame/dispatch [:notify {:message (str "Project " project-name " was deleted")}])
           (nav! "/"))
       :added-project-remove-agree
-      (let [updated-project (update project :issues conj delete-payload)
+      (let [updated-project (update project :issues assoc id delete-payload)
             {:keys [pending]} (pending-users updated-project)] ;still users
-        (re-frame/dispatch [:add-project-update {:payload delete-payload :project-name project-name}])
+        (re-frame/dispatch [:add-project-issue {:payload delete-payload :project-name project-name}])
         (re-frame/dispatch
          [:notify {:message (str (count pending) " users pending to remove project")}]))
       (throw (js/Error. "Couldn't parse remove-project payload")))))
