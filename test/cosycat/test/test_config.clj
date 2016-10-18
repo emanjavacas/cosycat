@@ -68,11 +68,11 @@
             {:value "randomnewvalue" :timestamp 12039102}))))
 
 (defn project-fixture [f]
-  (let [{:keys [project-name user-roles]} project-data])
-  (insert-users)
-  (create-project)
-  (insert-some-annotations)
-  (f)
-  (proj/erase-project db project-name (mapv :username user-roles))
-  (mc/drop (:db db) (server-project-name project-name))
-  (remove-users))
+  (let [{:keys [project-name user-roles]} project-data]
+    (insert-users)
+    (create-project)
+    (insert-some-annotations)
+    (f)
+    (proj/erase-project db project-name (mapv :username user-roles))
+    (mc/drop (:db db) (server-project-name project-name))
+    (remove-users)))

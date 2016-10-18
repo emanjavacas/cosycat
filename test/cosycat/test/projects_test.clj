@@ -22,7 +22,7 @@
     (testing "user roles are alright"
       (let [{users :users :as project} (proj/get-project db creator project-name)]
         (is (= (apply hash-set users) (apply hash-set user-roles)))))
-    (testing "users not in project can't see project"
+    (testing "users outside in project can't see project"
       (is (= (try (proj/get-project db "a random name!" project-name)
                   (catch clojure.lang.ExceptionInfo e
                     (:code (ex-data e))))
@@ -42,7 +42,8 @@
              :not-authorized)))
     (testing "remove-project adds username to updates type delete-project-agree"
       (let [_ (proj/remove-project db "howdy" project-name)
-            {:keys [issues] :as project} (proj/get-project db "howdy" project-name)]
+            {norm-issues :issues :as project} (proj/get-project db "howdy" project-name)
+            issues (vals norm-issues)]
         (is (not (empty? issues)))
         (is (some #{"howdy"} (->> issues
                                   (filter #(= "delete-project-agree" (:type %)))
@@ -52,7 +53,7 @@
     (testing "all agree to remove, remove-project returns nil"
       (let [_ (proj/remove-project db "whatssup" project-name)
             _ (proj/remove-project db "hello" project-name)
-            res (proj/remove-project db creator project-name)]
+            res (proj/remove-project db creator project-name)]        
         (is (nil? res))))
     (testing "actually removes; annotations are also removed"
       (is (removed?)))
