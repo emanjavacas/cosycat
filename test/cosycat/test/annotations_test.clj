@@ -3,19 +3,10 @@
             [clojure.test.check.generators :as check-generators]
             [monger.collection :as mc]
             [schema.core :as s]
-            [cosycat.test.test-config :refer [db-fixture db]]
+            [cosycat.test.test-config :refer [db-fixture test-project-fixture db]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
             [config.core :refer [env]]
             [cosycat.db.annotations :as anns]))
-
-(def project "_test_project")
-(def corpus "corpus")
-
-(defn test-project-fixture [f]
-  (println (format "Using db: [%s]" (:database-url env)))
-  (mc/drop (:db db) project)
-  (f)
-  (mc/drop (:db db) project))
 
 (use-fixtures :once db-fixture test-project-fixture)
 
