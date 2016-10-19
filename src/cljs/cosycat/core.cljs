@@ -41,7 +41,7 @@
   [:div.container-fluid
    [:div.row.text-center
     {:style {:height "250px"}}
-    [throbbing-panel :css-class "loader-ticks"]]
+    [throbbing-panel :css-class :loader-ticks]]
    [:div.row.text-center
     [:h2.text-muted "Loading Database"]]])
 

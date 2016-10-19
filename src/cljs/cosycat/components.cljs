@@ -12,8 +12,18 @@
 (def css-transition-group
   (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
 
-(defn throbbing-panel [& {:keys [css-class] :or {css-class "loader"}}]
-  [:div.text-center [:div {:class css-class}]])
+(defn throbbing-panel
+  [& {:keys [throbber] :or {throbber :loader-ticks}}]
+  [:div.container-fluid
+   [:div.row {:style {:height "55px"}}]
+   [:div.text-center
+    (case throbber
+      :loader [:div {:class "loader"}]
+      :loader-ticks [:div {:class "loader-ticks"}]
+      :round-loader [:div [:img {:src "img/round_spinner.gif"}]]
+      :horizontal-loader [:div [:img {:src "img/horizontal_spinner.gif"}]]
+      :jupiter [:div [:img {:src "img/jupiter.gif"}]])]
+   [:div.row {:style {:height "55px"}}]])
 
 (defn error-panel [& {:keys [status content]}]
   {:pre [(and status)]}

@@ -44,7 +44,7 @@
     (fn []
       (let [{:keys [status content]} @status]
         (cond
-          @throbbing?         [throbbing-panel]
+          @throbbing?         [throbbing-panel :throbber :horizontal-loader]
           (= :error status)   [error-panel-by-type content]
           (zero? @query-size) [no-results-panel @query-str]
           :else               [results-table])))))

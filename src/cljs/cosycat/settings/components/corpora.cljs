@@ -15,7 +15,7 @@
      [:div.row [bs/label {:style {:font-size "14px" :line-height "2.5em"}} corpus]]
      [:div.row [:br]]
      (if (nil? info)
-       [:div.row [throbbing-panel]]
+       [:div.row [throbbing-panel :throbber :loader]]
        [:div.row [data-tree info :init-open false]])
      [:div.row [:hr]]]))
 
