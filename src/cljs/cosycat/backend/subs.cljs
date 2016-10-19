@@ -214,15 +214,9 @@
                        (map #(get-in % [:avatar :dominant-color]) @filtered-users-info))))))
 
 (re-frame/register-sub
- :read-history
- (fn [db [_ path & {:keys [filter-fn] :or {filter-fn identity}}]]
-   (let [ws-history (reaction (get-in @db (into [:history] path)))]
-     (reaction (filter filter-fn @ws-history)))))
-
-(re-frame/register-sub
  :events
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))]
-     (reaction (get-in @db [:projects @active-project :events] []))
+     (reaction (vals (get-in @db [:projects @active-project :events])))
      ;; TODO: if not in project it should return app-wide events
      )))

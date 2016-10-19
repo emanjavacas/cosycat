@@ -20,10 +20,11 @@
   (-> (apply dissoc user :password :_id ks)
       (update-in [:roles] (partial apply hash-set))))
 
-(defn normalize-project [{:keys [issues] :as project}]
+(defn normalize-project [{:keys [issues events] :as project}]
   (cond-> project
     true   (dissoc :_id)
-    issues (assoc :issues (zipmap (map :id issues) issues))))
+    issues (assoc :issues (zipmap (map :id issues) issues))
+    events (assoc :events (zipmap (map :id events) events))))
 
 (defn is-user?
   [{db-conn :db :as db} {:keys [username email]}]

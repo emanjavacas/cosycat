@@ -15,20 +15,12 @@
   [projects user]
   (reduce
    (fn [acc {:keys [name] :as project}]
-     (let [{:keys [history settings]} (some #(when (= name (:name %)) %) (:projects user))]
+     (let [{:keys [settings]} (some #(when (= name (:name %)) %) (:projects user))]
        (assoc acc name (-> project
                            (assoc :session (default-project-session project))
-                           (cond-> history (assoc :history history))
                            (cond-> settings (assoc :settings settings))))))
    {}
    projects))
-
-(re-frame/register-handler
- :update-project-user-role
- standard-middleware
- (fn [db [_ project-name username new-role]]
-   (let [pred #(= username (:username %))]
-     (update-in db [:projects project-name :users] update-coll pred assoc :role new-role))))
 
 (re-frame/register-handler
  :remove-active-project
@@ -140,8 +132,9 @@
    db))
 
 (defn parse-remove-project-payload [payload]
-  (if (empty? payload) :project-removed
-      :added-project-remove-agree))
+  (if (empty? payload)
+    :project-removed
+    :added-project-remove-agree))
 
 (defn remove-project-handler [{project-name :name :as project}]
   (fn [{:keys [id] :as delete-payload}]
@@ -167,8 +160,16 @@
           :error-handler error-handler})
    db))
 
+(re-frame/register-handler
+ :update-project-user-role
+ standard-middleware
+ (fn [db [_ project-name username new-role]]
+   (let [pred #(= username (:username %))]
+     (update-in db [:projects project-name :users] update-coll pred assoc :role new-role))))
+
 (defn handle-new-user-role [project-name]
   (fn [{:keys [username role]}]
+    ;; refresh project events
     (re-frame/dispatch
      [:notify {:message (format "Succesfully updated %s's role to \"%s\"" username role)}])
     (re-frame/dispatch [:update-project-user-role project-name username role])))

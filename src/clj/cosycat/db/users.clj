@@ -143,34 +143,31 @@
 ;;; user-dependent history
 (defn user-project-events
   "find at most `max-events` last user project events that are older than `from`"
-  [{db-conn :db :as db} username project & {:keys [from max-events] :or {max-events 10}}]
+  [{db-conn :db :as db} username project & {:keys [from max-events]}]
   (let [from (or from (System/currentTimeMillis))
         project-events-str (format "$projects.%s.events" project)]
-    (mc/aggregate
-     db-conn (:users colls)
-     [{$match {:username username}}
-      {$unwind project-events-str}
-      {$project {:data (str project-events-str ".data")
-                 :timestamp (str project-events-str ".timestamp")
-                 :repeated (str project-events-str ".received")
-                 :type (str project-events-str ".type")
-                 :id (str project-events-str ".id")
-                 :_id 0}}               ;remove MongoDB id
-      {$match {:timestamp {$lte from}}}
-      {$sort {:timestamp -1 :repeated -1}}
-      {$limit max-events}])))
+    (vec (mc/aggregate
+          db-conn (:users colls)
+          (cond-> [{$match {:username username}}
+                   {$unwind project-events-str}
+                   {$project {:data (str project-events-str ".data")
+                              :timestamp (str project-events-str ".timestamp")
+                              :repeated (str project-events-str ".repeated")
+                              :type (str project-events-str ".type")
+                              :id (str project-events-str ".id")
+                              :_id 0}}
+                   {$match {:timestamp {$lt from}}}]
+            max-events       (into [{$sort {:timestamp -1 :repeated -1}} {$limit max-events}])
+            (not max-events) (conj {$sort {:timestamp -1 :repeated -1}}))))))
 
 (defn- register-same-user-project-event
-  [{db-conn :db :as db} username project {event-type :type :as event} {timestamp :timestamp :as old-event}]
+  [{db-conn :db :as db} username project {event-type :type :as event} {event-id :id :as old-event}]
   (let [project-events-str (format "projects.%s.events" project)]
-    (mc/find-and-modify
+    (mc/update
      db-conn (:users colls)
-     {:username username
-      $and [{(str project-events-str ".type") event-type}
-            {$or [{(str project-events-str ".timestamp") timestamp}
-                  {(str project-events-str ".repeated") timestamp}]}]}
+     {(str project-events-str ".id") event-id}
      {$push {(str project-events-str ".$.repeated") (System/currentTimeMillis)}}
-     {:return-new false})))
+     {:multi false})))
 
 (defn- register-new-user-project-event
   [{db-conn :db :as db} username project event]

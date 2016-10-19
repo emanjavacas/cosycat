@@ -97,6 +97,19 @@
       :ok
       (throw (ex-last-user project-name)))))
 
+;;; Events
+(defn make-event [event-map]
+  (assoc event-map :id (new-uuid) :timestamp (System/currentTimeMillis)))
+
+(defn new-user-event [username]
+  (make-event {:type :new-user-in-project :data {:username username}}))
+
+(defn new-user-role-event [username new-role]
+  (make-event {:type :new-user-role :data {:username username :new-role new-role}}))
+
+(defn remove-user-event [username]
+  (make-event {:type :user-left-project :data {:username username}}))
+
 ;;; Setters
 (defn join-project-creator [creator users]
   (conj users {:username creator :role "creator"}))
@@ -128,12 +141,13 @@
 
 (defn add-user
   "adds user to project"
-  [{db-conn :db :as db} username project-name user]
+  [{db-conn :db :as db} username project-name {new-username :username :as user}]
   (check-user-in-project db username project-name)
   (-> (mc/find-and-modify
        db-conn (:projects colls)
        {"name" project-name}
-       {$push {"users" user}}
+       {$push {"users" user
+               "events" (new-user-event new-username)}} ;atomically add event to project
        {:return-new true})
       normalize-project))
 
@@ -148,8 +162,9 @@
       (throw (ex-rights issuer :write role)))
     (->> (mc/find-and-modify
           db-conn (:projects colls)
-          {"users.username" username}
-          {$set {"users.$.role" new-role}}
+          {"users.username" username "name" project-name}
+          {$set {"users.$.role" new-role}
+           $push {"events" (new-user-role-event username new-role)}} ;atomically add event to project
           {:return-new true})
          :users
          (filter #(= username (:username %)))
@@ -166,11 +181,12 @@
   (-> (mc/find-and-modify
        db-conn (:projects colls)
        {"name" project-name}
-       {$pull {"users" {"username" username}}}
+       {$pull {"users" {"username" username}}
+        $push {"events" (remove-user-event username)}}
        {:return-new true})
       normalize-project))
 
-(defn get-delete-payload [username]
+(defn delete-issue [username]
   {:type "delete-project-agree"
    :status "open"
    :username username
@@ -195,7 +211,7 @@
       (throw (ex-non-existing-project project-name)))
     (when-not (check-project-role :delete role)
       (throw (ex-rights username :delete role)))
-    (let [delete-payload (get-delete-payload username)
+    (let [delete-payload (delete-issue username)
           {:keys [users] :as project} (add-project-issue db username project-name delete-payload)
           {:keys [pending non-app agreed-users]} (pending-users project)]
       (println pending agreed-users)
@@ -216,4 +232,22 @@
   [{db-conn :db} username]
   (->> (mc/find-maps db-conn (:projects colls) {"users.username" username})
        (mapv normalize-project)))
+
+(defn project-events
+  "find at most `max-events` last project events that are older than `from`"
+  [{db-conn :db :as db} username project & {:keys [from max-events]}]
+  (let [from (or from (System/currentTimeMillis))]
+    (check-user-in-project db username project)
+    (vec (mc/aggregate
+          db-conn (:projects colls)
+          (cond-> [{$match {:name project}}
+                   {$unwind "$events"}
+                   {$project {:data "$events.data"
+                              :timestamp "$events.timestamp"
+                              :type "$events.type"
+                              :id "$events.id"
+                              :_id 0}}
+                   {$match {:timestamp {$lt from}}}]
+            max-events       (into [{$sort {:timestamp -1}} {$limit max-events}])
+            (not max-events) (conj {$sort {:timestamp -1}}))))))
 

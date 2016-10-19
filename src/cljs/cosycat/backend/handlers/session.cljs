@@ -59,7 +59,6 @@
  (fn [_ [_ {:keys [me users corpora projects settings tagsets] :as payload}]]
    (-> payload
        (assoc :session default-session)
-       (assoc :history default-history)
        (assoc :settings (deep-merge settings (default-settings :corpora corpora)))
        (assoc :projects (normalize-projects projects me))
        (assoc-in [:session :init] true))))
