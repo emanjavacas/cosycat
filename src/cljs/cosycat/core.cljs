@@ -13,7 +13,6 @@
             [cosycat.backend.handlers.projects]
             [cosycat.backend.handlers.corpora]
             [cosycat.backend.handlers.events]
-            [cosycat.backend.history]
             [cosycat.backend.ws-routes]
             [cosycat.backend.subs]
             [cosycat.query.page :refer [query-panel]]
@@ -131,7 +130,6 @@
   [project-name]
   (let [prefix (str "#/project/" project-name)
         origin (.-lastToken_ cosycat.routes/history)]
-    (timbre/debug "origin" origin)
     (if-not origin
       prefix
       (cond (.endsWith origin "query") (str prefix "/query")
