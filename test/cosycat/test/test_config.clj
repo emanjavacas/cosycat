@@ -22,6 +22,7 @@
 
 (def project-data
   {:project-name "test_project"
+   :corpus "random"
    :creator "user"
    :random-users [{:username "hello" :role "guest"}
                   {:username "guest" :role "guest"}
