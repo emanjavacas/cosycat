@@ -3,12 +3,12 @@
             [clojure.test.check.generators :as check-generators]
             [monger.collection :as mc]
             [schema.core :as s]
-            [cosycat.test.test-config :refer [db-fixture test-project-fixture db]]
+            [cosycat.test.test-config :refer [db-fixture project-fixture db]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
             [config.core :refer [env]]
             [cosycat.db.annotations :as anns]))
 
-(use-fixtures :once db-fixture test-project-fixture)
+(use-fixtures :once db-fixture project-fixture)
 
 ;;; Annotations
 (def payload
