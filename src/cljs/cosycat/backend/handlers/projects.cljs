@@ -28,16 +28,27 @@
  (fn [db _]
    (assoc-in db [:session :active-project] nil)))
 
+(defn get-project-settings [db project-name]
+  (or (get-in db [:projects project-name :settings]) ;project-related settings
+      (get-in db [:me :settings])                    ;global settings
+      (default-settings :corpora (:corpora db))))    ;default settings
+
+(re-frame/register-handler
+ :reset-project-settings
+ standard-middleware
+ (fn [db [_ & {:keys [init] :or {init {}}}]]
+   (let [active-project (get-in db [:session :active-project])
+         project-settings (deep-merge (get-project-settings db active-project) init)]
+     (update db :settings deep-merge project-settings))))
+
 (re-frame/register-handler
  :set-active-project
  (conj standard-middleware check-project-exists)
  (fn [db [_ {:keys [project-name]}]]
-   (let [project-settings (or (get-in db [:projects project-name :settings])
-                              (get-in db [:me :settings])
-                              (default-settings :corpora (:corpora db)))]
+   (let [project-settings (get-project-settings db project-name)]
      (-> db
          (assoc-in [:session :active-project] project-name)
-         (update-in [:settings] deep-merge project-settings)))))
+         (update :settings deep-merge project-settings)))))
 
 (re-frame/register-handler              ;add project to client-db
  :add-project

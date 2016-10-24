@@ -23,7 +23,8 @@
  :set-corpus
  standard-middleware
  (fn [db [_ corpus-name]]
-   (re-frame/dispatch [:unset-query-results])
+   (re-frame/dispatch [:unset-query-results]) ;get rid of results in current query
+   (re-frame/dispatch [:reset-project-settings :init {:query {:corpus corpus-name}}]) ;reset sort/filter etc..
    (assoc-in db [:settings :query :corpus] corpus-name)))
 
 (re-frame/register-handler              ;key is one of (:sort-opts, :filter-opts)
