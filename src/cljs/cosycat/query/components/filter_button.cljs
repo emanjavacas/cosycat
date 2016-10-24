@@ -10,20 +10,10 @@
 (defn ->box [color]
   (str "0 -1.5px " color " inset"))
 
-(defn ->filter-opt [filter-name filter-value]
-  {:attribute filter-name :value filter-value})
-
-(defn add-filter [filter-name filter-value]
-  (re-frame/dispatch [:add-opts-map :filter-opts (->filter-opt filter-name filter-value)]))
-
-(defn remove-filter [filter-name]
-  (let [update-f (fn [filter-opts] (->> filter-opts (remove #(= filter-name (:attribute %))) vec))]
-    (re-frame/dispatch [:remove-opts-map :filter-opts :update-f update-f])))
-
 (defn dispatch-new-filter [filter-name value]
   (fn [e]
     (when (= 13 (.-charCode e))
-      (add-filter filter-name @value))))
+      (re-frame/dispatch [:add-opts-map :filter-opts {:attribute filter-name :value @value}]))))
 
 (def span-height "40px")
 
@@ -42,7 +32,7 @@
 (defn value-span [filter-name filter-value {:keys [clicked? has-value?]}]
   (fn [filter-name filter-value {:keys [clicked? has-value?]}]
     [:div.text-muted
-     {:on-click #(do (swap! clicked? not) (when has-value? (remove-filter filter-name)))
+     {:on-click #(do (swap! clicked? not) (when has-value? (re-frame/dispatch [:remove-filter-opt filter-name])))
       :style {:cursor "pointer" :height span-height :margin-top "10px"}}
      filter-value]))
 
@@ -71,11 +61,16 @@
         corpus-metadata (re-frame/subscribe [:corpus-config :info :corpus-info :metadata])
         filter-opts (re-frame/subscribe [:settings :query :filter-opts])]
     (fn []
-      [:div.text-right
-       [bs/button
-        {:onClick #(do (swap! show? not) (reset! target (.-target %)))
-         :bsStyle "primary"}
-        "Add Filter"]
+      [:div.pull-right
+       [bs/button-toolbar
+        [bs/button
+         {:onClick #(do (swap! show? not) (reset! target (.-target %)))
+          :bsStyle "primary"}
+         "Filters"]
+        (when-not (empty? @filter-opts)
+          [bs/button
+           {:onClick #(re-frame/dispatch [:set-project-settings [:query :filter-opts] []])}
+           "Clear"])]
        [bs/overlay
         {:show @show?
          :target (fn [] @target)
