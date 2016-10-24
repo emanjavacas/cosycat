@@ -3,7 +3,7 @@
             [schema.coerce :as coerce]
             [taoensso.timbre :as timbre]
             [cosycat.app-utils :refer [deep-merge]]
-            [cosycat.schemas.user-schemas :refer [settings-schema queries-schema query-id]]
+            [cosycat.schemas.user-schemas :refer [settings-schema queries-schema query-id-schema]]
             [cosycat.schemas.event-schemas :refer [event-schema event-id-schema]]
             [cosycat.schemas.results-schemas :refer [query-results-schema]]))
 
@@ -61,6 +61,6 @@
             ;; things that inform about events (new user, queryetc.)
             ;; merged from both collections users and projects
             (s/optional-key :events) {event-id-schema event-schema}
-            (s/optional-key :queries) {query-id queries-schema}
+            (s/optional-key :queries) {query-id-schema queries-schema}
             (s/optional-key :settings) project-settings-schema
             (s/optional-key :session) project-session-schema}))

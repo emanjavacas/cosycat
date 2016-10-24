@@ -25,11 +25,11 @@
    :query query-opts-schema
    (s/optional-key :tagsets) [s/Any]})
 
-(def query-id s/Any)
+(def query-id-schema s/Any)
 
 (def queries-schema                     ;metadata on previous stored queries
   {:query-data {:query-str s/Str :corpus s/Str}
-   :id query-id
+   :id query-id-schema
    :discarded [{:timestamp s/Int :hit s/Any}]})
 
 (def user-project-schema   ;server-only (get merged with project in the client)
