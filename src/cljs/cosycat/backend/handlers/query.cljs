@@ -145,7 +145,6 @@
      ;; add update
      (timbre/debug snippet-opts)
      (when-not dir                      ;only register first request
-       ;; register
-       )
+       (re-frame/dispatch [:register-user-project-event {:data {:hit-id hit-id :corpus corpus} :type "snippet"}]))
      (snippet corpus query-str snippet-opts hit-id dir)
      db)))

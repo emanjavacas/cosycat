@@ -24,7 +24,7 @@
  standard-middleware
  (fn [db [_ corpus-name]]
    (re-frame/dispatch [:unset-query-results]) ;get rid of results in current query
-   (re-frame/dispatch [:reset-project-settings :init {:query {:corpus corpus-name}}]) ;reset sort/filter etc..
+   (re-frame/dispatch [:reset-settings :init {:query {:corpus corpus-name}}]) ;reset sort/filter etc..
    (assoc-in db [:settings :query :corpus] corpus-name)))
 
 (re-frame/register-handler              ;key is one of (:sort-opts, :filter-opts)
@@ -38,6 +38,14 @@
  standard-middleware
  (fn [db [_ key & {:keys [update-f] :or {update-f pop}}]]
    (update-in db [:settings :query key] update-f)))
+
+(re-frame/register-handler
+ :remove-filter-opt
+ standard-middleware
+ (fn [db [_ attribute]]
+   (update-in
+    db [:settings :query :filter-opts]
+    (fn [filter-opts] (vec (remove #(= attribute (:attribute %)) filter-opts))))))
 
 (re-frame/register-handler              ;set session data related to active project
  :set-project-settings

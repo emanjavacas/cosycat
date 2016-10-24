@@ -34,7 +34,7 @@
       (default-settings :corpora (:corpora db))))    ;default settings
 
 (re-frame/register-handler
- :reset-project-settings
+ :reset-settings
  standard-middleware
  (fn [db [_ & {:keys [init] :or {init {}}}]]
    (let [active-project (get-in db [:session :active-project])
@@ -66,7 +66,6 @@
   (re-frame/dispatch [:notify {:message message :meta data :status :error}]))
 
 (defn new-project-handler [{project-name :name :as project}]
-  ;; register
   (re-frame/dispatch [:add-project project])
   (nav! (str "/project/" project-name)))
 
@@ -105,7 +104,6 @@
  :add-project-user
  standard-middleware
  (fn [db [_ {:keys [user project-name] :as data}]]
-   ;; register this
    (update-in db [:projects project-name :users] conj user)))
 
 (re-frame/register-handler
