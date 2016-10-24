@@ -127,7 +127,7 @@
 (defn bl-server-filter-str
   "builds the blacklab filter string from param maps"
   [filter-opts]
-  (apply str (interpose "&" (parse-filter-opts filter-opts))))
+  (apply str (interpose " AND " (parse-filter-opts filter-opts))))
 
 ;;; handle counting callbacks
 (defn clear-timeout [timeout-ids]
