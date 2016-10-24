@@ -5,6 +5,7 @@
             [react-bootstrap.components :as bs]
             [cosycat.utils :refer [->map by-id]]
             [cosycat.components :refer [dropdown-select]]
+            [cosycat.query.components.query-metadata-dropdown :refer [query-metadata-dropdown]]
             [taoensso.timbre :as timbre]))
 
 (defn on-select [query-opt & {:keys [has-query?]}]
@@ -72,24 +73,27 @@
         query-str-atom (reagent/atom @query-str)]
     (fn []
       [:div.row
-       [:div.col-lg-5.col-sm-7
-        [query-opts-menu]]
+       [:div.col-lg-5.col-sm-7 [query-opts-menu]]
        [:div.col-lg-7.col-sm-5
-        [:div.input-group
-         [:input#query-str.form-control.form-control-no-border
-          {:style {:width "100%"}
-           :type "text"
-           :name "query"
-           :value @query-str-atom
-           :placeholder "Example: [word='(wo)?man']" ;remove?
-           :autoCorrect "false"
-           :autoCapitalize "false"
-           :autoComplete "false"
-           :spellCheck "false"
-           :on-key-down #(.stopPropagation %) ;avoid triggerring global events
-           :on-key-press on-key-press
-           :on-change #(reset! query-str-atom (.. % -target -value))}]
-         [:span.input-group-addon
-          {:on-click on-click-search
-           :style {:cursor "pointer"}}
-          [bs/glyphicon {:glyph "search"}]]]]])))
+        [:div.container-fluid
+         [:div.row.pad
+          [:div.col-lg-11.col-sm-10.pad
+           [:div.input-group
+            [:input#query-str.form-control.form-control-no-border
+             {:style {:width "100%"}
+              :type "text"
+              :name "query"
+              :value @query-str-atom
+              :placeholder "Example: [word='(wo)?man']" ;remove?
+              :autoCorrect "false"
+              :autoCapitalize "false"
+              :autoComplete "false"
+              :spellCheck "false"
+              :on-key-down #(.stopPropagation %) ;avoid triggerring global events
+              :on-key-press on-key-press
+              :on-change #(reset! query-str-atom (.. % -target -value))}]
+            [:span.input-group-addon
+             {:on-click on-click-search
+              :style {:cursor "pointer"}}
+             [bs/glyphicon {:glyph "search"}]]]]
+          [:div.col-lg-1.col-sm-2.pull-right [query-metadata-dropdown]]]]]])))

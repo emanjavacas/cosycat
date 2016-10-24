@@ -220,3 +220,9 @@
      (reaction (vals (get-in @db [:projects @active-project :events])))
      ;; TODO: if not in project it should return app-wide events
      )))
+
+(re-frame/register-sub
+ :project-queries
+ (fn [db _]
+   (let [active-project (reaction (get-in @db [:session :active-project]))]
+     (reaction (get-in @db [:projects @active-project :queries] [])))))
