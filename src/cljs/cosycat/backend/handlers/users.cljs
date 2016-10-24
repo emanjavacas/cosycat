@@ -116,7 +116,7 @@
      (POST "/users/new-query-metadata"
            {:params {:project-name active-project
                      :query-data {:query-str query-str :corpus corpus}}
-            :handler #(re-frame/dispatch [])
+            :handler #(re-frame/dispatch []) ;todo
             :error-handler #(timbre/error "Error when storing query metadata")}))
    db))
 
@@ -128,7 +128,7 @@
            {:params {:project-name active-project
                      :id query-id
                      :discarded hit-id}
-            :handler #(re-frame/dispatch [])
+            :handler #(re-frame/dispatch []) ;todo
             :error-handler #(timbre/error "Error when storing query metadata")}))
    db))
 
@@ -140,6 +140,6 @@
            {:params {:project-name active-project
                      :id query-id
                      :discarded hit-id}
-            :handler #(re-frame/dispatch [])
+            :handler #(re-frame/dispatch []) ;todo
             :error-handler #(timbre/error "Error when storing query metadata")}))
    db))
