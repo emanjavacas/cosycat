@@ -214,7 +214,6 @@
     (let [delete-payload (delete-issue username)
           {:keys [users] :as project} (add-project-issue db username project-name delete-payload)
           {:keys [pending non-app agreed-users]} (pending-users project)]
-      (println pending agreed-users)
       (if (empty? pending)
         (do (timbre/info "Erasing project" project-name) (erase-project db project-name users))
         (do (timbre/info "Pending users to project remove" project-name) delete-payload)))))

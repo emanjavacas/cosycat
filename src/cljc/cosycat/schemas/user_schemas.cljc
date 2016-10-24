@@ -28,9 +28,7 @@
 (def query-id s/Any)
 
 (def queries-schema                     ;metadata on previous stored queries
-  {:query-data {:query-str s/Str
-                :filter-opts [filter-opts-schema]
-                :corpus s/Str}
+  {:query-data {:query-str s/Str :corpus s/Str}
    :id query-id
    :discarded [{:timestamp s/Int :hit s/Any}]})
 

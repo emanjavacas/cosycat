@@ -4,7 +4,7 @@
             [cosycat.backend.db :refer [default-project-session]]
             [cosycat.query-backends.core :refer [ensure-corpus]]
             [cosycat.query-backends.protocols :refer [query query-sort snippet]]
-            [cosycat.utils :refer [filter-marked-hits]]
+            [cosycat.utils :refer [filter-marked-hits current-results]]
             [cosycat.app-utils :refer [parse-token-id]]
             [taoensso.timbre :as timbre]))
 
@@ -79,11 +79,6 @@
 
 (defn find-corpus-config [db corpus-name]
   (some #(when (= corpus-name (:corpus %)) %) (db :corpora)))
-
-(defn current-results [db]
-  (let [active-project (get-in db [:session :active-project])
-        project (get-in db [:projects active-project])]
-    (get-in project [:session :query :results-summary])))
 
 (defn run-query [query-str corpus-config query-opts sort-opts filter-opts]
   (if (and (empty? sort-opts) (empty? filter-opts))
