@@ -95,15 +95,20 @@
 (defn- get-user-project-settings [user-projects project-name]
   (get-in user-projects [(keyword project-name) :settings]))
 
-(defn- merge-project-settings [projects user-projects]
+(defn- get-user-project-queries [user-projects project-name]
+  (get-in user-projects [(keyword project-name) :settings]))
+
+(defn- merge-projects [projects user-projects]
   (mapv (fn [{:keys [name] :as project}]
-          (if-let [user-project-settings (get-user-project-settings user-projects name)]
-            (assoc project :settings user-project-settings)
-            project))
+          (let [user-project-settings (get-user-project-settings user-projects name)
+                user-project-queries (get-user-project-queries user-projects name)]
+            (cond-> project
+              user-project-settings (assoc :settings user-project-settings)
+              user-project-queries (assoc :queries user-project-queries))))
         projects))
 
 (defn session-projects [db username {user-projects :projects :as me}]
-  (-> (get-projects db username) (merge-project-settings user-projects)))
+  (-> (get-projects db username) (merge-projects user-projects)))
 
 (defn session-settings [me]
   (get me :settings {}))
