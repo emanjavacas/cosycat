@@ -4,7 +4,7 @@
             [taoensso.timbre :as timbre]
             [clojure.string :as str]
             [cosycat.backend.middleware :refer [standard-middleware]]
-            [cosycat.utils :refer [format]]
+            [cosycat.utils :refer [format current-results]]
             [cosycat.app-utils :refer [update-coll deep-merge dekeyword]]))
 
 (re-frame/register-handler              ;set client user info
@@ -59,6 +59,13 @@
  (fn [db [_ username status]]
    (set-users db [username [:active] status])))
 
+(re-frame/register-handler
+ :fetch-user-info
+ (fn [db [_ username]]
+   (GET "users/user-info"
+        {})
+   db))
+
 (defn avatar-error-handler [& args]
   (re-frame/dispatch [:notify {:message "Couldn't update avatar" :status "danger"}]))
 
@@ -97,4 +104,42 @@
           {:params {:value value :project-users project-users}
            :handler #(reset! users-atom %)
            :error-handler #(.log js/console "Error" %)}))
+   db))
+
+;;; Query metadata
+(re-frame/register-handler
+ :query-new-metadata
+ (fn [db _]
+   (let [active-project (get-in db [:session :active-project])
+         {:keys [corpus]} (get-in db [:settings :query])         
+         {query-str :query-str} (current-results db)]
+     (POST "/users/new-query-metadata"
+           {:params {:project-name active-project
+                     :query-data {:query-str query-str :corpus corpus}}
+            :handler #(re-frame/dispatch [])
+            :error-handler #(timbre/error "Error when storing query metadata")}))
+   db))
+
+(re-frame/register-handler
+ :query-add-metadata
+ (fn [db [_ hit-id query-id]]
+   (let [active-project (get-in db [:session :active-project])]
+     (POST "/users/add-query-metadata"
+           {:params {:project-name active-project
+                     :id query-id
+                     :discarded hit-id}
+            :handler #(re-frame/dispatch [])
+            :error-handler #(timbre/error "Error when storing query metadata")}))
+   db))
+
+(re-frame/register-handler
+ :query-remove-metadata
+ (fn [db [_ hit-id query-id]]
+   (let [active-project (get-in db [:session :active-project])]
+     (POST "/users/add-query-metadata"
+           {:params {:project-name active-project
+                     :id query-id
+                     :discarded hit-id}
+            :handler #(re-frame/dispatch [])
+            :error-handler #(timbre/error "Error when storing query metadata")}))
    db))

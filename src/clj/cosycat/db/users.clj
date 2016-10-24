@@ -114,7 +114,7 @@
     (->> (mc/find-maps db-conn (:users colls) {:username {$in usernames}})
          (map #(normalize-user % :projects :settings)))))
 
-;;; user settings
+;;; User settings
 (defn user-settings
   [{db-conn :db :as db} username]
   (-> (user-info db username)
@@ -140,25 +140,69 @@
         {:return-new true})
       (get-in [:projects (keyword project-name) :settings] {})))
 
-;;; user-dependent history
+;;; Query metadata
+(defn find-query-metadata [{db-conn :db :as db} username project {:keys [id query-data]}]
+  (let [project-query-str (format "$projects.%s.queries" project)]
+    (first
+     (mc/aggregate
+      db-conn (:users colls)
+      [{$match {:username username}}
+       {$unwind project-query-str}
+       {$project {:id (str project-query-str ".id") :_id 0}}]))))
+
+(defn new-query-metadata
+  "Inserts new query into user db to allow for query-related metadata.
+   Returns this query's id needed for further updates."
+  [{db-conn :db :as db} username project query-data]
+  (let [project-query-str (format "projects.%s.queries" project)
+        now (System/currentTimeMillis), id (new-uuid)
+        payload (-> payload (assoc :id id) (assoc :discarded []))]
+    (do (mc/update
+         db-conn (:users colls)
+         {:username "username"}
+         {$push {project-query-str payload}})
+        id)))
+
+(defn add-query-metadata
+  [{db-conn :db :as db} username project {:keys [id discarded] :as payload}]
+  (let [project-query-str (format "projects.%s.queries" project)
+        new-discard {:hit discarded :timestamp (System/currentTimeMillis)}]
+    (mc/find-and-modify
+     db-conn (:users colls)
+     {:username "username" (str project-query-str ".id") id}
+     {$push {(str project-query-str ".$.discard") new-discard}}
+     {:return-new true
+      :upsert false})))
+
+(defn remove-query-metadata
+  [{db-conn :db :as db} username project {:keys [id discarded] :as payload}]
+  (let [project-query-str (format "projects.%s.queries" project)]
+    (mc/find-and-modify
+     db-conn (:users colls)
+     {:username username (str project-query-str ".id") id}
+     {$pull {(str project-query-str ".$.discarded") {"hit" discarded}}}
+     {:return-new true})))
+
+;;; User-dependent history
 (defn user-project-events
   "find at most `max-events` last user project events that are older than `from`"
   [{db-conn :db :as db} username project & {:keys [from max-events]}]
   (let [from (or from (System/currentTimeMillis))
         project-events-str (format "$projects.%s.events" project)]
-    (vec (mc/aggregate
-          db-conn (:users colls)
-          (cond-> [{$match {:username username}}
-                   {$unwind project-events-str}
-                   {$project {:data (str project-events-str ".data")
-                              :timestamp (str project-events-str ".timestamp")
-                              :repeated (str project-events-str ".repeated")
-                              :type (str project-events-str ".type")
-                              :id (str project-events-str ".id")
-                              :_id 0}}
-                   {$match {:timestamp {$lt from}}}]
-            max-events       (into [{$sort {:timestamp -1 :repeated -1}} {$limit max-events}])
-            (not max-events) (conj {$sort {:timestamp -1 :repeated -1}}))))))
+    (vec
+     (mc/aggregate
+      db-conn (:users colls)
+      (cond-> [{$match {:username username}}
+               {$unwind project-events-str}
+               {$project {:data (str project-events-str ".data")
+                          :timestamp (str project-events-str ".timestamp")
+                          :repeated (str project-events-str ".repeated")
+                          :type (str project-events-str ".type")
+                          :id (str project-events-str ".id")
+                          :_id 0}}
+               {$match {:timestamp {$lt from}}}]
+        max-events       (into [{$sort {:timestamp -1 :repeated -1}} {$limit max-events}])
+        (not max-events) (conj {$sort {:timestamp -1 :repeated -1}}))))))
 
 (defn- register-same-user-project-event
   [{db-conn :db :as db} username project {event-type :type :as event} {event-id :id :as old-event}]

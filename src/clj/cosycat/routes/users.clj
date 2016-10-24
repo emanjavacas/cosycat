@@ -29,6 +29,24 @@
            (mapv normalize-user))
       []))
 
+(defn new-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {{query-str :query-str corpus :corpus :as query-data} :query-data project-name :project-name} :params}]
+  (let [{:keys [projects]} (users/new-query-metadata db username project-name query-data)]
+    (->> (get-in projects [project-name :queries]) (some #(when (= query-data (:query-data %)) %)))))
+
+(defn add-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {id :id discarded :discarded project-name :project-name} :params}]
+  (let [{:keys [projects]} (users/add-query-metadata db username project-name {:id id :discarded discarded})]
+    (->> (get-in projects [project-name :queries])
+         (some #(when (= id (:id %)) %)))))
+
+(defn remove-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {id :id discarded :discarded project-name :project-name} :params}]
+  (let [out (users/remove-query-metadata db username project-name {:id id :discarded discarded})]))
+
 (defn maybe-update-avatar
   [{new-email :email username :username {href :href} :avatar :as update-map} old-email]
   (if (and new-email (not= new-email old-email) (is-gravatar? href))
@@ -63,5 +81,8 @@
    (context "/users" []
      (GET "/user-info" [] (make-default-route user-info-route))
      (GET "/query-users" [] (make-default-route query-users-route))
+     (POST "/new-query-metadata" [] (make-default-route new-query-metadata-route))
+     (POST "/add-query-metadata" [] (make-default-route add-query-metadata-route))
+     (POST "/remove-query-metadata" [] (make-default-route remove-query-metadata-route))
      (POST "/update-profile" [] (make-default-route update-profile-route))
      (POST "/new-avatar" [] (make-default-route new-avatar-route)))))
