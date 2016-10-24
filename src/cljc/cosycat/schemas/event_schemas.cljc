@@ -7,5 +7,5 @@
   {:id event-id-schema
    :timestamp s/Int
    (s/optional-key :repeated) [s/Int] ;field to efficiently collapse repeated events
-   :type s/Keyword
+   :type s/Any
    :data {s/Any s/Any}})
