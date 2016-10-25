@@ -4,7 +4,7 @@
             [cosycat.db.users :refer [user-login-info users-public-info user-settings]]
             [cosycat.db.projects :refer [get-projects]]
             [cosycat.db.utils :refer [normalize-user]]
-            [cosycat.app-utils :refer [dekeyword]]
+            [cosycat.app-utils :refer [dekeyword normalize-by]]
             [cosycat.utils :refer [join-path]]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]
@@ -96,7 +96,8 @@
   (get-in user-projects [(keyword project-name) :settings]))
 
 (defn- get-user-project-queries [user-projects project-name]
-  (get-in user-projects [(keyword project-name) :settings]))
+  (-> (get-in user-projects [(keyword project-name) :queries])
+      (normalize-by :id)))
 
 (defn- merge-projects [projects user-projects]
   (mapv (fn [{:keys [name] :as project}]

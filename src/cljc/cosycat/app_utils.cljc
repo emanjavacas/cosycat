@@ -97,6 +97,9 @@
 
 (defn dekeyword [k] (apply str (rest (str k))))
 
+(defn normalize-by [coll by]
+  (zipmap (map by coll) coll))
+
 (defn includes? [s substr]
   #?(:clj (.contains s substr)
      :cljs (not= -1 (.indexOf s substr))))

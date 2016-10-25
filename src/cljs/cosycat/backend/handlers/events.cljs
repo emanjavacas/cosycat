@@ -58,6 +58,3 @@
          :handler (project-events-handler project-name)
          :error-handler #(timbre/info "Couldn't fetch user project events")})
    db))
-
-
-

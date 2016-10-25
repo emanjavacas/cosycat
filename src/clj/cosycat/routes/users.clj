@@ -10,6 +10,7 @@
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
+;; Users info
 (defn user-info-route
   [{{{username :username} :identity} :session {db :db} :components
     {username :username project-name :project-name} :params}]
@@ -29,24 +30,7 @@
            (mapv normalize-user))
       []))
 
-(defn new-query-metadata-route
-  [{{{username :username} :identity} :session {db :db} :components
-    {{query-str :query-str corpus :corpus :as query-data} :query-data project-name :project-name} :params}]
-  (let [{:keys [projects]} (users/new-query-metadata db username project-name query-data)]
-    (->> (get-in projects [project-name :queries]) (some #(when (= query-data (:query-data %)) %)))))
-
-(defn add-query-metadata-route
-  [{{{username :username} :identity} :session {db :db} :components
-    {id :id discarded :discarded project-name :project-name} :params}]
-  (let [{:keys [projects]} (users/add-query-metadata db username project-name {:id id :discarded discarded})]
-    (->> (get-in projects [project-name :queries])
-         (some #(when (= id (:id %)) %)))))
-
-(defn remove-query-metadata-route
-  [{{{username :username} :identity} :session {db :db} :components
-    {id :id discarded :discarded project-name :project-name} :params}]
-  (let [out (users/remove-query-metadata db username project-name {:id id :discarded discarded})]))
-
+;; Profile
 (defn maybe-update-avatar
   [{new-email :email username :username {href :href} :avatar :as update-map} old-email]
   (if (and new-email (not= new-email old-email) (is-gravatar? href))
@@ -75,6 +59,27 @@
     (send-clients
      ws {:type :new-user-avatar :data {:avatar avatar :username username}} :source-client username)
     avatar))
+
+;; Query metadata
+(defn new-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {{query-str :query-str corpus :corpus :as query-data} :query-data project-name :project-name} :params}]
+  (let [{:keys [projects]} (users/new-query-metadata db username project-name query-data)]
+    (->> (get-in projects [(keyword project-name) :queries])
+         (some (fn [{db-query-data :query-data :as query-metadata}]
+                 (when (and (= query-data db-query-data)) query-metadata))))))
+
+(defn add-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {id :id discarded :discarded project-name :project-name} :params}]
+  (let [{:keys [projects]} (users/add-query-metadata db username project-name {:id id :discarded discarded})]
+    (->> (get-in projects [(keyword project-name) :queries])
+         (some #(when (= id (:id %)) %)))))
+
+(defn remove-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {id :id discarded :discarded project-name :project-name} :params}]
+  (let [out (users/remove-query-metadata db username project-name {:id id :discarded discarded})]))
 
 (defn users-routes []
   (routes

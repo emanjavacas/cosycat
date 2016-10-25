@@ -223,6 +223,8 @@
 
 (re-frame/register-sub
  :project-queries
- (fn [db _]
-   (let [active-project (reaction (get-in @db [:session :active-project]))]
-     (reaction (get-in @db [:projects @active-project :queries] [])))))
+ (fn [db [_ & {:keys [filter-corpus] :or {filter-corpus true}}]]
+   (let [active-project (reaction (get-in @db [:session :active-project]))
+         corpus (reaction (get-in @db [:settings :query :corpus]))]
+     (reaction (cond->> (vals (get-in @db [:projects @active-project :queries]))
+                 filter-corpus (filter #(= @corpus (get-in % [:query-data :corpus]))))))))

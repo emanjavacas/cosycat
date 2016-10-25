@@ -22,7 +22,6 @@
   {:init s/Bool
    :active-panel s/Keyword
    :active-project s/Any
-   (s/optional-key :active-query) query-id-schema
    (s/optional-key :notifications) {s/Any notification-schema}
    (s/optional-key :modals)     {s/Keyword s/Any}
    (s/optional-key :session-error) (s/maybe {:message s/Str (s/optional-key :code) s/Str})

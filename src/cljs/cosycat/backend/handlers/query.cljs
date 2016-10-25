@@ -87,9 +87,12 @@
 
 (re-frame/register-handler
  :query
- (fn [db [_ query-str]]
+ (fn [db [_ query-str & {:keys [set-active] :or {set-active false}}]]
    (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:settings :query])]
      (re-frame/dispatch [:start-throbbing :results-frame])
+     (if set-active
+       (re-frame/dispatch [:set-active-query set-active])
+       (re-frame/dispatch [:unset-active-query]))
      (re-frame/dispatch [:register-user-project-event {:data {:query-str query-str :corpus corpus} :type "query"}])
      (run-query query-str (find-corpus-config db corpus) query-opts sort-opts filter-opts)
      db)))

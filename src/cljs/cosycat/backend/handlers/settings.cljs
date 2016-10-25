@@ -24,6 +24,7 @@
  standard-middleware
  (fn [db [_ corpus-name]]
    (re-frame/dispatch [:unset-query-results]) ;get rid of results in current query
+   (re-frame/dispatch [:unset-active-query])
    (re-frame/dispatch [:reset-settings :init {:query {:corpus corpus-name}}]) ;reset sort/filter etc..
    (assoc-in db [:settings :query :corpus] corpus-name)))
 

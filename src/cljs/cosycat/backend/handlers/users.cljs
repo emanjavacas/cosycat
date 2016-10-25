@@ -108,6 +108,20 @@
 
 ;;; Query metadata
 (re-frame/register-handler
+ :new-query-metadata
+ standard-middleware
+ (fn [db [_ {:keys [id] :as query-metadata}]]
+   (let [active-project (get-in db [:session :active-project])]
+     (assoc-in db [:projects active-project :queries id] query-metadata))))
+
+(defn query-new-metadata-handler [{:keys [id] :as query-metadata}]
+  (re-frame/dispatch [:set-active-query id])
+  (re-frame/dispatch [:new-query-metadata query-metadata]))
+
+(defn query-new-metadata-error-handler [{{:keys [message code data]} :response}]
+  (re-frame/dispatch [:notify {:message message}]))
+
+(re-frame/register-handler
  :query-new-metadata
  (fn [db _]
    (let [active-project (get-in db [:session :active-project])
@@ -116,9 +130,16 @@
      (POST "/users/new-query-metadata"
            {:params {:project-name active-project
                      :query-data {:query-str query-str :corpus corpus}}
-            :handler #(re-frame/dispatch []) ;todo
-            :error-handler #(timbre/error "Error when storing query metadata")}))
+            :handler query-new-metadata-handler
+            :error-handler query-new-metadata-error-handler}))
    db))
+
+(re-frame/register-handler
+ :add-query-metadata
+ standard-middleware
+ (fn [db [_ {:keys [id discarded]}]]
+   (let [active-project (get-in db [:session :active-project])]
+     (assoc-in db [:projects active-project :query id :discarded] discarded))))
 
 (re-frame/register-handler
  :query-add-metadata
@@ -128,9 +149,16 @@
            {:params {:project-name active-project
                      :id query-id
                      :discarded hit-id}
-            :handler #(re-frame/dispatch []) ;todo
+            :handler #(re-frame/dispatch [:add-query-metadata %])
             :error-handler #(timbre/error "Error when storing query metadata")}))
    db))
+
+(re-frame/register-handler
+ :remove-query-metadata
+ standard-middleware
+ (fn [db [_ id hit-id]]
+   (let [active-project (get-in db [:session :active-project])]
+     (update-in db [:projects active-project :queries id :discarded] #(vec (remove (partial = hit-id) %))))))
 
 (re-frame/register-handler
  :query-remove-metadata
@@ -140,6 +168,15 @@
            {:params {:project-name active-project
                      :id query-id
                      :discarded hit-id}
-            :handler #(re-frame/dispatch []) ;todo
+            :handler #(re-frame/dispatch [:remove-query-metadata query-id hit-id])
             :error-handler #(timbre/error "Error when storing query metadata")}))
+   db))
+
+(re-frame/register-handler
+ :launch-query
+ (fn [db [_ query-id]]
+   (let [active-project (get-in db [:session :active-project])]
+     (if-let [{{query-str :query-str} :query-data} (get-in db [:projects active-project :queries query-id])]
+       (do (set! (.-value (.getElementById js/document "query-str")) query-str)
+           (re-frame/dispatch [:query query-str :set-active query-id]))))
    db))

@@ -70,8 +70,8 @@
   (fn []
     [:div.container-fluid
      [:div.row
-      [:div.col-lg-4.col-sm-5 [query-result-label]]
-      [:div.col-lg-8.col-sm-7 [:div.pull-left [pager-buttons]]]]]))
+      [:div.col-lg-3.col-sm-4 [query-result-label]]
+      [:div.col-lg-9.col-sm-8 [:div.pull-left [pager-buttons]]]]]))
 
 (defn mark-hits-btn []
   [bs/button
@@ -100,5 +100,5 @@
 (defn results-toolbar []
   (fn []
     [:div.row
-     [:div.col-sm-6 [result-label-pager]]
-     [:div.col-sm-6 [:div.pull-right [mark-buttons]]]]))
+     [:div.col-md-6.col-sm-7 [result-label-pager]]
+     [:div.col-md-6.col-sm-5 [:div.pull-right [mark-buttons]]]]))
