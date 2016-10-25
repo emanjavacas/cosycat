@@ -98,7 +98,7 @@
              :style {:width "20px"
                      :background-color background
                      :cursor "pointer"
-                     :color (if (:marked meta) "#158CBA" "black")}}
+                     :color (if (:marked meta) "#999999" "black")}}
             [:input.checkbox-custom.ignore
              {:id (str hit-num "-check")
               :type "checkbox"

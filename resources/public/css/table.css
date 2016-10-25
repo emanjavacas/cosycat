@@ -43,7 +43,7 @@ input[type=checkbox].checkbox-custom + label.checkbox-custom-label:before {
 }
 
 input[type=checkbox].checkbox-custom:checked + label.checkbox-custom-label:before {
-    background: rebeccapurple;
+    background: #999999;
 }
 
 input[type=checkbox].checkbox-custom:focus + label.checkbox-custom-label {

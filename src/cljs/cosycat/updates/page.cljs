@@ -44,5 +44,3 @@
           [read-more-button (->> @events (sort-by :timestamp >) last :timestamp)]]
          [:div.row
           {:style {:height "40px"}}]])})))
-
-

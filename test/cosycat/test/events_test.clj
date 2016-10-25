@@ -9,7 +9,7 @@
 
 (use-fixtures :once db-fixture project-fixture)
 
-(def query-event {:data {:query-str "\"a\""} :type :query})
+(def query-event {:data {:corpus "corpus" :query-str "\"a\""} :type :query})
 
 (deftest events-test
   (let [{:keys [creator project-name]} project-data]
