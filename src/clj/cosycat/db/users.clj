@@ -231,12 +231,11 @@
   [{db-conn :db :as db} username project {:keys [id discarded] :as payload}]
   (let [project-query-str (format "projects.%s.queries" project)
         new-discard {:hit discarded :timestamp (System/currentTimeMillis)}]
-    (mc/find-and-modify
+    (mc/update
      db-conn (:users colls)
-     {:username "username" (str project-query-str ".id") id}
-     {$push {(str project-query-str ".$.discarded") new-discard}}
-     {:return-new true
-      :upsert false})))
+     {:username username (str project-query-str ".id") id}
+     {$push {(str project-query-str ".$.discarded") new-discard}})
+    new-discard))
 
 (defn remove-query-metadata
   [{db-conn :db :as db} username project {:keys [id discarded] :as payload}]

@@ -228,3 +228,10 @@
          corpus (reaction (get-in @db [:settings :query :corpus]))]
      (reaction (cond->> (vals (get-in @db [:projects @active-project :queries]))
                  filter-corpus (filter #(= @corpus (get-in % [:query-data :corpus]))))))))
+
+(re-frame/register-sub
+ :discarded-hits
+ (fn [db [_ query-id]]
+   (let [active-project (reaction (get-in @db [:session :active-project]))
+         discarded (reaction (get-in @db [:projects @active-project :queries query-id :discarded]))]
+     (reaction (into (hash-set) (map :hit @discarded))))))

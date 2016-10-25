@@ -246,7 +246,7 @@
 (defn prepend-cell
   "prepend a cell `child` to a seq of siblings (useful for prepending :td in a :tr)"
   [siblings {:keys [key child opts]}]
-  (vec (cons ^{:key k} (apply merge [child] opts) siblings)))
+  (vec (cons ^{:key key} (apply merge [child] opts) siblings)))
 
 (defn notification-child                ;add a button to display notification meta
   [message date status href meta]

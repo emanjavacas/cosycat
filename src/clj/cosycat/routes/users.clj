@@ -72,14 +72,13 @@
 (defn add-query-metadata-route
   [{{{username :username} :identity} :session {db :db} :components
     {id :id discarded :discarded project-name :project-name} :params}]
-  (let [{:keys [projects]} (users/add-query-metadata db username project-name {:id id :discarded discarded})]
-    (->> (get-in projects [(keyword project-name) :queries])
-         (some #(when (= id (:id %)) %)))))
+  (let [payload (users/add-query-metadata db username project-name {:id id :discarded discarded})]
+    payload))
 
 (defn remove-query-metadata-route
   [{{{username :username} :identity} :session {db :db} :components
     {id :id discarded :discarded project-name :project-name} :params}]
-  (let [out (users/remove-query-metadata db username project-name {:id id :discarded discarded})]))
+  (let [payload (users/remove-query-metadata db username project-name {:id id :discarded discarded})]))
 
 (defn users-routes []
   (routes

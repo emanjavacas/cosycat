@@ -69,37 +69,65 @@
     (.stopPropagation event)
     (re-frame/dispatch [:fetch-snippet hit-id])))
 
+(defn include-hit [hit-id query-id discarded-hits]
+  (fn [hit-id query-id discarded-hits]
+    (let [green "#5cb85c", red "#d9534f"]
+      (if (contains? @discarded-hits hit-id)
+        [bs/glyphicon
+         {:glyph "remove-circle"
+          :class "ignore"
+          :style {:color red :cursor "pointer"}
+          :onClick #(re-frame/dispatch [:query-remove-metadata hit-id @query-id])}]
+        [bs/glyphicon
+         {:glyph "ok-circle"
+          :class "ignore"
+          :style {:color green :cursor "pointer"}
+          :onClick #(re-frame/dispatch [:query-add-metadata hit-id @query-id])}]))))
+
 (defn results-row [hit-num hit-map {:keys [color-map token-field break]}]
-  (fn [hit-num {hit :hit id :id {num :num marked :marked} :meta} {:keys [color-map token-field break]}]
-    (let [row-class (merge-classes (when marked "marked") (when break "break"))]
-      [:tr {:class row-class :data-hit id}
-       (concat
-        [^{:key (str hit-num "-check")}
-         [:td.ignore
-          {:class (if (:marked meta) "checked")
-           :style {:width "20px"
-                   :background-color "#F9F9F9"
-                   :cursor "pointer"
-                   :color (if (:marked meta) "#158CBA" "black")}}
-          [:input.checkbox-custom.ignore
-           {:id (str hit-num "-check")
-            :type "checkbox"
-            :checked marked
-            :on-change #(re-frame/dispatch [:mark-hit {:hit-id id :flag (not marked)}])}]
-          [:label.checkbox-custom-label.ignore
-           {:for (str hit-num "-check")
-            :tab-index (inc hit-num)}]]
-         ;; hit number
-         ^{:key (str hit-num "-num")}
-         [:td.ignore.snippet-trigger
-          {:style {:width "20px" :background-color "#F9F9F9" :cursor "pointer"}
-           :on-double-click (on-double-click id)}
-          [:label.ignore
-           {:style {:font-weight "bold" :cursor "pointer"}}
-           (inc (or num hit-num))]]]
-        ;; hit
-        (for [token hit]
-          ^{:key (str hit-num "-" (:id token))} [hit-token token color-map token-field]))])))
+  (let [active-query (re-frame/subscribe [:project-session :active-query])
+        discarded-hits (re-frame/subscribe [:discarded-hits @active-query])]
+    (fn [hit-num {hit :hit id :id {num :num marked :marked} :meta} {:keys [color-map token-field break]}]
+      (let [row-class (merge-classes (when marked "marked") (when break "break"))
+            background "#F9F9F9"]
+        [:tr {:class row-class :data-hit id}
+         (concat
+          [^{:key (str hit-num "-check")}
+           [:td.ignore
+            {:class (if (:marked meta) "checked")
+             :style {:width "20px"
+                     :background-color background
+                     :cursor "pointer"
+                     :color (if (:marked meta) "#158CBA" "black")}}
+            [:input.checkbox-custom.ignore
+             {:id (str hit-num "-check")
+              :type "checkbox"
+              :checked marked
+              :on-change #(re-frame/dispatch [:mark-hit {:hit-id id :flag (not marked)}])}]
+            [:label.checkbox-custom-label.ignore
+             {:for (str hit-num "-check")
+              :tab-index (inc hit-num)}]]
+           ;; discard
+           (when @active-query
+             ^{:key (str hit-num "-dis")}
+             [:td.ignore
+              {:style {:background-color background :line-height "24px"}}
+              [include-hit id active-query discarded-hits]])
+           ;; hit number
+           ^{:key (str hit-num "-num")}
+           [:td.ignore.snippet-trigger
+            {:style {:width "20px"
+                     :background-color background
+                     :cursor "pointer"
+                     :line-height "35px"
+                     :padding "0px"}
+             :on-double-click (on-double-click id)}
+            [:label.ignore
+             {:style {:font-weight "bold" :cursor "pointer"}}
+             (inc (or num hit-num))]]]
+          ;; hit
+          (for [token hit]
+            ^{:key (str hit-num "-" (:id token))} [hit-token token color-map token-field]))]))))
 
 (defn reduce-hits
   "returns hits indexed by `idx` and with a flag `break` indicating whether current hit belongs
@@ -119,7 +147,6 @@
         token-field (re-frame/subscribe [:project-session :components :token-field])
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]
-    (timbre/debug @token-field)
     (fn []
       [bs/table
        {:responsive true
