@@ -231,7 +231,15 @@
 
 (re-frame/register-sub
  :discarded-hits
- (fn [db [_ query-id]]
+ (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
-         discarded (reaction (get-in @db [:projects @active-project :queries query-id :discarded]))]
-     (reaction (into (hash-set) (map :hit @discarded))))))
+         active-query (reaction (get-in @db [:projects @active-project :session :active-query]))]
+     (reaction (get-in @db [:projects @active-project :queries @active-query :discarded])))))
+
+(re-frame/register-sub
+ :discarded-hit
+ (fn [db [_ hit-id]]
+   (let [active-project (reaction (get-in @db [:session :active-project]))
+         active-query (reaction (get-in @db [:projects @active-project :session :active-query]))
+         discarded (reaction (get-in @db [:projects @active-project :queries @active-query :discarded]))]
+     (reaction (contains? @discarded hit-id)))))

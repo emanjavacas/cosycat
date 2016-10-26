@@ -5,6 +5,7 @@
             [cosycat.utils :refer [format]]
             [cosycat.app-utils :refer [pending-users deep-merge update-coll]]
             [cosycat.routes :refer [nav!]]
+            [cosycat.backend.handlers.users :refer [normalize-query-metadata]]
             [cosycat.backend.middleware :refer [standard-middleware check-project-exists]]
             [cosycat.backend.db
              :refer [default-project-session default-project-history default-settings]]
@@ -12,13 +13,14 @@
 
 (defn normalize-projects
   "transforms server project to client project"
-  [projects user]
+  [projects]
   (reduce
-   (fn [acc {:keys [name] :as project}]
-     (let [{:keys [settings]} (some #(when (= name (:name %)) %) (:projects user))]
-       (assoc acc name (-> project
-                           (assoc :session (default-project-session project))
-                           (cond-> settings (assoc :settings settings))))))
+   (fn [acc {:keys [name queries] :as project}]
+     (assoc acc name (cond-> project
+                       true (assoc :session (default-project-session project))
+                       queries (assoc :queries (reduce-kv
+                                                (fn [acc k v] (assoc acc k (normalize-query-metadata v)))
+                                                {} queries)))))
    {}
    projects))
 
@@ -54,7 +56,7 @@
  :add-project
  standard-middleware
  (fn [db [_ project]]
-   (update db :projects merge (normalize-projects [project] (:me db)))))
+   (update db :projects merge (normalize-projects [project]))))
 
 (re-frame/register-handler              ;remove project from client-db
  :remove-project

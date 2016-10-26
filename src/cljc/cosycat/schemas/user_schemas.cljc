@@ -30,7 +30,8 @@
 (def queries-schema                     ;metadata on previous stored queries
   {:query-data {:query-str s/Str :corpus s/Str}
    :id query-id-schema
-   :discarded [{:timestamp s/Int :hit s/Any}]})
+   :discarded #?(:clj [{:timestamp s/Int :hit s/Any}]
+                 :cljs #{s/Any})})
 
 (def user-project-schema   ;server-only (get merged with project in the client)
   {:settings settings-schema            ;project-specific settings

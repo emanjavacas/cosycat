@@ -69,25 +69,25 @@
     (.stopPropagation event)
     (re-frame/dispatch [:fetch-snippet hit-id])))
 
-(defn include-hit [hit-id query-id discarded-hits]
-  (fn [hit-id query-id discarded-hits]
+(defn include-hit [hit-id query-id discarded?]
+  (fn [hit-id query-id discarded?]
     (let [green "#5cb85c", red "#d9534f"]
-      (if (contains? @discarded-hits hit-id)
+      (if discarded?
         [bs/glyphicon
          {:glyph "remove-circle"
           :class "ignore"
           :style {:color red :cursor "pointer"}
-          :onClick #(re-frame/dispatch [:query-remove-metadata hit-id @query-id])}]
+          :onClick #(re-frame/dispatch [:query-remove-metadata hit-id query-id])}]
         [bs/glyphicon
          {:glyph "ok-circle"
           :class "ignore"
           :style {:color green :cursor "pointer"}
-          :onClick #(re-frame/dispatch [:query-add-metadata hit-id @query-id])}]))))
+          :onClick #(re-frame/dispatch [:query-add-metadata hit-id query-id])}]))))
 
-(defn results-row [hit-num hit-map {:keys [color-map token-field break]}]
-  (let [active-query (re-frame/subscribe [:project-session :active-query])
-        discarded-hits (re-frame/subscribe [:discarded-hits @active-query])]
-    (fn [hit-num {hit :hit id :id {num :num marked :marked} :meta} {:keys [color-map token-field break]}]
+(defn results-row [hit-num {:keys [id]} {:keys [color-map token-field break active-query]}]
+  (let [discarded? (re-frame/subscribe [:discarded-hit id])]
+    (fn [hit-num {hit :hit id :id {:keys [num marked]} :meta} {:keys [color-map token-field break active-query]}]
+      (println hit-num @discarded?)
       (let [row-class (merge-classes (when marked "marked") (when break "break"))
             background "#F9F9F9"]
         [:tr {:class row-class :data-hit id}
@@ -108,11 +108,11 @@
              {:for (str hit-num "-check")
               :tab-index (inc hit-num)}]]
            ;; discard
-           (when @active-query
+           (when active-query
              ^{:key (str hit-num "-dis")}
              [:td.ignore
               {:style {:background-color background :line-height "24px"}}
-              [include-hit id active-query discarded-hits]])
+              [include-hit id active-query @discarded?]])
            ;; hit number
            ^{:key (str hit-num "-num")}
            [:td.ignore.snippet-trigger
@@ -144,6 +144,7 @@
   (let [results (re-frame/subscribe [:results])
         from (re-frame/subscribe [:project-session :query :results-summary :from])
         color-map (re-frame/subscribe [:filtered-users-colors])
+        active-query (re-frame/subscribe [:project-session :active-query])
         token-field (re-frame/subscribe [:project-session :components :token-field])
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]
@@ -162,5 +163,9 @@
         (doall
          (for [[idx {:keys [hit meta id] :as hit-map} break] (reduce-hits @results)
                :let [hit-num (+ idx @from)]]
-           ^{:key hit-num} [results-row hit-num hit-map
-                            {:color-map color-map :token-field @token-field :break break}]))]])))
+           ^{:key hit-num}
+           [results-row hit-num hit-map
+            {:color-map color-map
+             :token-field @token-field
+             :break break
+             :active-query @active-query}]))]])))
