@@ -120,6 +120,27 @@
          path [:projects active-project :session :components :token-field]]
      (assoc-in db path token-field))))
 
+(re-frame/register-handler
+ :set-active-query
+ standard-middleware
+ (fn [db [_ id]]
+   (let [active-project (get-in db [:session :active-project])]
+     (assoc-in db [:projects active-project :session :components :active-query] id))))
+
+(re-frame/register-handler
+ :unset-active-query
+ standard-middleware
+ (fn [db _]
+   (let [active-project (get-in db [:session :active-project])]
+     (update-in db [:projects active-project :session :components] dissoc :active-query))))
+
+(re-frame/register-handler
+ :set-active-project-frame
+ standard-middleware
+ (fn [db [_ active-frame]]
+   (let [active-project (get-in db [:session :active-project])]
+     (assoc-in db [:projects active-project :session :components :active-project-frame] active-frame))))
+
 ;;; marking
 (re-frame/register-handler
  :mark-hit

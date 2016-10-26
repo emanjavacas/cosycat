@@ -30,6 +30,7 @@
 (def queries-schema                     ;metadata on previous stored queries
   {:query-data {:query-str s/Str :corpus s/Str}
    :id query-id-schema
+   :timestamp s/Int
    :discarded #?(:clj [{:timestamp s/Int :hit s/Any}]
                  :cljs #{s/Any})})
 

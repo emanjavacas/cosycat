@@ -18,7 +18,6 @@
             [cosycat.query.page :refer [query-panel]]
             [cosycat.project.page :refer [project-panel]]
             [cosycat.settings.page :refer [settings-panel]]
-            [cosycat.updates.page :refer [updates-panel]]
             [cosycat.debug.page :refer [debug-panel]]
             [cosycat.front.page :refer [front-panel]]
             [cosycat.error.page :refer [error-panel]]
@@ -26,6 +25,7 @@
             [cosycat.key-bindings :refer [bind-panel-keys]]
             [cosycat.routes :as routes]
             [cosycat.localstorage :as ls]
+            [cosycat.routes :refer [nav!]]
             [cosycat.components
              :refer [notification-container session-message-modal
                      user-thumb throbbing-panel]]
@@ -50,7 +50,6 @@
 (defmethod panels :project-panel [] [#'project-panel])
 (defmethod panels :settings-panel [] [#'settings-panel])
 (defmethod panels :debug-panel [] [#'debug-panel])
-(defmethod panels :updates-panel [] [#'updates-panel])
 (defmethod panels :error-panel [] [#'error-panel])
 (defmethod panels :loading-panel [] [#'loading-panel])
 
@@ -63,7 +62,11 @@
 
 (defn user-brand-span [username active-project]
   (fn [username active-project]
-    [:div username
+    [:div
+     (when @active-project
+       {:style {:cursor "pointer"}
+        :onClick #(nav! (str "/project/" @active-project))})
+     username
      (when @active-project
        [:span {:style {:white-space "nowrap"}} (str "@" @active-project)])]))
 
@@ -134,7 +137,6 @@
       prefix
       (cond (.endsWith origin "query") (str prefix "/query")
             (.endsWith origin "settings") (str prefix "/settings")
-            (.endsWith origin "updates") (str prefix "/updates")
             :else prefix))))
 
 (defn projects-dropdown [projects active-project]
@@ -161,22 +163,14 @@
        [bs/navbar-header [user-brand active-project]]
        [bs/nav {:pullRight true}
         ;; projects
-        (when-not (or (not @active-project) (empty? @projects))
+        (when (and @active-project (not (empty? @projects)))
           [projects-dropdown projects active-project])
         ;; query
-        (when-not (or (not @active-project) (= @active-panel :front-panel))
+        (when (and @active-project (not= @active-panel :front-panel))
           [navlink {:target :query-panel
                     :href #(str "#/project/" @active-project "/query")
                     :label "Query"
                     :icon "zmdi-search"}])
-        ;; updates
-        (when-not (or (not @active-project) (= @active-panel :front-panel))
-          [navlink {:target :updates-panel
-                    :href #(if @active-project
-                             (str "#/project/" @active-project "/updates")
-                             "#/updates")
-                    :label "Updates"
-                    :icon "zmdi-notifications"}])
         ;; settings
         [navlink {:target :settings-panel
                   :href #(if @active-project
@@ -195,8 +189,7 @@
                   :label "Exit"
                   :icon "zmdi-power"}]]])))
 
-(defn has-session-error? [session-error]
-  session-error)
+(defn has-session-error? [session-error] session-error)
 
 (defn has-init-session? [session-init]
   (not session-init))

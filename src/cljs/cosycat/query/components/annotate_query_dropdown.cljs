@@ -35,7 +35,7 @@
 
 (defn annotate-query []
   (let [has-query? (re-frame/subscribe [:has-query?])
-        active-query (re-frame/subscribe [:project-session :active-query])]
+        active-query (re-frame/subscribe [:project-session :components :active-query])]
     (fn []
       [bs/overlay-trigger
        {:placement "top"

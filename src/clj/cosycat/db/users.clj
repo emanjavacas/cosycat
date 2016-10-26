@@ -219,7 +219,7 @@
   [{db-conn :db :as db} username project query-data]
   (let [project-query-str (format "projects.%s.queries" project)
         now (System/currentTimeMillis), id (new-uuid)
-        payload {:query-data query-data :id id :discarded []}]
+        payload {:query-data query-data :id id :discarded [] :timestamp now}]
     (check-query-exists db username project query-data)
     (mc/find-and-modify
      db-conn (:users colls)
@@ -245,3 +245,11 @@
      {:username username (str project-query-str ".id") id}
      {$pull {(str project-query-str ".$.discarded") {"hit" discarded}}}
      {:return-new true})))
+
+(defn drop-query-metadata
+  [{db-conn :db :as db} username project query-id]
+  (let [project-query-str (format "projects.%s.queries" project)]
+    (mc/update
+     db-conn (:users colls)
+     {:username username}
+     {$pull {(str project-query-str) {:id query-id}}})))

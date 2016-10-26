@@ -173,8 +173,28 @@
                      :id query-id
                      :discarded hit-id}
             :handler #(re-frame/dispatch [:remove-query-metadata query-id hit-id])
-            :error-handler #(timbre/error "Error when storing query metadata")}))
+            :error-handler #(timbre/error "Error when removing query metadata")}))
    db))
+
+(re-frame/register-handler
+ :drop-query-metadata
+ standard-middleware
+ (fn [db [_ query-id project-name]]
+   (let [active-query (get-in db [:projects project-name :session :components :active-query])]
+     (.log js/console (get-in db [:projects project-name :session]) active-query query-id)
+     (cond-> db
+       (= active-query query-id) (update-in [:projects project-name :session :components] dissoc :active-query)
+       true (update-in [:projects project-name :queries] dissoc query-id)))))
+
+(re-frame/register-handler
+ :query-drop-metadata
+ (fn [db [_ query-id]]
+   (let [active-project (get-in db [:session :active-project])]
+     (POST "/users/drop-query-metadata"
+           {:params {:project-name active-project :id query-id}
+            :handler #(re-frame/dispatch [:drop-query-metadata query-id active-project])
+            :error-handler #(timbre/error "Error when droping query metadata")})
+     db)))
 
 (re-frame/register-handler
  :launch-query

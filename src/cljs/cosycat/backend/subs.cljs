@@ -233,13 +233,13 @@
  :discarded-hits
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
-         active-query (reaction (get-in @db [:projects @active-project :session :active-query]))]
+         active-query (reaction (get-in @db [:projects @active-project :session :components :active-query]))]
      (reaction (get-in @db [:projects @active-project :queries @active-query :discarded])))))
 
 (re-frame/register-sub
  :discarded-hit
  (fn [db [_ hit-id]]
    (let [active-project (reaction (get-in @db [:session :active-project]))
-         active-query (reaction (get-in @db [:projects @active-project :session :active-query]))
+         active-query (reaction (get-in @db [:projects @active-project :session :components :active-query]))
          discarded (reaction (get-in @db [:projects @active-project :queries @active-query :discarded]))]
      (reaction (contains? @discarded hit-id)))))

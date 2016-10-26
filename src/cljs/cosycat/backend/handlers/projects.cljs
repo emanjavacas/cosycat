@@ -197,17 +197,3 @@
             :error-handler error-handler})
      db)))
 
-(re-frame/register-handler
- :set-active-query
- standard-middleware
- (fn [db [_ id]]
-   (let [active-project (get-in db [:session :active-project])]
-     (assoc-in db [:projects active-project :session :active-query] id))))
-
-(re-frame/register-handler
- :unset-active-query
- standard-middleware
- (fn [db _]
-   (let [active-project (get-in db [:session :active-project])]
-     (update-in db [:projects active-project :session] dissoc :active-query))))
-

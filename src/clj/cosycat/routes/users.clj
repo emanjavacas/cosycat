@@ -80,6 +80,11 @@
     {id :id discarded :discarded project-name :project-name} :params}]
   (let [payload (users/remove-query-metadata db username project-name {:id id :discarded discarded})]))
 
+(defn drop-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {id :id project-name :project-name} :params}]
+  (let [payload (users/drop-query-metadata db username project-name id)]))
+
 (defn users-routes []
   (routes
    (context "/users" []
@@ -88,5 +93,6 @@
      (POST "/new-query-metadata" [] (make-default-route new-query-metadata-route))
      (POST "/add-query-metadata" [] (make-default-route add-query-metadata-route))
      (POST "/remove-query-metadata" [] (make-default-route remove-query-metadata-route))
+     (POST "/drop-query-metadata" [] (make-default-route drop-query-metadata-route))
      (POST "/update-profile" [] (make-default-route update-profile-route))
      (POST "/new-avatar" [] (make-default-route new-avatar-route)))))

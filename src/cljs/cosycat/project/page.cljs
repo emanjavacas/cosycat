@@ -5,54 +5,18 @@
             [cosycat.project.components.delete-project-modal :refer [delete-project-modal]]
             [cosycat.project.components.leave-project-modal :refer [leave-project-modal]]
             [cosycat.project.components.add-user-modal :refer [add-user-modal]]
+            [cosycat.project.components.users-frame :refer [users-frame]]
+            [cosycat.project.components.events-frame :refer [events-frame]]
+            [cosycat.project.components.queries-frame :refer [queries-frame]]
             [cosycat.components :refer [user-profile-component]]
             [cosycat.roles :refer [project-user-roles]]
             [cosycat.utils :refer [human-time format]]
-            [cosycat.app-utils :refer [ceil]]
+            [cosycat.app-utils :refer [ceil dekeyword]]
             [cosycat.viewport :refer [viewport]]
             [taoensso.timbre :as timbre]))
 
-(def users-per-row 3)
-
-(def my-user-style {:border "1px solid #d1e8f1" :background-color "#eff7fa"})
-
-(defn col-class [users-per-row] "col-lg-6.col-sm-6.col-md-6")
-
-(defn can-edit-role? [my-role target-role]
-  (cond (some #{target-role} ["creator"]) false
-        (some #{my-role} ["guest" "user"]) false
-        :else true))
-
 (defn can-delete-project? [my-role]
   (not= my-role "guest"))
-
-(defn can-add-users? [my-role]
-  (contains? #{"project-lead" "creator"} my-role))
-
-(defn project-user [{:keys [username]} project-role my-role]
-  (let [user (re-frame/subscribe [:user username])]
-    (fn [{:keys [username]} project-role my-role]
-      [user-profile-component @user project-user-roles
-       :role project-role
-       ;; :on-submit TODO: send edit to project
-       :on-submit (fn [{:keys [username]} role]
-                    (re-frame/dispatch [:user-role-update {:username username :new-role role}]))
-       :displayable? true
-       :editable? (can-edit-role? my-role project-role)])))
-
-(defn project-users [users my-role]
-  (let [me (re-frame/subscribe [:me :username])]
-    (fn [users my-role]
-      (let [users-per-row (if (> (:width @viewport) 1185) 3 2)]
-        [:div.container-fluid
-         (doall (for [[idx row] (map-indexed vector (partition-all users-per-row users))]
-                  ^{:key (str "row." idx)}
-                  [:div.row
-                   (doall (for [{:keys [username role] :as user} row]
-                            ^{:key username}
-                            [:div.col-lg-4.col-sm-6.col-md-6
-                             [:div.well {:style (when (= @me username) my-user-style)}
-                              [project-user user role my-role]]]))]))]))))
 
 (defn delete-project-btn []
   (let [show? (re-frame/subscribe [:modals :delete-project])]
@@ -78,47 +42,62 @@
 
 (defn project-buttons [my-role]
   (fn [my-role]
-    [bs/button-toolbar
+    [bs/button-group
      (when (can-delete-project? @my-role) [delete-project-btn])
      [leave-project-btn]]))
 
-(defn add-user-button []
-  (let [show? (re-frame/subscribe [:modals :add-user])]
-    (fn []
-      [bs/button
-       {:onClick #(re-frame/dispatch [(if @show? :close-modal :open-modal) :add-user])}
-       "Add User"])))
-
 (defn project-header [{:keys [creator]}]
-  (let [creator (re-frame/subscribe [:user creator :username])]
+  (let [creator (re-frame/subscribe [:user creator :username])
+        my-role (re-frame/subscribe [:active-project-role])]
     (fn [{:keys [name description created]}]
       [:div.container-fluid
        [:div.row
-        [:div.col-lg-8.col-md-7.col-sm-7 {:style {:font-size "32px"}} name]
-        [:div.col-lg-4.col-md-5.col-sm-5 {:style {:text-align "bottom"}}
-         [:p.text-right
-          "Created by " [:strong @creator] " on " [:span.text-muted (human-time created)]]]]
-       [:div.row [:div.col-lg-12 [:p.text-muted description]]]])))
+        [:div.col-lg-6.col-md-6.col-sm-6
+         [:div.container-fluid
+          [:div.row {:style {:font-size "32px"}} name]
+          [:div.row {:style {:margin-top "15px"}} [:p description]]
+          [:div.row
+           [:p.text-muted
+            "Created by " [:strong @creator] " on " [:span (human-time created)]]]]]
+        [:div.col-lg-6 [:div.pull-right [project-buttons my-role]]]]
+       [:div.row [:div.col-lg-12 [:hr]]]])))
+
+(defmulti project-frame identity)
+(defmethod project-frame :users [] [#'users-frame])
+(defmethod project-frame :events [] [#'events-frame])
+(defmethod project-frame :queries [] [#'queries-frame])
+(defmethod project-frame :default []
+  [:div.container-fluid
+   [:div.row
+    {:style {:margin-top "50px"}}
+    [:div.col-lg-3]
+    [:div.col-lg-6.text-center
+     [:div [:h3 "Not implemented yet!"]]]
+    [:div.col-lg-3]]])
+
+(defn pill [key active-frame]
+  (fn [key active-frame]
+    [:li {:class (when (= key @active-frame) "active") :style {:cursor "pointer"}}
+     [:a {:onClick #(re-frame/dispatch [:set-active-project-frame key])}
+      (clojure.string/capitalize (dekeyword key))]]))
 
 (defn project-panel []
   (let [active-project (re-frame/subscribe [:active-project])
-        my-role (re-frame/subscribe [:active-project-role])
-        me (re-frame/subscribe [:me :username])]
+        active-project-frame (re-frame/subscribe [:project-session :components :active-project-frame])]
     (fn []
-      (let [{:keys [name users] :as project} @active-project]
-        [:div.container
+      (let [{:keys [name] :as project} @active-project]
+        [:div
          [delete-project-modal name]
          [leave-project-modal name]
          [add-user-modal project]
          [:div.container-fluid
           [:div.row [project-header project]]
-          [:div.row [:div.col-lg-12 [:hr]]]
           [:div.row
-           [:div.col-lg-6.col-md-6.col-sm-6
-            [:div [add-user-button]]]
-           [:div.col-lg-6.col-md-6.col-sm-6
-            [:div.pull-right [project-buttons my-role]]]]
-          [:div-row {:style {:margin "20px"}}
-           [:div.text [:h4 "Users working in " [:span.text-muted name]]]]
-          [:div.row {:style {:height "10px"}}]
-          [:div.row [project-users users @my-role]]]]))))
+           [:div.col-lg-12
+            [:ul.nav.nav-pills
+             [pill :users active-project-frame]
+             [pill :events active-project-frame]
+             [pill :queries active-project-frame]
+             [pill :issues active-project-frame]]]]
+          [:div.row {:style {:margin-top "20px"}}]
+          [:div.row (project-frame @active-project-frame)]]]))))

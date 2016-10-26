@@ -65,4 +65,3 @@
          (if @project-input-show?
            [project-name-input project-name]
            [double-check-button project-input-show?])]]])))
-

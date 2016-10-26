@@ -25,8 +25,7 @@
   {:query query-results-schema
    :status (s/conditional empty? {} :else status-schema)   
    :components {s/Any s/Any}
-   :filtered-users #{s/Str}
-   (s/optional-key :active-query) query-id-schema}) ;filter out annotations by other users
+   :filtered-users #{s/Str}}) ;filter out annotations by other users
 
 (defn make-keys-optional [schema]
   (reduce-kv (fn [m k v]

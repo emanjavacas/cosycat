@@ -87,7 +87,6 @@
 (defn results-row [hit-num {:keys [id]} {:keys [color-map token-field break active-query]}]
   (let [discarded? (re-frame/subscribe [:discarded-hit id])]
     (fn [hit-num {hit :hit id :id {:keys [num marked]} :meta} {:keys [color-map token-field break active-query]}]
-      (println hit-num @discarded?)
       (let [row-class (merge-classes (when marked "marked") (when break "break"))
             background "#F9F9F9"]
         [:tr {:class row-class :data-hit id}
@@ -144,7 +143,7 @@
   (let [results (re-frame/subscribe [:results])
         from (re-frame/subscribe [:project-session :query :results-summary :from])
         color-map (re-frame/subscribe [:filtered-users-colors])
-        active-query (re-frame/subscribe [:project-session :active-query])
+        active-query (re-frame/subscribe [:project-session :components :active-query])
         token-field (re-frame/subscribe [:project-session :components :token-field])
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]

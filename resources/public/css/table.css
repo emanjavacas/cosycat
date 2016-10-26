@@ -13,7 +13,6 @@ table tr.break {
     border-top: 2px solid rgba(154, 126, 126, 0.12);
 }
 
-/* checkbox */
 input[type=checkbox].checkbox-custom {
     opacity: 0;
     position: absolute;   
@@ -69,10 +68,6 @@ table#table-annotation tr td {
     display: table-cell;
 }
 
-/* table#table-annotation tr td:first-child { */
-/*     width: 90% !important; */
-/* } */
-
 table#table-annotation tr.queue-row:hover {
     opacity: 0.8;
     color: black !important;
@@ -121,3 +116,10 @@ table#table-annotation tr.ann-row:hover {
     background-color: #fafafa;
 }
 
+table#query-metadata-table {
+    margin-bottom: 0px !important;
+}
+
+table#query-metadata-table tr td {
+    padding: 4px;
+}
