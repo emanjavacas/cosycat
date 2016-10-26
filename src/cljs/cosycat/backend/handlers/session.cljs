@@ -60,7 +60,7 @@
    (-> payload
        (assoc :session default-session)
        (assoc :settings (deep-merge settings (default-settings :corpora corpora)))
-       (assoc :projects (normalize-projects projects me))
+       (assoc :projects (normalize-projects projects))
        (assoc-in [:session :init] true))))
 
 (re-frame/register-handler              ;load error
@@ -77,7 +77,7 @@
  (fn [db _] (-> db (assoc-in [:session :session-error] nil))))
 
 (defn initialize-session-handler [payload]
-  (re-frame/dispatch [:initialize-db payload]))
+  (re-frame/dispatch-sync [:initialize-db payload]))
 
 (defn initialize-session-error-handler [payload]
   (re-frame/dispatch

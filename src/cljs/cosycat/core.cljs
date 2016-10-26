@@ -231,7 +231,7 @@
   ;; web-sockets
   (open-ws-channel {:url (str "ws://" (.-host js/location) "/ws")})
   ;; start session
-  (re-frame/dispatch-sync [:initialize-session])
+  (re-frame/dispatch [:initialize-session])
   ;; declare app routes
   (routes/app-routes)
   ;; handle refreshes
