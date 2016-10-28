@@ -62,6 +62,7 @@
     (fn []
       (let [{:keys [name users] :as project} @active-project]
         [:div.container-fluid
-         [:div.row [:div.col-lg-12 [:div.pull-right [add-user-button]]]]
+         (when (can-add-users? @my-role)
+           [:div.row [:div.col-lg-12 [:div.pull-right [add-user-button]]]])
          [:div.row {:style {:height "10px"}}]
          [:div.row [project-users users @my-role]]]))))

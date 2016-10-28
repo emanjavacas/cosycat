@@ -5,8 +5,6 @@
             [cosycat.components :refer [user-profile-component]]
             [cosycat.roles :refer [project-user-roles]]
             [cosycat.autosuggest :refer [suggest-users]]
-            [cosycat.utils :refer [human-time wrap-key]]
-            [cosycat.app-utils :refer [ceil pending-users]]
             [taoensso.timbre :as timbre]))
 
 (defn remove-project-users [users project-users]

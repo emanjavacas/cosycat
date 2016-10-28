@@ -24,10 +24,12 @@
           (try {:status 200 :body (route req)}
                (catch clojure.lang.ExceptionInfo e
                  (let [{:keys [message code data]} (ex-data e)]
+                   (timbre/debug (ex-data e))
                    {:status 500 :body {:message message :code code :data data}}))
                (catch Exception e
                  (let [{message :message ex :class} (bean e)
                        stacktrace (mapv str (.getStackTrace e))]
+                   (timbre/debug (bean e))
                    {:status 500
                     :body {:message message :data {:e (str ex) :stacktrace stacktrace}}}))))
         rule-map))
