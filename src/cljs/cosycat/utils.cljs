@@ -163,7 +163,7 @@
    :signup "Hooray! %s has joined the team!"
    :login "%s is ready for science"
    :logout "%s is leaving us..."
-   :new-project "You've been added to project [%s] by user [%s]"})
+   :new-project "You've been added to project \"%s\" by %s"})
 
 (defn get-msg [path & args]
   (let [fmt (get-in notification-msgs path)]
