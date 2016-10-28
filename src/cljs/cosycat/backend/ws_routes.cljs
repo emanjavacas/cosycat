@@ -88,11 +88,11 @@
       (re-frame/dispatch [:notify {:message message}])))
   db)
 
-(defmethod ws-handler :project-update
-  [db {{payload :payload project-name :project-name} :data by :by}]
-  (re-frame/dispatch [:add-project-update {:project-name project-name :payload payload}])
+(defmethod ws-handler :project-issue
+  [db {{issue :issue project-name :project-name} :data by :by}]
+  (re-frame/dispatch [:add-project-issue project-name issue])
   (re-frame/dispatch
-   [:notify {:message (format "Project \"%s\" has an update by \"%s\"" project-name by)}])
+   [:notify {:message (format "Project \"%s\" has a new issue by \"%s\"" project-name by)}])
   db)
 
 (defmethod ws-handler :new-project-user-role

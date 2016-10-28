@@ -45,7 +45,7 @@
     :signup (make-schema {:data public-user-schema})
     :new-project (make-schema {:data {:project project-schema}})
     :project-remove (make-schema {:data {:project-name s/Str}})
-    :project-update (make-schema {:data issue-schema})
+    :project-issue (make-schema {:data {:project-name s/Str :issue issue-schema}})
     :project-add-user (make-schema {:data {:project project-schema}})
     :project-new-user (make-schema {:data {:user project-user-schema :project-name s/Str}})
     :project-remove-user (make-schema {:data {:username s/Str :project-name s/Str}})
@@ -56,11 +56,6 @@
 (defn ws-from-client
   [{:keys [type data] :as payload}]
   (case type
-    :annotation {:type s/Keyword
-                 :data {:hit-id  (s/if vector? [hit-id-schema] hit-id-schema)
-                        :ann-map (s/if vector? [annotation-schema] annotation-schema)}
-                 :payload-id s/Any
-                 (s/optional-key :status) s/Any}
-    :notify     {:type s/Keyword
-                 :data {s/Any s/Any}
-                 (s/optional-key :payload-id) s/Any}))
+    :notify {:type s/Keyword
+             :data {s/Any s/Any}
+             (s/optional-key :payload-id) s/Any}))

@@ -5,7 +5,7 @@
             [cosycat.components :refer [user-profile-component compute-feedback]]
             [cosycat.roles :refer [project-user-roles]]
             [cosycat.utils :refer [human-time]]
-            [cosycat.app-utils :refer [ceil pending-users]]
+            [cosycat.app-utils :refer [ceil get-pending-users]]
             [taoensso.timbre :as timbre]))
 
 (defn pending-user-row [{:keys [label usernames]}]
@@ -26,9 +26,8 @@
    This summary shows the status of the collective decision.")
 
 (defn pending-users-table [project]
-  (fn [project]
-    (let [{:keys [users]} project
-          {:keys [pending non-app agreed-users]} (pending-users project)]
+  (fn [{:keys [users] :as project}]
+    (let [{:keys [pending-users NA-users agreed-users]} (get-pending-users project)]
       [:div.container-fluid
        [:h4 "Summary"
         [:span [bs/overlay-trigger
@@ -36,14 +35,13 @@
                 [bs/glyphicon
                  {:glyph "question-sign"
                   :style {:font-size "14px" :margin-left "7px"}}]]]]
-       [pending-user-row {:label "Pending users: " :usernames pending}]
+       [pending-user-row {:label "Pending users: " :usernames pending-users}]
        [pending-user-row {:label "Agreeing users: " :usernames agreed-users}]])))
 
 (defn trigger-remove-project [project-name project-name-atom]
   (fn [event]
     (when (and (= 13 (.-charCode event)) (= project-name @project-name-atom))
-      (do (timbre/info "removing project" project-name)
-          (re-frame/dispatch [:close-modal :delete-project])
+      (do (re-frame/dispatch [:close-modal :delete-project])
           (re-frame/dispatch [:project-remove {:project-name project-name}])))))
 
 (defn project-name-input [project-name project-name-atom]
@@ -124,8 +122,8 @@
         show? (re-frame/subscribe [:modals :delete-project])
         me (re-frame/subscribe [:me :username])]
     (fn [project-name]
-      (let [{:keys [pending]} (pending-users @project)
-            pending? (contains? (apply hash-set pending) @me)]
+      (let [{:keys [pending-users]} (get-pending-users @project)
+            pending? (contains? (apply hash-set pending-users) @me)]
         [bs/modal
          {:show @show?
           :onHide (on-hide project-name-atom project-name-input-show? footer-alert-show)}

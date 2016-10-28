@@ -10,12 +10,12 @@
 (def issue-id-schema s/Any)
 
 (def issue-schema
-  {:type s/Str
+  {:id issue-id-schema
+   :type s/Str
    :timestamp s/Int
    :status (s/enum "open" "closed")
-   :users [(s/conditional keyword? (s/enum :all) :else s/Str)]
-   :id issue-id-schema
-   s/Any s/Any})
+   :users [(s/conditional keyword? (s/enum :all) :else s/Str)] ;
+   :data {s/Any s/Any}})
 
 (def status-schema
   {:status (s/enum :ok :error)
@@ -49,7 +49,8 @@
            :created s/Int
            :creator s/Str
            :users project-users-schema
-           (s/optional-key :issues) [issue-schema]}
+           (s/optional-key :issues) [issue-schema]
+           (s/optional-key :events) [event-schema]}
      :cljs {:name s/Str
             :description s/Str
             :creator s/Str
@@ -60,7 +61,7 @@
             (s/optional-key :issues) {issue-id-schema issue-schema}
             ;; things that inform about events (new user, queryetc.)
             ;; merged from both collections users and projects
-            (s/optional-key :events) {event-id-schema event-schema}
+            (s/optional-key :events) {event-id-schema event-schema}            
             (s/optional-key :queries) {query-id-schema queries-schema}
             (s/optional-key :settings) project-settings-schema
             (s/optional-key :session) project-session-schema}))

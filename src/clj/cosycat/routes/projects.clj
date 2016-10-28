@@ -16,34 +16,20 @@
      :target-clients (map :username users))
     project))
 
-(defn add-project-issue-route
-  [{{payload :payload project-name :project-name} :params
-    {{username :username} :identity} :session
-    {db :db ws :ws} :components}]
-  (let [{:keys [users]} (proj/get-project db username project-name)]
-    (proj/add-project-issue db username project-name payload)
-    (send-clients
-     ws {:type :project-update :data {:payload payload :project-name project-name} :by username}
-     :source-client username
-     :target-clients (map :username users))
-    payload))
-
 (defn add-user-route
-  [{{user :user project-name :project-name} :params
+  [{{{new-username :username :as user} :user project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [{:keys [users] :as project} (proj/get-project db username project-name)
-        updated-project (proj/add-user db username project-name user)
-        added-user-data {:project updated-project}
-        client-data {:project-name project-name :user user}]
-    (send-client                        ;send user
-     ws (:username user)
-     {:type :project-add-user :data added-user-data :by username})
-    (send-clients
-     ws {:type :project-new-user :data client-data :by username}
+  (let [_ (proj/add-user db username project-name user)
+        {:keys [users] :as project} (proj/get-project db username project-name)]
+    (send-client                        ;send to added user
+     ws new-username
+     {:type :project-add-user :data {:project project} :by username})
+    (send-clients                       ;send to project users
+     ws {:type :project-new-user :data {:project-name project-name :user user} :by username}
      :source-client username
      :target-clients (mapv :username users))
-    client-data))
+    {:project-name project-name :user user}))
 
 (defn remove-user-route
   [{{project-name :project-name} :params
@@ -62,10 +48,10 @@
     {db :db ws :ws} :components}]
   (let [{:keys [users]} (proj/find-project-by-name db project-name)]
     (if-let [delete-payload (proj/remove-project db username project-name)]
-      (let [client-payload {:type :project-update
-                            :data {:project-name project-name :payload delete-payload}
-                            :by username}]
-        (send-clients ws client-payload
+      (let [ws-payload {:type :project-issue
+                        :data {:project-name project-name :issue delete-payload}
+                        :by username}]
+        (send-clients ws ws-payload
          :source-client username
          :target-clients (mapv :username users))
         delete-payload)
@@ -87,12 +73,24 @@
      :target-clients (mapv :username users))
     project-user))
 
+(defn add-project-issue-route
+  [{{payload :payload project-name :project-name} :params
+    {{username :username} :identity} :session
+    {db :db ws :ws} :components}]
+  (let [{:keys [users]} (proj/get-project db username project-name)
+        issue (proj/add-project-issue db username project-name payload)]    
+    (send-clients
+     ws {:type :project-update :data {:issue issue :project-name project-name} :by username}
+     :source-client username
+     :target-clients (map :username users))
+    issue))
+
 (defn project-routes []
   (routes
    (context "/project" []
-    (POST "/new" [] (make-default-route new-project-route))
-    (POST "/issue" [] (make-default-route add-project-issue-route))
+    (POST "/new" [] (make-default-route new-project-route))    
     (POST "/add-user" [] (make-default-route add-user-route))
     (POST "/remove-user" [] (make-default-route remove-user-route))
     (POST "/remove-project" [] (make-default-route remove-project-route))
-    (POST "/update-user-role" [] (make-default-route update-user-role)))))
+    (POST "/update-user-role" [] (make-default-route update-user-role))
+    (POST "/issue" [] (make-default-route add-project-issue-route)))))

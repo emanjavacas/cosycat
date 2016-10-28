@@ -3,7 +3,7 @@
             [reagent.core :as reagent]
             [ajax.core :refer [POST]]
             [cosycat.utils :refer [format]]
-            [cosycat.app-utils :refer [pending-users deep-merge update-coll]]
+            [cosycat.app-utils :refer [get-pending-users deep-merge update-coll]]
             [cosycat.routes :refer [nav!]]
             [cosycat.backend.handlers.users :refer [normalize-query-metadata]]
             [cosycat.backend.middleware :refer [standard-middleware check-project-exists]]
@@ -11,16 +11,22 @@
              :refer [default-project-session default-project-history default-settings]]
             [taoensso.timbre :as timbre]))
 
+(defn normalize-queries [queries]
+  (reduce-kv
+   (fn [acc k v] (assoc acc k (normalize-query-metadata v)))
+   {}
+   queries))
+
 (defn normalize-projects
   "transforms server project to client project"
   [projects]
   (reduce
-   (fn [acc {:keys [name queries] :as project}]
+   (fn [acc {:keys [name queries issues events] :as project}]
      (assoc acc name (cond-> project
                        true (assoc :session (default-project-session project))
-                       queries (assoc :queries (reduce-kv
-                                                (fn [acc k v] (assoc acc k (normalize-query-metadata v)))
-                                                {} queries)))))
+                       issues (assoc :issues (zipmap (map :id issues) issues))
+                       events (assoc :events (zipmap (map :id events) events))
+                       queries (assoc :queries (normalize-queries queries)))))
    {}
    projects))
 
@@ -86,11 +92,12 @@
 (re-frame/register-handler              ;add project update to client-db
  :add-project-issue
  standard-middleware
- (fn [db [_ {{id :id :as payload} :payload project-name :project-name}]]
-   (update-in db [:projects project-name :issues] assoc id payload)))
+ (fn [db [_ project-name {{id :id :as issue} :issue}]]
+   (update-in db [:projects project-name :issues] assoc id issue)))
 
-(defn project-add-issue-handler [project-issue]
-  (re-frame/dispatch [:add-project-issue project-issue]))
+(defn project-add-issue-handler [project-name]
+  (fn [issue]
+    (re-frame/dispatch [:add-project-issue project-name issue])))
 
 (re-frame/register-handler
  :project-issue
@@ -98,7 +105,7 @@
  (fn [db [_ {:keys [payload project-name]}]]
    (POST "/project/issue"
          {:params {:project-name project-name :payload payload}
-          :handler project-add-issue-handler
+          :handler (project-add-issue-handler project-name)
           :error-handler error-handler})
    db))
 
@@ -148,18 +155,18 @@
     :added-project-remove-agree))
 
 (defn remove-project-handler [{project-name :name :as project}]
-  (fn [{:keys [id] :as delete-payload}]
-    (case (parse-remove-project-payload delete-payload)
+  (fn [{:keys [id] :as delete-issue}]
+    (case (parse-remove-project-payload delete-issue)
       :project-removed
       (do (re-frame/dispatch [:remove-project project-name])
           (re-frame/dispatch [:notify {:message (str "Project " project-name " was deleted")}])
           (nav! "/"))
       :added-project-remove-agree
-      (let [updated-project (update project :issues assoc id delete-payload)
-            {:keys [pending]} (pending-users updated-project)] ;still users
-        (re-frame/dispatch [:add-project-issue {:payload delete-payload :project-name project-name}])
+      (let [updated-project (update project :issues assoc id delete-issue)
+            {:keys [pending-users]} (get-pending-users updated-project)] ;still users
+        (re-frame/dispatch [:add-project-issue project-name delete-issue])
         (re-frame/dispatch
-         [:notify {:message (str (count pending) " users pending to remove project")}]))
+         [:notify {:message (str (count pending-users) " users pending to remove project")}]))
       (throw (js/Error. "Couldn't parse remove-project payload")))))
 
 (re-frame/register-handler
@@ -196,4 +203,3 @@
             :handler (handle-new-user-role project-name)
             :error-handler error-handler})
      db)))
-

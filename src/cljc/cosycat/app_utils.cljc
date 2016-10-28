@@ -120,15 +120,22 @@
 
 (defn server-project-name [s] (str "_" s))
 
-(defn pending-users [{:keys [issues users] :as project}]
-  (let [non-app (->> users (filter #(= "guest" (:role %))) (map :username))
-        rest-users (remove (apply hash-set non-app) (map :username users))
-        agreed-users (filter (apply hash-set rest-users)
-                             (->> (vals issues) ;denormalize issues
-                                  (filter #(= "delete-project-agree" (:type %)))
-                                  (map :username)))
-        pending (remove (apply hash-set agreed-users) rest-users)]
-    {:non-app non-app :agreed-users (vec (apply hash-set agreed-users)) :pending pending}))
+(defn find-delete-issue
+  "denormalize issues first in case of normalized project data"
+  [issues]
+  (let [issues (if (vector? issues) issues (vals issues))]
+    (->> issues
+         (filter #(= "delete-project-agree" (:type %)))
+         first)))
+
+(defn get-pending-users
+  "compute the status of each user with respect to a project-delete issue"
+  ([{:keys [issues users] :as project}]
+   (-> (find-delete-issue issues) (get-pending-users users)))
+  ([{{agreed-users :agreed} :data :as delete-issue} users]
+   (let [NA-users (->> users (filter #(= "guest" (:role %))) (map :username))
+         pending (remove (apply hash-set (concat NA-users agreed-users)) (map :username users))]
+     {:NA-users (vec NA-users) :agreed-users (vec agreed-users) :pending-users (vec pending)})))
 
 ;;; parse token id
 (defn parse-token-id
