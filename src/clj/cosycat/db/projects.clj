@@ -187,10 +187,12 @@
   "adds user to project"
   [{db-conn :db :as db} username project-name {new-username :username :as user}]
   (check-user-in-project db username project-name)
-  (let [_ (mc/update
-           db-conn (:projects colls)
-           {"name" project-name}
-           {$push {"users" user "events" (new-user-event new-username)}})]))
+  (-> (mc/find-and-modify
+       db-conn (:projects colls)
+       {"name" project-name}
+       {$push {"users" user "events" (new-user-event new-username)}}
+       {:return-new true})
+      normalize-project))
 
 (defn update-user-role [{db-conn :db :as db} issuer project-name username new-role]
   (let [project (find-project-by-name db project-name)

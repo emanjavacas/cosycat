@@ -118,10 +118,10 @@
 (re-frame/register-handler
  :project-add-user
  standard-middleware
- (fn [db [_ {:keys [user]}]]
+ (fn [db [_ {:keys [username role]}]]
    (let [project-name (get-in db [:session :active-project])]
      (POST "/project/add-user"
-           {:params {:user user :project-name project-name}
+           {:params {:username username :role role :project-name project-name}
             :handler #(re-frame/dispatch [:add-project-user %])
             :error-handler error-handler}))
    db))

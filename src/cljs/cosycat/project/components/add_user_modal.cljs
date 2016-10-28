@@ -16,11 +16,10 @@
      project-user-roles
      :editable? true
      :on-dismiss #(do (reset! current-selection-atom nil) (reset! selected-user-atom nil))
-     :on-submit (fn [user role]
+     :on-submit (fn [{:keys [username]} role]
                   (re-frame/dispatch
-                   [:project-add-user
-                    {:user {:username (:username user) :role role}}])
-                  (re-frame/dispatch [:add-user @selected-user-atom]) ;WIP
+                   [:project-add-user {:username username :role role}])
+                  (re-frame/dispatch [:fetch-user-info username]) ;WIP
                   (re-frame/dispatch [:close-modal :add-user])
                   (reset! selected-user-atom nil))]))
 

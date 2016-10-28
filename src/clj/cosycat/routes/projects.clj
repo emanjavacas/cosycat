@@ -17,19 +17,19 @@
     project))
 
 (defn add-user-route
-  [{{{new-username :username :as user} :user project-name :project-name} :params
+  [{{new-username :username role :role project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [_ (proj/add-user db username project-name user)
-        {:keys [users] :as project} (proj/get-project db username project-name)]
+  (let [new-user {:username username :role role}
+        {:keys [users] :as project} (proj/add-user db username project-name new-user)]
     (send-client                        ;send to added user
      ws new-username
      {:type :project-add-user :data {:project project} :by username})
     (send-clients                       ;send to project users
-     ws {:type :project-new-user :data {:project-name project-name :user user} :by username}
+     ws {:type :project-new-user :data {:project-name project-name :user new-user} :by username}
      :source-client username
-     :target-clients (mapv :username users))
-    {:project-name project-name :user user}))
+     :target-clients (->> users (remove #(= new-username (:username %))) (mapv :username)))
+    {:project-name project-name :user new-user}))
 
 (defn remove-user-route
   [{{project-name :project-name} :params
