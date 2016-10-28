@@ -40,9 +40,11 @@
     (cond
       (not (= password repeatpassword)) (on-signup-failure req "Password mismatch")
       (is-user? db user)                (on-signup-failure req "User already exists")
-      :else (let [user (new-user db user)]
+      :else (let [user (-> (new-user db user)
+                           (normalize-user :settings :projects)
+                           add-user-active)]
               (send-clients ws
-               {:type :signup :data (-> user (normalize-user :settings :projects) add-user-active)})
+               {:type :signup :data user})
               (-> (redirect (or next-url "/"))
                   (assoc-in [:session :identity] user))))))
 

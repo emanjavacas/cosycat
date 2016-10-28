@@ -1,6 +1,6 @@
 (ns cosycat.routes.session
   (:require [cosycat.routes.utils :refer [safe]]
-            [cosycat.components.ws :refer [get-active-users]]
+            [cosycat.components.ws :refer [add-active-info]]
             [cosycat.db.users :refer [user-login-info users-public-info user-settings]]
             [cosycat.db.projects :refer [get-projects]]
             [cosycat.db.utils :refer [normalize-user]]
@@ -62,9 +62,9 @@
                :let [abspath (join-path dir (.getName f))]]
            (-> abspath slurp json/read-str keywordize-keys)))))
 
-(defmulti normalize-corpus find-corpus-config-format)
+(defmulti session-corpus find-corpus-config-format)
 
-(defmethod normalize-corpus :short
+(defmethod session-corpus :short
   [{:keys [server endpoints]}]
   (mapcat (fn [{{corpus :corpus web-service :web-service} :args :as endpoint}]
             (if-not corpus
@@ -72,26 +72,16 @@
               [(assoc-in endpoint [:args :server] server)]))
           endpoints))
 
-(defmethod normalize-corpus :full
-  [corpus]
-  [corpus])
+(defmethod session-corpus :full [corpus] [corpus])
 
 (defn session-corpora []
-  (or (->> (env :corpora) (mapcat normalize-corpus) distinct vec) []))
+  (or (->> (env :corpora) (mapcat session-corpus) distinct vec) []))
 
-(defn add-active-info [user active-users]
-  (if (contains? active-users (:username user))
-    (assoc user :active true)
-    (assoc user :active false)))
-
-(defn- normalize-users [users username active-users]
-  (->> users
-       (remove (fn [user] (= username (:username user))))
-       (mapv (fn [user] {:username (:username user)
-                         :user (add-active-info user active-users)}))))
-
-(defn session-users [db username active-users]
-  (normalize-users (users-public-info db username) username active-users))
+(defn session-users [db ws username]
+  (let [users (->> (users-public-info db username)
+                   (remove (fn [user] (= username (:username user))))
+                   (mapv (fn [user] (add-active-info ws user))))]
+    (normalize-by users :username)))
 
 (defn- get-user-project-settings [user-projects project-name]
   (get-in user-projects [(keyword project-name) :settings]))
@@ -118,10 +108,9 @@
 (defn session-router
   [{{{username :username roles :roles} :identity} :session
     {db :db ws :ws} :components}]
-  (let [active-users (get-active-users ws)
-        {settings :settings user-projects :projects :as me} (user-login-info db username)]
+  (let [{settings :settings user-projects :projects :as me} (user-login-info db username)]
     {:me (normalize-user me :settings :projects)
-     :users (session-users db username active-users)
+     :users (session-users db ws username)
      :projects (session-projects db username me)
      :settings (session-settings me)
      :tagsets (session-tagsets (env :tagset-paths))

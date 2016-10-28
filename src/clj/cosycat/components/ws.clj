@@ -39,6 +39,11 @@
 (defn get-active-users [{clients :clients :as ws}]
   (apply hash-set (keys @clients)))
 
+(defn add-active-info [ws user]
+  (if (contains? (get-active-users ws) (:username user))
+    (assoc user :active true)
+    (assoc user :active false)))
+
 (defn new-ws [& {:keys [router] :or {router ping-router}}]
   (map->WS {:router router}))
 
