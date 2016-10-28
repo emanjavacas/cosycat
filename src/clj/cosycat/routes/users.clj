@@ -5,16 +5,18 @@
             [cosycat.db.utils :refer [normalize-user]]
             [cosycat.app-utils :refer [query-user]]
             [cosycat.avatar :refer [user-avatar is-gravatar?]]
-            [cosycat.components.ws :refer [send-clients]]
+            [cosycat.components.ws :refer [send-clients add-active-info]]
             [cosycat.components.db :refer [colls]]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
 ;; Users info
 (defn user-info-route
-  [{{{username :username} :identity} :session {db :db} :components
-    {username :username project-name :project-name} :params}]
-  (users/user-public-info db username))
+  [{{{username :username} :identity} :session {db :db ws :ws} :components
+    {requested-username :username} :params}]
+  ;; TODO: check if client has access to this user
+  (->> (users/user-public-info db requested-username)
+       (add-active-info ws)))
 
 (defn remove-project-users [project-users users]
   (remove (fn [{:keys [username]}]
@@ -25,9 +27,9 @@
   [{{{username :username} :identity} :session {{db-conn :db} :db} :components
     {value :value project-users :project-users} :params}]
   (or (->> (monger.collection/find-maps db-conn (:users colls) {})
-           (remove-project-users (unwrap-arraymap project-users)) ;wierd bug
+           (remove-project-users (unwrap-arraymap project-users))
            (filter (query-user value))
-           (mapv normalize-user))
+           (mapv #(normalize-user % :projects :settings)))
       []))
 
 ;; Profile
@@ -45,7 +47,7 @@
   (let [{old-email :email} (users/user-public-info db username)
         new-user-info (-> (users/update-user-info db username update-map)
                           (maybe-update-avatar old-email)
-                          normalize-user)]
+                          (normalize-user :projects :settings))]
     (send-clients
      ws {:type :new-user-info :data {:update-map new-user-info :username username}}
      :source-client username)

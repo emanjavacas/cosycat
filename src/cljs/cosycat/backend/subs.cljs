@@ -158,7 +158,7 @@
                        (vals @results-by-id))))))
 
 (defn get-users
-  ([db] (cons (:me db) (map :user (:users db))))
+  ([{:keys [users me] :as db}] (println users me) (cons me (vals users)))
   ([db by-name] (filter #(contains? by-name (:username %)) (get-users db))))
 
 (defn get-user [db username]

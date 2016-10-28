@@ -21,13 +21,15 @@
 
 (defn set-users
   [db [name path value]]
-  (let [pred (fn [{username :username}] (= username name))]
-    (update db :users update-coll pred assoc-in (into [:user] path) value)))
+  (if-let [user (get-in db [:users name])]
+    (assoc-in db (into [:users name] path) value)
+    db))
 
 (defn update-users
   [db name update-map]
-  (let [pred (fn [{username :username}] (= username name))]
-    (update db :users update-coll pred deep-merge {:user update-map})))
+  (if-let [user (get-in db [:users name])]
+    (update-in db [:users name] deep-merge update-map)
+    db))
 
 (re-frame/register-handler              ;set other users info
  :set-users
@@ -44,9 +46,9 @@
 (re-frame/register-handler              ;add user to client (after new signup)
  :add-user
  standard-middleware
- (fn [db [_ user]]
-   (let [user (update-in user [:roles] (partial apply hash-set))]
-     (update-in db [:users] into [{:username (:username user) :user user}]))))
+ (fn [db [_ {:keys [username] :as user}]]
+   (let [user (update user :roles (partial apply hash-set))]
+     (assoc-in db [:users username] user))))
 
 (re-frame/register-handler
  :new-user-avatar
@@ -63,7 +65,9 @@
  :fetch-user-info
  (fn [db [_ username]]
    (GET "users/user-info"
-        {})
+        {:params {:username username}
+         :handler #(re-frame/dispatch [:add-user %])
+         :error-handler #(timbre/error "Couldn't fetch user")})
    db))
 
 (defn avatar-error-handler [& args]
@@ -99,7 +103,9 @@
  :query-users
  (fn [db [_ value users-atom & {:keys [remove-project-users] :or {remove-project-users true}}]]
    (let [active-project (get-in db [:session :active-project])
-         project-users (if-not remove-project-users [] (get-in db [:projects active-project :users]))]
+         project-users (if-not remove-project-users
+                         []
+                         (get-in db [:projects active-project :users]))]
      (GET "users/query-users"
           {:params {:value value :project-users project-users}
            :handler #(reset! users-atom %)
@@ -115,7 +121,8 @@
  standard-middleware
  (fn [db [_ {:keys [id] :as query-metadata}]]
    (let [active-project (get-in db [:session :active-project])]
-     (assoc-in db [:projects active-project :queries id] (normalize-query-metadata query-metadata)))))
+     (assoc-in db [:projects active-project :queries id]
+               (normalize-query-metadata query-metadata)))))
 
 (defn query-new-metadata-handler [{:keys [id] :as query-metadata}]
   (re-frame/dispatch [:set-active-query id])
@@ -181,9 +188,10 @@
  standard-middleware
  (fn [db [_ query-id project-name]]
    (let [active-query (get-in db [:projects project-name :session :components :active-query])]
-     (.log js/console (get-in db [:projects project-name :session]) active-query query-id)
      (cond-> db
-       (= active-query query-id) (update-in [:projects project-name :session :components] dissoc :active-query)
+       (= active-query query-id) (update-in
+                                  [:projects project-name :session :components]
+                                  dissoc :active-query)
        true (update-in [:projects project-name :queries] dissoc query-id)))))
 
 (re-frame/register-handler
@@ -199,8 +207,9 @@
 (re-frame/register-handler
  :launch-query
  (fn [db [_ query-id]]
-   (let [active-project (get-in db [:session :active-project])]
-     (if-let [{{query-str :query-str} :query-data} (get-in db [:projects active-project :queries query-id])]
+   (let [active-project (get-in db [:session :active-project])
+         query (get-in db [:projects active-project :queries query-id])]
+     (if-let [{{query-str :query-str} :query-data} query]
        (do (set! (.-value (.getElementById js/document "query-str")) query-str)
            (re-frame/dispatch [:query query-str :set-active query-id]))))
    db))

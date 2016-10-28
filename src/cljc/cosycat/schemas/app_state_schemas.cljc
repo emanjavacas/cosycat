@@ -49,7 +49,7 @@
    :me user-schema
    
    ;; public users info
-   :users [{:username s/Str :user public-user-schema}]
+   :users {s/Str public-user-schema}
    
    ;; corpus config info (from config.edn) plus
    ;; corpus-backend specific info (from cosycat.query-backends.protocol/corpus-info)
