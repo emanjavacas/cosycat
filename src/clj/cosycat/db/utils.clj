@@ -22,9 +22,7 @@
 
 (defn normalize-project [{:keys [issues events] :as project}]
   (cond-> project
-    true   (dissoc :_id)
-    issues (assoc :issues (zipmap (map :id issues) issues))
-    events (assoc :events (zipmap (map :id events) events))))
+    true (dissoc :_id)))
 
 (defn is-user?
   [{db-conn :db :as db} {:keys [username email]}]
