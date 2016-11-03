@@ -12,9 +12,13 @@
             [cosycat.viewport :refer [viewport]]
             [taoensso.timbre :as timbre]))
 
-(def users-per-row 4)
-
 (def my-user-style {:border "1px solid #d1e8f1" :background-color "#eff7fa"})
+
+(defn get-users-per-row [users]
+  (cond
+    (< (count users) 3)         3
+    (> (:width @viewport) 1185) 4
+    :else                       2))
 
 (defn can-edit-role? [my-role target-role]
   (cond (some #{target-role} ["creator"]) false
@@ -38,16 +42,19 @@
 (defn project-users [users my-role]
   (let [me (re-frame/subscribe [:me :username])]
     (fn [users my-role]
-      (let [users-per-row (if (> (:width @viewport) 1185) 4 2)]
+      (let [users-per-row (get-users-per-row users)]
         [:div.container-fluid
          (doall (for [[idx row] (map-indexed vector (partition-all users-per-row users))]
                   ^{:key (str "row." idx)}
                   [:div.row
                    (doall (for [{:keys [username role] :as user} row]
                             ^{:key username}
-                            [:div.col-lg-3.col-sm-6.col-md-6
+                            [:div
+                             {:class (format "col-lg-%d col-sm-6 col-md-6" (/ 12 users-per-row))}
                              [:div.well {:style (when (= @me username) my-user-style)}
                               [project-user user role my-role]]]))]))]))))
+
+
 
 (defn add-user-button []
   (let [show? (re-frame/subscribe [:modals :add-user])]

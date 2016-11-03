@@ -65,7 +65,8 @@
 ;; Query metadata
 (defn new-query-metadata-route
   [{{{username :username} :identity} :session {db :db} :components
-    {{query-str :query-str corpus :corpus :as query-data} :query-data project-name :project-name} :params}]
+    {{query-str :query-str corpus :corpus :as query-data} :query-data
+     project-name :project-name} :params}]
   (let [{:keys [projects]} (users/new-query-metadata db username project-name query-data)]
     (->> (get-in projects [(keyword project-name) :queries])
          (some (fn [{db-query-data :query-data :as query-metadata}]
