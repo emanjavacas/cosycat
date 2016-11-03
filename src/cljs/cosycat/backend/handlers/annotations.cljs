@@ -88,7 +88,7 @@
 (re-frame/register-handler
  :fetch-annotations
  standard-middleware
- (fn [db [_ {:keys [page-margins]}]]
+ (fn [db [_ {:keys [page-margins]}]]    ;[{:start token-id :end token-id :hit-id .. :doc ..}]
    (let [project (get-in db [:session :active-project])
          corpus (get-in db [:projects project :session :query :results-summary :corpus])
          margins (count page-margins)

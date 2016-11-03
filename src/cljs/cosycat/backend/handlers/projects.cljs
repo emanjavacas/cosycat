@@ -112,8 +112,11 @@
 (re-frame/register-handler              ;add user to project in client-db
  :add-project-user
  standard-middleware
- (fn [db [_ {:keys [user project-name] :as data}]]
+ (fn [db [_ {:keys [user project-name]}]]
    (update-in db [:projects project-name :users] conj user)))
+
+(defn project-add-user-handler [{:keys [user project-name] :as data}]
+  (re-frame/dispatch [:add-project-user data]))
 
 (re-frame/register-handler
  :project-add-user
@@ -122,7 +125,7 @@
    (let [project-name (get-in db [:session :active-project])]
      (POST "/project/add-user"
            {:params {:username username :role role :project-name project-name}
-            :handler #(re-frame/dispatch [:add-project-user %])
+            :handler project-add-user-handler
             :error-handler error-handler}))
    db))
 

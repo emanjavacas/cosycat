@@ -149,7 +149,7 @@
                 (throw #?(:clj (ex-info msg {:token-id token-id})
                           :cljs (js/Error. msg))))))
 
-(defn parse-hit-id
+(defn parse-hit-id                      ;TODO: corpus independent
   [hit-id]
   (let [[_ doc-id hit-start hit-end] (re-find #"(.*)\.([^\.]*)\.([^\.]*)" hit-id)]
     {:doc-id doc-id :hit-start hit-start :hit-end hit-end}))
