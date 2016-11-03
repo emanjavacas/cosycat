@@ -185,12 +185,12 @@
 
 (defn add-user
   "adds user to project"
-  [{db-conn :db :as db} username project-name {new-username :username :as user}]
-  (check-user-in-project db username project-name)
+  [{db-conn :db :as db} issuer project-name {username :username :as user}]
+  (check-user-in-project db issuer project-name)
   (-> (mc/find-and-modify
        db-conn (:projects colls)
        {"name" project-name}
-       {$push {"users" user "events" (new-user-event new-username)}}
+       {$push {"users" user "events" (new-user-event username)}}
        {:return-new true})
       normalize-project))
 

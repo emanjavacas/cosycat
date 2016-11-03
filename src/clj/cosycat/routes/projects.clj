@@ -20,7 +20,7 @@
   [{{new-username :username role :role project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [new-user {:username username :role role}
+  (let [new-user {:username new-username :role role}
         {:keys [users] :as project} (proj/add-user db username project-name new-user)]
     (send-client                        ;send to added user
      ws new-username
@@ -28,7 +28,7 @@
     (send-clients                       ;send to project users
      ws {:type :project-new-user :data {:project-name project-name :user new-user} :by username}
      :source-client username
-     :target-clients (->> users (remove #(= new-username (:username %))) (mapv :username)))
+     :target-clients (->> users (map :username) (remove #(= new-username %))))
     {:project-name project-name :user new-user}))
 
 (defn remove-user-route
