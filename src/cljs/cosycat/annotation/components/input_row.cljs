@@ -1,6 +1,7 @@
 (ns cosycat.annotation.components.input-row
   (:require [cljs.core.async :refer [<! chan put!]]
             [reagent.core :as reagent]
+            [react-bootstrap.components :as bs]
             [re-frame.core :as re-frame]
             [cosycat.utils :refer [parse-annotation nbsp]]
             [cosycat.app-utils :refer [->int parse-token-id]]
@@ -96,6 +97,26 @@
         [visible-input-cell hit-id token-id chans metadata]
         [hidden-input-cell]))))
 
+(defn on-click-pager [hit-id dir]
+  (fn [] (re-frame/dispatch [:expand-hit hit-id dir])))
+
+(defn pager-cell [hit-id]
+  (fn [hit-id]
+    (let [glyph-style {:font-size "small" :cursor "pointer"}]
+      [:td {:style {:padding "0px" :line-height "1.3em"}}
+       [:span
+        [bs/glyphicon
+         {:class "hit-pager"
+          :style glyph-style
+          :glyph "chevron-left"
+          :onClick (on-click-pager hit-id :left)}]
+        (nbsp :n 4)
+        [bs/glyphicon
+         {:class "hit-pager"
+          :style glyph-style
+          :glyph "chevron-right"
+          :onClick (on-click-pager hit-id :right)}]]])))
+
 (defn input-row [{hit :hit hit-id :id meta :meta}]
   (let [metadata {:mouse-down (reagent/atom false) :source (reagent/atom nil)}]
     (fn [{hit :hit hit-id :id meta :meta}]
@@ -105,4 +126,4 @@
             (-> (for [{token-id :id word :word match :match} hit]
                   ^{:key (str hit-id "-" token-id)}
                   [input-cell hit-id token-id metadata])
-                (prepend-cell {:key (str hit-id "first") :child dummy-cell}))))))
+                (prepend-cell {:key (str hit-id "pager") :child pager-cell :opts [hit-id]}))))))
