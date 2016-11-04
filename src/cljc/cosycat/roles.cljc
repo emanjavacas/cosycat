@@ -21,13 +21,12 @@
   {:delete #{"creator" "project-lead" "user"}  ;remove project (see cosycat.db.projects)
    :write  #{"creator" "project-lead"}  ;update metadata
    :update #{"creator" "project-lead" "user"}  ;push update
-   :read   #{"creator" "project-lead" "user" "guest"} ;retrieve project
-   })
+   :read   #{"creator" "project-lead" "user" "guest"}});retrieve project
 
 (def annotation-roles
   "a map from annotation actions to required roles"
   {:update #{"creator" "project-lead"}
-   :delete #{"creator" "project-lead" "user"}
+   :delete #{"creator" "project-lead"}
    :write  #{"creator" "project-lead" "user"}
    :read   #{"creator" "project-lead" "user" "guest"}});retrieve project
 
