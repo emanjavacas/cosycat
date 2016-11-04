@@ -9,7 +9,7 @@
             [cosycat.front.components.edit-user-modal :refer [edit-user-modal]]
             [taoensso.timbre :as timbre]))
 
-(defn projects-col []
+(defn projects-column []
   (let [selected-users (reagent/atom {})
         open? (reagent/atom false)]
     (fn []
@@ -25,7 +25,7 @@
           [new-project-panel selected-users]
           [projects-panel])]])))
 
-(defn user-col []
+(defn user-column []
   (let [user (re-frame/subscribe [:me])
         edit-user-show? (reagent/atom false)]
     (fn []
@@ -57,8 +57,8 @@
     [:div.col-lg-1.visible-lg]
     [:div.col-lg-3.col-md-4.col-sm-4
      {:style {:border-right "1px solid #eeeeee"}}
-     [user-col]]
+     [user-column]]
     [:div.col-lg-7.col-md-8.col-sm-8
-     [projects-col]]
+     [projects-column]]
     [:div.col-lg-1.visible-lg]]])
 

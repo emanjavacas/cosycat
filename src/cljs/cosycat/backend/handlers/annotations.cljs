@@ -182,11 +182,13 @@
      db)))
 
 (defn remove-annotation-handler
-  [{{project :project hit-id :hit-id span :span key :key :as data} :data status :status message :message}]
+  [{{project :project hit-id :hit-id span :span key :key :as data} :data
+    status :status message :message}]
   (condp = status
     :ok (re-frame/dispatch [:remove-annotation project hit-id key span])
-    :error (re-frame/dispatch [:notify {:message (format "Couldn't remove annotation! Reason: [%s]" message)
-                                        :meta data}])))
+    :error (re-frame/dispatch
+            [:notify {:message (format "Couldn't remove annotation! Reason: [%s]" message)
+                      :meta data}])))
 
 (re-frame/register-handler
  :delete-annotation
