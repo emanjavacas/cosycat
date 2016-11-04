@@ -237,6 +237,16 @@
       :issues
       first))
 
+(defn find-annotation-issue [{db-conn :db :as db} project-name id]
+  (-> (mc/find-one-as-map
+       db-conn (:projects colls)
+       {:name project-name
+        "issues.type" "annotation-edit"
+        "issues.data._id" id}
+       {"issues.$.type" 1})
+      :issues
+      first))
+
 (defn find-delete-project-issue [{db-conn :db :as db} project-name]
   (-> (mc/find-one-as-map
        db-conn (:projects colls)
@@ -262,7 +272,7 @@
          (filter #(= id (:id %)))
          first)))
 
-(defn update-project-issue
+(defn- update-project-issue
   [{db-conn :db :as db} username project-name issue-id update-map]
   (let [{users :users :as issue} (get-project-issue db project-name issue-id)]
     (check-user-in-issue db project-name username issue-id)
@@ -277,9 +287,16 @@
          (filter #(= issue-id (:id %)))
          first)))
 
-(defn- set-user-delete-agree
-  [{db-conn :db :as db} username project-name issue-id]
-  (update-project-issue db username project-name issue-id {$push {"issues.$.data.agreed" username}}))
+(defn close-issue [db username project-name issue-id]
+  (update-project-issue
+   db username project-name issue-id
+   {$set {"issues.$.status" "closed"}}))
+
+(defn set-user-delete-agree
+  [db username project-name issue-id]
+  (update-project-issue
+   db username project-name issue-id
+   {$push {"issues.$.data.agreed" username}}))
 
 (defn make-delete-issue [username]
   {:type "delete-project-agree"
@@ -297,8 +314,8 @@
   nil)
 
 (defn remove-project
-  "drops the collections and removes project from users info (as per `erase-project`) if all users
-  agree to delete the project, otherwise adds user to agreeing"
+  "drops the collections and removes project from users info (as per `erase-project`)
+   if all users agree to delete the project, otherwise adds user to agreeing"
   [{db-conn :db :as db} username project-name]
   (let [{:keys [users] :as project} (find-project-by-name db project-name)
         role (get-user-role project username)]

@@ -103,11 +103,32 @@
  :project-issue
  standard-middleware
  (fn [db [_ {:keys [payload project-name]}]]
-   (POST "/project/issue"
-         {:params {:project-name project-name :payload payload}
-          :handler (project-add-issue-handler project-name)
-          :error-handler error-handler})
+   (let [project-name (or project-name (get-in db [:session :active-project]))]
+     (POST "/project/issue"
+           {:params {:project-name project-name :payload payload}
+            :handler (project-add-issue-handler project-name)
+            :error-handler error-handler}))
    db))
+
+(re-frame/register-handler
+ :open-annotation-edit
+ (fn [db [_ {:keys [_version _id hit-id value users]}]]
+   (let [project (get-in db [:session :active-project])
+         corpus (get-in db [:projects project :session :query :results-summary :corpus])
+         query (get-in db [:projects project :session :query :results-summary :query-str])]
+     (POST "/project/annotation-edit/open"
+           {:params {:project-name project
+                     :users users
+                     :ann-data {:_version _version
+                                :_id _id
+                                :value value
+                                :hit-id hit-id
+                                :corpus corpus
+                                :query query}}
+            :handler (project-add-issue-handler project)
+            :error-handler error-handler})
+     db)))
+
 
 (re-frame/register-handler              ;add user to project in client-db
  :add-project-user

@@ -1,6 +1,9 @@
 (ns cosycat.routes.projects
   (:require [compojure.core :refer [routes context POST GET]]
-            [cosycat.routes.utils :refer [make-default-route]]
+            [cosycat.app-utils :refer [server-project-name]]
+            [cosycat.roles :refer [check-annotation-role]]
+            [cosycat.routes.utils :refer [make-default-route ex-user check-user-rights normalize-anns]]
+            [cosycat.vcs :refer [check-sync-by-id]]
             [cosycat.db.projects :as proj]
             [cosycat.components.ws :refer [send-clients send-client]]
             [taoensso.timbre :as timbre]))
@@ -85,6 +88,46 @@
      :target-clients (map :username users))
     issue))
 
+(defn open-annotation-edit-route
+  [{{project-name :project-name users :users {:keys [_version _id] :as ann-data} :ann-data} :params
+    {{username :username} :identity} :session
+    {{db-conn :db :as db} :db ws :ws} :components}]
+  (check-sync-by-id db-conn (server-project-name project-name) _id _version)
+  (let [issue-payload {:type "annotation-edit"
+                       :status "open"
+                       :timestamp (System/currentTimeMillis)
+                       :users users
+                       :data (assoc ann-data :username username)} ;match update-annotation signature
+        {project-users :users} (proj/get-project db username project-name)
+        issue (proj/add-project-issue db username project-name issue-payload)]
+    (send-clients
+     ws {:type :project-update :data {:issue issue :project-name project-name} :by username}
+     :source-client username
+     :target-clients project-users)
+    issue))
+
+(defn close-annotation-edit-route
+  [{{project-name :project-name action :action issue-id :issue-id} :params
+    {{username :username} :identity} :session
+    {db :db ws :ws} :components}]
+  (check-user-rights db username project-name :update)
+  (let [{issue-data :data} (proj/get-project-issue db project-name issue-id)
+        {:keys [users]} (proj/find-project-by-name db project-name)
+        {:keys [hit-id] :as new-ann} (anns/update-annotation db project-name issue-data)
+        ann-payload {:anns (normalize-anns new-ann) :project project-name :hit-id hit-id}
+        updated-issue (proj/close-issue db username project-name issue-id)]
+    ;; send annotation update
+    (send-clients
+     ws {:type :annotation :data {:anns new-ann :project project-name :hit-id hit-id}}
+     :target-clients users)
+    ;; send issue update
+    (send-clients
+     ws {:type :project-update :data {:issue updated-issue :project-name project-name} :by username}
+     :source-client username
+     :target-clients users)
+    ;; send issue to source client
+    updated-issue))
+
 (defn project-routes []
   (routes
    (context "/project" []
@@ -93,4 +136,7 @@
     (POST "/remove-user" [] (make-default-route remove-user-route))
     (POST "/remove-project" [] (make-default-route remove-project-route))
     (POST "/update-user-role" [] (make-default-route update-user-role))
-    (POST "/issue" [] (make-default-route add-project-issue-route)))))
+    (POST "/issue" [] (make-default-route add-project-issue-route))
+    (context "/annotation-edit" []
+     (POST "/open" [] (make-default-route open-annotation-edit-route))
+     (POST "/close" [] (make-default-route close-annotation-edit-route))))))

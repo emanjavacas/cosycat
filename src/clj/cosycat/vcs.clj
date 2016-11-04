@@ -164,7 +164,8 @@
    monger f signature in third position, which works as a lock"
   [f]
   (fn wrapped-func
-    ([db coll version conditions-or-id document] (wrapped-func db coll version conditions-or-id document {}))
+    ([db coll version conditions-or-id document]
+     (wrapped-func db coll version conditions-or-id document {}))
     ([db coll version {:keys [_id] :as conditions-or-id} document {:keys [multi upsert remove] :as opts}]
      (assert-ex-info (not multi) ":multi is not allowed" {:message :multi-not-allowed :data opts})
      (assert-ex-info (not upsert) ":upsert is not allowed" {:message :upsert-not-allowed :data opts})
@@ -194,7 +195,7 @@
 
 ;;; public wrapper api
 (def find-and-modify
-  "(find-and-modify db coll version conditions document {:keys [fields sort remove return-new upsert keywordize]})"
+  "(find-and-modify db coll version cons doc {:keys [fields sort remove return-new upsert keywordize]})"
   (wrap-modify mc/find-and-modify))
 
 (def update
@@ -239,6 +240,12 @@
     (mc/update db *hist-coll-name* {:docId {$in ids}} {$push {:_remove true}} {:multi true})))
 
 ;;; utility functions
+(defn check-sync-by-id [db coll id claimed-version]
+  (assert-ex-info (integer? claimed-version) "Version has to be integer" {:type (type claimed-version)})
+  (if-let [{db-version :_version :as doc} (mc/find-one-as-map db coll {:_id id})]
+    (when-not (= db-version claimed-version)
+      (assert-sync claimed-version db-version))))
+
 (defn make-collection [args]            ;TODO
   ;; add indices and stuff on vcs collection to speed-up searching
   )

@@ -30,7 +30,7 @@
   (re-frame/dispatch
    [:dispatch-annotation
     ann-map                    ;ann-map
-    (->> tokens (map :hit-id))    ;hit-ids
+    (->> tokens (map :hit-id)) ;hit-ids
     (->> tokens (map :id))])) ;token-ids
 
 (defn update-annotations [{:keys [key value]} tokens]
@@ -47,8 +47,13 @@
       {:hit-id hit-id
        :token-id id}])))
 
-(defn suggest-annotation [new-val existin-annotation]
-  (re-frame/dispatch [:notify {:message "To be implemented"}]))
+(defn suggest-annotation-edits [ann-key new-val anns me]
+  (doseq [{{{:keys [_id _version ann scope history]} ann-key} :anns hit-id :hit-id} anns
+          :let [users (vec (into #{me} (map :username history)))]
+          :when (not= new-val (:value ann))]
+    (re-frame/dispatch
+     [:open-annotation-edit
+      {:_version _version :_id _id :hit-id hit-id :value new-val :users users}])))
 
 (defn trigger-dispatch
   [action {:keys [value marked-tokens annotation-modal-show current-ann me my-role]}]
@@ -60,7 +65,7 @@
             (and (empty? empty-annotation) ;user suggestion to change
                  (empty? existing-annotation-owner)
                  (not (empty? existing-annotation)))
-            (suggest-annotation val existing-annotation)
+            (suggest-annotation-edits key val existing-annotation @me)
             :else (let [key-val {:key key :value val}] ;dispatch annotations
                     (dispatch-annotations key-val empty-annotation)
                     (update-annotations key-val existing-annotation-owner)

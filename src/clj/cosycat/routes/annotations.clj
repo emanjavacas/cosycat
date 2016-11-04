@@ -1,45 +1,30 @@
 (ns cosycat.routes.annotations
   (:require [compojure.core :refer [routes context POST GET]]
-            [cosycat.roles :refer [check-annotation-role]]
             [cosycat.utils :refer [->int assert-ex-info]]
-            [cosycat.app-utils :refer [deep-merge-with span->token-id]]
-            [cosycat.routes.utils :refer [make-safe-route make-default-route unwrap-arraymap]]
+            [cosycat.routes.utils
+             :refer [make-safe-route make-default-route unwrap-arraymap
+                     check-user-rights
+                     normalize-anns]]
             [cosycat.db.annotations :as anns]
-            [cosycat.db.projects :refer [find-project-by-name]]
+            [cosycat.db.projects :refer [find-project-by-name find-annotation-issue]]
             [cosycat.components.ws :refer [send-clients]]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
 ;;; Exceptions
-(defn ex-user [username project-name action]
-  (ex-info "Action not authorized"
-           {:message :not-authorized
-            :data {:username username :action action :project project-name}}))
+(defn ex-open-issue [id]
+  (let [message "Annotation has open issue"]
+    (ex-info message {:message message :data {:id id}})))
 
 ;;; Checkers
-(defn check-user-rights [db username project-name action]
-  (let [{users :users} (find-project-by-name db project-name)
-        {role :role} (some #(when (= username (:username %)) %) users)]
-    (when-not (check-annotation-role action role)
-      (throw (ex-user username project-name action)))))
-
-;;; Formatters
-(defn ann->maps
-  [{{type :type :as span} :span {key :key} :ann :as ann}]
-  (let [token-id-or-ids (span->token-id span)]
-    (case type
-      "token" {token-id-or-ids {key ann}}
-      "IOB" (zipmap token-id-or-ids (repeat {key ann})))))
-
-(defn normalize-anns
-  "converts incoming annotations into a map of token-ids to ann-keys to anns"
-  [& anns]
-  (->> anns (map ann->maps) (apply deep-merge-with merge)))
+(defn check-annotation-has-issue [db project-name id]
+  (if-let [issue (find-annotation-issue project-name id)]
+    (throw (ex-open-issue id))))
 
 ;;; Handlers
 (defn general-handler
   "abstraction over handlers to factor out code"
-  [db ws username project action f payload-f
+  [db ws username project action {:keys [f payload-f]}
    & {:keys [message-type] :or {message-type :annotation}}]
   (try (check-user-rights db username project action)
        (let [users (->> (find-project-by-name db project) :users (map :username))
@@ -64,8 +49,8 @@
   "handles errors within the success callback to ease polymorphic payloads (bulk inserts)"
   [db ws username project {hit-id :hit-id :as ann-map}]
   (general-handler db ws username project :write
-   (fn [] (anns/insert-annotation db project (assoc ann-map :username username)))
-   (fn [new-ann] {:anns (normalize-anns new-ann) :project project :hit-id hit-id})))
+   {:f (fn [] (anns/insert-annotation db project (assoc ann-map :username username)))
+    :payload-f (fn [new-ann] {:anns (normalize-anns new-ann) :project project :hit-id hit-id})}))
 
 (defmulti insert-annotation-handler (fn [{{:keys [ann-map]} :params}] (type ann-map)))
 
@@ -88,16 +73,20 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (general-handler db ws username project :update
-   (fn [] (anns/update-annotation db project (assoc update-map :username username)))
-   (fn [new-ann] {:anns (normalize-anns new-ann) :project project :hit-id hit-id})))
+   {:f (fn []
+         (check-annotation-has-issue db project id)
+         (anns/update-annotation db project (assoc update-map :username username)))
+    :payload-f (fn [new-ann] {:anns (normalize-anns new-ann) :project project :hit-id hit-id})}))
 
 (defn remove-annotation-handler
-  [{{project :project hit-id :hit-id {{key :key} :ann span :span :as ann-map} :ann} :params
+  [{{project :project hit-id :hit-id {{key :key} :ann id :_id span :span :as ann-map} :ann} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (general-handler db ws username project :delete
-   (fn [] (anns/remove-annotation db project ann-map))
-   (fn [_] {:project project :hit-id hit-id :key key :span span})
+   {:f (fn []
+         (check-annotation-has-issue db id)
+         (anns/remove-annotation db project ann-map))
+    :payload-f (fn [_] {:project project :hit-id hit-id :key key :span span})}
    :message-type :remove-annotation))
 
 (defn fetch-annotation-range-handler
