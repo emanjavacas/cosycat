@@ -25,11 +25,11 @@
 (defn text-snippet [left match right]
   (fn [left match right]
     [:div
-     left
+     (interpose " " (map :word left))
      [:p.text-center
       {:style {:font-weight "bold" :margin-bottom 0}}
-      match]
-     right]))
+      (interpose " " (map :word match))]
+     (interpose " " (map :word right))]))
 
 (defn metadata [meta]
   (fn [meta]
@@ -53,7 +53,7 @@
          :onHide #(re-frame/dispatch [:close-modal :snippet])}
         [:h4 "Snippet"]]
        [bs/modal-body
-        (let [{{:keys [left match right]} :snippet hit-id :hit-id} @snippet-modal?
+        (let [{{:keys [left match right] :as snippet} :snippet hit-id :hit-id} @snippet-modal?
               {:keys [snippet-delta snippet-size]} @snippet-opts
               {:keys [hit meta]} @hit-map]
           [:div.container-fluid.text-justify
