@@ -3,9 +3,9 @@
             [cosycat.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [cosycat.backend.db :refer [default-project-session]]
             [cosycat.query-backends.core :refer [ensure-corpus]]
-            [cosycat.query-backends.protocols :refer [query query-sort snippet]]
-            [cosycat.utils :refer [filter-marked-hits current-results]]
-            [cosycat.app-utils :refer [parse-token-id]]
+            [cosycat.query-backends.protocols :refer [query query-sort snippet query-hit]]
+            [cosycat.utils :refer [filter-marked-hits current-results format]]
+            [cosycat.app-utils :refer [parse-token-id parse-hit-id]]
             [taoensso.timbre :as timbre]))
 
 (defn pager-next
@@ -26,23 +26,28 @@
            (neg?  new-from) [0 (+ new-from page-size)]
            :else            [new-from from]))))
 
-(defn merge-fn
+(defn merge-hit [old-hit new-hit]
+  (if (get-in old-hit [:meta :marked])
+    (assoc-in new-hit [:meta :marked] true)
+    new-hit))
+
+(defn merge-results
   "on new results, update current results preserving marked metadata"
   [old-results results]
   (let [new-results (zipmap (map :id results) results)] ;normalized results
     (reduce-kv (fn [m k v]
                  (if (get-in old-results [k :meta :marked])
-                   (assoc m k (assoc-in (get new-results k) [:meta :marked] true))
+                   (assoc m k (merge-hit (get old-results k) (get new-results k)))
                    m))
                new-results
                old-results)))
 
 (defn page-margins [results]
-  (-> (for [{hit :hit id :id} results   ;seq; avoid empty seq
-            :let [{doc :doc start :id} (parse-token-id (:id (first hit)))
-                  {end :id} (parse-token-id (:id (last hit)))]]
-        {:start start :end end :hit-id id :doc doc})
-      vec))
+  (let [margins (for [{hit :hit id :id} results ;seq; avoid empty seq
+                      :let [{doc :doc start :id} (-> hit first :id parse-token-id)
+                            end (-> hit last :id parse-token-id :id)]]
+                  {:start start :end end :hit-id id :doc doc})]
+    (vec margins)))
 
 (re-frame/register-handler
  :set-query-results
@@ -56,7 +61,7 @@
          (assoc-in [:projects active-project :session :status] status)
          (update-in (path-fn :results-summary) merge results-summary)
          (assoc-in (path-fn :results) (map :id results))
-         (update-in (path-fn :results-by-id) merge-fn results :has-marked? true)))))
+         (update-in (path-fn :results-by-id) merge-results results :has-marked? true)))))
 
 (re-frame/register-handler
  :unset-query-results
@@ -80,7 +85,7 @@
 (defn find-corpus-config [db corpus-name]
   (some #(when (= corpus-name (:corpus %)) %) (db :corpora)))
 
-(defn run-query [query-str corpus-config query-opts sort-opts filter-opts]
+(defn run-query [corpus-config query-str query-opts sort-opts filter-opts]
   (if (and (empty? sort-opts) (empty? filter-opts))
     (query (ensure-corpus corpus-config) query-str query-opts)
     (query-sort (ensure-corpus corpus-config) query-str query-opts sort-opts filter-opts)))
@@ -93,8 +98,9 @@
      (if set-active
        (re-frame/dispatch [:set-active-query set-active])
        (re-frame/dispatch [:unset-active-query]))
-     (re-frame/dispatch [:register-user-project-event {:data {:query-str query-str :corpus corpus} :type "query"}])
-     (run-query query-str (find-corpus-config db corpus) query-opts sort-opts filter-opts)
+     (re-frame/dispatch
+      [:register-user-project-event {:data {:query-str query-str :corpus corpus} :type "query"}])
+     (run-query (find-corpus-config db corpus) query-str query-opts sort-opts filter-opts)
      db)))
 
 (re-frame/register-handler
@@ -104,7 +110,7 @@
          {query-str :query-str} (current-results db)
          query-opts (if from (assoc query-opts :from from) query-opts)]
      (re-frame/dispatch [:start-throbbing :results-frame])
-     (run-query query-str (find-corpus-config db corpus) query-opts sort-opts filter-opts)
+     (run-query (find-corpus-config db corpus) query-str query-opts sort-opts filter-opts)
      db)))
 
 (re-frame/register-handler
@@ -120,7 +126,7 @@
                          :prev (pager-prev query-size page-size from))
              query-opts (assoc query-opts :from from :page-size (- to from))]
          (re-frame/dispatch [:start-throbbing :results-frame])
-         (run-query query-str (find-corpus-config db corpus) query-opts sort-opts filter-opts)))
+         (run-query (find-corpus-config db corpus) query-str query-opts sort-opts filter-opts)))
      db)))
 
 (re-frame/register-handler
@@ -134,15 +140,46 @@
      db)))
 
 (re-frame/register-handler
+ :update-hit
+ standard-middleware
+ (fn [db [_ {:keys [hit id]}]]
+   (let [{doc-id :doc-id} (parse-hit-id id)
+         active-project (get-in db [:session :active-project])
+         start (->> hit first :id parse-token-id :id)
+         end (->> hit last :id parse-token-id :id)]
+     (if-let [current-hit (get-in db [:projects active-project :session :query :results-by-id id])]
+       (do (re-frame/dispatch [:fetch-annotations [{:start start :end end :hit-id id :doc doc-id}]])
+           (assoc-in db [:projects active-project :session :query :results-by-id id :hit] hit))
+       (do (timbre/warn (format "Event :update-hit but coultn't find hit id [%s]" (str id)))
+           db)))))
+
+(defn update-hit [{:keys [hit id] :as hit-map}]
+  (re-frame/dispatch [:update-hit hit-map]))
+
+(re-frame/register-handler
+ :expand-hit
+ standard-middleware
+ (fn [db [_ id dir]]
+   (let [{:keys [corpus]} (get-in db [:settings :query])
+         corpus (ensure-corpus (find-corpus-config db corpus))
+         active-project (get-in db [:session :active-project])
+         {:keys [hit]} (get-in db [:projects active-project :session :query :results-by-id id])
+         [left match right] (partition-by :match hit)
+         words-left (if (= dir :left) (inc (count left)) (count left))
+         words-right (if (= dir :right) (inc (count right)) (count right))]
+     (query-hit corpus id {:words-left words-left :words-right words-right} update-hit))
+   db))
+
+(re-frame/register-handler
  :fetch-snippet
  (fn [db [_ hit-id {user-delta :snippet-delta dir :dir}]]
    (let [{:keys [snippet-opts corpus]} (get-in db [:settings :query])
-         {query-str :query-str} (current-results db)
-         corpus (ensure-corpus (find-corpus-config db corpus))
-         snippet-opts (assoc snippet-opts :snippet-delta (or user-delta (:snippet-delta snippet-opts)))]
-     ;; add update
-     (timbre/debug snippet-opts)
+         {snippet-delta :snippet-delta} snippet-opts
+         snippet-opts (assoc snippet-opts :snippet-delta (or user-delta snippet-delta))
+         corpus (ensure-corpus (find-corpus-config db corpus))         
+         {query-str :query-str} (current-results db)]
      (when-not dir                      ;only register first request
-       (re-frame/dispatch [:register-user-project-event {:data {:hit-id hit-id :corpus corpus} :type "snippet"}]))
+       (re-frame/dispatch
+        [:register-user-project-event {:data {:hit-id hit-id :corpus corpus} :type "snippet"}]))
      (snippet corpus query-str snippet-opts hit-id dir)
      db)))
