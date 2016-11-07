@@ -9,6 +9,7 @@
             [cosycat.avatar :refer [new-avatar]]
             [cosycat.db-utils :refer [clear-dbs]]
             [cosycat.app-utils :refer [server-project-name]]
+            [taoensso.timbre :as timbre]
             [config.core :refer [env]]))
 
 (def test-db "mongodb://127.0.0.1:27017/cosycatTest")
@@ -48,7 +49,7 @@
 (defn insert-users []
   (let [{:keys [user-roles boilerplate-user]} project-data]
     (doseq [{:keys [username]} user-roles]
-      (println (format "inserting [%s]" username))
+      (timbre/info (format "Inserting [%s]" username))
       (users/new-user db (assoc boilerplate-user :username username :email (str (rand-int 100000)))))))
 
 (defn remove-users []

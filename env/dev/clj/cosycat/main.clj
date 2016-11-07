@@ -6,6 +6,7 @@
             [cosycat.components.http-server :refer [new-http-server]]
             [cosycat.components.db :refer [new-db]]
             [cosycat.components.ws :refer [new-ws]]
+            [taoensso.timbre :as timbre]
             [config.core :refer [env]]))
 
 (defonce system nil)
@@ -31,7 +32,7 @@
         avatar-path (:avatar-path env)
         config-map (merge dev-config-map config-map)]
     (when-not (.exists (io/file resource-path))
-      (do (println "Creating app-resources dir")
+      (do (timbre/info "Creating app-resources dir")
           (io/make-parents (str resource-path avatar-path "dummy"))))
     (alter-var-root #'system (constantly (create-dev-system config-map)))))
 

@@ -27,7 +27,7 @@
           (try {:status 200 :body (route req)}
                (catch clojure.lang.ExceptionInfo e
                  (let [{:keys [message code data]} (ex-data e)]
-                   (timbre/debug (ex-data e))
+                   (timbre/debug "Caught ExceptionInfo:" (ex-data e))
                    {:status 500 :body {:message message :code code :data data}}))
                (catch Exception e
                  (let [{message :message ex :class} (bean e)
