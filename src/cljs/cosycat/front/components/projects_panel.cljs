@@ -11,10 +11,9 @@
 (defn user-cell [{username :username}]
   (let [user-info (re-frame/subscribe [:user username])]
     (fn [user]
-      [bs/overlay-trigger
-       {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} username])
-        :placement "bottom"
-        :class "pull-right"}
+      [:div {:style {:padding "1px"
+                     :border-radius "4.5px"
+                     :background-color "#e2e2e2"}}
        [user-selection-component @user-info]])))
 
 (defn users-row [creator users]
@@ -44,7 +43,7 @@
          [spacer :height 20]
          [:div.row
           [:div.col-lg-3.col-md-3.col-sm-3 [:span.text-muted "Created by: "]]
-          [:div.col-lg-9.col-md-9.col-sm-9 [user-selection-component @creator-info]]]
+          [:div.col-lg-9.col-md-9.col-sm-9 [:span [user-selection-component @creator-info]]]]
          [spacer]         
          [:div.row
           [:div.col-lg-3.col-md-3.col-sm-3 [:span.text-muted "Created on: "]]
