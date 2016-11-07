@@ -2,9 +2,11 @@
   (:require [compojure.core :refer [routes context POST GET]]
             [cosycat.app-utils :refer [server-project-name]]
             [cosycat.roles :refer [check-annotation-role]]
-            [cosycat.routes.utils :refer [make-default-route ex-user check-user-rights normalize-anns]]
+            [cosycat.routes.utils
+             :refer [make-default-route ex-user check-user-rights normalize-anns]]
             [cosycat.vcs :refer [check-sync-by-id]]
             [cosycat.db.projects :as proj]
+            [cosycat.db.annotations :as anns]
             [cosycat.components.ws :refer [send-clients send-client]]
             [taoensso.timbre :as timbre]))
 
