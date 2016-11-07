@@ -4,6 +4,7 @@
        :env {:host "localhost"
              :dev? true
              :pass "pass"
+             :log-dir "/home/enrique/code/cosycat/dev-resources"
              :database-url "mongodb://127.0.0.1:27017/cosycatDev"
              :port 3000
              :session-expires 900       ;in minutes

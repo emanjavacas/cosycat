@@ -97,3 +97,7 @@
 
 (defn is-logged? [req]
   (get-in req [:session :identity]))
+
+(defn is-admin? [req]
+  (-> (get-in req [:session :identity :roles])
+      (contains? "admin")))

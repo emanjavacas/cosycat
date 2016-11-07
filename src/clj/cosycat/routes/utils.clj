@@ -17,7 +17,7 @@
 
 (defn make-safe-route
   "a router that always returns success responses (error are handled internally in client)"
-  [router & {:keys [is-ok? login-uri] :or {is-ok? authenticated? login-uri "/login"}}]
+  [router & {:keys [is-ok? login-uri]}]
   (safe (fn [req] {:status 200 :body (router req)}) {:login-uri login-uri :is-ok? is-ok?}))
 
 (defn make-default-route
@@ -32,7 +32,7 @@
                (catch Exception e
                  (let [{message :message ex :class} (bean e)
                        stacktrace (mapv str (.getStackTrace e))]
-                   (timbre/debug (bean e))
+                   (timbre/debug "Caught java.lang.Exception" (bean e))
                    {:status 500
                     :body {:message message :data {:e (str ex) :stacktrace stacktrace}}}))))
         rule-map))

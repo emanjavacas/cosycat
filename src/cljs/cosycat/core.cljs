@@ -18,7 +18,7 @@
             [cosycat.query.page :refer [query-panel]]
             [cosycat.project.page :refer [project-panel]]
             [cosycat.settings.page :refer [settings-panel]]
-            [cosycat.debug.page :refer [debug-panel]]
+            [cosycat.admin.page :refer [admin-panel]]
             [cosycat.front.page :refer [front-panel]]
             [cosycat.error.page :refer [error-panel]]
             [cosycat.backend.ws :refer [open-ws-channel]]
@@ -49,7 +49,7 @@
 (defmethod panels :query-panel [] [#'query-panel])
 (defmethod panels :project-panel [] [#'project-panel])
 (defmethod panels :settings-panel [] [#'settings-panel])
-(defmethod panels :debug-panel [] [#'debug-panel])
+(defmethod panels :admin-panel [] [#'admin-panel])
 (defmethod panels :error-panel [] [#'error-panel])
 (defmethod panels :loading-panel [] [#'loading-panel])
 
@@ -153,6 +153,7 @@
 
 (defn navbar [active-panel]
   (let [active-project (re-frame/subscribe [:session :active-project])
+        roles (re-frame/subscribe [:me :roles])
         projects (re-frame/subscribe [:projects])]
     (fn [active-panel]
       [bs/navbar
@@ -187,7 +188,13 @@
         [navlink {:target :exit
                   :href "#/exit"
                   :label "Exit"
-                  :icon "zmdi-power"}]]])))
+                  :icon "zmdi-power"}]
+        ;; admin
+        (when (contains? @roles "admin")
+          [navlink {:target :admin
+                    :href "#/admin"
+                    :label "Admin"
+                    :icon "zmdi-bug"}])]])))
 
 (defn has-session-error? [session-error] session-error)
 
