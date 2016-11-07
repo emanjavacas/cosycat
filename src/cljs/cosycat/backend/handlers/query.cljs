@@ -148,7 +148,8 @@
          start (->> hit first :id parse-token-id :id)
          end (->> hit last :id parse-token-id :id)]
      (if-let [current-hit (get-in db [:projects active-project :session :query :results-by-id id])]
-       (do (re-frame/dispatch [:fetch-annotations [{:start start :end end :hit-id id :doc doc-id}]])
+       (do (re-frame/dispatch [:fetch-annotations
+                               {:page-margins [{:start start :end end :hit-id id :doc doc-id}]}])
            (assoc-in db [:projects active-project :session :query :results-by-id id :hit] hit))
        (do (timbre/warn (format "Event :update-hit but coultn't find hit id [%s]" (str id)))
            db)))))
