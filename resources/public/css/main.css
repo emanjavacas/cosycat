@@ -111,3 +111,9 @@ div.well.selected:hover {
 .hit-pager:hover {
     color: #158cba;
 }
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -232,7 +232,9 @@
        [:h4 [:img.img-rounded.img-responsive
              {:src (:href avatar) :style {:max-height "65.5px"}}]]] ;gravatar height
       [:div.col-sm-8.col-md-8
-       [:h4 username [:br] [:span [:small [:cite (str firstname " " lastname)]]]]
+       [:h4.truncate username
+        [:br]
+        [:span [:small [:cite (str firstname " " lastname)]]]]
        (when active [online-dot active])]]
      [:div.row {:style {:padding "0 15px"}}
       [user-attributes user]]
