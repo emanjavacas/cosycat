@@ -29,8 +29,7 @@
   Avoid having to remove user project events on project delete by ignoring them
   after re-creating a once deleted project"
   [db username project-name from]
-  (let [{:keys [created]} (proj/get-project db username project-name)
-        created (Long/parseLong created)]
+  (let [{:keys [created]} (proj/get-project db username project-name)]
     (if from
       (max created (Long/parseLong from))
       created)))
