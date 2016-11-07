@@ -89,6 +89,7 @@
 
 (defn wrap-base [handler]
   (-> handler
+      ;; wrap-debug
       wrap-reload
       (wrap-authorization auth-backend) ;todo, swap with token backend (jwt)
       (wrap-authentication auth-backend) ;todo swap with token backend (jwt)
