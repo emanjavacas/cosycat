@@ -66,7 +66,6 @@
               :hooks [leiningen.cljsbuild]
               :prep-tasks ["compile" ["cljsbuild" "once"]]
               :env {:database-url "mongodb://127.0.0.1:27017/cosycat"
-                    :pass "pass"
                     :port 3000
                     :session-expires 90}
               :omit-source true

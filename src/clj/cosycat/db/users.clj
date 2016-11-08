@@ -59,10 +59,13 @@
 
 (defn new-user
   "insert user into db"
-  [{db-conn :db :as db} user]
-  (check-user-exists db user)
-  (-> (mc/insert-and-return db-conn (:users colls) (create-new-user user))
-      (normalize-user :settings)))
+  ([db user is-admin?]
+   (let [update-user (if is-admin? (update user :roles conj "admin") user)]
+     (new-user db update-user)))
+  ([{db-conn :db :as db} user]
+   (check-user-exists db user)
+   (-> (mc/insert-and-return db-conn (:users colls) (create-new-user user))
+       (normalize-user :settings))))
 
 (defn remove-user
   "remove user from database"           ;TODO: remove all info related to user

@@ -8,6 +8,7 @@
             [cosycat.db.users :refer [lookup-user new-user]]
             [cosycat.db.utils :refer [is-user? normalize-user]]
             [cosycat.views.login :refer [login-page]]
+            [config.core :refer [env]]
             [buddy.auth.backends.session :refer [session-backend]]
             [buddy.sign.jws :as jws]
             [buddy.auth.backends.token :refer [jws-backend]]))
@@ -16,6 +17,14 @@
 
 (defn add-user-active [user]
   (assoc user :active true))
+
+(defn is-admin-in-profile? [username {:keys [admins]}]
+  (some #{username} admins))
+
+(defn maybe-add-admin [{:keys [roles username] :as user} env]
+  (if (and (is-admin-in-profile? username env) (not (some (into #{} roles) ["admin"])))
+    (update user :roles into "admin")
+    user))
 
 (defn on-login-failure [req]
   (render
@@ -40,13 +49,10 @@
     (cond
       (not (= password repeatpassword)) (on-signup-failure req "Password mismatch")
       (is-user? db user)                (on-signup-failure req "User already exists")
-      :else (let [user (-> (new-user db user)
+      :else (let [user (-> (new-user db user (is-admin-in-profile? username env))
                            (normalize-user :settings :projects)
                            add-user-active)]
-              (send-clients ws
-               {:type :signup :data user})
-              (-> (redirect (or next-url "/"))
-                  (assoc-in [:session :identity] user))))))
+              (-> (redirect (or next-url "/")) (assoc-in [:session :identity] user))))))
 
 (defn login-route
  [{{username :username password :password} :params
@@ -57,7 +63,7 @@
         password (or password password-form)
         user {:username username :password password}]
     (if-let [public-user (lookup-user db user)]
-      (do
+      (let [public-user (maybe-add-admin public-user env)]
         (send-clients ws {:type :login :data (add-user-active public-user)})
         (-> (redirect (or next-url "/")) (assoc-in [:session :identity] public-user)))
       (on-login-failure req))))

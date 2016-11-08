@@ -3,7 +3,7 @@
        :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]}}}
        :env {:host "localhost"
              :dev? true
-             :pass "pass"
+             :admins ["enrique"]
              :log-dir "/home/enrique/code/cosycat/dev-resources"
              :database-url "mongodb://127.0.0.1:27017/cosycatDev"
              :port 3000
@@ -19,7 +19,6 @@
                :args {:server "mbgserver.uantwerpen.be:8080"
                       :web-service "blacklab-server-1.6.0-SNAPSHOT"}}]}}
  :test {:env {:database-url "mongodb://127.0.0.1:27017/cosycatTest"
-              :pass "pass"
               :dev? true
               :corpora
               [{:corpus "mbg-small"
