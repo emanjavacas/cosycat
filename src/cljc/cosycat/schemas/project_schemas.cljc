@@ -9,13 +9,23 @@
 
 (def issue-id-schema s/Any)
 
-(def issue-schema
+(def base-issue-schema
   {:id issue-id-schema
+   :by s/Str
    :type s/Str
    :timestamp s/Int
    :status (s/enum "open" "closed")
-   :users (s/conditional keyword? (s/enum :all) :else [s/Str])
-   :data {s/Any s/Any}})
+   :users (s/conditional keyword? (s/enum :all) :else [s/Str]) ;addressed users
+   :data {s/Any s/Any}
+   (s/optional-key :resolve) {:status (s/enum "accepted" "rejected")
+                              :comment s/Str
+                              :timestamp s/Str
+                              :by s/Str}
+   (s/optional-key :comments) [{:comment s/Str :timestamp s/Int :by s/Str}]})
+
+(def issue-schema
+  #?(:cljs (assoc base-issue-schema (s/optional-key :meta) {s/Any s/Any})
+     :clj base-issue-schema))
 
 (def status-schema
   {:status (s/enum :ok :error)
