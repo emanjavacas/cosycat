@@ -4,7 +4,7 @@
             [taoensso.timbre :as timbre]
             [cosycat.app-utils :refer [span->token-id deep-merge-with]]
             [cosycat.roles :refer [check-annotation-role]]
-            [cosycat.db.projects :refer [find-project-by-name find-annotation-issue]]))
+            [cosycat.db.projects :refer [find-project-by-name]]))
 
 (defn safe
   [handler & [rule-map]]
@@ -17,8 +17,8 @@
 
 (defn make-safe-route
   "a router that always returns success responses (error are handled internally in client)"
-  [router & {:keys [is-ok? login-uri]}]
-  (safe (fn [req] {:status 200 :body (router req)}) {:login-uri login-uri :is-ok? is-ok?}))
+  [router & {:keys [is-ok? login-uri] :as rule-map}]
+  (safe (fn [req] {:status 200 :body (router req)}) rule-map))
 
 (defn make-default-route
   "a router that transform internal errors into proper responses"
