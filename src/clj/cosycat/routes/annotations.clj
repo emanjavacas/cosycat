@@ -18,7 +18,7 @@
 
 ;;; Checkers
 (defn check-annotation-has-issue [db project-name id]
-  (if-let [issue (find-annotation-issue project-name id)]
+  (if-let [issue (find-annotation-issue db project-name id)]
     (throw (ex-open-issue id))))
 
 ;;; Handlers
