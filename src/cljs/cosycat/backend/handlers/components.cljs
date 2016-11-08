@@ -23,14 +23,12 @@
  :start-throbbing
  standard-middleware
  (fn [db [_ panel]]
-   (timbre/debug "start" panel)
    (assoc-in db [:session :throbbing? panel] true)))
 
 (re-frame/register-handler
  :stop-throbbing
  standard-middleware
  (fn [db [_ panel]]
-   (timbre/debug "stop" panel)
    (assoc-in db [:session :throbbing? panel] false)))
 
 (re-frame/register-handler
@@ -140,6 +138,20 @@
  (fn [db [_ active-frame]]
    (let [active-project (get-in db [:session :active-project])]
      (assoc-in db [:projects active-project :session :components :active-project-frame] active-frame))))
+
+(re-frame/register-handler
+ :set-project-session-component
+ standard-middleware
+ (fn [db [_ value & path]]
+   (let [active-project (get-in db [:session :active-project])]
+     (assoc-in db (into [:projects active-project :session :components] path) value))))
+
+(re-frame/register-handler
+ :unset-project-session-component
+ standard-middleware
+ (fn [db [_ key & path]]
+   (let [active-project (get-in db [:session :active-project])]
+     (update-in db (into [:projects active-project :session :components] (or path [])) dissoc key))))
 
 ;;; marking
 (re-frame/register-handler

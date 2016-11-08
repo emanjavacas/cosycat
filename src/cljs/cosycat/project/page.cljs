@@ -7,6 +7,7 @@
             [cosycat.project.components.add-user-modal :refer [add-user-modal]]
             [cosycat.project.components.users-frame :refer [users-frame]]
             [cosycat.project.components.events-frame :refer [events-frame]]
+            [cosycat.project.components.issues-frame :refer [issues-frame]]
             [cosycat.project.components.queries-frame :refer [queries-frame]]
             [cosycat.components :refer [user-profile-component]]
             [cosycat.roles :refer [project-user-roles]]
@@ -66,6 +67,7 @@
 (defmethod project-frame :users [] [#'users-frame])
 (defmethod project-frame :events [] [#'events-frame])
 (defmethod project-frame :queries [] [#'queries-frame])
+(defmethod project-frame :issues [] [#'issues-frame])
 (defmethod project-frame :default []
   [:div.container-fluid
    [:div.row

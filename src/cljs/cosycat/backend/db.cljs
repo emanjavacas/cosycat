@@ -27,6 +27,7 @@
    :components {:panel-order ["query-frame" "annotation-panel"]
                 :panel-open {"query-frame" true "annotation-panel" false}
                 :active-project-frame :users
+                :issue-filters {:status "all" :type "all"}
                 :open-hits #{}
                 :token-field :word}
    :filtered-users (into #{} (map :username (:users project)))})
