@@ -84,10 +84,15 @@
 (defn user-selection-component
   [{username :username {href :href} :avatar}]
   (fn [{username :username {href :href} :avatar}]
-    [:div username
-     [:span
-      {:style {:padding-left "10px"}}
-      [user-thumb href {:height "25px" :width "25px"}]]]))
+    [:div {:style {:padding "1px 4px"
+                   :border-radius "4.5px"
+                   :display "inline-block"
+                   :border-style "outset"
+                   :background-color "#e2e2e2"}}
+     [:div username
+      [:span
+       {:style {:padding-left "10px"}}
+       [user-thumb href {:height "25px" :width "25px"}]]]]))
 
 (defn move-cursor [dir els]
   (fn [idx]
