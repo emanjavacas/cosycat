@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [compojure.core :refer [routes context POST GET]]
+            [cosycat.app-utils :refer [->int]]
             [cosycat.routes.auth :refer [is-admin?]]
             [cosycat.routes.utils
              :refer [make-default-route ex-user check-user-rights]]
@@ -36,14 +37,15 @@
 
 (defn lines-in-range [lines-seq from to]
   (let [lines (->> (drop from lines-seq) (take (- to from)))]
-    (for [[idx line] (map-indexed vector lines)]
-      {:idx idx :line line})))
+    (doall (for [[idx line] (map-indexed vector lines)]
+             {:idx (+ from idx) :line line}))))
 
 (defn log-route
-  [{{from :from to :to :or {to (+ from 10)}} :params}]
-  {:lines (vec (lines-in-range (lazy-log-lines (:log-dir env)) from to))})
+  [{{from :from to :to :or {to (+ (->int from) 10)}} :params}]
+  {:lines (vec (lines-in-range (lazy-log-lines (:log-dir env)) (->int from) (->int to)))})
 
 (defn admin-routes []
   (routes
    (context "/admin" []
     (GET "/log" [] (make-default-route log-route :is-ok? is-admin?)))))
+

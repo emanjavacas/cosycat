@@ -34,7 +34,7 @@
       (clojure.string/capitalize (dekeyword key))]]))
 
 (defn admin-panel []
-  (let [active-frame (reagent/atom :tree)]
+  (let [active-frame (reagent/atom :log)]
     (fn []
       [:div.container-fluid
        [:div.row

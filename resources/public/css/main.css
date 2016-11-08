@@ -113,7 +113,11 @@ div.well.selected:hover {
 }
 
 .truncate {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+span.log-line:hover {
+    color: white;
 }
