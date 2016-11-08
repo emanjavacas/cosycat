@@ -35,8 +35,6 @@
       :reagent-render
       (fn []
         [:div.container-fluid
-         [:div.row
-          [:div.col-lg-12.pull-right [events-panel events]]]
-         [:div.row.text-center
-          [read-more-button (->> @events (sort-by :timestamp >) last :timestamp)]]
+         [:div.row  [:div.col-lg-12 [events-panel events]]]
+         [:div.row.text-center [read-more-button (->> @events (sort-by :timestamp >) last :timestamp)]]
          [:div.row {:style {:height "40px"}}]])})))

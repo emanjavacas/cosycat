@@ -9,8 +9,6 @@
 
 (defn clear-dbs
   [{db :db :as db-conn} & {:keys [collections] :or {collections (keys colls)}}]
-  ;; let [pass (read-line)]
-  ;; if (= pass (:pass env))
   (let [projects (mc/find-maps db (:projects colls))]
     ;; remove projects
     (doseq [{project-name :name} projects]

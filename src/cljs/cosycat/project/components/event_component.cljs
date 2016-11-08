@@ -47,7 +47,7 @@
   (fn [collapsed? btn? timestamp]
     (if btn?
       [expand-button collapsed?]
-      [:div.row {:style {:margin "3px 0"}} (timestamp-text timestamp)])))
+      [:div.row {:style {:margin "3px 0"}} [:span (timestamp-text timestamp)]])))
 
 (defn repeated-lines [rest-timestamps {:keys [collapsed?]}]
   (fn [rest-timestamps {:keys [collapsed?]}]
@@ -72,7 +72,7 @@
          [:div.row
           [:div.col-sm-10
            [:div.container-fluid
-            [:div.row [:h4 header-text (timestamp-text last-timestamp)]]
+            [:div.row [:h4 header-text [:span (timestamp-text last-timestamp)]]]
             [:div.row [:span event-child]]
             (when repeated [repeated-component rest-timestamps])]]
           [:div.col-sm-2.text-right [event-source source-user]]]])])))
