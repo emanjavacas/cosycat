@@ -62,40 +62,19 @@
 
 (defn user-brand-span [username active-project]
   (fn [username active-project]
-    [:div
-     (when @active-project
-       {:style {:cursor "pointer"}
-        :onClick #(nav! (str "/project/" @active-project))})
+    [:span
+     (when @active-project {:style {:cursor "pointer"} :onClick #(nav! (str "/project/" @active-project))})
      username
-     (when @active-project
-       [:span {:style {:white-space "nowrap"}} (str "@" @active-project)])]))
+     (when @active-project [:span {:style {:white-space "nowrap"}} (str "@" @active-project)])]))
 
-(defn user-brand-component [active-project user]
-  (fn [active-project user]
-    (let [{username :username {href :href} :avatar} @user]
-      (when username                    ;wait until loaded
-        [:div.row
-         {:style {:line-height "35px" :text-align "right"}}
-         [:div.col-sm-8
-           [user-brand-span username active-project]]
-         [:div.col-sm-4
-          [user-thumb href {:height "30px" :width "30px"}]]]))))
-
-(defn user-brand [active-project]
-  (let [user (re-frame/subscribe [:me])
-        users (re-frame/subscribe [:active-project :users])]
+(defn user-brand-component [active-project]
+  (let [user (re-frame/subscribe [:me])]
     (fn [active-project]
-      (let [{username :username} @user
-            my-role (->> @users (filter #(= username (:username %))) first :role)
-            tooltip (format "Your role is [%s] in this project" my-role)]
-        [bs/navbar-brand
-         [:div.container-fluid
-          {:style {:margin-top "-9.5px"}}
-          (if @active-project
-            [bs/overlay-trigger
-             {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} tooltip])}
-             [:div [user-brand-component active-project user]]]
-            [:div [user-brand-component active-project user]])]]))))
+      (let [{username :username {href :href} :avatar} @user]
+        (when username                    ;wait until loaded
+          [bs/navbar-brand
+           [user-brand-span username active-project]
+           [:span [user-thumb href {:style {:margin-left "10px"} :height "30px" :width "30px"}]]])))))
 
 (defn navlink [{:keys [target href label icon]}]
   (let [active (re-frame/subscribe [:active-panel])]
@@ -161,40 +140,41 @@
         :responsive true
         :fixedTop true
         :fluid true}
-       [bs/navbar-header [user-brand active-project]]
-       [bs/nav {:pullRight true}
-        ;; projects
-        (when (and @active-project (not (empty? @projects)))
-          [projects-dropdown projects active-project])
-        ;; query
-        (when (and @active-project (not= @active-panel :front-panel))
-          [navlink {:target :query-panel
-                    :href #(str "#/project/" @active-project "/query")
-                    :label "Query"
-                    :icon "zmdi-search"}])
-        ;; settings
-        [navlink {:target :settings-panel
-                  :href #(if @active-project
-                           (str "#/project/" @active-project "/settings")
-                           "#/settings")
-                  :label "Settings"
-                  :icon "zmdi-settings"}]
-        ;; home
-        [navlink {:target :front-panel
-                  :href "#/"
-                  :label "Home"
-                  :icon "zmdi-home"}]
-        ;; exit
-        [navlink {:target :exit
-                  :href "#/exit"
-                  :label "Exit"
-                  :icon "zmdi-power"}]
-        ;; admin
-        (when (contains? @roles "admin")
-          [navlink {:target :admin
-                    :href "#/admin"
-                    :label "Admin"
-                    :icon "zmdi-bug"}])]])))
+       [bs/navbar-header [user-brand-component active-project] [bs/navbar-toggle]]
+       [bs/navbar-collapse
+        [bs/nav {:pullRight true}
+         ;; projects
+         (when (and @active-project (not (empty? @projects)))
+           [projects-dropdown projects active-project])
+         ;; query
+         (when (and @active-project (not= @active-panel :front-panel))
+           [navlink {:target :query-panel
+                     :href #(str "#/project/" @active-project "/query")
+                     :label "Query"
+                     :icon "zmdi-search"}])
+         ;; settings
+         [navlink {:target :settings-panel
+                   :href #(if @active-project
+                            (str "#/project/" @active-project "/settings")
+                            "#/settings")
+                   :label "Settings"
+                   :icon "zmdi-settings"}]
+         ;; home
+         [navlink {:target :front-panel
+                   :href "#/"
+                   :label "Home"
+                   :icon "zmdi-home"}]
+         ;; exit
+         [navlink {:target :exit
+                   :href "#/exit"
+                   :label "Exit"
+                   :icon "zmdi-power"}]
+         ;; admin
+         (when (contains? @roles "admin")
+           [navlink {:target :admin
+                     :href "#/admin"
+                     :label "Admin"
+                     :icon "zmdi-bug"}])]]])))
 
 (defn has-session-error? [session-error] session-error)
 
