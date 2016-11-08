@@ -84,7 +84,7 @@
     {db :db ws :ws} :components}]
   (general-handler db ws username project :delete
    {:f (fn []
-         (check-annotation-has-issue db id)
+         (check-annotation-has-issue db project id)
          (anns/remove-annotation db project ann-map))
     :payload-f (fn [_] {:project project :hit-id hit-id :key key :span span})}
    :message-type :remove-annotation))
