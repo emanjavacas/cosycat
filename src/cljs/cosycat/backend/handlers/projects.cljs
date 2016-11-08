@@ -92,7 +92,7 @@
 (re-frame/register-handler              ;add project update to client-db
  :add-project-issue
  standard-middleware
- (fn [db [_ project-name {{id :id :as issue} :issue}]]
+ (fn [db [_ project-name {id :id :as issue}]]
    (update-in db [:projects project-name :issues] assoc id issue)))
 
 (defn project-add-issue-handler [project-name]
