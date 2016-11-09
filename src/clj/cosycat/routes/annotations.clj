@@ -2,9 +2,7 @@
   (:require [compojure.core :refer [routes context POST GET]]
             [cosycat.utils :refer [->int assert-ex-info]]
             [cosycat.routes.utils
-             :refer [make-safe-route make-default-route unwrap-arraymap
-                     check-user-rights
-                     normalize-anns]]
+             :refer [make-safe-route make-default-route unwrap-arraymap check-user-rights normalize-anns]]
             [cosycat.db.annotations :as anns]
             [cosycat.db.projects :refer [find-project-by-name find-annotation-issue]]
             [cosycat.components.ws :refer [send-clients]]
@@ -24,10 +22,9 @@
 ;;; Handlers
 (defn general-handler
   "abstraction over handlers to factor out code"
-  [db ws username project action {:keys [f payload-f]}
+  [db ws username project {:keys [f payload-f]}
    & {:keys [message-type] :or {message-type :annotation}}]
-  (try (check-user-rights db username project action)
-       (let [users (->> (find-project-by-name db project) :users (map :username))
+  (try (let [users (->> (find-project-by-name db project) :users (map :username))
              out (f)
              data (payload-f out)]
          (send-clients
@@ -48,8 +45,10 @@
 (defn insert-annotation-handler*
   "handles errors within the success callback to ease polymorphic payloads (bulk inserts)"
   [db ws username project {hit-id :hit-id :as ann-map}]
-  (general-handler db ws username project :write
-   {:f (fn [] (anns/insert-annotation db project (assoc ann-map :username username)))
+  (general-handler db ws username project
+   {:f (fn []
+         (check-user-rights db username project :write)
+         (anns/insert-annotation db project (assoc ann-map :username username)))
     :payload-f (fn [new-ann] {:anns (normalize-anns new-ann) :project project :hit-id hit-id})}))
 
 (defmulti insert-annotation-handler (fn [{{:keys [ann-map]} :params}] (type ann-map)))
@@ -72,9 +71,10 @@
   [{{project :project {hit-id :hit-id id :_id :as update-map} :update-map} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (general-handler db ws username project :update
+  (general-handler db ws username project
    {:f (fn []
          (check-annotation-has-issue db project id)
+         (check-user-rights db username project :update id)
          (anns/update-annotation db project (assoc update-map :username username)))
     :payload-f (fn [new-ann] {:anns (normalize-anns new-ann) :project project :hit-id hit-id})}))
 
@@ -82,9 +82,10 @@
   [{{project :project hit-id :hit-id {{key :key} :ann id :_id span :span :as ann-map} :ann} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (general-handler db ws username project :delete
+  (general-handler db ws username project
    {:f (fn []
          (check-annotation-has-issue db project id)
+         (check-user-rights db username project :delete id)
          (anns/remove-annotation db project ann-map))
     :payload-f (fn [_] {:project project :hit-id hit-id :key key :span span})}
    :message-type :remove-annotation))
@@ -96,14 +97,14 @@
   (check-user-rights db username project :read)
   {:hit-id hit-id
    :project project
-   :anns (->> (anns/fetch-annotations db project corpus (->int from) (->int size) :doc doc)
+   :anns (->> (anns/find-annotations db project corpus (->int from) (->int size) :doc doc)
               (apply normalize-anns))})
 
 (defn fetch-from-range [db project corpus]
   (fn [{:keys [start end hit-id doc]}]
     (let [from (->int start)
           size (- (->int end) from)
-          anns (->> (anns/fetch-annotations db project corpus from size :doc doc)
+          anns (->> (anns/find-annotations db project corpus from size :doc doc)
                     (apply normalize-anns))]
       (when anns {:hit-id hit-id :project project :anns anns}))))
 

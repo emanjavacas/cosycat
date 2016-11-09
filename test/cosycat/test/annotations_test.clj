@@ -79,7 +79,7 @@
     (testing "find token annotation"
       (is (let [k (get-in token-ann [:ann :key]) 
                 span (:span token-ann)
-                ann (anns/fetch-token-annotation-by-key db project-name corpus k span)]
+                ann (anns/find-token-annotation-by-key db project-name corpus k span)]
             (nil? (s/check annotation-schema ann)))))
     (testing "insert IOB annotation"
       (let [k (get-in IOB-ann [:ann :key])
@@ -88,7 +88,7 @@
     (testing "find IOB annotation"
       (is (let [k (get-in IOB-ann [:ann :key]) 
                 span (:span IOB-ann)
-                ann (anns/fetch-span-annotation-by-key db project-name corpus k span)]
+                ann (anns/find-span-annotation-by-key db project-name corpus k span)]
             (nil? (s/check annotation-schema ann)))))
     (testing "attempt IOB overlapping IOB annotation"
       (is (= (-> (try (anns/insert-annotation db project-name overlapping-IOB-IOB-ann)
