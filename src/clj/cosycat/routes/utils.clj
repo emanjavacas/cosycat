@@ -4,6 +4,7 @@
             [taoensso.timbre :as timbre]
             [cosycat.app-utils :refer [span->token-id deep-merge-with]]
             [cosycat.roles :refer [check-annotation-role]]
+            [cosycat.db.annotations :refer [find-annotation-owner]]
             [cosycat.db.projects :refer [find-project-by-name]]))
 
 (defn safe
@@ -48,11 +49,21 @@
            {:message :not-authorized
             :data {:username username :action action :project project-name}}))
 
-(defn check-user-rights [db username project-name action]
-  (let [{users :users} (find-project-by-name db project-name)
-        {role :role} (some #(when (= username (:username %)) %) users)]
-    (when-not (check-annotation-role action role)
-      (throw (ex-user username project-name action)))))
+(defn find-user-role
+  "returns user role in project or `owner` if username is current annotation owner.
+   `ann-id` might be nil, in which case role defaults to user project role"
+  [db username project-name project-users ann-id]
+  (let [{role :role} (some #(when (= username (:username %)) %) project-users)]
+    (if (and (not (nil? ann-id)) (= username (find-annotation-owner db project-name ann-id)))
+      "owner"
+      role)))
+
+(defn check-user-rights
+  ([db username project-name action & [ann-id]]
+   (let [{users :users} (find-project-by-name db project-name)
+         role (find-user-role db username project-name users ann-id)]
+     (when-not (check-annotation-role action role)
+       (throw (ex-user username project-name action))))))
 
 ;;; normalizers
 (defn ann->maps
