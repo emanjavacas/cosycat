@@ -95,9 +95,10 @@
     {{username :username} :identity} :session
     {{db-conn :db :as db} :db ws :ws} :components}]
   (check-sync-by-id db-conn (server-project-name project-name) _id _version)
-  (let [issue-payload {:type "annotation-edit"
-                       :status "open"
+  (let [issue-payload {:by username
+                       :type "annotation-edit"
                        :timestamp (System/currentTimeMillis)
+                       :status "open"
                        :users users
                        :data (assoc ann-data :username username)} ;match update-annotation signature
         {project-users :users} (proj/get-project db username project-name)
@@ -112,7 +113,7 @@
   [{{project-name :project-name action :action issue-id :issue-id} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (check-user-rights db username project-name :update)
+  ;; check if user is authorized to execute resolve
   (let [{issue-data :data} (proj/get-project-issue db project-name issue-id)
         {:keys [users]} (proj/find-project-by-name db project-name)
         {:keys [hit-id] :as new-ann} (anns/update-annotation db project-name issue-data)
