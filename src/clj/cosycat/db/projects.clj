@@ -310,6 +310,7 @@
   [{db-conn :db :as db} project-name users]
   (vcs/drop db-conn (server-project-name project-name))
   (mc/remove db-conn (:projects colls) {:name project-name})
+  ;; TODO: remove user.projects.project-name (events, settings)?
   (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}})
   nil)
 
@@ -330,12 +331,3 @@
       (if (empty? pending-users)
         (do (timbre/info "Erasing project" project-name) (erase-project db project-name users))
         (do (timbre/info "Pending users to project remove" project-name) issue)))))
-
-;; (get-project-issue (:db cosycat.main/system) "myProject" "6b9c6349-3e1b-4920-956c-4e3257a12114")
-;; (get-pending-users
-;;  (get-project (:db cosycat.main/system) "enrique" "myProject"))
-;; (mc/find-and-modify (:db (:db cosycat.main/system)) (:projects colls)
-;;                     {:name "myProject"
-;;                      "issues.type" "delete-project-agree"}
-;;                     {$unset {"issues.$.agreed" 0}}
-;;                     {:fields {"issues" 1}})

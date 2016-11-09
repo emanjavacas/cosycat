@@ -4,6 +4,7 @@
             [goog.dom.dataset :as gdataset]
             [goog.string :as gstr]            
             [cosycat.app-utils :refer [->int]]
+            [cosycat.roles :refer [check-annotation-role]]
             [taoensso.timbre :as timbre])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
@@ -123,7 +124,7 @@
   (try (js/parseInt id)
        (catch :default e -1)))
 
-;;; annotations
+;;; Annotations
 (defn ->box [color] (str "0 -1.5px " color " inset"))
 
 (defn parse-annotation
