@@ -51,26 +51,32 @@
   (doseq [{{{:keys [_id _version ann scope history]} ann-key} :anns hit-id :hit-id} anns
           :let [users (vec (into #{me} (map :username history)))]
           :when (not= new-val (:value ann))]
-    (re-frame/dispatch
-     [:open-annotation-edit
-      {:_version _version :_id _id :hit-id hit-id :value new-val :users users}])))
+    (re-frame/dispatch [:notify {:message "Not implemented yet"}])
+    ;; (re-frame/dispatch
+    ;;  [:open-annotation-edit
+    ;;   {:_version _version :_id _id :hit-id hit-id :value new-val :users users}])
+    ))
 
 (defn trigger-dispatch
   [action {:keys [value marked-tokens annotation-modal-show current-ann me my-role]}]
   (if-let [[key val] (parse-annotation @value)]
     (let [{:keys [empty-annotation existing-annotation-owner existing-annotation]}
           (group-tokens @marked-tokens @current-ann @me)]
-      (cond (not (check-annotation-role action @my-role)) ;user is not authorized
-            (notify-not-authorized action @my-role)
-            (and (empty? empty-annotation) ;user suggestion to change
-                 (empty? existing-annotation-owner)
-                 (not (empty? existing-annotation)))
-            (suggest-annotation-edits key val existing-annotation @me)
-            :else (let [key-val {:key key :value val}] ;dispatch annotations
-                    (dispatch-annotations key-val empty-annotation)
-                    (update-annotations key-val existing-annotation-owner)
-                    (deselect-tokens empty-annotation)
-                    (deselect-tokens existing-annotation-owner)))
+      (cond
+        ;; user is not authorized
+        (not (check-annotation-role action @my-role)) (notify-not-authorized action @my-role)
+        ;; user suggestion to change
+        (and (empty? empty-annotation)
+             (empty? existing-annotation-owner)
+             (not (empty? existing-annotation)))
+        (suggest-annotation-edits key val existing-annotation @me)
+        ;; dispatch annotations
+        :else (let [key-val {:key key :value val}]
+                (dispatch-annotations key-val empty-annotation)
+                (update-annotations key-val existing-annotation-owner)
+                (deselect-tokens empty-annotation)
+                (deselect-tokens existing-annotation-owner)))
+      ;; finally
       (swap! annotation-modal-show not))))
 
 (defn update-current-ann [current-ann value]

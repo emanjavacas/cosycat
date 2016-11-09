@@ -110,25 +110,28 @@
             :error-handler error-handler}))
    db))
 
+(defn open-annotation-fn [issue-type]
+  (fn [db [_ {users :users :as ann-data}]]
+    (let [project (get-in db [:session :active-project])
+          corpus (get-in db [:projects project :session :query :results-summary :corpus])
+          query (get-in db [:projects project :session :query :results-summary :query-str])
+          ann-data (assoc ann-data :corpus corpus :query query)]
+      (POST "/project/annotation-edit/open"
+            {:params {:project-name project
+                      :type issue-type
+                      :users users
+                      :ann-data ann-data}
+             :handler (project-add-issue-handler project)
+             :error-handler error-handler})
+      db)))
+
 (re-frame/register-handler
  :open-annotation-edit
- (fn [db [_ {:keys [_version _id hit-id value users]}]]
-   (let [project (get-in db [:session :active-project])
-         corpus (get-in db [:projects project :session :query :results-summary :corpus])
-         query (get-in db [:projects project :session :query :results-summary :query-str])]
-     (POST "/project/annotation-edit/open"
-           {:params {:project-name project
-                     :users users
-                     :ann-data {:_version _version
-                                :_id _id
-                                :value value
-                                :hit-id hit-id
-                                :corpus corpus
-                                :query query}}
-            :handler (project-add-issue-handler project)
-            :error-handler error-handler})
-     db)))
+ (open-annotation-fn "annotation-edit"))
 
+(re-frame/register-handler
+ :open-annotation-remove
+ (open-annotation-fn "annotation-remove"))
 
 (re-frame/register-handler              ;add user to project in client-db
  :add-project-user

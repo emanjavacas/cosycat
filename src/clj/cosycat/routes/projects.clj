@@ -91,12 +91,13 @@
     issue))
 
 (defn open-annotation-edit-route
-  [{{project-name :project-name users :users {:keys [_version _id] :as ann-data} :ann-data} :params
+  [{{issue-type :type project-name :project-name users :users
+     {:keys [_version _id] :as ann-data} :ann-data} :params
     {{username :username} :identity} :session
     {{db-conn :db :as db} :db ws :ws} :components}]
   (check-sync-by-id db-conn (server-project-name project-name) _id _version)
   (let [issue-payload {:by username
-                       :type "annotation-edit"
+                       :type issue-type
                        :timestamp (System/currentTimeMillis)
                        :status "open"
                        :users users
@@ -109,27 +110,33 @@
      :target-clients project-users)
     issue))
 
-(defn close-annotation-edit-route
+(defmulti resolve-annotation-issue (fn [db project-name {issue-type :type}] issue-type))
+
+(defmethod resolve-annotation-issue "annotation-edit"
+  [db project-name {issue-data :data :as issue}]
+  (let [{:keys [hit-id] :as new-ann} (anns/update-annotation db project-name issue-data)]
+    {:anns (normalize-anns new-ann) :project project-name :hit-id hit-id}))
+
+(defn resolve-annotation-edit-route
   [{{project-name :project-name action :action issue-id :issue-id} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   ;; check if user is authorized to execute resolve
-  (let [{issue-data :data} (proj/get-project-issue db project-name issue-id)
+  (let [issue (proj/get-project-issue db project-name issue-id)
         {:keys [users]} (proj/find-project-by-name db project-name)
-        {:keys [hit-id] :as new-ann} (anns/update-annotation db project-name issue-data)
-        ann-payload {:anns (normalize-anns new-ann) :project project-name :hit-id hit-id}
-        updated-issue (proj/close-issue db username project-name issue-id)]
+        ann-payload (resolve-annotation-issue db project-name issue)
+        closed-issue (proj/close-issue db username project-name issue-id)]
     ;; send annotation update
     (send-clients
-     ws {:type :annotation :data {:anns new-ann :project project-name :hit-id hit-id}}
+     ws {:type :annotation :data ann-payload}
      :target-clients users)
     ;; send issue update
     (send-clients
-     ws {:type :project-update :data {:issue updated-issue :project-name project-name} :by username}
+     ws {:type :project-update :data {:issue closed-issue :project-name project-name} :by username}
      :source-client username
      :target-clients users)
     ;; send issue to source client
-    updated-issue))
+    closed-issue))
 
 (defn project-routes []
   (routes
@@ -142,4 +149,4 @@
     (POST "/issue" [] (make-default-route add-project-issue-route))
     (context "/annotation-edit" []
      (POST "/open" [] (make-default-route open-annotation-edit-route))
-     (POST "/close" [] (make-default-route close-annotation-edit-route))))))
+     (POST "/resolve" [] (make-default-route resolve-annotation-edit-route))))))
