@@ -11,17 +11,16 @@
   (let [role (if (= username my-name) "owner" my-role)]
     (check-annotation-role action role)))
 
-(defn dispatch-update [{:keys [_id _version username history]} hit-id new-value my-name my-role]
+(defn dispatch-update
+  [{:keys [_id _version username history] :as ann-data} hit-id new-value my-name my-role]
   (if (may-edit? :update username my-name my-role)
     ;; dispatch update
     (re-frame/dispatch
      [:update-annotation
       {:update-map {:_id _id :_version _version :value new-value :hit-id hit-id}}])
+    ;; dispatch update edit
     (let [users (vec (into #{my-name} (map :username history)))]
-      ;; dispatch update edit
-      (re-frame/dispatch
-       [:open-annotation-edit
-        {:_version _version :_id _id :hit-id hit-id :value new-value :users users}]))))
+      (re-frame/dispatch [:open-annotation-edit (assoc ann-data :value new-value) users]))))
 
 (defn dispatch-remove [{:keys [_id _version username history] :as ann-map} hit-id my-name my-role]
   (if (may-edit? :update username my-name my-role)
@@ -44,7 +43,8 @@
 (defn new-value-input [{{value :value} :ann} hit-id my-name my-role on-dispatch]
   (let [text-atom (reagent/atom value)
         clicked (reagent/atom false)]
-    (fn [{{key :key value :value} :ann id :_id version :_version username :username time :timestamp :as ann}
+    (fn [{{key :key value :value} :ann
+          id :_id version :_version username :username time :timestamp :as ann-map}
          hit-id my-name my-role on-dispatch]
       (let [may-edit (may-edit? :update username my-name my-role)
             tooltip-text (if may-edit "Click to modify" "Click to suggest a modification")]
@@ -64,7 +64,7 @@
              {:name "newannval"
               :type "text"
               :value  @text-atom
-              :on-key-press (trigger-update ann hit-id @text-atom my-name my-role on-dispatch)
+              :on-key-press (trigger-update ann-map hit-id @text-atom my-name my-role on-dispatch)
               :on-blur #(do (reset! text-atom value) (swap! clicked not))
               :on-change #(reset! text-atom (.. % -target -value))}])]]))))
 
