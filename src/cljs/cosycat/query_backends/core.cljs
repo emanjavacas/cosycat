@@ -19,7 +19,7 @@
   (defn ensure-corpus
     "instantiates corpus object and caches it for further calls"
     [{corpus-name :corpus corpus-type :type args :args :as corpus-config} &
-     {:keys [force] :or {force true}}]
+     {:keys [force] :or {force false}}]
     (if-let [corpus (get-corpus mem corpus-name corpus-type args)]
       (do (-> (swap! mem assoc corpus-name corpus) (get corpus-name)))
       (throw (js/Error. "Corpus not available")))))

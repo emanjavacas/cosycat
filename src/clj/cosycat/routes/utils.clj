@@ -59,13 +59,15 @@
       role)))
 
 (defn check-user-rights
-  ([db username project-name action & [ann-id]]
-   (let [{users :users} (find-project-by-name db project-name)
-         role (find-user-role db username project-name users ann-id)]
-     (when-not (check-annotation-role action role)
-       (throw (ex-user username project-name action))))))
+  "check user rights to an action inside a project. `ann-id` can optionally be provided
+   in which case `owner` might be returned as role."
+  [db username project-name action & [ann-id]]
+  (let [{users :users} (find-project-by-name db project-name)
+        role (find-user-role db username project-name users ann-id)]
+    (when-not (check-annotation-role action role)
+      (throw (ex-user username project-name action)))))
 
-;;; normalizers
+;;; Normalizers
 (defn ann->maps
   [{{type :type :as span} :span {key :key} :ann :as ann}]
   (let [token-id-or-ids (span->token-id span)]

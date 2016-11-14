@@ -55,7 +55,9 @@
         (is-B-IOB? ann token-id) (inc (- O B)) ;; B IOB
         (= type "token")         1)) ;; token
 
-(defn with-colspans [hit ann-key]
+(defn with-colspans
+  "compute colspan for a given annotation"
+  [hit ann-key]
   (reduce (fn [acc {token-id :id anns :anns :as token}]
             (if-let [colspan (cell-colspan token-id (get anns ann-key))]
               (conj acc {:colspan colspan :token token})

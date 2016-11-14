@@ -95,6 +95,7 @@
      {:keys [_version _id] :as ann-data} :ann-data} :params
     {{username :username} :identity} :session
     {{db-conn :db :as db} :db ws :ws} :components}]
+  ;; check the target annotation is on sync
   (check-sync-by-id db-conn (server-project-name project-name) _id _version)
   (let [issue-payload {:by username
                        :type issue-type

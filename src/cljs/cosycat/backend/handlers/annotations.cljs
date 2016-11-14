@@ -47,16 +47,19 @@
   (let [results-by-id (get-in db [:projects project :session :query :results-by-id])
         path [:projects project :session :query :results-by-id hit-id :hit]]
     (if (contains? results-by-id hit-id)
-      (update-in db path update-hit anns) ;found hit by id
+      ;; found hit by id
+      (update-in db path update-hit anns)
       (if-let [hit-id (find-hit-id (keys anns) (vals results-by-id))]
-        (update-in db path update-hit anns) ;found hit for annotation
-        db)))) ;couldn't find hit for annotation
+        ;; found hit for annotation
+        (update-in db path update-hit anns)
+        ;; couldn't find hit for annotation
+        db))))
 
 (defmethod add-annotations cljs.core/PersistentVector
   [db ms]
   (reduce (fn [db m] (add-annotations db m)) db ms))
 
-(re-frame/register-handler              ;generic handler
+(re-frame/register-handler ;; generic handler
  :add-annotation
  standard-middleware
  (fn [db [_ map-or-maps]] (add-annotations db map-or-maps)))
@@ -69,10 +72,13 @@
          results (vals (get-in db [:projects project :session :query :results-by-id]))
          token-id-or-ids (span->token-id span)]
      (if-let [hit (get-in db path)]
-       (update-in db path delete-ann token-id-or-ids key) ;found hit by id
+       ;; found hit by id
+       (update-in db path delete-ann token-id-or-ids key)
        (if-let [hit-id (find-hit-id token-id-or-ids results)]
-         (update-in db path delete-ann token-id-or-ids key) ;found hit for annotation
-         db))))) ;couldn't find hit
+         ;; found hit for annotation
+         (update-in db path delete-ann token-id-or-ids key)
+         ;; couldn't find hit
+         db)))))
 
 (defn fetch-annotation-handler [& {:keys [is-last]}]
   (fn [ann]
@@ -85,10 +91,10 @@
     (re-frame/dispatch [:stop-throbbing :fetch-annotations])
     (timbre/info "Couldn't fetch anns" data)))
 
-(re-frame/register-handler
+(re-frame/register-handler ;; general annotation fetcher for query hits
  :fetch-annotations
  standard-middleware
- (fn [db [_ {:keys [page-margins]}]]    ;[{:start token-id :end token-id :hit-id .. :doc ..}]
+ (fn [db [_ {:keys [page-margins]}]] ;; [{:start token-id :end token-id :hit-id .. :doc ..}]
    (let [project (get-in db [:session :active-project])
          corpus (get-in db [:projects project :session :query :results-summary :corpus])
          margins (count page-margins)
@@ -101,6 +107,12 @@
              :handler (fetch-annotation-handler :is-last is-last)
              :error-handler (fetch-annotation-error-handler)})))
    db))
+
+(re-frame/register-handler ;; annotation fetcher for single spans (document snippet)
+ :fetch-annotations-in-span
+ (fn [db [_ {:keys [page-margins handler]}]]
+   ;; TODO
+   ))
 
 ;;; Outgoing annotations
 (s/defn make-annotation :- annotation-schema
@@ -201,20 +213,20 @@
             :error-handler error-handler})
      db)))
 
-;;; Utils
+;;; Annotation packaging
 (defmulti package-annotation
   "packages annotation data for the server. It only supports bulk payloads for token annotations"
   (fn [ann-map-or-maps project hit-id token-id & [token-to]]
     [(type ann-map-or-maps) (coll? token-id)]))
 
-(defmethod package-annotation           ;simple token annotation
+(defmethod package-annotation ;; simple token annotation
   [cljs.core/PersistentArrayMap false]
   ([ann-map project hit-id token-id]
    {:project project :ann-map (make-annotation ann-map hit-id token-id)})
   ([ann-map project hit-id token-from token-to]
    {:project project :ann-map (make-annotation ann-map hit-id token-from token-to)}))
 
-(defmethod package-annotation           ;bulk token annotation
+(defmethod package-annotation ;; bulk token annotation
   [cljs.core/PersistentArrayMap true]
   [ann-map project hit-ids token-ids]
   (->> (mapv (fn [token-id hit-id] (make-annotation ann-map hit-id token-id)) token-ids hit-ids)

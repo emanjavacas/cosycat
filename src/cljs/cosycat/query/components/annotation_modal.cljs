@@ -48,13 +48,12 @@
        :token-id id}])))
 
 (defn suggest-annotation-edits [ann-key new-val anns me]
-  (doseq [{{{:keys [_id _version ann scope history]} ann-key} :anns hit-id :hit-id} anns
-          :let [users (vec (into #{me} (map :username history)))]
+  (doseq [{{{:keys [_id _version ann span history]} ann-key} :anns hit-id :hit-id} anns
+          :let [users (vec (into #{me} (map :username history)))
+                ann-data {:_version _version :_id _id :hit-id hit-id :value new-val :span span}]
           :when (not= new-val (:value ann))]
-    (re-frame/dispatch [:notify {:message "Not implemented yet"}])
-    ;; (re-frame/dispatch
-    ;;  [:open-annotation-edit
-    ;;   {:_version _version :_id _id :hit-id hit-id :value new-val :users users}])
+    (re-frame/dispatch [:notify {:message "Edit not authorized"}])
+    ;; (re-frame/dispatch [:open-annotation-edit ann-data users])
     ))
 
 (defn trigger-dispatch
