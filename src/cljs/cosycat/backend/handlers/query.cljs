@@ -85,6 +85,8 @@
 (defn find-corpus-config [db corpus-name]
   (some #(when (= corpus-name (:corpus %)) %) (db :corpora)))
 
+;;; cosycat.query-backends.protocols/query
+;;; cosycat.query-backends.protocols/query-sort
 (defn run-query [corpus-config query-str query-opts sort-opts filter-opts]
   (if (and (empty? sort-opts) (empty? filter-opts))
     (query (ensure-corpus corpus-config) query-str query-opts)
@@ -129,6 +131,7 @@
          (run-query (find-corpus-config db corpus) query-str query-opts sort-opts filter-opts)))
      db)))
 
+;;; cosycat.query-backends.protocols/query-sort
 (re-frame/register-handler
  :query-sort
  (fn [db _]
@@ -139,6 +142,22 @@
      (query-sort (ensure-corpus corpus-config) query-str query-opts sort-opts filter-opts)
      db)))
 
+;;; cosycat.query-backends.protocols/snippet
+(re-frame/register-handler
+ :fetch-snippet
+ (fn [db [_ hit-id {user-delta :snippet-delta dir :dir}]]
+   (let [{:keys [snippet-opts corpus]} (get-in db [:settings :query])
+         {snippet-delta :snippet-delta} snippet-opts
+         snippet-opts (assoc snippet-opts :snippet-delta (or user-delta snippet-delta))
+         corpus (ensure-corpus (find-corpus-config db corpus))         
+         {query-str :query-str} (current-results db)]
+     (when-not dir ;; only register first request
+       (re-frame/dispatch
+        [:register-user-project-event {:data {:hit-id hit-id :corpus corpus} :type "snippet"}]))
+     (snippet corpus query-str snippet-opts hit-id dir)
+     db)))
+
+;;; cosycat.query-backends.protocols/query-hit
 (re-frame/register-handler
  :update-hit
  standard-middleware
@@ -154,33 +173,25 @@
        (do (timbre/warn (format "Event :update-hit but coultn't find hit id [%s]" (str id)))
            db)))))
 
-(defn update-hit [{:keys [hit id] :as hit-map}]
-  (re-frame/dispatch [:update-hit hit-map]))
-
 (re-frame/register-handler
  :expand-hit
  standard-middleware
- (fn [db [_ id dir]]
-   (let [{:keys [corpus]} (get-in db [:settings :query])
-         corpus (ensure-corpus (find-corpus-config db corpus))
-         active-project (get-in db [:session :active-project])
-         {:keys [hit]} (get-in db [:projects active-project :session :query :results-by-id id])
-         [left match right] (partition-by :match hit)
-         words-left (if (= dir :left) (inc (count left)) (count left))
-         words-right (if (= dir :right) (inc (count right)) (count right))]
-     (query-hit corpus id {:words-left words-left :words-right words-right} update-hit))
-   db))
+ (let [update-hit (fn [hit-map] (re-frame/dispatch [:update-hit hit-map]))]
+   (fn [db [_ id dir]]
+     (let [{:keys [corpus]} (get-in db [:settings :query])
+           corpus (ensure-corpus (find-corpus-config db corpus))
+           active-project (get-in db [:session :active-project])
+           {:keys [hit]} (get-in db [:projects active-project :session :query :results-by-id id])
+           [left match right] (partition-by :match hit)
+           words-left (if (= dir :left) (inc (count left)) (count left))
+           words-right (if (= dir :right) (inc (count right)) (count right))]
+       (query-hit corpus id {:words-left words-left :words-right words-right} update-hit))
+     db)))
 
 (re-frame/register-handler
- :fetch-snippet
- (fn [db [_ hit-id {user-delta :snippet-delta dir :dir}]]
-   (let [{:keys [snippet-opts corpus]} (get-in db [:settings :query])
-         {snippet-delta :snippet-delta} snippet-opts
-         snippet-opts (assoc snippet-opts :snippet-delta (or user-delta snippet-delta))
-         corpus (ensure-corpus (find-corpus-config db corpus))         
-         {query-str :query-str} (current-results db)]
-     (when-not dir                      ;only register first request
-       (re-frame/dispatch
-        [:register-user-project-event {:data {:hit-id hit-id :corpus corpus} :type "snippet"}]))
-     (snippet corpus query-str snippet-opts hit-id dir)
+ :fetch-annotation-context
+ standard-middleware
+ (fn [db [_ {:keys [hit-id corpus] :as ann-map} context handler]]
+   (let [corpus (ensure-corpus (find-corpus-config db corpus))]
+     (query-hit corpus hit-id {:words-left context :words-right context} handler)
      db)))

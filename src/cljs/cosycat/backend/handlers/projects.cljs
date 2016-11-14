@@ -95,8 +95,16 @@
  (fn [db [_ project-name {id :id :as issue}]]
    (update-in db [:projects project-name :issues] assoc id issue)))
 
+(re-frame/register-handler
+ :add-issue-meta
+ standard-middleware
+ (fn [db [_ issue-id meta-key meta-value]]
+   (let [active-project (get-in db [:session :active-project])]
+     (update-in db [:projects active-project :issues issue-id :meta] assoc meta-key meta-value))))
+
 (defn project-add-issue-handler [project-name]
   (fn [issue]
+    (re-frame/dispatch [:notify {:message "New issue was added to project"}])
     (re-frame/dispatch [:add-project-issue project-name issue])))
 
 (re-frame/register-handler
@@ -110,8 +118,8 @@
             :error-handler error-handler}))
    db))
 
-(defn open-annotation-fn [issue-type]
-  (fn [db [_ {users :users :as ann-data}]]
+(defn open-annotation-fn [issue-type]  
+  (fn [db [_ ann-data users]] ;; ann-data is (assoc previous-ann :value new-ann-value)
     (let [project (get-in db [:session :active-project])
           corpus (get-in db [:projects project :session :query :results-summary :corpus])
           query (get-in db [:projects project :session :query :results-summary :query-str])

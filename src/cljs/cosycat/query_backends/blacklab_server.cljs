@@ -12,10 +12,14 @@
 (declare ->BlacklabServerCorpus)
 
 (defn make-blacklab-server-corpus
+  "instantiate a BlacklabServerCorpus for a given corpus name
+   `on-counting-callback` is a callback to be called internally in case BlacklabServer
+   return a partial count for a given query"
   [corpus-name {:keys [server web-service on-counting-callback]
                 :or {on-counting-callback identity}}]
-  (let [timeout-ids (atom [])]
-    (->BlacklabServerCorpus corpus-name server web-service on-counting-callback timeout-ids)))
+  (let [timeout-ids (atom []), callback-id (atom -1)]
+    (->BlacklabServerCorpus
+     corpus-name server web-service on-counting-callback timeout-ids callback-id)))
 
 (def default-query-params
   {:maxcount 200000
@@ -53,7 +57,7 @@
       :method jsonp)))
   ([corpus query-str query-opts] (base-query corpus query-str query-opts nil nil)))
 
-(deftype BlacklabServerCorpus [index server web-service callback timeout-ids]
+(deftype BlacklabServerCorpus [index server web-service callback timeout-ids callback-id]
   p/Corpus
   (p/query [this query-str query-opts]
     (clear-timeout timeout-ids)
@@ -63,13 +67,14 @@
     (base-query this query-str query-opts sort-opts filter-opts))
 
   (p/query-hit [_ hit-id {:keys [words-left words-right] :or {words-left 0 words-right 0}} handler]
-    (let [{:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)]
+    (let [{:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)
+          jsonp-callback-str (str "callback" (swap! callback-id inc))]
       (jsonp (bl-server-url server web-service index :resource (str "docs/" doc-id "/snippet"))
              {:params {:wordsaroundhit (max words-left words-right)
                        :hitstart (->int hit-start)
                        :hitend (->int hit-end)
-                       :jsonp "callbackHit"}
-              :json-callback-str "callbackHit"
+                       :jsonp jsonp-callback-str}              
+              :json-callback-str jsonp-callback-str
               :handler #(-> % (normalize-query-hit hit-id words-left words-right) handler)
               :error-handler #(timbre/error %)})))
 
