@@ -2,7 +2,8 @@
   (:require [compojure.core :refer [routes context POST GET]]
             [cosycat.utils :refer [->int assert-ex-info]]
             [cosycat.routes.utils
-             :refer [make-safe-route make-default-route unwrap-arraymap check-user-rights normalize-anns]]
+             :refer [make-safe-route make-default-route unwrap-arraymap
+                     check-user-rights normalize-anns]]
             [cosycat.db.annotations :as anns]
             [cosycat.db.projects :refer [find-project-by-name find-annotation-issue]]
             [cosycat.components.ws :refer [send-clients]]
@@ -117,6 +118,16 @@
        (filter identity)
        vec))
 
+;;; TODO
+(defn query-annotations
+  [{{query-map :query-map project :project} :params
+    {{username :username} :identity} :session
+    {db :db} :components}]
+  (check-user-rights db username project :read)
+  (anns/query-annotations db project {}))
+
+(defn )
+
 ;;; Routes
 (defn annotation-routes []
   (routes
@@ -125,4 +136,5 @@
     (POST "/update" [] (make-safe-route update-annotation-handler))
     (POST "/remove" [] (make-safe-route remove-annotation-handler))
     (GET "/range" [] (make-default-route fetch-annotation-range-handler))
-    (GET "/page" [] (make-default-route fetch-annotation-page-handler)))))
+    (GET "/page" [] (make-default-route fetch-annotation-page-handler))
+    (GET "/query" [] (make-default-route query-annotations)))))

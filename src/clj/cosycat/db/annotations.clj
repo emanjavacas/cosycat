@@ -116,6 +116,12 @@
 (defn find-annotation-owner [db project ann-id]
   (-> (find-annotation-by-id db project ann-id) :username))
 
+;;; Query annotations
+;;; TODO: annotation queries specified by #{key, value, timestamp, username, corpus, query}
+;;; do a quick grouping based on group-field (e.g. group by hit-id?)
+(defn query-annotations [{db-conn :db :as db} project query-map & {:keys [group-field]}]
+  )
+
 ;;; Setters
 (defn insert-annotation
   [{db-conn :db :as db} project {username :username :as ann}]
