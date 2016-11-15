@@ -2,6 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
+            [cosycat.components :refer [append-cell prepend-cell]]
             [cosycat.utils :refer [->map human-time]]
             [cosycat.app-utils :refer [dekeyword]]
             [cosycat.components :refer [css-transition-group dropdown-select user-thumb]]
@@ -9,18 +10,17 @@
 
 (declare issue-component)
 
-(defn issuer-thumb [source-user]
-  (let [avatar (re-frame/subscribe [:user source-user :avatar :href])]
-    (fn [source-user]
-      [:div {:style {:margin "10px"}}
-       [user-thumb (or @avatar "img/avatars/server.png")]])))
+(defn issuer-thumb [& {:keys [username] :or {username :me}}]
+  (let [href (if (= username :me)
+                 (re-frame/subscribe [:me :avatar :href])
+                 (re-frame/subscribe [:user username :avatar :href]))]
+    (fn [& opts]
+      [user-thumb {:style {:margin "10px"}} (or @href "img/avatars/server.png")])))
 
 (defn issue-timestamp [username timestamp]
   [:span.text-muted
    {:style {:margin-left "30px" :font-size "14px"}}
-   [:span (str "Issued by ")]
-   [:strong username]
-   [:span {:style {:margin-left "7px"}} (human-time timestamp)]])
+   [:span "Issued by " [:strong username] " " (human-time timestamp)]])
 
 (defn status-icon [status]
   (let [green "#5cb85c", red "#d9534f"]
@@ -60,15 +60,88 @@
       (fn [{{new-value :value {:keys [value key]} :ann} :data {{:keys [hit]} :hit-map} :meta}]
         [:div (str hit)])})))
 
+(defn thread-comment-input [issue-id & {:keys [parent-id]}]
+  (let [href (re-frame/subscribe [:me :avatar :href])
+        value (reagent/atom "")]
+    (fn [issue-id & {:keys [parent-id]}]
+      [:div.input-group
+       [:span.input-group-addon
+        [:img.img-rounded {:src @href :width "30px"}]]
+       [:textarea.form-control.form-control-no-border
+        {:type "text"
+         :style {:resize "none"}
+         :placeholder "..."
+         :value @value
+         :on-key-down #(.stopPropagation %)
+         :on-change #(reset! value (.-value (.-target %)))}]
+       [:span.input-group-addon
+        [bs/glyphicon
+         {:onClick #(re-frame/dispatch
+                     [:comment-on-issue {:comment @value :issue-id issue-id :parent-id parent-id}])
+          :style {:cursor "pointer"}
+          :glyph "send"}]]])))
+
+(defn comment-component [{:keys [comment timestamp by] :as comment-map} issue-id]
+  (let [href (re-frame/subscribe [:user by :avatar :href])
+        show-comment-input? (reagent/atom false)]
+    (fn [{:keys [comment timestamp by] :as comment-map} issue-id]
+      [:div.panel.panel-default {:style {:border-width "1px"}}
+       [:div.panel-body
+        {:style {:padding "10px"}}
+        [:div.container-fluid
+         [:div.row
+          {:style {:min-height "35px"}}
+          [:div.col-lg-1.col-md-1.col-sm-1.pad [user-thumb {:width "30px" :height "30px"} @href]]
+          [:div.col-lg-11.col-md-11.col-sm-11.pad {:style {:white-space "pre-wrap"}} comment]]
+         [:div.row {:style {:height "10px"}}]
+         [:div.row
+          [:div.col-lg-6.col-sm-6.text-left.pad
+           [:span.text-muted  "by " [:strong by] " "(human-time timestamp)]]
+          (let [style {:cursor "pointer" :padding "0 5px"}]
+            [:div.col-lg-6.col-sm-6.text-right.pad
+             [:a {:style style
+                  :onClick #(re-frame/dispatch [:notify {:message "Not implememented yet"}])}
+              "Delete"]
+             [:a {:style style
+                  :onClick #(swap! show-comment-input? not)}
+              (if @show-comment-input? "Dismiss" "Reply")]])]
+         (when @show-comment-input?
+           [:div.row {:style {:height "10px"}}])
+         (when @show-comment-input?
+           [:div.row [thread-comment-input issue-id]])]]])))
+
+;;; TODO: lazy-seq that returns depth first search of children in map
+;; (defn comments->tree* [])
+(defn comments->tree [comments]
+  (let [by-id (zipmap (map :id comments) comments)]
+    (for [comment comments]
+      [comment "depth"])))
+
+(defn thread-component [{issue-id :id comments :comments :as issue}]
+  [:div.container-fluid
+   (-> (doall (for [[comment-map depth] (comments->tree comments)
+                    :let [{:keys [id comment by timestamp]} comment-map]]
+                ^{:key id} [:div.row
+                            {:style {:margin-left (when false "10px")}}
+                            [comment-component comment-map issue-id]])))])
+
+(defn show-thread-panel [issue]
+  (fn [{comments :comments issue-id :id :as issue}]
+    [:div.container-fluid
+     ;; insert root comments
+     [:div.row [thread-comment-input issue-id]]
+     [:div.row {:style {:height "10px"}}]
+     (when comments [:div.row [thread-component issue]])]))
+
 (defmethod issue-component :annotation-edit
   [{ann-data :data {:keys [hit-map]} :meta issue-id :id :as issue}]
   (let [panel-open (reagent/atom {:show-hit false :thread false})]
     (fn [{ann-data :data meta :meta issue-id :id :as issue}]
-      [bs/panel-group {:accordion true}
+      [bs/panel-group {:accordion true :activeKey "2"}
        [bs/panel {:header "Show hit" :eventKey "1"}
         (reagent/as-component [show-hit-panel issue])]
        [bs/panel {:header "Show thread" :eventKey "2"}
-        (reagent/as-component [:div "Hello"])]])))
+        (reagent/as-component [show-thread-panel issue])]])))
 
 (defmethod issue-component :default
   [issue]
