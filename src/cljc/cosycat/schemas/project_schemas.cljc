@@ -17,11 +17,21 @@
    :status (s/enum "open" "closed")
    :users (s/conditional keyword? (s/enum :all) :else [s/Str]) ;addressed users
    :data {s/Any s/Any}
-   (s/optional-key :resolve) {:status (s/enum "accepted" "rejected")
-                              :comment s/Str
-                              :timestamp s/Str
-                              :by s/Str}
-   (s/optional-key :comments) [{:comment s/Str :timestamp s/Int :by s/Str}]})
+   (s/optional-key :resolve)
+   {:status (s/enum "accepted" "rejected")
+    :comment s/Str
+    :timestamp s/Str
+    :by s/Str}
+   (s/optional-key :comments)
+   [{:comment s/Str
+     :id s/Any
+     :timestamp s/Int
+     :by s/Str
+     ;; Tree Structure with parent references
+     ;; https://docs.mongodb.com/v3.0/tutorial/model-tree-structures-with-parent-references/
+     ;; :children is an array of comment ids pointing to children
+     ;; at normalizing time - look up roots, - sort by timestamp and recurse
+     (s/optional-key :children) [s/Any]}]})
 
 (def issue-schema
   #?(:cljs (assoc base-issue-schema (s/optional-key :meta) {s/Any s/Any})

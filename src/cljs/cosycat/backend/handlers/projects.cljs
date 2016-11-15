@@ -90,10 +90,10 @@
    db))
 
 (re-frame/register-handler              ;add project update to client-db
- :add-project-issue
+ :update-project-issue
  standard-middleware
  (fn [db [_ project-name {id :id :as issue}]]
-   (update-in db [:projects project-name :issues] assoc id issue)))
+   (update-in db [:projects project-name :issues id] deep-merge issue)))
 
 (re-frame/register-handler
  :add-issue-meta
@@ -105,18 +105,28 @@
 (defn project-add-issue-handler [project-name]
   (fn [issue]
     (re-frame/dispatch [:notify {:message "New issue was added to project"}])
-    (re-frame/dispatch [:add-project-issue project-name issue])))
+    (re-frame/dispatch [:update-project-issue project-name issue])))
 
 (re-frame/register-handler
  :project-issue
  standard-middleware
  (fn [db [_ {:keys [payload project-name]}]]
    (let [project-name (or project-name (get-in db [:session :active-project]))]
-     (POST "/project/issue"
+     (POST "/project/issues/new"
            {:params {:project-name project-name :payload payload}
             :handler (project-add-issue-handler project-name)
             :error-handler error-handler}))
    db))
+
+(re-frame/register-handler
+ :comment-on-issue
+ (fn [db [_ {:keys [comment issue-id parent-id] :as params}]]
+   (let [active-project (get-in db [:session :active-project])]
+     (POST "/project/issues/comment"
+           {:params (assoc params :project-name active-project)
+            :handler #(re-frame/dispatch [:update-project-issue active-project %])
+            :error-handler #(re-frame/dispatch [:notify {:message "Couldn't store comment" :status :error}])})
+     db)))
 
 (defn open-annotation-fn [issue-type]  
   (fn [db [_ ann-data users]] ;; ann-data is (assoc previous-ann :value new-ann-value)
@@ -124,7 +134,7 @@
           corpus (get-in db [:projects project :session :query :results-summary :corpus])
           query (get-in db [:projects project :session :query :results-summary :query-str])
           ann-data (assoc ann-data :corpus corpus :query query)]
-      (POST "/project/annotation-edit/open"
+      (POST "/project/issues/annotation-edit/open"
             {:params {:project-name project
                       :type issue-type
                       :users users
@@ -199,7 +209,7 @@
       :added-project-remove-agree
       (let [updated-project (update project :issues assoc id delete-issue)
             {:keys [pending-users]} (get-pending-users updated-project)] ;still users
-        (re-frame/dispatch [:add-project-issue project-name delete-issue])
+        (re-frame/dispatch [:update-project-issue project-name delete-issue])
         (re-frame/dispatch
          [:notify {:message (str (count pending-users) " users pending to remove project")}]))
       (throw (js/Error. "Couldn't parse remove-project payload")))))

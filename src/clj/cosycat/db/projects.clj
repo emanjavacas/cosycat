@@ -273,19 +273,32 @@
          first)))
 
 (defn- update-project-issue
-  [{db-conn :db :as db} username project-name issue-id update-map]
-  (let [{users :users :as issue} (get-project-issue db project-name issue-id)]
-    (check-user-in-issue db project-name username issue-id)
-    (->> (mc/find-and-modify
-          db-conn (:projects colls)
-          {:name project-name
-           "issues.id" issue-id}
-          update-map
-          {:return-new true
-           :fields {:issues 1}})
-         :issues
-         (filter #(= issue-id (:id %)))
-         first)))
+  "utility function for operations on issues. Accepts a `query-map` to allow for modifications
+   in other nested arrays such as :comments"
+  ([{db-conn :db :as db} username project-name issue-id update-map]
+   (update-project-issue db username project-name issue-id {} update-map))
+  ([{db-conn :db :as db} username project-name issue-id query-map update-map]
+   (let [{users :users :as issue} (get-project-issue db project-name issue-id)]
+     (check-user-in-issue db project-name username issue-id)
+     (->> (mc/find-and-modify db-conn (:projects colls)
+                              (merge query-map {:name project-name "issues.id" issue-id})
+                              update-map
+                              {:return-new true :fields {:issues 1}})
+          :issues
+          (filter #(= issue-id (:id %)))
+          first))))
+
+(defn comment-on-issue [db username project-name issue-id comment & {:keys [parent-id]}]
+  (let [timestamp (System/currentTimeMillis), id (new-uuid)
+        comment-map {:by username :comment comment :timestamp timestamp :id id}]
+    (if parent-id
+      (update-project-issue
+       db username project-name issue-id
+       {"comments.id" parent-id}
+       {$push {"comments.$.children" id "issues.$.comments" comment-map}})
+      (update-project-issue
+       db username project-name issue-id
+       {$push {"issues.$.comments" comment-map}}))))
 
 (defn close-issue [db username project-name issue-id]
   (update-project-issue

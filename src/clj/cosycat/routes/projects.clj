@@ -85,10 +85,22 @@
   (let [{:keys [users]} (proj/get-project db username project-name)
         issue (proj/add-project-issue db username project-name payload)]    
     (send-clients
-     ws {:type :project-update :data {:issue issue :project-name project-name} :by username}
+     ws {:type :new-project-issue :data {:issue issue :project-name project-name} :by username}
      :source-client username
      :target-clients (map :username users))
     issue))
+
+(defn comment-on-project-issue-route
+  [{{:keys [comment project-name issue-id parent-id]} :params
+    {{username :username} :identity} :session
+    {db :db ws :ws} :components}]
+  (let [{:keys [users]} (proj/get-project db username project-name)
+        updated-issue (proj/comment-on-issue db username project-name issue-id comment :parent-id parent-id)]
+    (send-clients
+     ws {:type :update-project-issue :data {:issue updated-issue :project-name project-name} :by username}
+     :source-client username
+     :target-clients (map :username users))
+    updated-issue))
 
 (defn open-annotation-edit-route
   [{{issue-type :type project-name :project-name users :users
@@ -106,7 +118,7 @@
         {project-users :users} (proj/get-project db username project-name)
         issue (proj/add-project-issue db username project-name issue-payload)]
     (send-clients
-     ws {:type :project-update :data {:issue issue :project-name project-name} :by username}
+     ws {:type :new-project-issue :data {:issue issue :project-name project-name} :by username}
      :source-client username
      :target-clients project-users)
     issue))
@@ -133,7 +145,7 @@
      :target-clients users)
     ;; send issue update
     (send-clients
-     ws {:type :project-update :data {:issue closed-issue :project-name project-name} :by username}
+     ws {:type :close-project-issue :data {:issue closed-issue :project-name project-name} :by username}
      :source-client username
      :target-clients users)
     ;; send issue to source client
@@ -147,7 +159,9 @@
     (POST "/remove-user" [] (make-default-route remove-user-route))
     (POST "/remove-project" [] (make-default-route remove-project-route))
     (POST "/update-user-role" [] (make-default-route update-user-role))
-    (POST "/issue" [] (make-default-route add-project-issue-route))
-    (context "/annotation-edit" []
-     (POST "/open" [] (make-default-route open-annotation-edit-route))
-     (POST "/resolve" [] (make-default-route resolve-annotation-edit-route))))))
+    (context "/issues" []
+     (POST "/new" [] (make-default-route add-project-issue-route))
+     (POST "/comment" [] (make-default-route comment-on-project-issue-route))
+      (context "/annotation-edit" []
+       (POST "/open" [] (make-default-route open-annotation-edit-route))
+       (POST "/resolve" [] (make-default-route resolve-annotation-edit-route)))))))

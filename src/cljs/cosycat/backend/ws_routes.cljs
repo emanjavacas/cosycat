@@ -88,22 +88,36 @@
       (re-frame/dispatch [:notify {:message message}])))
   db)
 
-(defmethod ws-handler :project-issue
+(defmethod ws-handler :new-project-issue
   [db {{issue :issue project-name :project-name} :data by :by}]
-  (re-frame/dispatch [:add-project-issue project-name issue])
+  (re-frame/dispatch [:update-project-issue project-name issue])
   (re-frame/dispatch
-   [:notify {:message (format "Project \"%s\" has a new issue by \"%s\"" project-name by)}])
+   [:notify {:message (format "Project \"%s\" has a new issue by \"%s\"" project-name by) :by by}])
+  db)
+
+(defmethod ws-handler :update-project-issue
+  [db {{issue :issue project-name :project-name} :data by :by}]
+  (re-frame/dispatch [:update-project-issue project-name issue])
+  (re-frame/dispatch
+   [:notify {:message (format "Issue in project \"%s\" has an update by \"%s\"" project-name by) :by by}])
+  db)
+
+(defmethod ws-handler :project-close-issue
+  [db {{issue :issue project-name :project-name} :data by :by}]
+  (re-frame/dispatch [:update-project-issue project-name issue])
+  (re-frame/dispatch
+   [:notify {:message (format "\"%s\" has closed an issue in project \"%s\"" by project-name) :by by}])
   db)
 
 (defmethod ws-handler :new-project-user-role
   [db {{username :username project-name :project-name role :role} :data by :by}]
-  (let [{{me :username} :me} db]
+  (let [{{me :username} :me} db
+        user-text (if (= username me) "Your" username) ]
     (re-frame/dispatch [:update-project-user-role project-name username role])
     (re-frame/dispatch
-     [:notify
-      {:message (format "%s role in project \"%s\" has been changed to \"%s\" by %s"
-                        (if (= username me) "Your" username) project-name role by)
-       :by (if (= username me) by me)}])
+     [:notify {:message (format "%s role in project \"%s\" has been changed to \"%s\" by %s"
+                                user-text project-name role by)
+               :by by}])
     db))
 
 (defmethod ws-handler :new-user-avatar
