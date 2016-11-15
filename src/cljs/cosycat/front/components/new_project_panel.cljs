@@ -98,7 +98,6 @@
           :user-projects @user-projects})))))
 
 (defn new-project-btn [open? selected-users]
-  (assert (map? @selected-users) "selected-users must be map atom")
   (let [user-projects (re-frame/subscribe [:session :user-info :projects])]
     (fn [open? selected-users]
       [bs/button-toolbar

@@ -32,7 +32,7 @@
         (when username                    ;wait until loaded
           [bs/navbar-brand
            [user-brand-span username active-project]
-           [:span [user-thumb href {:style {:margin-left "10px"} :height "30px" :width "30px"}]]])))))
+           [:span [user-thumb {:style {:margin-left "10px"} :height "30px" :width "30px"} href]]])))))
 
 (defn navlink [{:keys [target href label icon]}]
   (let [active (re-frame/subscribe [:active-panel])]

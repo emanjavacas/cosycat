@@ -74,12 +74,13 @@
     href))
 
 (defn user-thumb
-  [avatar-href & [props]]
-  [bs/image
-   (merge {:src (right-href avatar-href)
-           :height "42" :width "42"
-           :circle true}
-          props)])
+  ([href] (user-thumb {} href))
+  ([props href]
+   [bs/image
+    (merge {:src (right-href href)
+            :height "42" :width "42"
+            :circle true}
+           props)]))
 
 (defn user-selection-component
   [{username :username {href :href} :avatar}]
@@ -92,7 +93,7 @@
      [:div username
       [:span
        {:style {:padding-left "10px"}}
-       [user-thumb href {:height "25px" :width "25px"}]]]]))
+       [user-thumb {:height "25px" :width "25px"} href]]]]))
 
 (defn move-cursor [dir els]
   (fn [idx]
@@ -255,6 +256,11 @@
   [siblings {:keys [key child opts]}]
   (vec (cons ^{:key key} (apply merge [child] opts) siblings)))
 
+(defn append-cell
+  "append a cell `child` to a seq of siblings (useful for appending :td in a :tr)"
+  [siblings {:keys [key child opts]}]
+  (conj (vec siblings) ^{:key key} (apply merge [child] opts)))
+
 (defn notification-child                ;add a button to display notification meta
   [message date status href meta]
   [:div.notification
@@ -300,7 +306,7 @@
             :style {:max-height "40px"}
             :onClick #(re-frame/dispatch [:update-filtered-users username])}
            opts)
-          (reagent/as-component [user-thumb href {:height "20px" :width "20px"}])]]))))
+          (reagent/as-component [user-thumb {:height "20px" :width "20px"} href])]]))))
 
 (defn filter-annotation-buttons []
   (let [filtered-users (re-frame/subscribe [:active-project :filtered-users])

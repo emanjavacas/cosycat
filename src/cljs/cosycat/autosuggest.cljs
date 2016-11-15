@@ -149,7 +149,7 @@
           [field v] ((query-user @value-atom) user)]
       (reagent/as-element
        [:div {:style {:margin "10px 0"}}
-        [user-thumb (:href avatar) {:height "25px" :width "25px"}]
+        [user-thumb {:height "25px" :width "25px"} (:href avatar)]
         [:span {:style {:padding-left "10px"}} username]
         (when-let [[pre match post] (split-on-match v @value-atom)]
           [:span (str "  [" (dekeyword field) ":" pre) [:strong match] (str post "]")])]))))
