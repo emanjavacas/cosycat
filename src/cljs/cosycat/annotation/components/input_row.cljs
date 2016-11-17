@@ -51,50 +51,50 @@
     (re-frame/dispatch [:dispatch-annotation ann-map hit-id from to])))
 
 (defn on-key-down
-  [hit-id token-ids {:keys [value chans]}]
+  [{hit-id :id {query-str :query-str} :meta :as hit-map} token-ids {:keys [value chans]}]
   (fn [pressed]
     (.stopPropagation pressed)
     (when (= 13 (.-keyCode pressed))
       (if-let [[key val] (parse-annotation (.. pressed -target -value))]
-        (let [ann {:key key :value val}]
+        (let [ann-map {:ann {:key key :value val} :query-str query-str}]
           (condp = (count token-ids)
             0 (re-frame/dispatch [:notify {:message "Empty selection"}])
-            1 (re-frame/dispatch [:dispatch-annotation ann hit-id (first token-ids)])
-            (handle-span-dispatch ann hit-id token-ids chans))
+            1 (re-frame/dispatch [:dispatch-annotation ann-map hit-id (first token-ids)])
+            (handle-span-dispatch ann-map hit-id token-ids chans))
           (reset! value ""))))))
 
-(defn input-component [hit-id token-id chans]
+(defn input-component [{hit-id :id :as hit-map} token-id chans]
   (let [tagsets (re-frame/subscribe [:selected-tagsets])
         value (reagent/atom "")]
-    (fn [hit-id token-id chans]
+    (fn [{hit-id :id :as hit-map} token-id chans]
       [:div.input-cell
        [suggest-annotations
         @tagsets
         {:id (str "input-" hit-id)
-         :class "form-control input-cell"         
+         :class "form-control input-cell"
          :value value
          :onChange #(reset! value (.. % -target -value))
-         :onKeyDown (on-key-down hit-id (keys @chans) {:value value :chans chans})}]])))
+         :onKeyDown (on-key-down hit-map (keys @chans) {:value value :chans chans})}]])))
 
 (defn hidden-input-cell []
   (fn [] [:td {:style {:display "none"}}]))
 
-(defn visible-input-cell [hit-id token-id chans metadata]
-  (fn [hit-id token-id chans metadata]
+(defn visible-input-cell [hit-map token-id chans metadata]
+  (fn [hit-map token-id chans metadata]
     [:td {:style (merge {:padding "0px"} border-style)
           :colSpan (count @chans)
           :on-mouse-down #(input-mouse-down metadata (get @chans token-id))
           :on-mouse-enter #(input-mouse-over token-id metadata chans)
           :on-double-click #(unmerge-cells token-id chans)}
-     [input-component hit-id token-id chans]]))
+     [input-component hit-map token-id chans]]))
 
-(defn input-cell [hit-id token-id metadata]
+(defn input-cell [hit-map token-id metadata]
   (let [display (reagent/atom true)
         chans (reagent/atom {token-id (chan)})]
     (handle-chan-events token-id display chans)
-    (fn [hit-id token-id metadata]
+    (fn [hit-map token-id metadata]
       (if @display
-        [visible-input-cell hit-id token-id chans metadata]
+        [visible-input-cell hit-map token-id chans metadata]
         [hidden-input-cell]))))
 
 (defn on-click-pager [hit-id dir]
@@ -117,7 +117,7 @@
           :glyph "chevron-right"
           :onClick (on-click-pager hit-id :right)}]]])))
 
-(defn input-row [{hit :hit hit-id :id meta :meta}]
+(defn input-row [{hit :hit hit-id :id meta :meta :as hit-map}]
   (let [metadata {:mouse-down (reagent/atom false) :source (reagent/atom nil)}]
     (fn [{hit :hit hit-id :id meta :meta}]
       (into [:tr
@@ -125,5 +125,5 @@
               :on-mouse-up #(reset-metadata! metadata)}]
             (-> (for [{token-id :id word :word match :match} hit]
                   ^{:key (str hit-id "-" token-id)}
-                  [input-cell hit-id token-id metadata])
+                  [input-cell hit-map token-id metadata])
                 (prepend-cell {:key (str hit-id "pager") :child pager-cell :opts [hit-id]}))))))

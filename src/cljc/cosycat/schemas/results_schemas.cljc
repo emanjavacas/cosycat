@@ -20,6 +20,7 @@
    ;; optional keys 
    (s/optional-key :marked) s/Bool      ;is hit marked for annotation?
    (s/optional-key :has-marked) s/Bool  ;does hit contain marked tokens?
+   (s/optional-key :query-str) s/Str    ;the query-str that retrieved it
    ;; any other additional keys
    s/Keyword                s/Any})
 

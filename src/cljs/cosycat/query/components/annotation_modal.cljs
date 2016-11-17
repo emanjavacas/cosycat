@@ -33,19 +33,16 @@
     (->> tokens (map :hit-id)) ;hit-ids
     (->> tokens (map :id))])) ;token-ids
 
-(defn update-annotations [{:keys [key value]} tokens]
+(defn update-annotations [{{:keys [key value]} :ann :as ann-map} tokens]
   (doseq [{hit-id :hit-id {ann key} :anns} tokens
-          :let [{:keys [_id _version]} ann]]
+          :let [{:keys [_id _version]} ann]] ;get corresponding existing ann
     (re-frame/dispatch
      [:update-annotation
       {:update-map {:_id _id :_version _version :value value :hit-id hit-id}}])))
 
 (defn deselect-tokens [tokens]
   (doseq [{:keys [hit-id id]} tokens]
-    (re-frame/dispatch
-     [:unmark-token
-      {:hit-id hit-id
-       :token-id id}])))
+    (re-frame/dispatch [:unmark-token {:hit-id hit-id :token-id id}])))
 
 (defn suggest-annotation-edits [ann-key new-val anns me]
   (doseq [{{{:keys [_id _version ann span history]} ann-key} :anns hit-id :hit-id} anns
@@ -70,9 +67,9 @@
              (not (empty? existing-annotation)))
         (suggest-annotation-edits key val existing-annotation @me)
         ;; dispatch annotations
-        :else (let [key-val {:key key :value val}]
-                (dispatch-annotations key-val empty-annotation)
-                (update-annotations key-val existing-annotation-owner)
+        :else (let [ann-map {:ann {:key key :value val}}]
+                (dispatch-annotations ann-map empty-annotation)
+                (update-annotations ann-map existing-annotation-owner)
                 (deselect-tokens empty-annotation)
                 (deselect-tokens existing-annotation-owner)))
       ;; finally

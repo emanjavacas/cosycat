@@ -31,13 +31,23 @@
     (assoc-in new-hit [:meta :marked] true)
     new-hit))
 
+(defn with-query-str
+  "on incoming hits (potentially after new query) check if a marked hit from previous
+   query has its corresponding query-str in meta, and add it, otherwise return."
+  [{{hit-query-str :query-str} :meta :as hit} query-str]
+  (if-not hit-query-str
+    (assoc-in hit [:meta :query-str] query-str)
+    hit))
+
 (defn merge-results
-  "on new results, update current results preserving marked metadata"
-  [old-results results]
+  "on new results, update current results preserving marked metadata and including query-str
+   (in case query has changed). This is done only here for (memory) efficiency to avoid appending
+   query-str metadata to each hit regardless their being marked."
+  [old-results results current-query-str]
   (let [new-results (zipmap (map :id results) results)] ;normalized results
     (reduce-kv (fn [m k v]
                  (if (get-in old-results [k :meta :marked])
-                   (assoc m k (merge-hit (get old-results k) (get new-results k)))
+                   (assoc m k (with-query-str v current-query-str))
                    m))
                new-results
                old-results)))
@@ -56,12 +66,13 @@
    (re-frame/dispatch [:stop-throbbing :results-frame])
    (re-frame/dispatch [:fetch-annotations {:page-margins (page-margins results)}])
    (let [active-project (get-in db [:session :active-project])
+         query-str (get-in db [:projects active-project :session :query :results-summary :query-str])
          path-fn (fn [key] [:projects active-project :session :query key])]
      (-> db
          (assoc-in [:projects active-project :session :status] status)
          (update-in (path-fn :results-summary) merge results-summary)
          (assoc-in (path-fn :results) (map :id results))
-         (update-in (path-fn :results-by-id) merge-results results :has-marked? true)))))
+         (update-in (path-fn :results-by-id) merge-results results query-str)))))
 
 (re-frame/register-handler
  :unset-query-results
