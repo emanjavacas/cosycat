@@ -135,23 +135,33 @@
 (re-frame/register-handler
  :set-active-project-frame
  standard-middleware
- (fn [db [_ active-frame]]
+ (fn [db [_ frame]]
    (let [active-project (get-in db [:session :active-project])]
-     (assoc-in db [:projects active-project :session :components :active-project-frame] active-frame))))
+     (assoc-in db [:projects active-project :session :components :active-project-frame] frame))))
 
 (re-frame/register-handler
  :set-project-session-component
  standard-middleware
- (fn [db [_ value & path]]
+ (fn [db [_ path value]]
    (let [active-project (get-in db [:session :active-project])]
      (assoc-in db (into [:projects active-project :session :components] path) value))))
 
 (re-frame/register-handler
  :unset-project-session-component
  standard-middleware
- (fn [db [_ key & path]]
+ (fn [db [_ path key]]
    (let [active-project (get-in db [:session :active-project])]
-     (update-in db (into [:projects active-project :session :components] (or path [])) dissoc key))))
+     (update-in db (into [:projects active-project :session :components] path) dissoc key))))
+
+(re-frame/register-handler
+ :toggle-project-session-component
+ standard-middleware
+ (fn [db [_ path]]
+   (let [active-project (get-in db [:session :active-project])
+         path (into [:projects active-project :session :components] path)]
+     (if (get-in db path)
+       (update-in db (pop path) dissoc (last path))
+       (assoc-in db path true)))))
 
 ;;; marking
 (re-frame/register-handler
