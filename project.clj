@@ -45,7 +45,7 @@
 
   :main cosycat.main
   
-  :jvm-opts ["-Xmx4000M" "-Djava.awt.headless=true"]
+  :jvm-opts ["-Xmx4000M" "-Djava.awt.headless=true" "-XX:-OmitStackTraceInFastThrow"]
   
   :plugins [[lein-cljsbuild "1.1.1"]
             [lein-environ "1.0.1"]
