@@ -178,8 +178,8 @@
          start (->> hit first :id parse-token-id :id)
          end (->> hit last :id parse-token-id :id)]
      (if-let [current-hit (get-in db [:projects active-project :session :query :results-by-id id])]
-       (do (re-frame/dispatch [:fetch-annotations
-                               {:page-margins [{:start start :end end :hit-id id :doc doc-id}]}])
+       (do (re-frame/dispatch
+            [:fetch-annotations {:page-margins [{:start start :end end :hit-id id :doc doc-id}]}])
            (assoc-in db [:projects active-project :session :query :results-by-id id :hit] hit))
        (do (timbre/warn (format "Event :update-hit but coultn't find hit id [%s]" (str id)))
            db)))))
@@ -199,10 +199,26 @@
        (query-hit corpus id {:words-left words-left :words-right words-right} update-hit))
      db)))
 
+(defn fetch-issue-id-handler
+  "creates a handler to be passed to query-hit when fetching hit for an edit annotation issue"
+  [{issue-id :id :as issue} context & {:keys [with-annotations?] :or {with-annotations? false}}]  
+  (fn [hit-map]
+    (re-frame/dispatch [:add-issue-meta issue-id [:hit-map] hit-map])
+    ;; this will fail if fetching anns from db is faster than updating the re-frame db :-)
+    (when with-annotations?
+      (let [{{hit-id :hit-id corpus :corpus {doc :doc} :span} :data} issue
+            {:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)
+            start (max 0 (- hit-start context))
+            end (+ hit-end context)]
+        (re-frame/dispatch
+         [:fetch-annotations-in-span
+          {:start start :end end :hit-id hit-id :doc doc :corpus corpus} issue])))))
+
 (re-frame/register-handler
- :fetch-annotation-context
+ :fetch-issue-hit
  standard-middleware
- (fn [db [_ {:keys [hit-id corpus] :as ann-map} context handler]]
-   (let [corpus (ensure-corpus (find-corpus-config db corpus))]
+ (fn [db [_ {{:keys [hit-id corpus]} :data issue-id :issue-id :as issue} context :context]]
+   (let [corpus (ensure-corpus (find-corpus-config db corpus))
+         handler (fetch-issue-id-handler issue context)]
      (query-hit corpus hit-id {:words-left context :words-right context} handler)
      db)))

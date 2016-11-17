@@ -98,9 +98,16 @@
 (re-frame/register-handler
  :add-issue-meta
  standard-middleware
- (fn [db [_ issue-id meta-key meta-value]]
+ (fn [db [_ issue-id path value]]
    (let [active-project (get-in db [:session :active-project])]
-     (update-in db [:projects active-project :issues issue-id :meta] assoc meta-key meta-value))))
+     (assoc-in db (into [:projects active-project :issues issue-id :meta] path) value))))
+
+(re-frame/register-handler
+ :update-issue-meta
+ standard-middleware
+ (fn [db [_ issue-id path update-fn]]
+   (let [active-project (get-in db [:session :active-project])]
+     (update-in db (into [:projects active-project :issues issue-id :meta] path) update-fn))))
 
 (defn project-add-issue-handler [project-name]
   (fn [issue]

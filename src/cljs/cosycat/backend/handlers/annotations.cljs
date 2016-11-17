@@ -8,7 +8,7 @@
             [cosycat.backend.middleware :refer [standard-middleware]]
             [taoensso.timbre :as timbre]))
 
-;;; Incoming annotations
+;;; Incoming annotations; query-panel
 (defn update-hit [hit anns]
   (mapv (fn [{token-id :id :as token}]
           (if-let [ann (get anns token-id)]
@@ -81,15 +81,15 @@
          db)))))
 
 (defn fetch-annotation-handler [& {:keys [is-last]}]
-  (fn [ann]
-    (re-frame/dispatch [:add-annotation ann])
+  (fn [data]
+    (re-frame/dispatch [:add-annotation data])
     (when is-last
       (re-frame/dispatch [:stop-throbbing :fetch-annotations]))))
 
 (defn fetch-annotation-error-handler []
   (fn [data]
     (re-frame/dispatch [:stop-throbbing :fetch-annotations])
-    (timbre/info "Couldn't fetch anns" data)))
+    (timbre/warn "Couldn't fetch anns" data)))
 
 (re-frame/register-handler ;; general annotation fetcher for query hits
  :fetch-annotations
@@ -108,11 +108,26 @@
              :error-handler (fetch-annotation-error-handler)})))
    db))
 
-(re-frame/register-handler ;; annotation fetcher for single spans (document snippet)
- :fetch-annotations-in-span
- (fn [db [_ {:keys [page-margins handler]}]]
-   ;; TODO
-   ))
+(defn fetch-annotations-in-span [handler]
+  (fn [db [_ {:keys [start end hit-id doc corpus]} & args]]
+    (let [project (get-in db [:session :active-project])]
+      (GET "/annotation/page"
+           {:params {:page-margins [{:start start :end end :hit-id hit-id :doc doc}]
+                     :project project :corpus corpus}
+            :handler #(handler (first %) args) ;; payload will be [{:keys [hit-id project anns]}]
+            :error-handler #(timbre/warn "Couldn't fetch annotations" (str %))})
+      db)))
+
+(re-frame/register-handler
+ :fetch-annotations-issue-hit
+ (let [handler (fn [{:keys [hit-id project anns]} & [{issue-id :id :as issue}]]
+                 (re-frame/dispatch
+                  [:update-issue-meta issue-id [:hit-map :hit] (fn [hit] (update-hit hit anns))]))]
+   (fetch-annotations-in-span handler)))
+
+(re-frame/register-handler ;; groups annotations by hit-id
+ :query-annotations
+ (fn [db _]))
 
 ;;; Outgoing annotations
 (s/defn make-annotation :- annotation-schema
@@ -214,7 +229,7 @@
             :error-handler error-handler})
      db)))
 
-;;; Annotation packaging
+;;; annotation dispatch utils
 (defmulti package-annotation
   "packages annotation data for the server. It only supports bulk payloads for token annotations"
   (fn [ann-map-or-maps project hit-id token-id & [token-to]]
