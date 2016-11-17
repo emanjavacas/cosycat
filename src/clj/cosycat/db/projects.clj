@@ -291,14 +291,10 @@
 (defn comment-on-issue [db username project-name issue-id comment & {:keys [parent-id]}]
   (let [timestamp (System/currentTimeMillis), id (new-uuid)
         comment-map {:by username :comment comment :timestamp timestamp :id id}]
-    (if parent-id
-      (update-project-issue
-       db username project-name issue-id
-       {"comments.id" parent-id}
-       {$push {"comments.$.children" id "issues.$.comments" comment-map}})
-      (update-project-issue
-       db username project-name issue-id
-       {$push {"issues.$.comments" comment-map}}))))
+    (update-project-issue
+     db username project-name issue-id
+     (cond-> {$set {(str "issues.$.comments." id) comment-map}}
+       parent-id (assoc $push {(format "issues.$.comments.%s.children" parent-id) id})))))
 
 (defn close-issue [db username project-name issue-id]
   (update-project-issue

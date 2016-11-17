@@ -23,7 +23,10 @@
     :timestamp s/Str
     :by s/Str}
    (s/optional-key :comments)
-   [{:comment s/Str
+   ;; comments are stored as objects indexed by comment id
+   ;; to make comment updates atomic (see http://stackoverflow.com/questions/18573117/updating-nested-arrays-in-mongodb-via-mongo-shell/18574256#18574256)
+   {s/Keyword ;; comment-id as keyword
+    {:comment s/Str
      :id s/Any
      :timestamp s/Int
      :by s/Str
@@ -31,7 +34,7 @@
      ;; https://docs.mongodb.com/v3.0/tutorial/model-tree-structures-with-parent-references/
      ;; :children is an array of comment ids pointing to children
      ;; at normalizing time - look up roots, - sort by timestamp and recurse
-     (s/optional-key :children) [s/Any]}]})
+     (s/optional-key :children) [s/Any]}}})
 
 (def issue-schema
   #?(:cljs (assoc base-issue-schema (s/optional-key :meta) {s/Any s/Any})
