@@ -51,12 +51,12 @@
     (re-frame/dispatch [:dispatch-annotation ann-map hit-id from to])))
 
 (defn on-key-down
-  [{hit-id :id {query-str :query-str} :meta :as hit-map} token-ids {:keys [value chans]}]
+  [{hit-id :id {query :query} :meta :as hit-map} token-ids {:keys [value chans]}]
   (fn [pressed]
     (.stopPropagation pressed)
     (when (= 13 (.-keyCode pressed))
       (if-let [[key val] (parse-annotation (.. pressed -target -value))]
-        (let [ann-map {:ann {:key key :value val} :query-str query-str}]
+        (let [ann-map {:ann {:key key :value val} :query query}]
           (condp = (count token-ids)
             0 (re-frame/dispatch [:notify {:message "Empty selection"}])
             1 (re-frame/dispatch [:dispatch-annotation ann-map hit-id (first token-ids)])
