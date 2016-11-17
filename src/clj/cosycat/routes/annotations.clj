@@ -126,8 +126,6 @@
   (check-user-rights db username project :read)
   (anns/query-annotations db project {}))
 
-(defn )
-
 ;;; Routes
 (defn annotation-routes []
   (routes

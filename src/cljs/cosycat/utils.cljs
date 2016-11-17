@@ -163,7 +163,7 @@
    :info  "%s says: %s"
    :signup "Hooray! %s has joined the team!"
    :login "%s is ready for science"
-   :logout "%s is leaving us..."
+   :logout "%s is leaving us for a while"
    :new-project "You've been added to project \"%s\" by %s"})
 
 (defn get-msg [path & args]

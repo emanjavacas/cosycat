@@ -12,6 +12,9 @@
 (def css-transition-group
   (reagent/adapt-react-class js/React.addons.CSSTransitionGroup))
 
+(def transition-group
+  (reagent/adapt-react-class js/React.addons.TransitionGroup))
+
 (defn throbbing-panel
   [& {:keys [throbber] :or {throbber :loader-ticks}}]
   [:div.container-fluid

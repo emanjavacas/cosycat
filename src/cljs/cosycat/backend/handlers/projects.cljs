@@ -125,7 +125,8 @@
      (POST "/project/issues/comment"
            {:params (assoc params :project-name active-project)
             :handler #(re-frame/dispatch [:update-project-issue active-project %])
-            :error-handler #(re-frame/dispatch [:notify {:message "Couldn't store comment" :status :error}])})
+            :error-handler #(re-frame/dispatch
+                             [:notify {:message "Couldn't store comment" :status :error}])})
      db)))
 
 (defn open-annotation-fn [issue-type]  
