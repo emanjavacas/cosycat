@@ -68,21 +68,26 @@
               :on-blur #(do (reset! text-atom value) (swap! clicked not))
               :on-change #(reset! text-atom (.. % -target -value))}])]]))))
 
-(defn history-row [ann current-ann hit-id my-name my-role on-dispatch]
-  (fn [{{value :value} :ann timestamp :timestamp}
+(defn history-row [ann-map current-ann hit-id my-name my-role on-dispatch & {:keys [editable?]}]
+  (fn [{{value :value} :ann timestamp :timestamp :as ann-map}
        {version :_version id :_id username :username :as current-ann}
-       hit-id on-dispatch]
+       hit-id on-dispatch
+       & {:keys [editable?]}]
     (let [may-edit (may-edit? :update username my-name my-role)
-          tooltip-text (if may-edit "Click to restore this version" "Click to suggest revert to this version")]
+          tooltip-text (if may-edit
+                         "Click to restore this version"
+                         "Click to suggest revert to this version")]
       [:tr
-       [:td [bs/overlay-trigger
-             {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} tooltip-text])
-              :placement "left"}
-             [bs/label
-              {:style {:cursor "pointer"}
-               :bsStyle (if may-edit "primary" "warning")
-               :onClick #(trigger-update current-ann hit-id value my-name my-role on-dispatch)}
-              value]]]
+       [:td (if-not editable?
+              [bs/label value]
+              [bs/overlay-trigger
+               {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} tooltip-text])
+                :placement "left"}
+               [bs/label
+                {:style {:cursor "pointer"}
+                 :bsStyle (if may-edit "primary" "warning")
+                 :onClick #(trigger-update current-ann hit-id value my-name my-role on-dispatch)}
+                value]])]
        [:td {:style {:width "25px"}}]
        [:td
         [:span.text-muted username]
@@ -92,22 +97,25 @@
 
 (defn spacer-row [] [:tr {:style {:height "5px"}} [:td ""]])
 
-(defn get-ann-history [history]
+(defn get-history [history]
    (butlast (interleave (sort-by :timestamp > history) (range))))
 
-(defn history-body [history current-ann hit-id my-name my-role on-dispatch]
-  (fn [history current-ann hit-id on-dispatch]
+(defn history-body [history current-ann hit-id my-name my-role on-dispatch & {:keys [editable?]}]
+  (fn [history current-ann hit-id on-dispatch & {:keys [editable?]}]
     [:tbody
      (doall
-      (for [{{value :value} :ann timestamp :timestamp :as ann} (get-ann-history history)
-            :let [key (if value (str value timestamp) (str "spacer-" ann))]]
+      (for [{{:keys [key value]} :ann timestamp :timestamp :as ann-map-or-idx} (get-history history)]
         (if value
-          ^{:key key} [history-row ann current-ann hit-id my-name my-role on-dispatch]
-          ^{:key key} [spacer-row])))]))
+          ^{:key (str value timestamp)}
+          [history-row ann-map-or-idx current-ann hit-id my-name my-role on-dispatch
+           :editable? editable?]
+          ^{:key (str "spacer-" ann-map-or-idx)}
+          [spacer-row])))]))
 
 (defn annotation-popover
   [{{:keys [timestamp username history _version] :as ann} :ann-map
-    hit-id :hit-id on-dispatch :on-dispatch}]
+    hit-id :hit-id on-dispatch :on-dispatch editable? :editable?
+    :or {editable? true}}]
   (let [user (re-frame/subscribe [:user username])
         my-name (re-frame/subscribe [:me :username])
         my-role (re-frame/subscribe [:active-project-role])]
@@ -127,8 +135,10 @@
                   [:div.row.pad.pull-right (human-time timestamp)]]]]])
       :style {:max-width "100%"}}
      [:div.container-fluid
-      [:div.row {:style {:background-color "#e2e2e2"}}
-       [new-value-input ann hit-id @my-name @my-role on-dispatch]]
+      (when editable?
+        [:div.row {:style {:background-color "#e2e2e2"}}
+         [new-value-input ann hit-id @my-name @my-role on-dispatch]])
       [:div.row {:style {:height "8px"}}]
       [:div.row [:table (when-not (empty? history)
-                          [history-body history ann hit-id @my-name @my-role on-dispatch])]]]]))
+                          [history-body history ann hit-id @my-name @my-role on-dispatch
+                           :editable? editable?])]]]]))

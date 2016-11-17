@@ -23,10 +23,10 @@
     {:box-shadow (->box color)}
     {:opacity "0.25"}))
 
-(defn annotation-cell [ann-map hit-id token-id color-map colspan]
-  (let [open? (reagent/atom false)
-        target (reagent/atom nil)]
-    (fn [{username :username anns :anns :as ann-map} hit-id token-id color-map colspan]
+(defn annotation-cell [ann-map hit-id token-id colspan color-map & {:keys [editable?]}]
+  (let [open? (reagent/atom false), target (reagent/atom nil)]
+    (fn [{username :username anns :anns :as ann-map}
+         hit-id token-id colspan color-map & {:keys [editable?]}]
       [:td.ann-cell
        {:style (annotation-cell-style @color-map username)
         :colSpan colspan
@@ -35,14 +35,15 @@
         [key-val ann-map]
         [bs/overlay
          {:show @open?
-          :target (fn [] @target)     ;DOMNode
+          :target (fn [] @target) ;DOMNode
           :rootClose true
           :onHide #(swap! open? not) ;called when rootClose triggers
           :placement "top"}
          (annotation-popover
           {:ann-map ann-map
            :hit-id hit-id
-           :on-dispatch #(swap! open? not)})]]])))
+           :on-dispatch #(swap! open? not)
+           :editable? editable?})]]])))
 
 (defn annotation-key [key]
   [:td [bs/label {:style {:font-size "90%"}} key]])
@@ -65,7 +66,7 @@
           []
           hit))
 
-(defn annotation-row [hit ann-key]
+(defn annotation-row [hit ann-key & {:keys [editable?] :or {editable? true}}]
   (let [color-map (re-frame/subscribe [:filtered-users-colors])]
     (fn [{hit-id :id hit :hit} ann-key]
       (into
@@ -73,6 +74,12 @@
        (-> (for [{colspan :colspan {token-id :id anns :anns} :token} (with-colspans hit ann-key)]
              ^{:key (str ann-key hit-id token-id)}
              (if-let [ann-map (get anns ann-key)]
-               [annotation-cell (get anns ann-key) hit-id token-id color-map colspan]
+               [annotation-cell
+                (get anns ann-key)
+                hit-id
+                token-id
+                colspan
+                color-map
+                :editable? editable?]
                [dummy-cell]))
            (prepend-cell {:key (str ann-key) :child annotation-key :opts [ann-key]}))))))
