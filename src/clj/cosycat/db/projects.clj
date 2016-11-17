@@ -108,7 +108,7 @@
 (defn check-user-in-issue
   [{db-conn :db :as db} project-name username issue-id]
   (let [{:keys [users]} (get-project-issue db project-name issue-id)]
-    (when-not (or (= ["all"] users) (some #(= username %) users))
+    (when-not (or (= "all" users) (some #(= username %) users))
       (throw (ex-user-issue username issue-id)))))
 
 ;;; Getters
@@ -311,7 +311,8 @@
   {:type "delete-project-agree"
    :status "open"
    :data {:agreed [username]}
-   :users [:all]
+   :by username
+   :users "all"
    :timestamp (System/currentTimeMillis)})
 
 (defn erase-project

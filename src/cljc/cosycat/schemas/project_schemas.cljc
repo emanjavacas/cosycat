@@ -15,7 +15,7 @@
    :type s/Str
    :timestamp s/Int
    :status (s/enum "open" "closed")
-   :users (s/conditional keyword? (s/enum :all) :else [s/Str]) ;addressed users
+   :users (s/conditional string? (s/enum "all") :else [s/Str]) ;addressed users
    :data {s/Any s/Any}
    (s/optional-key :resolve)
    {:status (s/enum "accepted" "rejected")

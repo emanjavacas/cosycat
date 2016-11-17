@@ -53,7 +53,7 @@
     {db :db ws :ws} :components}]
   (let [{:keys [users]} (proj/find-project-by-name db project-name)]
     (if-let [delete-payload (proj/remove-project db username project-name)]
-      (let [ws-payload {:type :project-issue
+      (let [ws-payload {:type :new-project-issue
                         :data {:project-name project-name :issue delete-payload}
                         :by username}]
         (send-clients ws ws-payload
@@ -95,12 +95,12 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [{:keys [users]} (proj/get-project db username project-name)
-        updated-issue (proj/comment-on-issue db username project-name issue-id comment :parent-id parent-id)]
+        issue (proj/comment-on-issue db username project-name issue-id comment :parent-id parent-id)]
     (send-clients
-     ws {:type :update-project-issue :data {:issue updated-issue :project-name project-name} :by username}
+     ws {:type :update-project-issue :data {:issue issue :project-name project-name} :by username}
      :source-client username
      :target-clients (map :username users))
-    updated-issue))
+    issue))
 
 (defn open-annotation-edit-route
   [{{issue-type :type project-name :project-name users :users
@@ -145,7 +145,9 @@
      :target-clients users)
     ;; send issue update
     (send-clients
-     ws {:type :close-project-issue :data {:issue closed-issue :project-name project-name} :by username}
+     ws {:type :close-project-issue
+         :data {:issue closed-issue :project-name project-name}
+         :by username}
      :source-client username
      :target-clients users)
     ;; send issue to source client

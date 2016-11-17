@@ -157,12 +157,12 @@
 
 (re-frame/register-handler
  :dispatch-annotation
- (fn [db [_ {ann-query-str :query-str :as ann-map} & args]]
+ (fn [db [_ {ann-query :query :as ann-map} & args]]
    (let [project (get-in db [:session :active-project])
          corpus (get-in db [:projects project :session :query :results-summary :corpus])
-         db-query-str (get-in db [:projects project :session :query :results-summary :query-str])
-         ann-map (assoc ann-map :corpus corpus :query-str (or ann-query-str db-query-str))]
-     (assert (:query-str ann-map) "missing `query-str` in ann-map")
+         db-query (get-in db [:projects project :session :query :results-summary :query-str])
+         ann-map (assoc ann-map :corpus corpus :query (or ann-query db-query))]
+     (assert (:query ann-map) "missing `query` in ann-map")
      (try (POST "/annotation/new"
                 {:params (apply package-annotation ann-map project args)
                  :handler dispatch-annotation-handler
