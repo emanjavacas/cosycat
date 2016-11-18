@@ -51,20 +51,23 @@
 (defn is-B-IOB? [{{{B :B O :O} :scope type :type} :span} token-id]
   (and (= type "IOB") (= B (-> (parse-token-id token-id) :id))))
 
-(defn cell-colspan [token-id {{{B :B O :O} :scope type :type} :span :as ann}]
-  (cond (not ann)                1 ;; no annotation
-        (is-B-IOB? ann token-id) (inc (- O B)) ;; B IOB
-        (= type "token")         1)) ;; token
+(defn cell-colspan [token-id token-from token-to {{{B :B O :O} :scope type :type} :span :as ann}]
+  (cond (not ann)        1             ;; no annotation
+        (is-B-IOB? ann token-id) (inc (- (min token-to O) (max token-from B))) ;; B IOB
+        (= type "token") 1))           ;; token
 
 (defn with-colspans
   "compute colspan for a given annotation"
   [hit ann-key]
-  (reduce (fn [acc {token-id :id anns :anns :as token}]
-            (if-let [colspan (cell-colspan token-id (get anns ann-key))]
-              (conj acc {:colspan colspan :token token})
-              acc))
-          []
-          hit))
+  (let [token-from (-> hit first :id parse-token-id :id)
+        token-to (-> hit last :id parse-token-id :id)]
+    (println token-from token-to)
+    (reduce (fn [acc {token-id :id anns :anns :as token}]
+              (if-let [colspan (cell-colspan token-id token-from token-to (get anns ann-key))]
+                (conj acc {:colspan colspan :token token})
+                acc))
+            []
+            hit)))
 
 (defn annotation-row [hit ann-key & {:keys [editable?] :or {editable? true}}]
   (let [color-map (re-frame/subscribe [:filtered-users-colors])]
