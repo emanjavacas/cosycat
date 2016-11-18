@@ -3,9 +3,9 @@
        :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]}}}
        :env {:host "localhost"
              :dev? true
-             :admins ["enrique"]
+             :admin "enrique"
              :log-dir "/home/enrique/code/cosycat/dev-resources"
-             :database-url "mongodb://127.0.0.1:27017/cosycatDev"
+             :database-url "mongodb://cosycat:cosycat@127.0.0.1:27017/cosycatDev"
              :port 3000
              :session-expires 900       ;in minutes
              :tagset-paths ["/home/enrique/code/cosycat/resources/public/tagsets"]
@@ -18,7 +18,7 @@
                :type :blacklab-server
                :args {:server "mbgserver.uantwerpen.be:8080"
                       :web-service "blacklab-server-1.6.0-SNAPSHOT"}}]}}
- :test {:env {:database-url "mongodb://127.0.0.1:27017/cosycatTest"
+ :test {:env {:database-url "mongodb://cosycat:cosycat@127.0.0.1:27017/cosycatTest"
               :dev? true
               :corpora
               [{:corpus "mbg-small"
