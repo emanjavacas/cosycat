@@ -69,6 +69,13 @@
               :message message
               :data {:username username :id issue-id}})))
 
+(defn ex-issue-comment-author [username issue-id comment-id]
+  (let [message (str username " is not author of comment")]
+    (ex-info message
+             {:code :user-not-in-issue
+              :message message
+              :data {:username username :issue-id issue-id :comment-id comment-id}})))
+
 ;;; Checkers
 (declare get-project-issue find-project-by-name get-user-role)
 
@@ -110,6 +117,12 @@
   (let [{:keys [users]} (get-project-issue db project-name issue-id)]
     (when-not (or (= "all" users) (some #(= username %) users))
       (throw (ex-user-issue username issue-id)))))
+
+(defn check-user-is-comment-author
+  [{db-conn :db :as db} project-name username issue-id comment-id]
+  (let [{{{:keys [by]} (keyword comment-id)} :comments} (get-project-issue db project-name issue-id)]
+    (when-not (= by username)
+      (throw (ex-issue-comment-author username issue-id comment-id)))))
 
 ;;; Getters
 (defn find-project-by-name [{db-conn :db} project-name]
@@ -295,6 +308,12 @@
      db username project-name issue-id
      (cond-> {$set {(str "issues.$.comments." id) comment-map}}
        parent-id (assoc $push {(format "issues.$.comments.%s.children" parent-id) id})))))
+
+(defn delete-comment-on-issue [db username project-name issue-id comment-id]
+  (check-user-is-comment-author db project-name username issue-id comment-id)
+  (update-project-issue
+   db username project-name issue-id
+   {$set {(format "issues.$.comments.%s.deleted" comment-id) true}}))
 
 (defn close-issue [db username project-name issue-id]
   (update-project-issue

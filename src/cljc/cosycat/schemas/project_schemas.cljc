@@ -30,6 +30,7 @@
      :id s/Any
      :timestamp s/Int
      :by s/Str
+     (s/optional-key :deleted) s/Bool
      ;; Tree Structure with parent references
      ;; https://docs.mongodb.com/v3.0/tutorial/model-tree-structures-with-parent-references/
      ;; :children is an array of comment ids pointing to children

@@ -129,11 +129,22 @@
  :comment-on-issue
  (fn [db [_ {:keys [comment issue-id parent-id] :as params}]]
    (let [active-project (get-in db [:session :active-project])]
-     (POST "/project/issues/comment"
+     (POST "/project/issues/comment/new"
            {:params (assoc params :project-name active-project)
             :handler #(re-frame/dispatch [:update-project-issue active-project %])
             :error-handler #(re-frame/dispatch
                              [:notify {:message "Couldn't store comment" :status :error}])})
+     db)))
+
+(re-frame/register-handler
+ :delete-comment-on-issue
+ (fn [db [_ {:keys [comment-id issue-id] :as params}]]
+   (let [active-project (get-in db [:session :active-project])]
+     (POST "/project/issues/comment/delete"
+           {:params (assoc params :project-name active-project)
+            :handler #(re-frame/dispatch [:update-project-issue active-project %])
+            :error-handler #(re-frame/dispatch
+                             [:notify {:message "Couldn't delete comment" :status :error}])})
      db)))
 
 (defn open-annotation-fn [issue-type]  

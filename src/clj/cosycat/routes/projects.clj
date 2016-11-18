@@ -102,6 +102,18 @@
      :target-clients (map :username users))
     issue))
 
+(defn delete-comment-on-project-issue-route
+  [{{:keys [project-name issue-id comment-id]} :params
+    {{username :username} :identity} :session
+    {db :db ws :ws} :components}]
+  (let [{:keys [users]} (proj/get-project db username project-name)
+        issue (proj/delete-comment-on-issue db username project-name issue-id comment-id)]
+    (send-clients
+     ws {:type :update-project-issue :data {:issue issue :project-name project-name} :by username}
+     :source-client username
+     :target-clients (map :username users))
+    issue))
+
 (defn open-annotation-edit-route
   [{{issue-type :type project-name :project-name users :users
      {:keys [_version _id] :as ann-data} :ann-data} :params
@@ -155,15 +167,17 @@
 
 (defn project-routes []
   (routes
-   (context "/project" []
-    (POST "/new" [] (make-default-route new-project-route))    
-    (POST "/add-user" [] (make-default-route add-user-route))
-    (POST "/remove-user" [] (make-default-route remove-user-route))
-    (POST "/remove-project" [] (make-default-route remove-project-route))
-    (POST "/update-user-role" [] (make-default-route update-user-role))
-    (context "/issues" []
-     (POST "/new" [] (make-default-route add-project-issue-route))
-     (POST "/comment" [] (make-default-route comment-on-project-issue-route))
-      (context "/annotation-edit" []
-       (POST "/open" [] (make-default-route open-annotation-edit-route))
-       (POST "/resolve" [] (make-default-route resolve-annotation-edit-route)))))))
+    (context "/project" []
+      (POST "/new" [] (make-default-route new-project-route))    
+      (POST "/add-user" [] (make-default-route add-user-route))
+      (POST "/remove-user" [] (make-default-route remove-user-route))
+      (POST "/remove-project" [] (make-default-route remove-project-route))
+      (POST "/update-user-role" [] (make-default-route update-user-role))
+      (context "/issues" []
+        (POST "/new" [] (make-default-route add-project-issue-route))
+        (context "/comment" []
+          (POST "/new" [] (make-default-route comment-on-project-issue-route))
+          (POST "/delete" [] (make-default-route delete-comment-on-project-issue-route)))             
+        (context "/annotation-edit" []
+          (POST "/open" [] (make-default-route open-annotation-edit-route))
+          (POST "/resolve" [] (make-default-route resolve-annotation-edit-route)))))))
