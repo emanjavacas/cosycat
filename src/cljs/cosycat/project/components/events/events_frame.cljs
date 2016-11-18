@@ -1,9 +1,9 @@
-(ns cosycat.project.components.events-frame 
+(ns cosycat.project.components.events.events-frame
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
             [cosycat.components :refer [css-transition-group]]
-            [cosycat.project.components.event-component :refer [event-component]]
+            [cosycat.project.components.events.event-component :refer [event-component]]
             [taoensso.timbre :as timbre]))
 
 (defn events-panel [events]

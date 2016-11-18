@@ -1,4 +1,4 @@
-(ns cosycat.project.components.add-user-modal
+(ns cosycat.project.components.users.add-user-modal
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]

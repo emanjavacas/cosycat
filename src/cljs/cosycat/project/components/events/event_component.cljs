@@ -1,4 +1,4 @@
-(ns cosycat.project.components.event-component
+(ns cosycat.project.components.events.event-component
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
@@ -52,9 +52,11 @@
 (defn repeated-lines [rest-timestamps {:keys [collapsed?]}]
   (fn [rest-timestamps {:keys [collapsed?]}]
     (let [max-lines (if @collapsed? 2 (count rest-timestamps))]
-      [:div (doall (for [[idx timestamp] (map-indexed vector (concat (take max-lines rest-timestamps) ["btn"]))
-                         :let [btn? (= timestamp "btn")]]
-                     ^{:key idx} [timestamp-or-btn collapsed? btn? timestamp]))])))
+      [:div
+       (doall
+        (for [[idx timestamp] (map-indexed vector (concat (take max-lines rest-timestamps) ["btn"]))
+              :let [btn? (= timestamp "btn")]]
+          ^{:key idx} [timestamp-or-btn collapsed? btn? timestamp]))])))
 
 (defn repeated-component [rest-timestamps]
   (let [collapsed? (reagent/atom true)]
@@ -89,9 +91,11 @@
                    :timestamp timestamp}])))
 
 (defmethod event-component :query
-  [{{query-str :query-str corpus :corpus} :data event-type :type timestamp :timestamp repeated :repeated}]
+  [{{query-str :query-str corpus :corpus} :data
+    event-type :type timestamp :timestamp repeated :repeated}]
   (let [me (re-frame/subscribe [:me :username])]
-    (fn [{{query-str :query-str corpus :corpus} :data event-type :type timestamp :timestamp repeated :repeated}]
+    (fn [{{query-str :query-str corpus :corpus} :data
+          event-type :type timestamp :timestamp repeated :repeated}]
       [event-item {:header-text event-type
                    :source-user @me
                    :event-child [:div.container-fluid

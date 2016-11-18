@@ -1,10 +1,8 @@
-(ns cosycat.project.components.users-frame
+(ns cosycat.project.components.users.users-frame
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
-            [cosycat.project.components.delete-project-modal :refer [delete-project-modal]]
-            [cosycat.project.components.leave-project-modal :refer [leave-project-modal]]
-            [cosycat.project.components.add-user-modal :refer [add-user-modal]]
+            [cosycat.project.components.users.add-user-modal :refer [add-user-modal]]
             [cosycat.components :refer [user-profile-component]]
             [cosycat.roles :refer [project-user-roles]]
             [cosycat.utils :refer [human-time format]]
@@ -68,8 +66,10 @@
         my-role (re-frame/subscribe [:active-project-role])]
     (fn []
       (let [{:keys [name users] :as project} @active-project]
-        [:div.container-fluid
-         (when (can-add-users? @my-role)
-           [:div.row [:div.col-lg-12 [:div.pull-right [add-user-button]]]])
-         [:div.row {:style {:height "10px"}}]
-         [:div.row [project-users users @my-role]]]))))
+        [:div
+         [add-user-modal]
+         [:div.container-fluid
+          (when (can-add-users? @my-role)
+            [:div.row [:div.col-lg-12 [:div.pull-right [add-user-button]]]])
+          [:div.row {:style {:height "10px"}}]
+          [:div.row [project-users users @my-role]]]]))))

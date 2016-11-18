@@ -4,11 +4,10 @@
             [react-bootstrap.components :as bs]
             [cosycat.project.components.delete-project-modal :refer [delete-project-modal]]
             [cosycat.project.components.leave-project-modal :refer [leave-project-modal]]
-            [cosycat.project.components.add-user-modal :refer [add-user-modal]]
-            [cosycat.project.components.users-frame :refer [users-frame]]
-            [cosycat.project.components.events-frame :refer [events-frame]]
-            [cosycat.project.components.issues-frame :refer [issues-frame]]
-            [cosycat.project.components.queries-frame :refer [queries-frame]]
+            [cosycat.project.components.users.users-frame :refer [users-frame]]
+            [cosycat.project.components.events.events-frame :refer [events-frame]]
+            [cosycat.project.components.issues.issues-frame :refer [issues-frame]]
+            [cosycat.project.components.queries.queries-frame :refer [queries-frame]]
             [cosycat.components :refer [user-profile-component]]
             [cosycat.roles :refer [project-user-roles]]
             [cosycat.utils :refer [human-time format]]
@@ -91,7 +90,6 @@
         [:div
          [delete-project-modal name]
          [leave-project-modal name]
-         [add-user-modal project]
          [:div.container-fluid
           [:div.row [project-header project]]
           [:div.row

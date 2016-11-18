@@ -1,9 +1,8 @@
-(ns cosycat.project.components.queries-frame
+(ns cosycat.project.components.queries.queries-frame
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
             [cosycat.components :refer [css-transition-group]]
-            [cosycat.project.components.event-component :refer [event-component]]
             [cosycat.utils :refer [human-time]]
             [taoensso.timbre :as timbre]))
 
