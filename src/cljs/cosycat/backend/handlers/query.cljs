@@ -217,7 +217,7 @@
 (re-frame/register-handler
  :fetch-issue-hit
  standard-middleware
- (fn [db [_ {{:keys [hit-id corpus]} :data issue-id :issue-id :as issue} context :context]]
+ (fn [db [_ {{{:keys [hit-id corpus]} :data :as issue} :issue context :context}]]
    (let [corpus (ensure-corpus (find-corpus-config db corpus))
          handler (fetch-issue-id-handler issue context)]
      (query-hit corpus hit-id {:words-left context :words-right context} handler)
