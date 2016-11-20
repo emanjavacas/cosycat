@@ -1,5 +1,7 @@
 /scripts/*
 !/scripts/cosycat_update.sh
+!/scripts/queries/
+*pyc
 /*.log
 /target
 /*-init.clj
