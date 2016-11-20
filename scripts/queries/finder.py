@@ -1,7 +1,9 @@
 
+import re
 import sys
 import time
 import inspect
+from pprint import pprint
 from collections import defaultdict
 
 import pymongo
@@ -46,7 +48,12 @@ class Finder(object):
     def query_filters(self):
         def filter_value(val):
             if len(val) == 1:
-                return val[0]
+                filter_val = val[0]
+                is_regex = re.match(r"/([^/]+)/", filter_val)
+                if is_regex:
+                    return {"$regex": is_regex.groups()[0]}
+                else:
+                    return filter_val
             if len(val) > 1:
                 return {"$in": val}
         return {f: filter_value(val) for (f, val) in self.filters.items()}
@@ -80,20 +87,24 @@ class Finder(object):
 
     def add_to_filter(self, filter_key, filter_val):
         self.filters[filter_key].append(filter_val)
+        if self.verbose:
+            pprint(self.query_filters())
 
     def reset_filter(self, filter_key, filter_val):
         self.filters[filter_key] = [filter_val]
+        if self.verbose:
+            pprint(self.query_filters())
 
     def clear_filters(self):
-        if self.verbose:
-            print("  Cleared all filters")
+        print("Cleared all filters")
         self.filters = defaultdict(list)
 
     def clear_filter(self, filter_key):
         if filter_key in self.filters:
-            if verbose:
-                print("  Cleared filter {f}".format(f=filter_key))
+            print("Cleared filter {f}".format(f=filter_key))
             del self.filters[filter_key]
+        if self.verbose:
+            pprint(self.query_filters())
 
     """
     API functions. First docstr line is used for in-line autocompletion help.
@@ -230,7 +241,7 @@ class Finder(object):
             return project_name[1:]
         for coll in self.conn.collection_names():
             if coll.startswith('_') and coll != "_vcs":
-                print("  " + display_project(coll))
+                print(display_project(coll))
 
     def do_count(self, args):
         """
@@ -239,4 +250,6 @@ class Finder(object):
         assert args, "Specify a project (e.g. GET)"
         project = args[0]
         result = self.conn["_" + project].find(self.query_filters()).count()
-        print("    Found [{result}] annotations".format(result=result))
+        if self.verbose:
+            pprint(self.query_filters())
+        print("Found [{result}] annotations".format(result=result))

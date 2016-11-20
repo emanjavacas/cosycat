@@ -20,6 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', type=int, default=27017)
     parser.add_argument('-u', '--user')
     parser.add_argument('-P', '--password')
+    parser.add_argument('-v', '--verbose', default=False, action='store_true')
 
     args = parser.parse_args()
     if args.user and not args.password:
@@ -34,7 +35,7 @@ if __name__ == '__main__':
         uri = 'mongodb://{host}:{port}/cosycat'. \
               format(host=args.host, port=args.port)
 
-    finder = Finder(uri)
+    finder = Finder(uri, verbose=args.verbose)
     try:
         history = FileHistory(args.history_file)
     except Exception:
