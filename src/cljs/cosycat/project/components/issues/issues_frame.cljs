@@ -7,6 +7,8 @@
             [cosycat.components :refer [dropdown-select user-thumb css-transition-group]]
             [cosycat.project.components.issues.annotation-edit-component
              :refer [annotation-edit-component]]
+            [cosycat.project.components.issues.remove-project-component
+             :refer [remove-project-component]]
             [taoensso.timbre :as timbre]))
 
 (declare issue-component)
@@ -35,6 +37,10 @@
         :class "ignore"
         :style {:color green :margin-right "10px"}}])))
 
+(def get-issue-name
+  {:delete-project-agree "Delete project"
+   :annotation-edit "Annotation edit suggestion"})
+
 (defn issue-container [issue]
   (fn [{data :data timestamp :timestamp status :status by :by type :type :as issue}]
     [bs/list-group-item
@@ -44,7 +50,7 @@
         [:div.col-lg-10.col-sm-10
          [:div.container-fluid
           [:div.row
-           [:h4 [:span [status-icon status]] (str type)]
+           [:h4 [:span [status-icon status]] (get-issue-name (keyword type))]
            [issue-timestamp by timestamp]]]]
         [:div.col-lg-2.col-sm-2.text-right [issuer-thumb :username by]]]
        [:div.row {:style {:height "10px"}}]
@@ -52,6 +58,7 @@
 
 (defmulti issue-component (fn [{issue-type :type}] (keyword issue-type)))
 (defmethod issue-component :annotation-edit [issue] [annotation-edit-component issue])
+(defmethod issue-component :delete-project-agree [issue] [remove-project-component issue])
 (defmethod issue-component :default [issue] [:div (str issue)])
 
 (defn issue-filter [issues]
