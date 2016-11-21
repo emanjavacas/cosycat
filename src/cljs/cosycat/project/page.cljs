@@ -76,17 +76,18 @@
      [:div [:h3 "Not implemented yet!"]]]
     [:div.col-lg-3]]])
 
-(defn pill [key active-frame]
-  (fn [key active-frame]
+(defn pill [key active-frame & {:keys [notifications]}]
+  (fn [key active-frame & {:keys [notifications] :or {notifications 0}}]
     [:li {:class (when (= key @active-frame) "active") :style {:cursor "pointer"}}
      [:a {:onClick #(re-frame/dispatch [:set-active-project-frame key])}
-      (clojure.string/capitalize (dekeyword key))]]))
+      (clojure.string/capitalize (dekeyword key))
+      (when (> notifications 0) [:span.badge notifications])]]))
 
 (defn project-panel []
   (let [active-project (re-frame/subscribe [:active-project])
         active-project-frame (re-frame/subscribe [:project-session :components :active-project-frame])]
     (fn []
-      (let [{:keys [name] :as project} @active-project]
+      (let [{:keys [name issues] :as project} @active-project]
         [:div
          [delete-project-modal name]
          [leave-project-modal name]
@@ -98,6 +99,7 @@
              [pill :users active-project-frame]
              [pill :events active-project-frame]
              [pill :queries active-project-frame]
-             [pill :issues active-project-frame]]]]
+             [pill :issues active-project-frame
+              :notifications (count (filter #(= (:status %) "open") (vals issues)))]]]]
           [:div.row {:style {:margin-top "20px"}}]
           [:div.row (project-frame @active-project-frame)]]]))))
