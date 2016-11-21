@@ -81,14 +81,21 @@
          :select-fn
          #(re-frame/dispatch [:set-project-session-component [:issue-filters :type] %])}]])))
 
+(defn should-display-issue?
+  [{issue-status :status issue-type :type} {status-filter :status type-filter :type}]
+  (and (or (= "all" status-filter) (= issue-status status-filter))
+       (or (= "all" type-filter)   (= issue-type   type-filter))))
+
 (defn issues-panel [issues]
-  (fn [issues]
-    [bs/list-group
-     [css-transition-group {:transition-name "updates"
-                            :transition-enter-timeout 650
-                            :transition-leave-timeout 650}
-      (doall (for [{:keys [id] :as issue} (sort-by :timestamp > (vals @issues))]
-               ^{:key id} [issue-container issue]))]]))
+  (let [issue-filters (re-frame/subscribe [:project-session :components :issue-filters])]
+    (fn [issues]
+      [bs/list-group
+       [css-transition-group {:transition-name "updates"
+                              :transition-enter-timeout 650
+                              :transition-leave-timeout 650}
+        (doall (for [{:keys [id] :as issue} (sort-by :timestamp > (vals @issues))
+                     :when (should-display-issue? issue @issue-filters)]
+                 ^{:key id} [issue-container issue]))]])))
 
 (defn issues-frame []
   (let [issues (re-frame/subscribe [:active-project :issues])]
