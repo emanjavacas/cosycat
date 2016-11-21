@@ -233,23 +233,54 @@ class Finder(object):
             except AttributeError:
                 self._print_suggestions(cmd)
 
+    def get_coll_names(self):
+        for coll_name in self.conn.collection_names():
+            if coll_name.startswith('_') and coll_name != "_vcs":
+                yield coll_name
+
+    def get_project_name(self, coll_name):
+        return coll_name[1:]
+
+    def get_project_names(self):
+        for coll_name in self.get_coll_names():
+            yield self.get_project_name(coll_name)
+
+    def get_project(self, project):
+        return self.conn['_' + project]
+
+    def get_projects(self):
+        for project_name in self.get_project_names():
+            yield self.get_project(project_name)
+
     def do_projects(self, args):
         """
-        Show existing projects.
+        Do operations on projects.
+          projects: show existing projects
         """
-        def display_project(project_name):
-            return project_name[1:]
-        for coll in self.conn.collection_names():
-            if coll.startswith('_') and coll != "_vcs":
-                print(display_project(coll))
+        if len(args) == 0:
+            for project_name in self.get_project_names():
+                print(project_name)
 
     def do_count(self, args):
         """
         Count annotations using the current filters.
         """
-        assert args, "Specify a project (e.g. GET)"
-        project = args[0]
-        result = self.conn["_" + project].find(self.query_filters()).count()
+        assert args, "Specify a project (e.g. GET) or 'all' for all projects"
+        project_count = "Found [{result}] annotations in project '{project}'"
+
+        def display_count(project):
+            result = project.find(self.query_filters()).count()
+            print(project_count.format(
+                result=result,
+                project=self.get_project_name(project.name)))
+
         if self.verbose:
             pprint(self.query_filters())
-        print("Found [{result}] annotations".format(result=result))
+
+        project, *rest = args
+        if project == 'all':
+            for project in self.get_projects():
+                display_count(project)
+        else:
+            project = self.get_project(project)
+            display_count(project)
