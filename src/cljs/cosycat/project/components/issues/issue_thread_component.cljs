@@ -5,6 +5,7 @@
             [cosycat.utils :refer [human-time]]
             [cosycat.app-utils :refer [disjconj]]
             [cosycat.components :refer [user-thumb]]
+            [cosycat.project.components.issues.components :refer [collapsible-issue-panel]]
             [taoensso.timbre :as timbre]))
 
 (defn dispatch-comment
@@ -99,9 +100,15 @@
                           {:style {:padding-left (when (pos? depth) (str (* 20 depth) "px"))}}
                           [comment-component comment-map issue-id]]))]))
 
-(defn issue-thread-component [issue]
+(defn issue-thread [issue]
   (fn [{comments :comments issue-id :id :as issue}]
     [:div.container-fluid
      [:div.row [thread-comment-input issue-id]]
      [:div.row {:style {:height "10px"}}]
      (when comments [:div.row [thread-component issue]])]))
+
+(defn issue-thread-component [issue & {:keys [collapsible?] :or {collapsible? true}}]
+  (fn [issue & {:keys [collapsible?] :or {collapsible? true}}]
+    (if collapsible?
+      [collapsible-issue-panel "Show thread" issue-thread issue :show-thread]
+      [issue-thread issue])))

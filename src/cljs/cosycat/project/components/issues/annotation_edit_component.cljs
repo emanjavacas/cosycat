@@ -2,6 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
+            [cosycat.project.components.issues.components :refer [collapsible-issue-panel]]
             [cosycat.project.components.issues.issue-thread-component
              :refer [issue-thread-component]]
             [taoensso.timbre :as timbre]))
@@ -18,19 +19,8 @@
                       {:style {:padding "0 5px"}}
                       (if match [:strong word] word)]))])}))
 
-(defn annotation-edit-panel [header child {issue-id :id :as issue} panel-id]
-  (let [expanded? (re-frame/subscribe [:project-session :components :issues issue-id panel-id])]
-    (fn [header child issue panel-id]
-      [:div.panel.panel-default
-       {:style {:margin-bottom "5px"}}
-       [:div.panel-heading
-        {:on-click #(re-frame/dispatch [:toggle-project-session-component [:issues issue-id panel-id]])
-         :style {:font-size "16px" :cursor "pointer"}}
-        header]
-       (when @expanded? [:div.panel-body [child issue]])])))
-
 (defn annotation-edit-component [issue]
   (fn [issue]
     [:div.container-fluid
-     [annotation-edit-panel "Show hit" hit-component issue :show-hit]
-     [annotation-edit-panel "Show thread" issue-thread-component issue :show-thread]]))
+     [:div.row [collapsible-issue-panel "Show hit" hit-component issue :show-hit]]
+     [:div.row [issue-thread-component issue :collapsible? true]]]))
