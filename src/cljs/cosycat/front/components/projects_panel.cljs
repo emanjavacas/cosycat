@@ -27,24 +27,28 @@
 (defn spacer [& {:keys [height] :or {height 5}}]
   [:div.row {:style {:height (str height "px")}}])
 
-(defn project-row [{:keys [name description users created creator]}]
+(defn issues-badge [issues]
+  (fn [issues]
+    (let [open-issues (count (filter #(= "open" (:status %)) (vals issues)))]    
+      [:span.badge (when (pos? open-issues) open-issues)])))
+
+(defn project-row [{:keys [name description users created creator issues]}]
   (let [creator-info (re-frame/subscribe [:user creator])]
-    (fn [{:keys [name description users created]}]
+    (fn [{:keys [name description users created issues]}]
       [bs/list-group-item
        (reagent/as-component
         [:div.container-fluid
          [:div.row
-          [:div.col-lg-8
-           [:h4 [:a {:style {:cursor "pointer"} :on-click #(nav! (str "/project/" name))} name]]
-           [:div description]]]
+          [:div.col-lg-8.col-sm-8
+           [:h3 [:a {:style {:cursor "pointer"} :on-click #(nav! (str "/project/" name))} name]]
+           [:span.text-muted "Created on " (human-time created)]
+           [:h4 description]]
+          [:div.col-lg-4.col-sm-4.text-right
+           [issues-badge issues]]]
          [spacer :height 20]
          [:div.row
           [:div.col-lg-3.col-md-3.col-sm-3 [:span.text-muted "Created by: "]]
           [:div.col-lg-9.col-md-9.col-sm-9 [user-selection-component @creator-info]]]
-         [spacer]         
-         [:div.row
-          [:div.col-lg-3.col-md-3.col-sm-3 [:span.text-muted "Created on: "]]
-          [:div.col-lg-9.col-md-9.col-sm-9 [:span (human-time created)]]]
          [spacer]
          [:div.row
           [:div.col-lg-3.col-md-3.col-sm-3 [:span.text-muted "Users in project: "]]
