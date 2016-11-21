@@ -108,7 +108,7 @@
      (when comments [:div.row [thread-component issue]])]))
 
 (defn issue-thread-component [issue & {:keys [collapsible?] :or {collapsible? true}}]
-  (fn [issue & {:keys [collapsible?] :or {collapsible? true}}]
+  (fn [{:keys [comments] :as issue} & {:keys [collapsible?] :or {collapsible? true}}]
     (if collapsible?
       [collapsible-issue-panel "Show thread" issue-thread issue :show-thread]
       [issue-thread issue])))

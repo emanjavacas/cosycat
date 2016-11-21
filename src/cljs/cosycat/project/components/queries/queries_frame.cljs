@@ -55,7 +55,6 @@
 (defn queries-frame []
   (let [project-queries (re-frame/subscribe [:project-queries :filter-corpus false])
         show? (re-frame/subscribe [:modals :remove-query])]
-    (println @project-queries)
     (fn []
       [:div.container-fluid
        [remove-query-modal show?]

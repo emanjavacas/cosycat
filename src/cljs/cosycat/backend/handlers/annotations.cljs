@@ -108,22 +108,20 @@
              :error-handler (fetch-annotation-error-handler)})))
    db))
 
-(defn fetch-annotations-in-span [handler]
-  (fn [db [_ {:keys [start end hit-id doc corpus]} & args]]
+(re-frame/register-handler
+ :fetch-annotations-in-issue-hit
+ (fn [db [_ {:keys [start end hit-id doc corpus]} {issue-id :id :as issue}]]
     (let [project (get-in db [:session :active-project])]
       (GET "/annotation/page"
            {:params {:page-margins [{:start start :end end :hit-id hit-id :doc doc}]
-                     :project project :corpus corpus}
-            :handler #(handler (first %) args) ;; payload will be [{:keys [hit-id project anns]}]
+                     :project project
+                     :corpus corpus}
+            :handler (fn [[{:keys [hit-id project anns]}]]
+                       (re-frame/dispatch
+                        [:update-issue-meta issue-id [:hit-map :hit]
+                         (fn [hit] (update-hit hit anns))]))
             :error-handler #(timbre/warn "Couldn't fetch annotations" (str %))})
       db)))
-
-(re-frame/register-handler
- :fetch-annotations-issue-hit
- (let [handler (fn [{:keys [hit-id project anns]} & [{issue-id :id :as issue}]]
-                 (re-frame/dispatch
-                  [:update-issue-meta issue-id [:hit-map :hit] (fn [hit] (update-hit hit anns))]))]
-   (fetch-annotations-in-span handler)))
 
 (re-frame/register-handler ;; groups annotations by hit-id
  :query-annotations

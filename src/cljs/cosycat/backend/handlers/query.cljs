@@ -211,7 +211,7 @@
             start (max 0 (- hit-start context))
             end (+ hit-end context)]
         (re-frame/dispatch
-         [:fetch-annotations-in-span
+         [:fetch-annotations-in-issue-hit
           {:start start :end end :hit-id hit-id :doc doc :corpus corpus} issue])))))
 
 (re-frame/register-handler
@@ -219,6 +219,6 @@
  standard-middleware
  (fn [db [_ {{{:keys [hit-id corpus]} :data :as issue} :issue context :context}]]
    (let [corpus (ensure-corpus (find-corpus-config db corpus))
-         handler (fetch-issue-id-handler issue context)]
+         handler (fetch-issue-id-handler issue context :with-annotations? true)]
      (query-hit corpus hit-id {:words-left context :words-right context} handler)
      db)))

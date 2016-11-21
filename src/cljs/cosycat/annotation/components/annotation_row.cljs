@@ -68,7 +68,6 @@
   [hit ann-key]
   (let [token-from (-> hit first :id parse-token-id :id)
         token-to (-> hit last :id parse-token-id :id)]
-    (println token-from token-to)
     (reduce (fn [acc {token-id :id anns :anns :as token}]
               (if-let [colspan (cell-colspan token-id token-from token-to (get anns ann-key))]
                 (conj acc {:colspan colspan :token token})
@@ -78,7 +77,7 @@
 
 (defn annotation-row [hit ann-key & {:keys [editable?] :or {editable? true}}]
   (let [color-map (re-frame/subscribe [:filtered-users-colors])]
-    (fn [{hit-id :id hit :hit} ann-key]
+    (fn [{hit-id :id hit :hit} ann-key & {:keys [editable?] :or {editable? true}}]
       (into
        [:tr.ann-row {:data-hitid hit-id}]
        (-> (for [{colspan :colspan {token-id :id anns :anns} :token} (with-colspans hit ann-key)]
