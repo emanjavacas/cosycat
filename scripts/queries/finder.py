@@ -205,11 +205,12 @@ class Finder(object):
 
     def do_config(self, args):
         """
+        Not implemented yet
         Change session configuration.
           Values:
             page_size: type int, default 10
         """
-        pass
+        raise NotImplementedError()
 
     def do_exit(self, args):
         """
@@ -220,18 +221,18 @@ class Finder(object):
 
     def do_help(self, args):
         """
-        Show help. Can take a command and display corresponding info.
+        Show help. Takes a command and display corresponding info.
         Example:
           help filter
         """
         if len(args) == 0:
-            print("App help... TODO")
-        else:
-            try:
-                cmd = args[0]          # ignore rest arguments
-                print("   " + getattr(self, "do_" + cmd).__doc__.strip())
-            except AttributeError:
-                self._print_suggestions(cmd)
+            print("Please, specify a command.")
+            return
+        try:
+            cmd, *rest = args   # ignore rest arguments
+            print("   " + getattr(self, "do_" + cmd).__doc__.strip())
+        except AttributeError:
+            self._print_suggestions(cmd)
 
     def get_coll_names(self):
         for coll_name in self.conn.collection_names():
