@@ -121,6 +121,8 @@
     {{db-conn :db :as db} :db ws :ws} :components}]
   ;; check the target annotation is on sync
   (check-sync-by-id db-conn (server-project-name project-name) _id _version)
+  ;; check annotation has already issue
+  (proj/check-annotation-has-issue db project-name _id)
   (let [issue-payload {:by username
                        :type issue-type
                        :timestamp (System/currentTimeMillis)
@@ -132,7 +134,7 @@
     (send-clients
      ws {:type :new-project-issue :data {:issue issue :project-name project-name} :by username}
      :source-client username
-     :target-clients project-users)
+     :target-clients (map :username project-users))
     issue))
 
 (defmulti resolve-annotation-issue (fn [db project-name {issue-type :type}] issue-type))

@@ -76,6 +76,13 @@
               :message message
               :data {:username username :issue-id issue-id :comment-id comment-id}})))
 
+(defn ex-annotation-has-issue [project-name ann-id]
+  (let [message (str "Annotation has already an open issue in project " project-name)]
+    (ex-info message
+             {:code :annotation-has-issue
+              :message message
+              :data {:project-name project-name :ann-id ann-id}})))
+
 ;;; Checkers
 (declare get-project-issue find-project-by-name get-user-role)
 
@@ -123,6 +130,14 @@
   (let [{{{:keys [by]} (keyword comment-id)} :comments} (get-project-issue db project-name issue-id)]
     (when-not (= by username)
       (throw (ex-issue-comment-author username issue-id comment-id)))))
+
+(defn check-annotation-has-issue [{db-conn :db :as db} project-name ann-id]
+  (when (->> (mc/find-one-as-map
+              db-conn (:projects colls)
+              {:name project-name
+               "issues.status" "open"
+               "issues.data._id" ann-id}))
+    (throw (ex-annotation-has-issue project-name ann-id))))
 
 ;;; Getters
 (defn find-project-by-name [{db-conn :db} project-name]
