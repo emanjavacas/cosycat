@@ -206,6 +206,15 @@
      (reaction (map #(get @users-map %) (map :username (:users @project)))))))
 
 (re-frame/register-sub
+ :project-users-colors
+ (fn [db _]
+   (let [active-project-name (reaction (get-in @db [:session :active-project]))
+         project-users (reaction (get-in @db [:projects @active-project-name :users]))
+         project-users-info (reaction (get-users @db (into #{} (map :username @project-users))))]
+     (reaction (zipmap (map :username @project-users-info)
+                       (map #(get-in % [:avatar :dominant-color]) @project-users-info))))))
+
+(re-frame/register-sub
  :filtered-users-colors
  (fn [db _]
    (let [active-project-name (reaction (get-in @db [:session :active-project]))

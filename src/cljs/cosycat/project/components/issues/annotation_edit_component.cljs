@@ -11,13 +11,19 @@
             [taoensso.timbre :as timbre]))
 
 (defn hit-component [{{hit-map :hit-map} :meta issue-id :id :as issue}]
-  (let [color-map (re-frame/subscribe [:filtered-users-colors])]
+  (let [color-map (re-frame/subscribe [:project-users-colors])]
     (reagent/create-class
      {:component-will-mount
-      #(when-not hit-map (re-frame/dispatch [:fetch-issue-hit {:issue issue :context 10}]))
+      #(when-not hit-map (re-frame/dispatch [:fetch-issue-hit {:issue issue :context 6}]))
       :reagent-render
-      (fn [{{new-value :value {:keys [value key]} :ann} :data {{:keys [hit]} :hit-map} :meta}]
-        [annotation-component hit-map color-map :editable? false])})))
+      (fn [{{new-value :value {:keys [value key]} :ann {{B :B :as scope} :scope} :span} :data
+            {{:keys [hit]} :hit-map} :meta}]
+        [annotation-component hit-map color-map
+         :highlight-ann-key? key
+         :highlight-token-id? (or B scope)
+         :editable? false
+         :show-match? false
+         :show-hit-id? false])})))
 
 (defn annotation-edit-message
   [{{{old-value :value key :key} :ann {doc :doc {:keys [B O] :as scope} :scope type :type} :span
