@@ -19,7 +19,8 @@
       (let [sep (if (< 2 (count others)) ", " "")]
         [:span (doall (for [other (cons (capitalize (first others)) (rest others))]
                         ^{:key (str other "-" issue-id)}
-                        [:span [:strong other] sep]))
+                        [:span [:strong other]
+                         sep]))
          " and "
          [:strong one]
          " want to remove the project."]))))
@@ -40,10 +41,10 @@
       (let [sep (if (< 2 (count others)) ", " "")]
         [:span (doall (for [other (cons (capitalize (first others)) (rest others))]
                         ^{:key (str other "-" issue-id)}
-                        [:span (condp other
-                                   "You" [you-pending :capitalize? true]
-                                   "you" [you-pending]
-                                   :else [:strong other])
+                        [:span (cond
+                                 (= other "You") [you-pending :capitalize? true]
+                                 (= other "you") [you-pending]
+                                 :else [:strong other])
                          sep]))
          " and "
          (if (= one "you") [you-pending] [:strong one])
