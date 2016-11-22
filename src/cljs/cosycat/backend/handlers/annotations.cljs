@@ -140,11 +140,13 @@
   type)
 
 (defn notification-message
-  [{{{B :B O :O :as scope} :scope type :type} :span} message]
-  (->> (case type
-         "token" (get-msg [:annotation :error :token] scope message)
-         "IOB" (get-msg [:annotation :error :IOB] B O message))
-       (assoc {} :message)))
+  [{{{B :B O :O :as scope} :scope span-type :type} :span :as data} message]
+  (if-not span-type  ;; project-level error (e.g. insufficient rights)
+    {:message message}
+    (->> (case span-type
+           "token" (get-msg [:annotation :error :token] scope message)
+           "IOB" (get-msg [:annotation :error :IOB] B O message))
+         (assoc {} :message))))
 
 (defmethod dispatch-annotation-handler cljs.core/PersistentArrayMap
   [{status :status message :message data :data}]
