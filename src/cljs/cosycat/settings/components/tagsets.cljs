@@ -9,15 +9,16 @@
             [cosycat.tree :refer [data-tree]]
             [taoensso.timbre :as timbre]))
 
-(defn new-tagsets [model-tagsets selected-tagsets tagset flag]
-  (cond (and (not flag) (not selected-tagsets)) (vec (remove #(= % tagset) model-tagsets))
-        (not flag) (vec (remove #(= % tagset) selected-tagsets))
-        :else (conj (vec selected-tagsets) tagset)))
+(defn new-tagsets [model-tagsets selected-tagsets tagset-name flag]
+  (cond (and (not flag) (not selected-tagsets)) (vec (remove #(= % tagset-name) model-tagsets))
+        (not flag) (vec (remove #(= % tagset-name) selected-tagsets))
+        :else (conj (vec selected-tagsets) tagset-name)))
 
 (defn on-change [model-tagsets selected-tagsets name checked?]
   (fn [e]
     (re-frame/dispatch
-     [:set-project-settings [:tagsets] (new-tagsets @model-tagsets @selected-tagsets name checked?)])))
+     [:set-project-settings [:tagsets]
+      (new-tagsets @model-tagsets @selected-tagsets name checked?)])))
 
 (defn check-tagset [tagset-name model-tagsets]
   (let [selected-tagsets (re-frame/subscribe [:active-project :settings :tagsets])]
@@ -26,9 +27,10 @@
         [:div
          [:h2.label.label-default {:style {:font-size "14px" :line-height "2.5em"}} tagset-name]
          [:span {:style {:padding-left "10px"}}
-          [:input {:type "checkbox"
-                   :checked checked?
-                   :on-change (on-change model-tagsets selected-tagsets tagset-name (not checked?))}]]]))))
+          [:input
+           {:type "checkbox"
+            :checked checked?
+            :on-change (on-change model-tagsets selected-tagsets tagset-name (not checked?))}]]]))))
 
 (defn tagset-info [{:keys [name] :as tagset} model-tagsets]
   (fn [{:keys [name] :as tagset} model-tagsets]
