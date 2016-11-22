@@ -22,8 +22,8 @@
   (some #{username} admins))
 
 (defn maybe-add-admin [{:keys [roles username] :as user} env]
-  (if (and (is-admin-in-profile? username env) (not (some (into #{} roles) ["admin"])))
-    (update user :roles into "admin")
+  (if (and (is-admin-in-profile? username env) (not (some #{"admin"} roles)))
+    (update user :roles conj "admin")
     user))
 
 (defn on-login-failure [req]
