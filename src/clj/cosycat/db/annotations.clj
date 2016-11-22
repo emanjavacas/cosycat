@@ -38,7 +38,7 @@
     (and (<= new-B old-O) (<= old-B new-O)) false
     :else true))
 
-(defmulti check-insert (fn [db project {{type :type} :span}] type))
+(defmulti check-insert (fn [db project {{scope-type :type} :span}] scope-type))
 
 (defmethod check-insert "token"
   [{db-conn :db :as db} project {corpus :corpus {scope :scope :as span} :span {key :key} :ann}]
@@ -123,9 +123,10 @@
 
 ;;; Setters
 (defn insert-annotation
-  [{db-conn :db :as db} project {username :username :as ann}]
-  (check-insert db project ann)
-  (vcs/insert-and-return db-conn (server-project-name project) (assoc ann :_id (vcs/new-uuid))))
+  [{db-conn :db :as db} project {username :username :as ann-map}]
+  (check-insert db project ann-map)
+  (timbre/info "Inserting annotation" (str ann-map))
+  (vcs/insert-and-return db-conn (server-project-name project) (assoc ann-map :_id (vcs/new-uuid))))
 
 (defn update-annotation
   [{db-conn :db :as db} project
@@ -145,4 +146,5 @@
 (defn remove-annotation
   [{db-conn :db :as db} project {version :_version id :_id :as ann-map}]
   (assert-ex-info (and version id) "annotation update requires annotation id/version" ann-map)
+  (timbre/info "Removing annotation" (str ann-map))
   (vcs/remove-by-id db-conn (server-project-name project) version id))

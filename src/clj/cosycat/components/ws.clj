@@ -8,7 +8,8 @@
             [clojure.core.match :refer [match]]
             [cosycat.schemas.route-schemas :refer [ws-from-server ws-from-client]]
             [cosycat.db.users :refer [user-logout]]
-            [cosycat.utils :refer [write-str read-str ->int]]))
+            [cosycat.utils :refer [write-str read-str ->int]]
+            [config.core :refer [env]]))
 
 (def messages
   {:shutting-down {:type :info :data {:message "Server is going to sleep!"} :by "server"}
@@ -74,9 +75,9 @@
   (let [str-payload (write-str payload :json)]
     (if-let [ws-target-ch (get @clients ws-target)]
       (do (s/validate (ws-from-server payload) payload)
-          (timbre/info "sending" payload "to" ws-target "at" ws-target-ch)
+          (when (:dev? env) (timbre/info "sending" payload "to" ws-target "at" ws-target-ch))
           (kit/send! ws-target-ch str-payload))
-      (timbre/info "not sending" payload "to" ws-target "[Not online]"))))
+      (when (:dev? env) (timbre/info "not sending" payload "to" ws-target "[Not online]")))))
 
 (defn send-clients
   "function wrapper over multiplexed puts to out-chan"

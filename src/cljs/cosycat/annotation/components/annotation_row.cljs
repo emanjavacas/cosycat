@@ -79,7 +79,6 @@
             hit)))
 
 (defn highlight-cell? [ann-key token-id highlight-ann-key? highlight-token-id?]
-  (println ann-key token-id highlight-ann-key? highlight-token-id?)
   (cond
     (and highlight-ann-key? highlight-token-id?)
     (and (= highlight-ann-key? ann-key) (= highlight-token-id? token-id))

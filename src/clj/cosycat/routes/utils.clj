@@ -2,7 +2,7 @@
   (:require [ring.util.response :refer [redirect]]
             [buddy.auth :refer [authenticated?]]
             [taoensso.timbre :as timbre]
-            [cosycat.app-utils :refer [span->token-id deep-merge-with]]
+            [cosycat.app-utils :refer [span->token-id deep-merge-with dekeyword]]
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.db.annotations :refer [find-annotation-owner]]
             [cosycat.db.projects :refer [find-project-by-name]]))
@@ -21,6 +21,9 @@
   [router & {:keys [is-ok? login-uri] :as rule-map}]
   (safe (fn [req] {:status 200 :body (router req)}) rule-map))
 
+(defn format-stacktrace [stacktrace]
+  (apply str (interleave (repeat "\t") stacktrace (repeat "\n"))))
+
 (defn make-default-route
   "a router that transform internal errors into proper responses"
   [route & {:keys [is-ok? login-uri] :as rule-map}]
@@ -33,8 +36,8 @@
                (catch Exception e
                  (let [{message :message ex :class} (bean e)
                        stacktrace (mapv str (.getStackTrace e))]
-                   (timbre/debug "Caught java.lang.Exception: [" (str ex) "]"
-                                 "Stacktrace:" (apply str stacktrace))
+                   (timbre/debug "Caught java.lang.Exception: [" (str ex) "]\n"
+                                 "Stacktrace:\n" (format-stacktrace stacktrace))
                    {:status 500
                     :body {:message message :data {:e (str ex) :stacktrace stacktrace}}}))))
         rule-map))
@@ -46,9 +49,12 @@
 
 ;;; Exceptions
 (defn ex-user [username project-name action]
-  (ex-info "Action not authorized"
-           {:message :not-authorized
-            :data {:username username :action action :project project-name}}))
+  (let [message (format "%s is not authorized to %s in project [%s]"
+                        username (dekeyword action) project-name)]
+    (ex-info message
+     {:code :not-authorized
+      :message message
+      :data {:username username :action action :project project-name}})))
 
 (defn find-user-role
   "returns user role in project or `owner` if username is current annotation owner.
