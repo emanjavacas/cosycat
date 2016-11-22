@@ -33,7 +33,8 @@
                (catch Exception e
                  (let [{message :message ex :class} (bean e)
                        stacktrace (mapv str (.getStackTrace e))]
-                   (timbre/debug "Caught java.lang.Exception" (bean e))
+                   (timbre/debug "Caught java.lang.Exception: [" (str ex) "]"
+                                 "Stacktrace:" (apply str stacktrace))
                    {:status 500
                     :body {:message message :data {:e (str ex) :stacktrace stacktrace}}}))))
         rule-map))
