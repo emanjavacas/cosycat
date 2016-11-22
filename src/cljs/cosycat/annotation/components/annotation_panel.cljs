@@ -24,37 +24,41 @@
     (.stopPropagation event)
     (when editable? (re-frame/dispatch [:fetch-snippet hit-id]))))
 
-(defn hit-id-cell [hit-id {num :num} editable?]
+(defn hit-id-cell [hit-id {num :num} editable? show-hit-id?]
   [:td.unselectable
    {:style {:width "100%" :display "table-cell" :font-weight "bold"}
     :on-double-click (on-double-click hit-id editable?)}
-   (if num (inc num) hit-id)])
+   (when show-hit-id? (if num (inc num) hit-id))])
 
-(defn hit-cell [{:keys [word match]} hit-id color-map & {:keys [editable?] :or {editable? true}}]
-  (fn [{:keys [word match anns] :as token-map} hit-id color-map
-       & {:keys [editable?] :or {editable? true}}]
+(defn hit-cell [{:keys [word match]} hit-id color-map & {:keys [editable? show-match?]}]
+  (fn [{:keys [word match anns] :as token-map} hit-id color-map & {:keys [editable? show-match?]}]
     (let [color (when anns (highlight-annotation token-map @color-map))]
       [:td.unselectable
-       {:class (when match "info")
+       {:class (when (and show-match? match) "info")
         :on-click #(when editable? (re-frame/dispatch [:open-hit hit-id]))
         :style {:box-shadow color}}
        word])))
 
 (defn hit-row
   "component for a (currently being annotated) hit row"
-  [{hit :hit hit-id :id meta :meta} color-map & {:keys [editable?] :or {editable? true}}]
-  (fn [{hit :hit hit-id :id meta :meta} color-map
-       & {:keys [editable?] :or {editable? true}}]
+  [{hit :hit hit-id :id meta :meta} color-map & {:keys [editable? show-match? show-hit-id?]}]
+  (fn [{hit :hit hit-id :id meta :meta} color-map & {:keys [editable? show-match? show-hit-id?]}]
     (into
      [:tr
       {:style {:background-color "#f5f5f5" :cursor (when editable? "pointer") :width "100%"}}]
      (-> (for [{id :id :as token} hit]
-           ^{:key (str "hit" hit-id id)} [hit-cell token hit-id color-map :editable? editable?])
-         (prepend-cell {:key (str hit-id) :child hit-id-cell :opts [hit-id meta editable?]})))))
+           ^{:key (str "hit" hit-id id)}
+           [hit-cell token hit-id color-map :editable? editable? :show-match? show-match?])
+         (prepend-cell {:key (str hit-id)
+                        :child hit-id-cell
+                        :opts [hit-id meta editable? show-hit-id?]})))))
 
 (defn annotation-component
-  [hit color-map & {:keys [editable?] :or {editable? true}}]
-  (fn [hit color-map & {:keys [editable?] :or {editable? true}}]
+  [hit color-map
+   & {:keys [editable? show-hit-id? show-match? highlight-ann-key? highlight-token-id?]}]
+  (fn [hit color-map
+       & {:keys [editable? show-hit-id? show-match? highlight-ann-key? highlight-token-id?]
+          :or {editable? true show-hit-id? true show-match? true}}]
     [bs/table
      {:id "table-annotation"
       :style {:border-collapse "collapse" :border "1px" :border-style "inset"}
@@ -63,10 +67,16 @@
      (into
       [:tbody]
       (concat
-       [[hit-row hit color-map :editable? editable?]]
+       [[hit-row hit color-map
+         :editable? editable?
+         :show-hit-id? show-hit-id?
+         :show-match? show-match?]]
        (when editable? [[input-row hit]])
        (for [ann-key (sort-by (juxt :type :key) > (ann-types hit))]
-         [annotation-row hit ann-key :editable? editable?])))]))
+         [annotation-row hit color-map ann-key
+          :editable? editable?
+          :highlight-ann-key? highlight-ann-key?
+          :highlight-token-id? highlight-token-id?])))]))
 
 (defn closed-annotation-component [hit color-map]
   (fn [hit color-map]

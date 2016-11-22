@@ -18,17 +18,20 @@
      v]]])
 
 (defn annotation-cell-style
-  [color-map username]
-  (if-let [color (get color-map username)]
-    {:box-shadow (->box color)}
-    {:opacity "0.25"}))
+  [color-map username highlight?]
+  (let [color (get color-map username)]
+    (cond-> {}
+      highlight?  (assoc :background-color "antiquewhite")
+      (not color) (assoc :opacity "0.25")
+      color       (assoc :box-shadow (->box color)))))
 
-(defn annotation-cell [ann-map hit-id token-id colspan color-map & {:keys [editable?]}]
+(defn annotation-cell
+  [ann-map hit-id token-id colspan color-map & {:keys [editable? highlight?]}]
   (let [open? (reagent/atom false), target (reagent/atom nil)]
     (fn [{username :username anns :anns :as ann-map}
-         hit-id token-id colspan color-map & {:keys [editable?]}]
+         hit-id token-id colspan color-map & {:keys [editable? highlight?]}]
       [:td.ann-cell
-       {:style (annotation-cell-style @color-map username)
+       {:style (annotation-cell-style @color-map username highlight?)
         :colSpan colspan
         :on-click #(do (reset! target (.-target %)) (swap! open? not))}
        [:div
@@ -75,20 +78,32 @@
             []
             hit)))
 
-(defn annotation-row [hit ann-key & {:keys [editable?] :or {editable? true}}]
-  (let [color-map (re-frame/subscribe [:filtered-users-colors])]
-    (fn [{hit-id :id hit :hit} ann-key & {:keys [editable?] :or {editable? true}}]
-      (into
-       [:tr.ann-row {:data-hitid hit-id}]
-       (-> (for [{colspan :colspan {token-id :id anns :anns} :token} (with-colspans hit ann-key)]
-             ^{:key (str ann-key hit-id token-id)}
-             (if-let [ann-map (get anns ann-key)]
-               [annotation-cell
-                (get anns ann-key)
-                hit-id
-                token-id
-                colspan
-                color-map
-                :editable? editable?]
-               [dummy-cell]))
-           (prepend-cell {:key (str ann-key) :child annotation-key :opts [ann-key]}))))))
+(defn highlight-cell? [ann-key token-id highlight-ann-key? highlight-token-id?]
+  (println ann-key token-id highlight-ann-key? highlight-token-id?)
+  (cond
+    (and highlight-ann-key? highlight-token-id?)
+    (and (= highlight-ann-key? ann-key) (= highlight-token-id? token-id))
+    highlight-ann-key? (= highlight-ann-key? ann-key)
+    highlight-token-id? (= highlight-token-id? token-id)))
+
+(defn annotation-row
+  [hit color-map ann-key & {:keys [editable? highlight-ann-key? highlight-token-id?]}]
+  (fn [{hit-id :id hit :hit} color-map ann-key
+       & {:keys [editable? highlight-ann-key? highlight-token-id?] :or {editable? true}}]
+    (into
+     [:tr.ann-row {:data-hitid hit-id}]
+     (-> (for [{colspan :colspan {token-id :id anns :anns} :token} (with-colspans hit ann-key)
+               :let [{parsed-token-id :id} (parse-token-id token-id)]]
+           ^{:key (str ann-key hit-id token-id)}
+           (if-let [ann-map (get anns ann-key)]
+             [annotation-cell
+              (get anns ann-key)
+              hit-id
+              token-id
+              colspan
+              color-map
+              :editable? editable?
+              :highlight?
+              (highlight-cell? ann-key parsed-token-id highlight-ann-key? highlight-token-id?)]
+             [dummy-cell]))
+         (prepend-cell {:key (str ann-key) :child annotation-key :opts [ann-key]})))))
