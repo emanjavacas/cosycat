@@ -17,13 +17,13 @@
 (defn on-change [model-tagsets selected-tagsets name checked?]
   (fn [e]
     (re-frame/dispatch
-     [:set-project-settings [:tagsets]
+     [:set-settings [:tagsets]
       (new-tagsets @model-tagsets @selected-tagsets name checked?)])))
 
 (defn check-tagset [tagset-name model-tagsets]
-  (let [selected-tagsets (re-frame/subscribe [:active-project :settings :tagsets])]
+  (let [selected-tagsets (re-frame/subscribe [:settings :tagsets])]
     (fn [tagset-name]
-      (let [checked? (if-not @selected-tagsets true (some #{tagset-name} @selected-tagsets))]
+      (let [checked? (if-not @selected-tagsets false (some #{tagset-name} @selected-tagsets))]
         [:div
          [:h2.label.label-default {:style {:font-size "14px" :line-height "2.5em"}} tagset-name]
          [:span {:style {:padding-left "10px"}}

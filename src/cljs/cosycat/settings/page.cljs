@@ -47,7 +47,6 @@
 
 (defmethod get-update-map :tagsets
   [_ {:keys [tagsets] :as settings}]
-  (.log js/console settings)
   {:tagsets tagsets})
 
 (defn display-setting-submit [active-tab]
