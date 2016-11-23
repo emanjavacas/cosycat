@@ -40,14 +40,11 @@
                   (catch clojure.lang.ExceptionInfo e
                     (-> e ex-data :code)))
              :not-authorized)))
-    (testing "remove-project adds username to updates type delete-project-agree"
+    (testing "remove-project adds username to agreed in delete-project-agree issue"
       (let [_ (proj/remove-project db "howdy" project-name)
-            {norm-issues :issues :as project} (proj/get-project db "howdy" project-name)
-            issues (vals norm-issues)]
-        (is (not (empty? issues)))
-        (is (some #{"howdy"} (->> issues
-                                  (filter #(= "delete-project-agree" (:type %)))
-                                  (map :username))))))
+            {{agreed :agreed} :data :as issue} (proj/find-delete-project-issue db project-name)]
+        (is (not (nil? issue)))
+        (is (some #{"howdy"} agreed))))
     (testing "project is not yet removed"
       (is (not (removed?))))
     (testing "all agree to remove, remove-project returns nil"

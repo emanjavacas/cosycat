@@ -6,6 +6,7 @@
             [cosycat.test.test-config :refer [db-fixture project-fixture project-data db]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
             [config.core :refer [env]]
+            [cosycat.app-utils :refer [server-project-name]]
             [cosycat.db.annotations :as anns]))
 
 (use-fixtures :once db-fixture project-fixture)
@@ -30,7 +31,7 @@
   {:ann {:key "a", :value "a"},
    :hit-id 5377
    :username "user",
-   :span     {:type "token", :scope 166},
+   :span {:type "token", :scope 166},
    :corpus (:corpus project-data)
    :query "my-query"
    :timestamp 1461920859355})
@@ -110,4 +111,15 @@
                         (ex-data e)))
                  (select-keys [:source-span :span]))
              {:source-span (get-in IOB-ann [:span])
-              :span (get-in overlapping-IOB-token-ann [:span])})))))
+              :span (get-in overlapping-IOB-token-ann [:span])})))
+    (testing "ensure unique annotations using mongodb indices"
+      (dotimes [i 500]
+        (.start (Thread.
+                 #(try (anns/insert-annotation db project-name token-ann)
+                       (catch Exception e)))))
+      (Thread/sleep 5000)               ;give it some time to finish
+      (let [out (mc/find-maps (:db db) (server-project-name project-name)
+                              {"ann.key" (get-in token-ann [:ann :key])
+                               :span (:span token-ann)
+                               :corpus (:corpus token-ann)})]
+        (is (= 1 (count out)))))))
