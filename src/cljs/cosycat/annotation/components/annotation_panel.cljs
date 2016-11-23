@@ -87,15 +87,19 @@
      [:tbody
       [hit-row hit color-map :editable? true :show-match? true :show-hit-id? true]]]))
 
-(defn annotation-panel []
+(defn annotation-panel [& {:keys [page-size] :or {page-size 10}}]
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])
         color-map (re-frame/subscribe [:filtered-users-colors])
+        current-hit-page (re-frame/subscribe [:project-session :components :current-hit-page])
         open-hits (re-frame/subscribe [:project-session :components :open-hits])]
     (fn []
       [:div.container-fluid
-       (doall (for [{hit-id :id :as hit} (sort-by #(get-in % [:meta :num]) @marked-hits)]
-                ^{:key (str hit-id)}
-                [:div.row
-                 (if (contains? @open-hits hit-id)
-                   [annotation-component hit color-map]
-                   [closed-annotation-component hit color-map])]))])))
+       (let [start (* page-size (or @current-hit-page 0))
+             end (min (count @marked-hits) (+ start page-size))
+             sorted-marked-hits (sort-by #(get-in % [:meta :num]) @marked-hits)]
+         (doall (for [{hit-id :id :as hit} (subvec (vec sorted-marked-hits) start end)]
+                  ^{:key (str hit-id)}
+                  [:div.row
+                   (if (contains? @open-hits hit-id)
+                     [annotation-component hit color-map]
+                     [closed-annotation-component hit color-map])])))])))

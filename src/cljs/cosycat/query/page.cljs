@@ -110,29 +110,53 @@
   [bs/button
    {:onClick #(re-frame/dispatch [:unmark-hits])
     :style {:font-size "12px" :height "34px"}}
-   "Unmark hits"])
+   "Unmark"])
 
 (defn close-hits-btn []
   [bs/button
    {:onClick #(re-frame/dispatch [:close-hits])
     :style {:font-size "12px" :height "34px"}}
-   "Close hits"])
+   "Close"])
 
 (defn open-hits-btn []
   [bs/button
    {:onClick #(re-frame/dispatch [:open-hits])
     :style {:font-size "12px" :height "34px"}}
-   "Open hits"])
+   "Open"])
+
+(defn marked-hits-pager [& {:keys [page-size] :or {page-size 10}}]
+  (let [current-hit-page (re-frame/subscribe [:project-session :components :current-hit-page])
+        marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
+    (fn []
+      [bs/pagination
+       {:style {:margin "0px"}
+        :next true
+        :prev true
+        :first true
+        :last true
+        :ellipsis false
+        :boundaryLinks true
+        :items (.ceil js/Math (/ (count @marked-hits) page-size))
+        :maxButtons 5
+        :activePage (if @current-hit-page (inc @current-hit-page) 1)
+        :onSelect #(this-as this
+                     (re-frame/dispatch
+                      [:set-project-session-component [:current-hit-page]
+                       (dec (.-eventKey this))]))}])))
 
 (defn hits-toolbar []
-  [bs/button-toolbar [open-hits-btn] [close-hits-btn] [unmark-hits-btn]])
+  [bs/button-toolbar
+   [open-hits-btn]
+   [close-hits-btn]
+   [unmark-hits-btn]])
 
 (defn annotation-open-header []
   (fn []
     [:div.container-fluid
      [:div.row
-      [:div.col-lg-7.col-sm-5 [:div.pull-left [filter-annotation-buttons]]]
-      [:div.col-lg-4.col-sm-5 [:div.pull-right [hits-toolbar]]]]]))
+      [:div.col-lg-5.col-sm-5 [:div.pull-left [filter-annotation-buttons]]]
+      [:div.col-lg-3.col-sm-3 [:div.pull-right [hits-toolbar]]]
+      [:div.col-lg-3.col-sm-3 [:div.pull-right [marked-hits-pager]]]]]))
 
 (defn minimizable-query-frame []
   [minimize-panel
