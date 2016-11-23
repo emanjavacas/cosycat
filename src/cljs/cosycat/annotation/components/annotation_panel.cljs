@@ -55,7 +55,8 @@
 
 (defn annotation-component
   [hit color-map
-   & {:keys [editable? show-hit-id? show-match? highlight-ann-key? highlight-token-id?]}]
+   & {:keys [editable? show-hit-id? show-match? highlight-ann-key? highlight-token-id?]
+      :or {editable? true show-hit-id? true show-match? true}}]
   (fn [hit color-map
        & {:keys [editable? show-hit-id? show-match? highlight-ann-key? highlight-token-id?]
           :or {editable? true show-hit-id? true show-match? true}}]
@@ -84,7 +85,7 @@
      {:id "table-annotation"}
      [:thead]
      [:tbody
-      [hit-row hit color-map]]]))
+      [hit-row hit color-map :editable? true :show-match? true :show-hit-id? true]]]))
 
 (defn annotation-panel []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])
