@@ -198,10 +198,17 @@
 (defn join-project-creator [creator users]
   (conj users {:username creator :role "creator"}))
 
+(defn create-project-index [{db-conn :db :as db} project-name]
+  (mc/create-index
+   db-conn (server-project-name project-name)
+   (array-map "ann.key" 1 :span 1 :corpus 1) ;; unique identifiers for annotations
+   {:unique true}))
+
 (defn new-project
   "creates a new project"
   [{db-conn :db :as db} creator project-name description & [users]]
   (check-new-project db project-name users)
+  (create-project-index db project-name)
   (-> (mc/insert-and-return
        db-conn (:projects colls)
        {:name project-name
