@@ -18,11 +18,11 @@
 (defn add-user-active [user]
   (assoc user :active true))
 
-(defn is-admin-in-profile? [username {:keys [admins]}]
-  (some #{username} admins))
+(defn is-admin-in-profile? [username]
+  (= username (:admin env)))
 
-(defn maybe-add-admin [{:keys [roles username] :as user} env]
-  (if (and (is-admin-in-profile? username env) (not (some #{"admin"} roles)))
+(defn maybe-add-admin [{:keys [roles username] :as user}]
+  (if (and (is-admin-in-profile? username) (not (some #{"admin"} roles)))
     (update user :roles conj "admin")
     user))
 
@@ -49,7 +49,7 @@
     (cond
       (not (= password repeatpassword)) (on-signup-failure req "Password mismatch")
       (is-user? db user)                (on-signup-failure req "User already exists")
-      :else (let [user (-> (new-user db user (is-admin-in-profile? username env))
+      :else (let [user (-> (new-user db user (is-admin-in-profile? username))
                            (normalize-user :settings :projects)
                            add-user-active)]
               (-> (redirect (or next-url "/")) (assoc-in [:session :identity] user))))))
@@ -63,7 +63,7 @@
         password (or password password-form)
         user {:username username :password password}]
     (if-let [public-user (lookup-user db user)]
-      (let [public-user (maybe-add-admin public-user env)]
+      (let [public-user (maybe-add-admin public-user)]
         (send-clients ws {:type :login :data (add-user-active public-user)})
         (-> (redirect (or next-url "/")) (assoc-in [:session :identity] public-user)))
       (on-login-failure req))))
