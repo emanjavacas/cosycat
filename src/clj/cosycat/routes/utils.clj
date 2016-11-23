@@ -84,5 +84,6 @@
 
 (defn normalize-anns
   "converts incoming annotations into a map of token-ids to ann-keys to anns"
-  [& anns]
+  [anns]
+  (assert (sequential? anns))
   (->> anns (map ann->maps) (apply deep-merge-with merge)))

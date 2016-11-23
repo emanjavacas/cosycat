@@ -142,7 +142,7 @@
 (defmethod resolve-annotation-issue "annotation-edit"
   [db project-name {issue-data :data :as issue}]
   (let [{:keys [hit-id] :as new-ann} (anns/update-annotation db project-name issue-data)]
-    {:anns (normalize-anns new-ann) :project project-name :hit-id hit-id}))
+    {:anns (normalize-anns [new-ann]) :project project-name :hit-id hit-id}))
 
 (defn resolve-annotation-edit-route
   [{{project-name :project-name action :action issue-id :issue-id} :params

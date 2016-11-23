@@ -48,4 +48,3 @@
   (routes
    (context "/admin" []
     (GET "/log" [] (make-default-route log-route :is-ok? is-admin?)))))
-

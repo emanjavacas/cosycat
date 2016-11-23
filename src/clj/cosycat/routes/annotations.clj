@@ -50,7 +50,7 @@
    {:f (fn []
          (check-user-rights db username project :write)
          (anns/insert-annotation db project (assoc ann-map :username username)))
-    :payload-f (fn [new-ann] {:anns (normalize-anns new-ann) :project project :hit-id hit-id})}))
+    :payload-f (fn [new-ann] {:anns (normalize-anns [new-ann]) :project project :hit-id hit-id})}))
 
 (defmulti insert-annotation-handler (fn [{{:keys [ann-map]} :params}] (type ann-map)))
 
@@ -77,7 +77,7 @@
          (check-annotation-has-issue db project id)
          (check-user-rights db username project :update id)
          (anns/update-annotation db project (assoc update-map :username username)))
-    :payload-f (fn [new-ann] {:anns (normalize-anns new-ann) :project project :hit-id hit-id})}))
+    :payload-f (fn [new-ann] {:anns (normalize-anns [new-ann]) :project project :hit-id hit-id})}))
 
 (defn remove-annotation-handler
   [{{project :project hit-id :hit-id {{key :key} :ann id :_id span :span :as ann-map} :ann} :params
@@ -99,15 +99,14 @@
   {:hit-id hit-id
    :project project
    :anns (->> (anns/find-annotations db project corpus (->int from) (->int size) :doc doc)
-              (apply normalize-anns))})
+              normalize-anns)})
 
 (defn fetch-from-range [db project corpus]
   (fn [{:keys [start end hit-id doc]}]
     (let [from (->int start)
           size (- (->int end) from)
-          anns (->> (anns/find-annotations db project corpus from size :doc doc)
-                    (apply normalize-anns))]
-      (when anns {:hit-id hit-id :project project :anns anns}))))
+          anns (anns/find-annotations db project corpus from size :doc doc)]
+      (when anns {:hit-id hit-id :project project :anns (normalize-anns anns)}))))
 
 (defn fetch-annotation-page-handler
   [{{project :project corpus :corpus page-margins :page-margins} :params
