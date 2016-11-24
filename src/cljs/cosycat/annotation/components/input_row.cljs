@@ -102,7 +102,7 @@
         [hidden-input-cell]))))
 
 (defn on-click-pager [hit-id dir]
-  (fn [] (re-frame/dispatch [:expand-hit hit-id dir])))
+  (fn [] (re-frame/dispatch [:shift-hit hit-id dir])))
 
 (defn pager-cell [hit-id]
   (fn [hit-id]

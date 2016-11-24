@@ -184,8 +184,8 @@
        (do (timbre/warn (format "Event :update-hit but coultn't find hit id [%s]" (str id)))
            db)))))
 
-(re-frame/register-handler
- :expand-hit
+(re-frame/register-handler ;; shift window around hit left or right
+ :shift-hit
  standard-middleware
  (let [update-hit (fn [hit-map] (re-frame/dispatch [:update-hit hit-map]))]
    (fn [db [_ id dir]]
