@@ -69,7 +69,7 @@
               :aot :all
               :cljsbuild {:jar true
                           :builds {:app {:source-paths ["env/prod/cljs"]
-                                         :compiler {:optimizations :advanced
+                                         :compiler {:optimizations :simple
                                                     :closure-defines {goog.DEBUG false}
                                                     :pretty-print true}}}}}}
 
