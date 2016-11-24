@@ -86,7 +86,9 @@
 
 (defn results-row [hit-num {:keys [id]} {:keys [color-map token-field break active-query]}]
   (let [discarded? (re-frame/subscribe [:discarded-hit id])]
-    (fn [hit-num {hit :hit id :id {:keys [num marked]} :meta} {:keys [color-map token-field break active-query]}]
+    (fn [hit-num
+         {hit :hit id :id {:keys [num marked]} :meta :as hit-map}
+         {:keys [color-map token-field break active-query] :as opts}]
       (let [row-class (merge-classes (when marked "marked") (when break "break"))
             background "#F9F9F9"]
         [:tr {:class row-class :data-hit id}

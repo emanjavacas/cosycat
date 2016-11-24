@@ -1,4 +1,4 @@
-(ns cosycat.query.components.annotation-modal
+(ns cosycat.annotation.components.annotation-modal
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cosycat.utils :refer [by-id parse-annotation nbsp format wrap-key]]
@@ -10,6 +10,7 @@
             [react-bootstrap.components :as bs]
             [taoensso.timbre :as timbre]))
 
+;;; Utils
 (defn notify-not-authorized [action role]
   (let [action (dekeyword action)
         message (format "Your project role [%s] does not allow you to [%s] annotations"
@@ -26,23 +27,24 @@
 (defn group-tokens [tokens ann-key username]
   (->> tokens (group-by #(classify-annotation (:anns %) ann-key username))))
 
-(defn dispatch-annotations [ann-map tokens]
+(defn deselect-tokens [tokens]
+  (doseq [{:keys [hit-id id]} tokens]
+    (re-frame/dispatch [:unmark-token {:hit-id hit-id :token-id id}])))
+
+;;; Dispatch operations
+(defn dispatch-new-annotations [ann-map tokens]
   (re-frame/dispatch
    [:dispatch-annotation
     ann-map                    ;ann-map
     (->> tokens (map :hit-id)) ;hit-ids
     (->> tokens (map :id))])) ;token-ids
 
-(defn update-annotations [{{:keys [key value]} :ann :as ann-map} tokens]
+(defn dispatch-annotation-updates [{{:keys [key value]} :ann :as ann-map} tokens]
   (doseq [{hit-id :hit-id {ann key} :anns} tokens
           :let [{:keys [_id _version]} ann]] ;get corresponding existing ann
     (re-frame/dispatch
      [:update-annotation
       {:update-map {:_id _id :_version _version :value value :hit-id hit-id}}])))
-
-(defn deselect-tokens [tokens]
-  (doseq [{:keys [hit-id id]} tokens]
-    (re-frame/dispatch [:unmark-token {:hit-id hit-id :token-id id}])))
 
 (defn suggest-annotation-edits [ann-key new-val anns me]
   (doseq [{{{:keys [_id _version ann span history]} ann-key} :anns hit-id :hit-id} anns
@@ -54,7 +56,7 @@
     ))
 
 (defn trigger-dispatch
-  [action {:keys [value marked-tokens annotation-modal-show current-ann me my-role]}]
+  [action {:keys [value marked-tokens current-ann me my-role unselect-checked?]}]
   (if-let [[key val] (parse-annotation @value)]
     (let [{:keys [empty-annotation existing-annotation-owner existing-annotation]}
           (group-tokens @marked-tokens @current-ann @me)]
@@ -68,39 +70,29 @@
         (suggest-annotation-edits key val existing-annotation @me)
         ;; dispatch annotations
         :else (let [ann-map {:ann {:key key :value val}}]
-                (dispatch-annotations ann-map empty-annotation)
-                (update-annotations ann-map existing-annotation-owner)
-                (deselect-tokens empty-annotation)
-                (deselect-tokens existing-annotation-owner)))
+                (dispatch-new-annotations ann-map empty-annotation)
+                (dispatch-annotation-updates ann-map existing-annotation-owner)
+                (when @unselect-checked? (deselect-tokens empty-annotation))
+                (when @unselect-checked? (deselect-tokens existing-annotation-owner))))
       ;; finally
-      (swap! annotation-modal-show not))))
+      (reset! value "")
+      (reset! current-ann "")
+      (re-frame/dispatch [:close-modal :annotation-modal]))))
 
+;;; Components
 (defn update-current-ann [current-ann value]
   (fn [target]
     (let [input-data @value
           [_ key] (re-find #"([^=]+)=?" input-data)]
       (reset! current-ann key))))
 
-(defn count-selected [marked-tokens current me]
-  (->> @marked-tokens
-       (sort-by (juxt :word (fn [{:keys [anns]}] (classify-annotation anns @current @me))))
-       (map (juxt :word (fn [token] (get-in token [:anns @current]))))
-       frequencies))
-
-(defn background-color [ann me]
-  (let [danger  "#fbeded", success "#def0de"]
-    (cond
-      (not ann) "white"
-      (= (:username ann) me) success
-      :else danger)))
-
 (defn on-key-press
-  [{:keys [value marked-tokens current-ann me my-role annotation-modal-show] :as opts}]
+  [{:keys [value marked-tokens current-ann me my-role] :as opts}]
   (wrap-key 13 (fn [] (trigger-dispatch :write opts))))
 
 (defn annotation-input [marked-tokens opts]
   (let [tagsets (re-frame/subscribe [:selected-tagsets])]
-    (fn [marked-tokens {:keys [annotation-modal-show value current-ann me my-role] :as opts}]
+    (fn [marked-tokens {:keys [value current-ann me my-role] :as opts}]
       [:table
        {:width "100%"}
        [:tbody
@@ -132,6 +124,13 @@
       :placement "right"}
      [:span (str value)]]))
 
+(defn background-color [ann me]
+  (let [danger  "#fbeded", success "#def0de"]
+    (cond
+      (not ann) "white"
+      (= (:username ann) me) success
+      :else danger)))
+
 (defn token-counts-row [[word ann :as token] cnt me]
   (fn [[word ann] cnt me]
     [:tr
@@ -141,6 +140,12 @@
      [:td {:style {:padding-bottom "5px" :text-align "right"}}
       [bs/label {:style {:vertical-align "-30%" :display "inline-block" :font-size "100%"}}
        cnt]]]))
+
+(defn count-selected [marked-tokens current me]
+  (->> @marked-tokens
+       (sort-by (juxt :word (fn [{:keys [anns]}] (classify-annotation anns @current @me))))
+       (map (juxt :word (fn [token] (get-in token [:anns @current]))))
+       frequencies))
 
 (defn token-counts-table [marked-tokens {:keys [current-ann me]}]
   (fn [marked-tokens {:keys [current-ann me]}]
@@ -157,17 +162,23 @@
         ^{:key (str word (:username ann) "pop")}
         [token-counts-row token cnt me])]]))
 
-(defn annotation-modal [annotation-modal-show marked-tokens current-ann]
+(defn annotation-modal [marked-tokens current-ann]
   (let [me (re-frame/subscribe [:me :username])
-        value (reagent/atom "")
-        my-role (re-frame/subscribe [:active-project-role])]
-    (fn [annotation-modal-show marked-tokens current-ann]
-      (let [opts {:annotation-modal-show annotation-modal-show :value value :me me
-                  :my-role my-role :current-ann current-ann :marked-tokens marked-tokens}]
+        show? (re-frame/subscribe [:modals :annotation-modal])
+        my-role (re-frame/subscribe [:active-project-role])
+        unselect-checked? (reagent/atom false)
+        value (reagent/atom "")]
+    (fn [marked-tokens current-ann]
+      (let [opts {:value value
+                  :me me
+                  :my-role my-role
+                  :current-ann current-ann
+                  :unselect-checked? unselect-checked?
+                  :marked-tokens marked-tokens}]
         [bs/modal
          {:class "large"
-          :show @annotation-modal-show
-          :on-hide #(do (reset! current-ann "") (swap! annotation-modal-show not))}
+          :show @show?
+          :on-hide #(re-frame/dispatch [:close-modal :annotation-modal])}
          [bs/modal-header
           {:closeButton true}
           [bs/modal-title
@@ -178,8 +189,14 @@
            [:div.row
             [annotation-input marked-tokens opts]
             [:hr]
-            [token-counts-table marked-tokens {:current-ann current-ann :me me}]]]]
+            [token-counts-table marked-tokens {:current-ann current-ann :me me}]]]]         
          [bs/modal-footer
+          [:div.input-group.pull-left
+           [:input
+            {:type "checkbox"
+             :checked @unselect-checked?
+             :on-change #(swap! unselect-checked? not)}]
+           [:span.text-muted " Unselect after dispatch?"]]
           [bs/button
            {:className "pull-right"
             :bsStyle "info"
@@ -187,9 +204,8 @@
            "Submit"]]]))))
 
 (defn annotation-modal-button []
-  (let [marked-tokens (re-frame/subscribe [:marked-tokens])
-        current-ann (reagent/atom "")
-        show? (reagent/atom false)]
+  (let [marked-tokens (re-frame/subscribe [:marked-tokens])        
+        current-ann (reagent/atom "")]
     (fn []
       (let [disabled? (fn [marked-tokens] (zero? (count @marked-tokens)))]
         [bs/button
@@ -198,7 +214,6 @@
                   :cursor (if (disabled? marked-tokens) "auto" "pointer")
                   :height "34px"}
           :onClick #(when-not (disabled? marked-tokens)
-                      (do (reset! current-ann "")
-                          (swap! show? not)))}
+                      (re-frame/dispatch [:open-modal :annotation-modal]))}
          [:div [:i.zmdi.zmdi-edit]
-          [annotation-modal show? marked-tokens current-ann]]]))))
+          [annotation-modal marked-tokens current-ann]]]))))

@@ -8,7 +8,7 @@
             [cosycat.app-utils :refer [dekeyword ->int]]
             [cosycat.routes :refer [nav!]]
             [cosycat.components :refer [disabled-button-tooltip dropdown-select]]
-            [cosycat.query.components.annotation-modal :refer [annotation-modal-button]]))
+            [cosycat.annotation.components.annotation-modal :refer [annotation-modal-button]]))
 
 (defn pager-button [& {:keys [direction label]}]
   [bs/button
