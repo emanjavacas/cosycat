@@ -28,17 +28,24 @@
 (defn annotation-edit-message
   [{{{old-value :value key :key} :ann {doc :doc {:keys [B O] :as scope} :scope type :type} :span
      new-value :value corpus :corpus} :data by :by :as issue}]  
-  [:div
-   [:h5 [:span
-         [:strong (capitalize by)]
-         " suggest to change annotation key " [bs/label key]
-         " from " [bs/label {:bsStyle "primary"} old-value]
-         " to " [bs/label {:bsStyle "primary"} new-value] "."]]
-   (let [tokens (if (= type "token") 1 (inc (- O B)))]
+  [:div.container-fluid
+   [:div.row
+    [:div.col-lg-6.col-sm-6
      [:h5 [:span
-           "Annotation is in corpus " [:strong corpus]
-           " in document " [:strong doc]
-           " and spans " [:strong tokens] (if (> tokens 1) " tokens." " token.")]])])
+           [:strong (capitalize by)]
+           " suggest to change annotation key " [bs/label key]
+           " from " [bs/label {:bsStyle "primary"} old-value]
+           " to " [bs/label {:bsStyle "primary"} new-value] "."]]
+     (let [tokens (if (= type "token") 1 (inc (- O B)))]
+       [:h5 [:span
+             "Annotation is in corpus " [:strong corpus]
+             " in document " [:strong doc]
+             " and spans " [:strong tokens] (if (> tokens 1) " tokens." " token.")]])]
+    [:div.col-lg-6.col-sm-6
+     [:div.pull-right
+      [bs/button-toolbar
+       [bs/button {:bsStyle "success"} "Accept"]
+       [bs/button {:bsStyle "danger"} "Reject"]]]]]])
 
 (defn annotation-edit-component [issue]
   (fn [issue]
