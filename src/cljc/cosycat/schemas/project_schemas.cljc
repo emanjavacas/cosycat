@@ -7,6 +7,7 @@
             [cosycat.schemas.event-schemas :refer [event-schema event-id-schema]]
             [cosycat.schemas.results-schemas :refer [query-results-schema]]))
 
+;;; project issues schemas
 (def issue-id-schema s/Any)
 
 (def base-issue-schema
@@ -41,6 +42,17 @@
   #?(:cljs (assoc base-issue-schema (s/optional-key :meta) {s/Any s/Any})
      :clj base-issue-schema))
 
+;;; query-metadata schemas
+(def query-id-schema s/Any)
+
+(def queries-schema                     ;metadata on previous stored queries
+  {:query-data {:query-str s/Str :corpus s/Str}
+   :id query-id-schema
+   :timestamp s/Int
+   :discarded #?(:clj [{:timestamp s/Int :hit s/Any}]
+                 :cljs #{s/Any})})
+
+;;; project session schemas
 (def status-schema
   {:status (s/enum :ok :error)
    (s/optional-key :content) {:message s/Str (s/optional-key :code) s/Str}})
@@ -59,14 +71,17 @@
              {}
              schema))
 
+;;; project settings schemas
 (def project-settings-schema (make-keys-optional settings-schema))
 
+;;; project users schemas
 (def project-user-schema
   {:username s/Str :role s/Str})
 
 (def project-users-schema
   [project-user-schema])
 
+;;; general schema
 (def project-schema
   #?(:clj {:name s/Str
            :description s/Str

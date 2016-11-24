@@ -25,15 +25,6 @@
    :query query-opts-schema
    (s/optional-key :tagsets) [s/Any]})
 
-(def query-id-schema s/Any)
-
-(def queries-schema                     ;metadata on previous stored queries
-  {:query-data {:query-str s/Str :corpus s/Str}
-   :id query-id-schema
-   :timestamp s/Int
-   :discarded #?(:clj [{:timestamp s/Int :hit s/Any}]
-                 :cljs #{s/Any})})
-
 (def user-project-schema   ;server-only (get merged with project in the client)
   {:settings settings-schema            ;project-specific settings
    :queries [queries-schema]            ;query-related metadata

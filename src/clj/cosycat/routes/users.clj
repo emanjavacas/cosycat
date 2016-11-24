@@ -62,40 +62,10 @@
      ws {:type :new-user-avatar :data {:avatar avatar :username username}} :source-client username)
     avatar))
 
-;; Query metadata
-(defn new-query-metadata-route
-  [{{{username :username} :identity} :session {db :db} :components
-    {{query-str :query-str corpus :corpus :as query-data} :query-data
-     project-name :project-name} :params}]
-  (let [{:keys [projects]} (users/new-query-metadata db username project-name query-data)]
-    (->> (get-in projects [(keyword project-name) :queries])
-         (some (fn [{db-query-data :query-data :as query-metadata}]
-                 (when (and (= query-data db-query-data)) query-metadata))))))
-
-(defn add-query-metadata-route
-  [{{{username :username} :identity} :session {db :db} :components
-    {id :id discarded :discarded project-name :project-name} :params}]
-  (let [payload (users/add-query-metadata db username project-name {:id id :discarded discarded})]
-    payload))
-
-(defn remove-query-metadata-route
-  [{{{username :username} :identity} :session {db :db} :components
-    {id :id discarded :discarded project-name :project-name} :params}]
-  (let [payload (users/remove-query-metadata db username project-name {:id id :discarded discarded})]))
-
-(defn drop-query-metadata-route
-  [{{{username :username} :identity} :session {db :db} :components
-    {id :id project-name :project-name} :params}]
-  (let [payload (users/drop-query-metadata db username project-name id)]))
-
 (defn users-routes []
   (routes
    (context "/users" []
      (GET "/user-info" [] (make-default-route user-info-route))
      (GET "/query-users" [] (make-default-route query-users-route))
-     (POST "/new-query-metadata" [] (make-default-route new-query-metadata-route))
-     (POST "/add-query-metadata" [] (make-default-route add-query-metadata-route))
-     (POST "/remove-query-metadata" [] (make-default-route remove-query-metadata-route))
-     (POST "/drop-query-metadata" [] (make-default-route drop-query-metadata-route))
      (POST "/update-profile" [] (make-default-route update-profile-route))
      (POST "/new-avatar" [] (make-default-route new-avatar-route)))))

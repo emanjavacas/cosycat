@@ -23,29 +23,12 @@
      (= new-name old-name) (ex-user-exists :username)
      (= new-email old-email) (ex-user-exists :email))))
 
-(defn- ex-query-exists
-  [query-str corpus]
-  (ex-info "Query already exists"
-           {:code :query-exists
-            :data {:query-str query-str :corpus corpus}
-            :message "Query already exists"}))
-
 ;;; Checkers
 (defn- check-user-exists
   "user check. returns nil or ex-info (in case a exception has to be thrown)"
   [{db-conn :db :as db} {:keys [username email] :as new-user}]
   (if-let [old-user (is-user? db new-user)]
     (throw (ex-user-exists old-user new-user))))
-
-(defn- check-query-exists
-  [{db-conn :db :as db} username project {:keys [query-str corpus]}]
-  (let [project-query-str (format "projects.%s.queries.query-data" project)]
-    (when-let [query (mc/find-one-as-map
-                      db-conn (:users colls)
-                      {:username username
-                       (str project-query-str ".query-str") query-str
-                       (str project-query-str ".corpus") corpus})]
-      (throw (ex-query-exists query-str corpus)))))
 
 ;;; Updates
 (defn- create-new-user
@@ -201,58 +184,8 @@
 
 (defn register-user-project-event
   [{db-conn :db :as db} username project {event-type :type event-data :data :as event}]
-  (let [{:keys [timestamp type data] :as last} (first (user-project-events db username project :max-events 1))]
+  (let [{:keys [timestamp type data] :as last}
+        (first (user-project-events db username project :max-events 1))]
     (if (and last (= event-type type) (= data event-data))
       (register-same-user-project-event db username project event last)
       (register-new-user-project-event db username project event))))
-
-;;; Query metadata
-(defn find-query-metadata [{db-conn :db :as db} username project {:keys [id query-data]}]
-  (let [project-query-str (format "$projects.%s.queries" project)]
-    (first
-     (mc/aggregate
-      db-conn (:users colls)
-      [{$match {:username username}}
-       {$unwind project-query-str}
-       {$project {:id (str project-query-str ".id") :_id 0}}]))))
-
-(defn new-query-metadata
-  "Inserts new query into user db to allow for query-related metadata.
-   Returns this query's id needed for further updates."
-  [{db-conn :db :as db} username project query-data]
-  (let [project-query-str (format "projects.%s.queries" project)
-        now (System/currentTimeMillis), id (new-uuid)
-        payload {:query-data query-data :id id :discarded [] :timestamp now}]
-    (check-query-exists db username project query-data)
-    (mc/find-and-modify
-     db-conn (:users colls)
-     {:username username}
-     {$push {project-query-str payload}}
-     {:return-new true})))
-
-(defn add-query-metadata
-  [{db-conn :db :as db} username project {:keys [id discarded] :as payload}]
-  (let [project-query-str (format "projects.%s.queries" project)
-        new-discard {:hit discarded :timestamp (System/currentTimeMillis)}]
-    (mc/update
-     db-conn (:users colls)
-     {:username username (str project-query-str ".id") id}
-     {$push {(str project-query-str ".$.discarded") new-discard}})
-    new-discard))
-
-(defn remove-query-metadata
-  [{db-conn :db :as db} username project {:keys [id discarded] :as payload}]
-  (let [project-query-str (format "projects.%s.queries" project)]
-    (mc/find-and-modify
-     db-conn (:users colls)
-     {:username username (str project-query-str ".id") id}
-     {$pull {(str project-query-str ".$.discarded") {"hit" discarded}}}
-     {:return-new true})))
-
-(defn drop-query-metadata
-  [{db-conn :db :as db} username project query-id]
-  (let [project-query-str (format "projects.%s.queries" project)]
-    (mc/update
-     db-conn (:users colls)
-     {:username username}
-     {$pull {(str project-query-str) {:id query-id}}})))

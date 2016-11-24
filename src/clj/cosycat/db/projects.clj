@@ -13,7 +13,7 @@
             [taoensso.timbre :as timbre]))
 
 ;;; Exceptions
-(defn ex-user [username]
+(defn ex-user-missing [username]
   (let [message "User doesn't exist"]
     (ex-info 
      {:message message
@@ -83,8 +83,24 @@
               :message message
               :data {:project-name project-name :ann-id ann-id}})))
 
+(defn- ex-query-exists
+  [query-str corpus]
+  (let [message "Query already exists"]
+    (ex-info message
+             {:code :query-exists
+              :data {:query-str query-str :corpus corpus}
+              :message message})))
+
+(defn- ex-cannot-drop-query
+  [username query-id]
+  (let [message (format "%s cannot drop query %s" username query-id)]
+    (ex-info message
+             {:code :cannot-drop-query
+              :data {:query-id query-id}
+              :message message})))
+
 ;;; Checkers
-(declare get-project-issue find-project-by-name get-user-role)
+(declare get-project-issue find-project-by-name get-user-role find-query-metadata)
 
 (defn is-project? [db project-name]
   (boolean (find-project-by-name db project-name)))
@@ -105,7 +121,7 @@
 (defn check-new-project [db project-name & [users]]
   (let [missing-username (some #(when (not (is-user? db {:username %})) %) (map :username users))]
     (cond
-      missing-username (throw (ex-user missing-username))
+      missing-username (throw (ex-user-missing missing-username))
       (is-project? db project-name) (throw (ex-project project-name)))))
 
 (defn check-user-in-project [db username project-name]
@@ -138,6 +154,21 @@
                "issues.status" "open"
                "issues.data._id" ann-id}))
     (throw (ex-annotation-has-issue project-name ann-id))))
+
+(defn- check-query-exists
+  [{db-conn :db :as db} project-name {:keys [query-str corpus]}]
+  (when-let [query (mc/find-one-as-map
+                    db-conn (:projects colls)
+                    {:name project-name
+                     "queries.query-str" query-str
+                     "queries.corpus" corpus})]
+    (throw (ex-query-exists query-str corpus))))
+
+(defn check-user-is-query-metadata-creator
+  [{db-conn :db :as db} username project-name query-id]
+  (if-let [{:keys [creator]} (find-query-metadata db username project-name query-id)]
+    (when-not (= username creator)
+      (throw (ex-cannot-drop-query username query-id)))))
 
 ;;; Getters
 (defn find-project-by-name [{db-conn :db} project-name]
@@ -233,7 +264,7 @@
   (let [project (find-project-by-name db project-name)
         role (get-user-role db project-name issuer)]
     (when-not role
-      (throw (ex-user username)))
+      (throw (ex-user-missing username)))
     (when (has-pending-issue? project username)
       (throw (ex-pending project-name username)))
     (when-not (check-project-role :write role)
@@ -382,3 +413,54 @@
       (if (empty? pending-users)
         (do (timbre/info "Erasing project" project-name) (erase-project db project-name users))
         (do (timbre/info "Pending users to project remove" project-name) issue)))))
+
+;;; Query metadata
+(defn find-query-metadata [{db-conn :db :as db} username project-name query-id]
+  (-> (mc/find-one-as-map
+       db-conn (:projects colls)
+       {:name project-name
+        "queries.id" query-id}
+       {"queries.id" 1})
+      (get-in [:queries query-id])))
+
+(defn new-query-metadata
+  "Inserts new query into user db to allow for query-related metadata.
+   Returns this query's id needed for further updates."
+  [{db-conn :db :as db} username project-name query-data]
+  (check-user-in-project db username project-name)  
+  (let [now (System/currentTimeMillis), id (new-uuid)
+        payload {:query-data query-data :id id :discarded [] :timestamp now :creator username}]
+   (check-query-exists db project-name query-data)
+   (mc/find-and-modify
+    db-conn (:projects colls)
+    {:name project-name}
+    {$push {:queries payload}}
+    {:return-new true})))
+
+(defn add-query-metadata
+  [{db-conn :db :as db} username project-name {:keys [id discarded] :as payload}]
+  (check-user-in-project db username project-name)
+  (let [new-discard {:hit discarded :timestamp (System/currentTimeMillis) :by username}]
+    (mc/update
+     db-conn (:projects colls)
+     {:name project-name "queries.id" id}
+     {$push {"queries.$.discarded" new-discard}})
+    new-discard))
+
+(defn remove-query-metadata
+  [{db-conn :db :as db} username project-name {:keys [id discarded] :as payload}]
+  (check-user-in-project db username project-name)  
+  (mc/find-and-modify
+   db-conn (:projects colls)
+   {:name project-name "queries.id" id}
+   {$pull {"queries.$.discarded" {"hit" discarded}}}
+   {:return-new true}))
+
+(defn drop-query-metadata
+  [{db-conn :db :as db} username project-name query-id]
+  (check-user-in-project db username project-name)
+  (check-user-is-query-metadata-creator db username project-name query-id)
+  (mc/update
+   db-conn (:projects colls)
+   {:name project-name}
+   {$pull {:queries {:id query-id}}}))

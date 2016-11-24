@@ -167,6 +167,32 @@
     ;; send issue to source client
     closed-issue))
 
+;; Query metadata
+(defn new-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {{query-str :query-str corpus :corpus :as query-data} :query-data
+     project-name :project-name} :params}]
+  (let [{:keys [projects]} (proj/new-query-metadata db username project-name query-data)]
+    (->> (get-in projects [(keyword project-name) :queries])
+         (some (fn [{db-query-data :query-data :as query-metadata}]
+                 (when (and (= query-data db-query-data)) query-metadata))))))
+
+(defn add-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {id :id discarded :discarded project-name :project-name} :params}]
+  (let [payload (proj/add-query-metadata db username project-name {:id id :discarded discarded})]
+    payload))
+
+(defn remove-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {id :id discarded :discarded project-name :project-name} :params}]
+  (let [payload (proj/remove-query-metadata db username project-name {:id id :discarded discarded})]))
+
+(defn drop-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {id :id project-name :project-name} :params}]
+  (let [payload (proj/drop-query-metadata db username project-name id)]))
+
 (defn project-routes []
   (routes
     (context "/project" []
@@ -175,6 +201,11 @@
       (POST "/remove-user" [] (make-default-route remove-user-route))
       (POST "/remove-project" [] (make-default-route remove-project-route))
       (POST "/update-user-role" [] (make-default-route update-user-role))
+      (context "/queries" []
+        (POST "/new-query-metadata" [] (make-default-route new-query-metadata-route))
+        (POST "/add-query-metadata" [] (make-default-route add-query-metadata-route))
+        (POST "/remove-query-metadata" [] (make-default-route remove-query-metadata-route))
+        (POST "/drop-query-metadata" [] (make-default-route drop-query-metadata-route)))
       (context "/issues" []
         (POST "/new" [] (make-default-route add-project-issue-route))
         (context "/comment" []
