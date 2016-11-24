@@ -222,3 +222,7 @@
          handler (fetch-issue-id-handler issue context :with-annotations? true)]
      (query-hit corpus hit-id {:words-left context :words-right context} handler)
      db)))
+
+(re-frame/register-handler
+ :fetch-annotation-query-hit
+ (fn [db [_ {:keys [hit-id]}]]))        ;perhaps with annotations included?
