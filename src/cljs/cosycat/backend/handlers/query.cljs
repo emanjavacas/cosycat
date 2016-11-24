@@ -157,14 +157,14 @@
 (re-frame/register-handler
  :fetch-snippet
  (fn [db [_ hit-id {user-delta :snippet-delta dir :dir}]]
-   (let [{:keys [snippet-opts corpus]} (get-in db [:settings :query])
+   (let [{snippet-opts :snippet-opts corpus-name :corpus} (get-in db [:settings :query])
          {snippet-delta :snippet-delta} snippet-opts
          snippet-opts (assoc snippet-opts :snippet-delta (or user-delta snippet-delta))
-         corpus (ensure-corpus (find-corpus-config db corpus))         
+         corpus (ensure-corpus (find-corpus-config db corpus-name))
          {query-str :query-str} (current-results db)]
      (when-not dir ;; only register first request
        (re-frame/dispatch
-        [:register-user-project-event {:data {:hit-id hit-id :corpus corpus} :type "snippet"}]))
+        [:register-user-project-event {:data {:hit-id hit-id :corpus corpus-name} :type "snippet"}]))
      (snippet corpus query-str snippet-opts hit-id dir)
      db)))
 
@@ -194,8 +194,8 @@
            active-project (get-in db [:session :active-project])
            {:keys [hit]} (get-in db [:projects active-project :session :query :results-by-id id])
            [left match right] (partition-by :match hit)
-           words-left (if (= dir :left) (inc (count left)) (count left))
-           words-right (if (= dir :right) (inc (count right)) (count right))]
+           words-left (if (= dir :left) (inc (count left)) (dec (count left)))
+           words-right (if (= dir :right) (inc (count right)) (dec (count right)))]
        (query-hit corpus id {:words-left words-left :words-right words-right} update-hit))
      db)))
 
