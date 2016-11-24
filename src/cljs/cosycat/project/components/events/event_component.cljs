@@ -104,6 +104,19 @@
                    :repeated repeated
                    :timestamp timestamp}])))
 
+(defmethod event-component :snippet
+  [{{hit-id :hit-id corpus :corpus} :data
+    event-type :type timestamp :timestamp repeated :repeated}]
+  (let [me (re-frame/subscribe [:me :username])]
+    (fn [{{hit-id :hit-id corpus :corpus} :data
+          event-type :type timestamp :timestamp repeated :repeated}]
+      [event-item {:header-text event-type
+                   :source-user @me
+                   :event-child [:div.container-fluid
+                                 [:div.row [:span "Corpus: " [:code corpus]]]
+                                 [:div.row [:span "Hit-id: " [:code hit-id]]]]
+                   :timestamp timestamp}])))
+
 (defmethod event-component :user-left-project
   [{{username :username} :data event-type :type timestamp :timestamp}]
   (fn [{{username :username} :data event-type :type timestamp :timestamp}]
