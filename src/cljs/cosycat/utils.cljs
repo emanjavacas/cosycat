@@ -71,7 +71,7 @@
 
 ;;; Component utilities
 (defn merge-classes [& classes]
-  (->> classes (filter identity) (interpose ".") (apply str)))
+  (->> classes (filter identity) (interpose " ") (apply str)))
 
 (defn nbsp
   "computes a html entity blankspace string of given length"
