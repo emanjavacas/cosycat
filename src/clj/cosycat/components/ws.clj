@@ -81,9 +81,9 @@
 
 (defn send-clients
   "function wrapper over multiplexed puts to out-chan"
-  [{clients :clients :as ws} payload &
-   {:keys [source-client target-clients] :or {source-client "server"}}]
+  [{clients :clients :as ws} payload
+   & {:keys [source-client target-clients]}]
   (doseq [[target-client _] (seq @clients)
-          :when (and (not (= source-client target-client))
-                     (if-not target-clients true (some #{target-client} target-clients)))]
+          :when (and (or (not source-client)  (not= source-client target-client))
+                     (or (not target-clients) (some #{target-client} target-clients)))]
     (send-client ws target-client payload)))
