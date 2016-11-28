@@ -109,6 +109,9 @@
 
 (defn issue-thread-component [issue & {:keys [collapsible?] :or {collapsible? true}}]
   (fn [{:keys [comments] :as issue} & {:keys [collapsible?] :or {collapsible? true}}]
-    (if collapsible?
-      [collapsible-issue-panel "Show thread" issue-thread issue :show-thread]
-      [issue-thread issue])))
+    (let [deleted-comments (count (filter :deleted (vals comments)))
+          valid-comments (- (count comments) deleted-comments)
+          title (str "Show thread (" valid-comments " comments)")]
+      (if collapsible?
+        [collapsible-issue-panel title issue-thread issue :show-thread]
+        [issue-thread issue]))))

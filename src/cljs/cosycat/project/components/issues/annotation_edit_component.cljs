@@ -40,7 +40,13 @@
        [:h5 [:span
              "Annotation is in corpus " [:strong corpus]
              " in document " [:strong doc]
-             " and spans " [:strong tokens] (if (> tokens 1) " tokens." " token.")]])]
+             " and spans " [:strong tokens] (if (> tokens 1) " tokens." " token.")]])
+     [:h5 [:span "Go back to "
+           [:a
+            {:style {:cursor "pointer"}
+             :onClick #(re-frame/dispatch [:notify {:message "To be implemented"}])}
+            "query"]
+           "."]]]
     [:div.col-lg-6.col-sm-6
      [:div.pull-right
       [bs/button-toolbar
