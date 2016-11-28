@@ -10,6 +10,7 @@
             [cosycat.components.ws :refer [send-clients send-client]]
             [taoensso.timbre :as timbre]))
 
+;;; General
 (defn new-project-route
   [{{project-name :project-name desc :description users :users} :params
     {{username :username} :identity} :session
@@ -20,32 +21,6 @@
      :source-client username
      :target-clients (map :username users))
     project))
-
-(defn add-user-route
-  [{{new-username :username role :role project-name :project-name} :params
-    {{username :username} :identity} :session
-    {db :db ws :ws} :components}]
-  (let [new-user {:username new-username :role role}
-        {:keys [users] :as project} (proj/add-user db username project-name new-user)]
-    (send-client                        ;send to added user
-     ws new-username
-     {:type :project-add-user :data {:project project} :by username})
-    (send-clients                       ;send to project users
-     ws {:type :project-new-user :data {:project-name project-name :user new-user} :by username}
-     :source-client username
-     :target-clients (->> users (map :username) (remove #(= new-username %))))
-    {:project-name project-name :user new-user}))
-
-(defn remove-user-route
-  [{{project-name :project-name} :params
-    {{username :username} :identity} :session
-    {db :db ws :ws} :components}]
-  (let [{:keys [users]} (proj/get-project db username project-name)]
-    (proj/remove-user db username project-name)
-    (send-clients
-     ws {:type :project-remove-user :data {:username username :project-name project-name}}
-     :source-client username
-     :target-clients (mapv :username users))))
 
 (defn remove-project-route
   [{{project-name :project-name} :params
@@ -60,24 +35,11 @@
          :source-client username
          :target-clients (mapv :username users))
         delete-payload)
-      (send-clients ws {:type :project-remove :data {:project-name project-name}}
+      (send-clients ws {:type :remove-project :data {:project-name project-name}}
        :source-client username
        :target-clients (mapv :username users)))))
 
-(defn update-user-role
-  [{{project-name :project-name username :username new-role :new-role} :params
-    {{issuer :username} :identity} :session
-    {db :db ws :ws} :components}]
-  (let [{:keys [users]} (proj/find-project-by-name db project-name)
-        project-user (proj/update-user-role db issuer project-name username new-role)
-        client-payload {:type :new-project-user-role
-                        :data {:username username :project-name project-name :role new-role}
-                        :by issuer}]
-    (send-clients ws client-payload
-     :source-client issuer
-     :target-clients (mapv :username users))
-    project-user))
-
+;;; Issues
 (defn add-project-issue-route
   [{{payload :payload project-name :project-name} :params
     {{username :username} :identity} :session
@@ -90,6 +52,31 @@
      :target-clients (map :username users))
     issue))
 
+;;; Issues :new-project-issue
+(defn open-annotation-edit-route
+  [{{issue-type :type project-name :project-name users :users
+     {:keys [_version _id] :as ann-data} :ann-data} :params
+    {{username :username} :identity} :session
+    {{db-conn :db :as db} :db ws :ws} :components}]
+  ;; check the target annotation is on sync
+  (check-sync-by-id db-conn (server-project-name project-name) _id _version)
+  ;; check annotation has already issue
+  (proj/check-annotation-has-issue db project-name _id)
+  (let [issue-payload {:by username
+                       :type issue-type
+                       :timestamp (System/currentTimeMillis)
+                       :status "open"
+                       :users users
+                       :data (assoc ann-data :username username)} ;match update-annotation signature
+        {project-users :users} (proj/get-project db username project-name)
+        issue (proj/add-project-issue db username project-name issue-payload)]
+    (send-clients
+     ws {:type :new-project-issue :data {:issue issue :project-name project-name} :by username}
+     :source-client username
+     :target-clients (map :username project-users))
+    issue))
+
+;;; Issues :update-project-issue
 (defn comment-on-project-issue-route
   [{{:keys [comment project-name issue-id parent-id]} :params
     {{username :username} :identity} :session
@@ -114,29 +101,7 @@
      :target-clients (map :username users))
     issue))
 
-(defn open-annotation-edit-route
-  [{{issue-type :type project-name :project-name users :users
-     {:keys [_version _id] :as ann-data} :ann-data} :params
-    {{username :username} :identity} :session
-    {{db-conn :db :as db} :db ws :ws} :components}]
-  ;; check the target annotation is on sync
-  (check-sync-by-id db-conn (server-project-name project-name) _id _version)
-  ;; check annotation has already issue
-  (proj/check-annotation-has-issue db project-name _id)
-  (let [issue-payload {:by username
-                       :type issue-type
-                       :timestamp (System/currentTimeMillis)
-                       :status "open"
-                       :users users
-                       :data (assoc ann-data :username username)} ;match update-annotation signature
-        {project-users :users} (proj/get-project db username project-name)
-        issue (proj/add-project-issue db username project-name issue-payload)]
-    (send-clients
-     ws {:type :new-project-issue :data {:issue issue :project-name project-name} :by username}
-     :source-client username
-     :target-clients (map :username project-users))
-    issue))
-
+;;; Issues :close-project-issue
 (defmulti resolve-annotation-issue (fn [db project-name {issue-type :type}] issue-type))
 
 (defmethod resolve-annotation-issue "annotation-edit"
@@ -156,42 +121,109 @@
     ;; send annotation update
     (send-clients
      ws {:type :annotation :data ann-payload}
-     :target-clients users)
+     :target-clients (map :username users))
     ;; send issue update
     (send-clients
      ws {:type :close-project-issue
          :data {:issue closed-issue :project-name project-name}
          :by username}
      :source-client username
-     :target-clients users)
+     :target-clients (map :username users))
     ;; send issue to source client
     closed-issue))
 
+;;; Users
+(defn add-user-route
+  [{{new-username :username role :role project-name :project-name} :params
+    {{username :username} :identity} :session
+    {db :db ws :ws} :components}]
+  (let [new-user {:username new-username :role role}
+        {:keys [users] :as project} (proj/add-user db username project-name new-user)]
+    (send-client                        ;send to added user
+     ws new-username
+     {:type :add-project-user :data {:project project} :by username})
+    (send-clients                       ;send to project users
+     ws {:type :new-project-user :data {:project-name project-name :user new-user} :by username}
+     :source-client username
+     :target-clients (->> users (map :username) (remove #(= new-username %))))
+    {:project-name project-name :user new-user}))
+
+(defn remove-user-route
+  [{{project-name :project-name} :params
+    {{username :username} :identity} :session
+    {db :db ws :ws} :components}]
+  (let [{:keys [users]} (proj/get-project db username project-name)]
+    (proj/remove-user db username project-name)
+    (send-clients
+     ws {:type :remove-project-user :data {:username username :project-name project-name}}
+     :source-client username
+     :target-clients (mapv :username users))))
+
+(defn update-user-role
+  [{{project-name :project-name username :username new-role :new-role} :params
+    {{issuer :username} :identity} :session
+    {db :db ws :ws} :components}]
+  (let [{:keys [users]} (proj/find-project-by-name db project-name)
+        project-user (proj/update-user-role db issuer project-name username new-role)
+        client-payload {:type :new-project-user-role
+                        :data {:username username :project-name project-name :role new-role}
+                        :by issuer}]
+    (send-clients ws client-payload
+     :source-client issuer
+     :target-clients (mapv :username users))
+    project-user))
+
 ;; Query metadata
 (defn new-query-metadata-route
-  [{{{username :username} :identity} :session {db :db} :components
+  [{{{username :username} :identity} :session {db :db ws :ws} :components
     {{query-str :query-str corpus :corpus :as query-data} :query-data
      project-name :project-name} :params}]
-  (let [{:keys [projects]} (proj/new-query-metadata db username project-name query-data)]
-    (->> (get-in projects [(keyword project-name) :queries])
-         (some (fn [{db-query-data :query-data :as query-metadata}]
-                 (when (and (= query-data db-query-data)) query-metadata))))))
+  (let [{:keys [users]} (proj/get-project db username project-name)
+        new-query (proj/new-query-metadata db username project-name query-data)]
+    (send-clients
+     ws {:type :new-query-metadata
+         :data {:query new-query :project-name project-name}
+         :by username}
+     :source-client username
+     :target-clients (map :username users))
+    new-query))
 
 (defn add-query-metadata-route
-  [{{{username :username} :identity} :session {db :db} :components
+  [{{{username :username} :identity} :session {db :db ws :ws} :components
     {id :id discarded :discarded project-name :project-name} :params}]
-  (let [payload (proj/add-query-metadata db username project-name {:id id :discarded discarded})]
-    payload))
+  (let [{:keys [users]} (proj/get-project db username project-name)
+        new-discarded (proj/add-query-metadata db username project-name {:id id :discarded discarded})]
+    (send-clients
+     ws {:type :add-query-metadata
+         :data {:query-id id :discarded new-discarded :project-name project-name}
+         :by username}
+     :source-client username
+     :target-clients (map :username users))
+    new-discarded))
 
 (defn remove-query-metadata-route
-  [{{{username :username} :identity} :session {db :db} :components
+  [{{{username :username} :identity} :session {db :db ws :ws} :components
     {id :id discarded :discarded project-name :project-name} :params}]
-  (let [payload (proj/remove-query-metadata db username project-name {:id id :discarded discarded})]))
+  (let [{:keys [users]} (proj/get-project db username project-name)]
+    (proj/remove-query-metadata db username project-name {:id id :discarded discarded})
+    (send-clients
+     ws {:type :remove-query-metadata
+         :data {:query-id id :discarded discarded :project-name project-name}
+         :by username}
+     :source-client username
+     :target-clients (map :username users))))
 
 (defn drop-query-metadata-route
-  [{{{username :username} :identity} :session {db :db} :components
+  [{{{username :username} :identity} :session {db :db ws :ws} :components
     {id :id project-name :project-name} :params}]
-  (let [payload (proj/drop-query-metadata db username project-name id)]))
+  (let [{:keys [users]} (proj/get-project db username project-name)]
+    (proj/drop-query-metadata db username project-name id)
+    (send-clients
+     ws {:type :drop-query-metadata
+         :data {:query-id id :project-name project-name}
+         :by username}
+     :source-client username
+     :target-clients (map :username users))))
 
 (defn project-routes []
   (routes

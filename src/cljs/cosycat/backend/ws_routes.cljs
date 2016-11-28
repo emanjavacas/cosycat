@@ -13,6 +13,7 @@
   `type` (:annotation :notify & other-routes) and `status` (:ok :error)"
   (fn [db {:keys [type status]}] type))
 
+;;; Annotations
 (defmethod ws-handler :annotation
   [db {:keys [data]}]
   (re-frame/dispatch [:add-annotation data])
@@ -23,6 +24,7 @@
   (re-frame/dispatch [:remove-annotation project hit-id key span])
   db)
 
+;;; Auth
 (defmethod ws-handler :info
   [db {{message :message} :data by :by}]
   (re-frame/dispatch
@@ -48,6 +50,8 @@
   (re-frame/dispatch [:notify {:message (get-msg [:logout] username) :by username}])
   db)
 
+;;; Projects
+;;; Projects general
 (defmethod ws-handler :new-project
   [db {{{creator :creator project-name :name :as project} :project} :data by :by}]
   (let [message (get-msg [:new-project] project-name creator)]
@@ -55,28 +59,7 @@
     (re-frame/dispatch [:notify {:message message :by by}])
     db))
 
-(defmethod ws-handler :project-add-user ;added user gets project data
-  [db {{{project-name :name :as project} :project} :data by :by}]
-  (re-frame/dispatch [:add-project project])
-  (re-frame/dispatch [:notify {:message (get-msg [:new-project] project-name by)}])
-  db)
-
-(defmethod ws-handler :project-remove-user
-  [db {{:keys [username project-name]} :data}]
-  (re-frame/dispatch [:remove-project-user {:username username :project-name project-name}])
-  (re-frame/dispatch
-   [:notify {:message (str username " has left project " project-name) :by username}])
-  db)
-
-(defmethod ws-handler :project-new-user ;existing users get new user data
-  [db {{project-name :project-name {role :role username :username :as user} :user} :data by :by}]
-  (re-frame/dispatch [:add-project-user {:user user :project-name project-name}])
-  (re-frame/dispatch
-   [:notify
-    {:message (format "\"%s\" has been added to project \"%s\" by \"%s\"" username project-name by)}])
-  db)
-
-(defmethod ws-handler :project-remove
+(defmethod ws-handler :remove-project
   [db {{:keys [project-name]} :data}]
   (let [active-project (get-in db [:session :active-project])
         message (format "Project \"%s\" was removed" project-name)]
@@ -88,38 +71,98 @@
       (re-frame/dispatch [:notify {:message message}])))
   db)
 
+;;; Projects issues
 (defmethod ws-handler :new-project-issue
   [db {{issue :issue project-name :project-name} :data by :by}]
   (re-frame/dispatch [:update-project-issue project-name issue])
   (re-frame/dispatch
-   [:notify {:message (format "Project \"%s\" has a new issue by \"%s\"" project-name by) :by by}])
+   [:notify {:message (format "Project \"%s\" has a new issue by \"%s\"" project-name by)
+             :by by}])
   db)
 
 (defmethod ws-handler :update-project-issue
   [db {{issue :issue project-name :project-name} :data by :by}]
   (re-frame/dispatch [:update-project-issue project-name issue])
   (re-frame/dispatch
-   [:notify {:message (format "Issue in project \"%s\" has an update by \"%s\"" project-name by) :by by}])
+   [:notify {:message (format "Issue in project \"%s\" has an update by \"%s\"" project-name by)
+             :by by}])
   db)
 
-(defmethod ws-handler :project-close-issue
+(defmethod ws-handler :close-project-issue
   [db {{issue :issue project-name :project-name} :data by :by}]
   (re-frame/dispatch [:update-project-issue project-name issue])
   (re-frame/dispatch
    [:notify {:message (format "\"%s\" has closed an issue in project \"%s\"" by project-name) :by by}])
   db)
 
+;;; Projects users
+(defmethod ws-handler :add-project-user ;added user gets project data
+  [db {{{project-name :name :as project} :project} :data by :by}]
+  (re-frame/dispatch [:add-project project])
+  (re-frame/dispatch [:notify {:message (get-msg [:new-project] project-name by)}])
+  db)
+
+(defmethod ws-handler :new-project-user ;existing users get new user data
+  [db {{project-name :project-name {role :role username :username :as user} :user} :data by :by}]
+  (re-frame/dispatch [:add-project-user {:user user :project-name project-name}])
+  (re-frame/dispatch
+   [:notify
+    {:message (format "\"%s\" has been added to project \"%s\" by \"%s\"" username project-name by)}])
+  db)
+
+(defmethod ws-handler :remove-project-user
+  [db {{:keys [username project-name]} :data}]
+  (re-frame/dispatch [:remove-project-user {:username username :project-name project-name}])
+  (re-frame/dispatch
+   [:notify {:message (str username " has left project " project-name) :by username}])
+  db)
+
 (defmethod ws-handler :new-project-user-role
   [db {{username :username project-name :project-name role :role} :data by :by}]
   (let [{{me :username} :me} db
-        user-text (if (= username me) "Your" username) ]
+        user-text (if (= username me) "Your" username)
+        msg-string "%s role in project \"%s\" has been changed to \"%s\" by %s"]
     (re-frame/dispatch [:update-project-user-role project-name username role])
     (re-frame/dispatch
-     [:notify {:message (format "%s role in project \"%s\" has been changed to \"%s\" by %s"
-                                user-text project-name role by)
-               :by by}])
+     [:notify {:message (format msg-string user-text project-name role by) :by by}])
     db))
 
+;;; Projects queries
+(defmethod ws-handler :new-query-metadata
+  [db {{query :query project-name :project-name} :data by :by}]
+  (re-frame/dispatch [:new-query-metadata {:query query :project-name project-name}])
+  (let [message (format "Project \"%s\" has new query annotation" project-name)]
+    (re-frame/dispatch [:notify {:message message :by by}]))
+  db)
+
+(defmethod ws-handler :add-query-metadata
+  [db {{query-id :query-id {discarded :hit} :discarded project-name :project-name} :data by :by}]
+  (re-frame/dispatch
+   [:add-query-metadata
+    {:query-id query-id :discarded discarded :project-name project-name}])
+  (let [message (format "\"%s\" has discarded a hit in a %s's query" by project-name)]
+    (re-frame/dispatch [:notify {:message message :by by}]))
+  db)
+
+(defmethod ws-handler :remove-query-metadata
+  [db {{query-id :query-id {discarded :hit} :discarded project-name :project-name} :data by :by}]
+  (re-frame/dispatch
+   [:remove-query-metadata
+    {:query-id query-id
+     :discarded discarded
+     :project-name project-name}])
+  (let [message (format "\"%s\" has removed added back a hit to a %s's query" by project-name)]
+    (re-frame/dispatch [:notify {:message message :by by}]))
+  db)
+
+(defmethod ws-handler :drop-query-metadata
+  [db {{query-id :query-id project-name :project-name} :data by :by}]
+  (re-frame/dispatch [:drop-query-metadata {:query-id query-id :project-name project-name}])
+  (let [message (format "A query annotation was dropped in project %s" project-name)]
+    (re-frame/dispatch [:notify {:message message :by by}]))
+  db)
+
+;;; Users
 (defmethod ws-handler :new-user-avatar
   [db {{username :username avatar :avatar} :data}]
   (re-frame/dispatch [:new-user-avatar {:username username :avatar avatar}])

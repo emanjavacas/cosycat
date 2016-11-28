@@ -3,7 +3,7 @@
             [schema.coerce :as coerce]
             [taoensso.timbre :as timbre]
             [cosycat.app-utils :refer [deep-merge]]
-            [cosycat.schemas.user-schemas :refer [settings-schema queries-schema query-id-schema]]
+            [cosycat.schemas.user-schemas :refer [settings-schema]]
             [cosycat.schemas.event-schemas :refer [event-schema event-id-schema]]
             [cosycat.schemas.results-schemas :refer [query-results-schema]]))
 
@@ -49,7 +49,7 @@
   {:query-data {:query-str s/Str :corpus s/Str}
    :id query-id-schema
    :timestamp s/Int
-   :discarded #?(:clj [{:timestamp s/Int :hit s/Any}]
+   :discarded #?(:clj [{:timestamp s/Int :hit s/Any :by s/Str}]
                  :cljs #{s/Any})})
 
 ;;; project session schemas

@@ -256,6 +256,7 @@
   (-> (mc/find-and-modify
        db-conn (:projects colls)
        {"name" project-name}
+       ;; atomically add event to project
        {$push {"users" user "events" (new-user-event username)}}
        {:return-new true})
       normalize-project))
@@ -273,7 +274,8 @@
           db-conn (:projects colls)
           {"users.username" username "name" project-name}
           {$set {"users.$.role" new-role}
-           $push {"events" (new-user-role-event username new-role)}} ;atomically add event to project
+           ;; atomically add event to project
+           $push {"events" (new-user-role-event username new-role)}}
           {:return-new true})
          :users
          (filter #(= username (:username %)))
@@ -291,6 +293,7 @@
    db-conn (:projects colls)
    {"name" project-name}
    {$pull {"users" {"username" username}}
+    ;; atomically add event to project
     $push {"events" (remove-user-event username)}}))
 
 ;;; Issues
@@ -429,32 +432,32 @@
   [{db-conn :db :as db} username project-name query-data]
   (check-user-in-project db username project-name)  
   (let [now (System/currentTimeMillis), id (new-uuid)
-        payload {:query-data query-data :id id :discarded [] :timestamp now :creator username}]
+        query-metadata {:query-data query-data :id id :discarded [] :timestamp now :creator username}]
    (check-query-exists db project-name query-data)
    (mc/find-and-modify
     db-conn (:projects colls)
     {:name project-name}
-    {$push {:queries payload}}
-    {:return-new true})))
+    {$push {:queries query-metadata}}
+    {:return-new false})
+   query-metadata))
 
 (defn add-query-metadata
   [{db-conn :db :as db} username project-name {:keys [id discarded] :as payload}]
   (check-user-in-project db username project-name)
-  (let [new-discard {:hit discarded :timestamp (System/currentTimeMillis) :by username}]
+  (let [new-discarded {:hit discarded :timestamp (System/currentTimeMillis) :by username}]
     (mc/update
      db-conn (:projects colls)
      {:name project-name "queries.id" id}
-     {$push {"queries.$.discarded" new-discard}})
-    new-discard))
+     {$push {"queries.$.discarded" new-discarded}})
+    new-discarded))
 
 (defn remove-query-metadata
   [{db-conn :db :as db} username project-name {:keys [id discarded] :as payload}]
   (check-user-in-project db username project-name)  
-  (mc/find-and-modify
+  (mc/update
    db-conn (:projects colls)
    {:name project-name "queries.id" id}
-   {$pull {"queries.$.discarded" {"hit" discarded}}}
-   {:return-new true}))
+   {$pull {"queries.$.discarded" {"hit" discarded}}}))
 
 (defn drop-query-metadata
   [{db-conn :db :as db} username project-name query-id]

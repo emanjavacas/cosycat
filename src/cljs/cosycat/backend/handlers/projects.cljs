@@ -2,14 +2,16 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [ajax.core :refer [POST]]
-            [cosycat.utils :refer [format]]
+            [cosycat.utils :refer [format current-results]]
             [cosycat.app-utils :refer [get-pending-users deep-merge update-coll]]
             [cosycat.routes :refer [nav!]]
-            [cosycat.backend.handlers.users :refer [normalize-query-metadata]]
             [cosycat.backend.middleware :refer [standard-middleware check-project-exists]]
             [cosycat.backend.db
              :refer [default-project-session default-project-history default-settings]]
             [taoensso.timbre :as timbre]))
+
+(defn normalize-query-metadata [{:keys [discarded] :as query-metadata}]
+  (assoc query-metadata :discarded (set (map :hit discarded))))
 
 (defn normalize-queries [queries]
   (reduce-kv
@@ -267,3 +269,110 @@
             :handler (handle-new-user-role project-name)
             :error-handler error-handler})
      db)))
+
+;;; Query metadata
+(re-frame/register-handler
+ :new-query-metadata
+ standard-middleware
+ (fn [db [_ {{:keys [id] :as query-metadata} :query project-name :project-name}]]
+   (let [normalized-query-metadata (normalize-query-metadata query-metadata)]
+     (assoc-in db [:projects project-name :queries id] normalized-query-metadata))))
+
+(defn query-new-metadata-handler [project-name]
+  (fn [{:keys [id] :as query-metadata}]
+    (re-frame/dispatch [:set-active-query id])
+    (re-frame/dispatch [:new-query-metadata {:query query-metadata :project-name project-name}])))
+
+(defn query-new-metadata-error-handler [{{:keys [message code data]} :response}]
+  (re-frame/dispatch [:notify {:message message}]))
+
+(re-frame/register-handler
+ :query-new-metadata
+ (fn [db _]
+   (let [active-project (get-in db [:session :active-project])
+         {:keys [corpus]} (get-in db [:settings :query])         
+         {query-str :query-str} (current-results db)]
+     (POST "/project/queries/new-query-metadata"
+           {:params {:project-name active-project
+                     :query-data {:query-str query-str :corpus corpus}}
+            :handler (query-new-metadata-handler active-project)
+            :error-handler query-new-metadata-error-handler}))
+   db))
+
+(re-frame/register-handler
+ :add-query-metadata
+ standard-middleware
+ (fn [db [_ {:keys [query-id discarded project-name]}]]
+   (update-in db [:projects project-name :queries query-id :discarded] conj discarded)))
+
+(defn query-add-metadata-handler [project-name]
+  (fn [{query-id :query-id {discarded :hit} :discarded}]
+    (re-frame/dispatch
+     [:add-query-metadata
+      {:query-id query-id :discarded discarded :project-name project-name}])))
+
+(re-frame/register-handler
+ :query-add-metadata
+ standard-middleware
+ (fn [db [_ hit-id query-id]]
+   (let [active-project (get-in db [:session :active-project])]
+     (POST "/project/queries/add-query-metadata"
+           {:params {:project-name active-project
+                     :id query-id
+                     :discarded hit-id}
+            :handler (query-add-metadata-handler active-project)
+            :error-handler #(timbre/error "Error when storing query metadata")}))
+   db))
+
+(re-frame/register-handler
+ :remove-query-metadata
+ standard-middleware
+ (fn [db [_ {:keys [query-id discarded project-name]}]]
+   (update-in db [:projects project-name :queries query-id :discarded] disj discarded)))
+
+(re-frame/register-handler
+ :query-remove-metadata
+ (fn [db [_ hit-id query-id]]
+   (let [active-project (get-in db [:session :active-project])]
+     (POST "/users/remove-query-metadata"
+           {:params {:project-name active-project
+                     :id query-id
+                     :discarded hit-id}
+            :handler #(re-frame/dispatch
+                       [:remove-query-metadata
+                        {:query-id query-id :discarded hit-id :project-name active-project}])
+            :error-handler #(timbre/error "Error when removing query metadata")}))
+   db))
+
+(re-frame/register-handler
+ :drop-query-metadata
+ standard-middleware
+ (fn [db [_ {:keys [query-id project-name]}]]
+   (let [active-query (get-in db [:projects project-name :session :components :active-query])]
+     (cond-> db
+       (= active-query query-id) (update-in
+                                  [:projects project-name :session :components]
+                                  dissoc :active-query)
+       true (update-in [:projects project-name :queries] dissoc query-id)))))
+
+(re-frame/register-handler
+ :query-drop-metadata
+ (fn [db [_ query-id]]
+   (let [active-project (get-in db [:session :active-project])]
+     (POST "/users/drop-query-metadata"
+           {:params {:project-name active-project :id query-id}
+            :handler #(re-frame/dispatch
+                       [:drop-query-metadata
+                        {:query-id query-id :project-name active-project}])
+            :error-handler #(timbre/error "Error when droping query metadata")})
+     db)))
+
+(re-frame/register-handler
+ :launch-query-from-metadata
+ (fn [db [_ query-id]]
+   (let [active-project (get-in db [:session :active-project])
+         query (get-in db [:projects active-project :queries query-id])]
+     (if-let [{{query-str :query-str} :query-data} query]
+       (do (set! (.-value (.getElementById js/document "query-str")) query-str)
+           (re-frame/dispatch [:query query-str :set-active query-id]))))
+   db))

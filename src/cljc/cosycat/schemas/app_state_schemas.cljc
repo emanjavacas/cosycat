@@ -3,7 +3,7 @@
             [schema.spec.core :as spec]
             [schema.spec.collection :as coll]
             [cosycat.schemas.project-schemas :refer [project-schema]]
-            [cosycat.schemas.user-schemas :refer [user-schema settings-schema query-id-schema]]))
+            [cosycat.schemas.user-schemas :refer [user-schema settings-schema]]))
 
 ;;; users
 (def public-user-schema

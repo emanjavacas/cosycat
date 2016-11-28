@@ -27,7 +27,6 @@
 
 (def user-project-schema   ;server-only (get merged with project in the client)
   {:settings settings-schema            ;project-specific settings
-   :queries [queries-schema]            ;query-related metadata
    :events [event-schema]})             ;user-specific project events (queries, etc.)
 
 (def user-schema
