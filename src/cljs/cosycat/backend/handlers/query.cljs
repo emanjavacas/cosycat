@@ -107,6 +107,7 @@
  :query
  (fn [db [_ query-str & {:keys [set-active] :or {set-active false}}]]
    (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:settings :query])]
+     (re-frame/dispatch [:unset-query-results])
      (re-frame/dispatch [:start-throbbing :results-frame])
      (if set-active
        (re-frame/dispatch [:set-active-query set-active])
