@@ -14,7 +14,7 @@
        {:id "dropdown"
         :pullRight true
         :disabled (boolean (empty? @queries))
-        :onSelect #(re-frame/dispatch [:launch-query %2])}
+        :onSelect #(re-frame/dispatch [:launch-query-from-metadata %2])}
        [bs/dropdown-toggle
         {:noCaret true}
         [bs/glyphicon {:glyph "chevron-down"}]]
