@@ -60,7 +60,7 @@ if __name__ == '__main__':
         except NotImplementedError:
             print("Functionality is not yet implemented... :-(")
         except ParseError as e:
-            print("Bad input \'{value}', expected format is \'{expected}\'".
+            print("Bad input [{value}], expected format is [{expected}]".
                   format(value=e.value, expected=e.expected))
         except AssertionError as e:
             print("Bad input value: {assertion}".format(assertion=e))
