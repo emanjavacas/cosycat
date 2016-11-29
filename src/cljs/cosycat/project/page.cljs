@@ -46,10 +46,9 @@
      (when (can-delete-project? @my-role) [delete-project-btn])
      [leave-project-btn]]))
 
-(defn project-header [{:keys [creator]}]
-  (let [creator (re-frame/subscribe [:user creator :username])
-        my-role (re-frame/subscribe [:active-project-role])]
-    (fn [{:keys [name description created]}]
+(defn project-header [{:keys [name description created creator] :as project}]
+  (let [my-role (re-frame/subscribe [:active-project-role])]
+    (fn [{:keys [name description created creator] :as project}]
       [:div.container-fluid
        [:div.row
         [:div.col-lg-6.col-md-6.col-sm-6
@@ -58,7 +57,7 @@
           [:div.row {:style {:margin-top "15px"}} [:p description]]
           [:div.row
            [:p.text-muted
-            "Created by " [:strong @creator] " on " [:span (human-time created)]]]]]
+            "Created by " [:strong creator] " on " [:span (human-time created)]]]]]
         [:div.col-lg-6 [:div.pull-right [project-buttons my-role]]]]
        [:div.row [:div.col-lg-12 [:hr]]]])))
 
