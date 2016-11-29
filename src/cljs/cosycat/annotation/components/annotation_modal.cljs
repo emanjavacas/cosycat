@@ -191,12 +191,13 @@
             [:hr]
             [token-counts-table marked-tokens {:current-ann current-ann :me me}]]]]         
          [bs/modal-footer
-          [:div.input-group.pull-left
-           [:input
-            {:type "checkbox"
-             :checked @unselect-checked?
-             :on-change #(swap! unselect-checked? not)}]
-           [:span.text-muted " Unselect after dispatch?"]]
+          [:div.checkbox.pull-left
+           [:label
+            [:input
+             {:type "checkbox"
+              :checked @unselect-checked?
+              :on-change #(swap! unselect-checked? not)}]
+            [:span.text-muted "Unselect after dispatch?"]]]
           [bs/button
            {:className "pull-right"
             :bsStyle "info"
