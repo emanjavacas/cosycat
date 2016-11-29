@@ -298,23 +298,50 @@ class Finder(object):
     def do_count(self, args):
         """
         Count annotations using the current filters.
+        Specify a project to get only counts for that project:
+          count myProject
+        Multiple projects can be specified with commas:
+          count myProject,projectTest,otherProject
         """
         assert args, "Specify a project (e.g. GET) or 'all' for all projects"
-        project_count = "Found [{result}] annotations in project '{project}'"
-
-        def display_count(project):
-            result = project.find(self.query_filters()).count()
-            print(project_count.format(
-                result=result,
-                project=self.get_project_name(project.name)))
+        count_text = "Found [{result}] annotations in project '{name}'"
 
         if self.verbose:
             pprint(self.query_filters())
 
         project, *rest = args
+        rest_args = parse_rest(rest, {'groupby': ['key1,key2,etc'],
+                                      'output':  ['filename']})
         if project == 'all':
-            for project in self.get_projects():
-                display_count(project)
+            projects = self.get_project_names()
         else:
+            projects = project.split(',')
+        output = {}
+        for project_name in projects:
             project = self.get_project(project)
-            display_count(project)
+            if 'groupby' not in rest_args:
+                result = project.find(self.query_filters()).count()
+                output[project_name] = result
+            else:
+                keys = rest_args['groupby']['key1,key2,etc'].split(',')
+                groupkeys = {k: "$" + k for k in keys}
+                result = project.aggregate(
+                    [{"$match": self.query_filters()},
+                     {"$group": {"key": groupkeys, "count": {"$sum": 1}}}]
+                )
+                output[project_name] = list(result)
+            if 'output' in rest_args:
+                raise NotImplementedError()
+            else:
+                if 'groupby' not in rest_args:
+                    for project, result in output.items():
+                        print(count_text.format(result=result, name=project))
+                else:
+                    for project, result in output.items():
+                        print(project + "\n")
+                        header = list(sorted(result[0]['_id'].keys()))
+                        print('%-10s' * len(header) % tuple(header))
+                        for line in result:
+                            vals = [result['_id'][k] for k in header]
+                            print('%-10s' * len(header) % tuple(vals)
+                                  + '%-10d' % result['count'])
