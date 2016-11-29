@@ -72,6 +72,7 @@ class Finder(object):
             print("    " + sugg)
 
     def query_filters(self):
+        """Parse currently stored filter values into a pymongo query dict"""
         def filter_value(val):
             if len(val) == 1:
                 filter_val = val[0]
@@ -152,7 +153,8 @@ class Finder(object):
 
     def do_show(self, args):
         """
-        Show the current value of a particular settings (e.g. filters)"""
+        Show the current value of a particular settings (e.g. filters).
+        """
         vals = ('filters', 'sort')
         assert len(args) == 1, "Specify at least one value"
         assert args[0] in vals, "Specify one of {vals}".format(vals=vals)
@@ -171,7 +173,12 @@ class Finder(object):
         Add a filter to the query.
         Multiple filters can be added using the following syntax:
           filter key1:value key2:value ...
-        Possible keys are [username, corpus, query]"""
+        Input a key to clear the filter for that key:
+          filter username
+        Input no arguments to clear all filters:
+          filter
+        Possible keys are [username, corpus, query]
+        """
 
         ALREADY_EXISTS = \
             "A value for filter {key} already exists, " + \
@@ -212,7 +219,7 @@ class Finder(object):
           sort field1:asc field2:des
         Specify `asc` or `des` for ascending or descending order.
         Order defaults to descending order.
-        Possible value for field are [timestamp,username,corpus].
+        Possible value for field are [timestamp, username, corpus].
         """
         orders = ('asc', 'des')
         for arg in args:
@@ -281,7 +288,7 @@ class Finder(object):
 
     def do_projects(self, args):
         """
-        Do operations on projects.
+        Show information about projects
           projects: show existing projects
         """
         if len(args) == 0:
