@@ -26,14 +26,9 @@
            (neg?  new-from) [0 (+ new-from page-size)]
            :else            [new-from from]))))
 
-(defn merge-hit [old-hit new-hit]
-  (if (get-in old-hit [:meta :marked])
-    (assoc-in new-hit [:meta :marked] true)
-    new-hit))
-
-(defn with-query-str
+(defn maybe-assoc-query-str
   "on incoming hits (potentially after new query) check if a marked hit from previous
-   query has its corresponding query-str in meta, and add it, otherwise return."
+   query has its corresponding query-str in meta, and add it to the new hit, otherwise return."
   [{{hit-query-str :query-str} :meta :as hit} query-str]
   (if-not hit-query-str
     (assoc-in hit [:meta :query-str] query-str)
@@ -45,9 +40,16 @@
    query-str metadata to each hit regardless their being marked."
   [old-results results current-query-str]
   (let [new-results (zipmap (map :id results) results)] ;normalized results
-    (reduce-kv (fn [m k v]
-                 (if (get-in old-results [k :meta :marked])
-                   (assoc m k (with-query-str v current-query-str))
+    (reduce-kv (fn [m hit-id old-hit]
+                 (if (get-in old-hit [:meta :marked])
+                   (let [new-hit (->
+                                  ;; use new hit for numeration in case new-hit was in old-results
+                                  (or (get new-results hit-id) old-hit)
+                                  ;; preserve marked meta information
+                                  (assoc-in [:meta :marked] true)
+                                  ;; update query-str if necessary
+                                  (maybe-assoc-query-str current-query-str))]
+                     (assoc m hit-id new-hit))
                    m))
                new-results
                old-results)))
