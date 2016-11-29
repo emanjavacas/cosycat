@@ -17,6 +17,32 @@ class ParseError(Exception):
         self.expected = expected
 
 
+def parse_rest(rest, schema):
+    """
+    Recursively parse a list of rest arguments according to a schema.
+    A schema is a dict from optional argument to a list of corresponding
+    positional values:
+     {'output': ['filename']}
+    Returns a dict from optional arguments to dicts of positional argument
+    name to positional argument value.
+    """
+    def rec(rest, acc):
+        if not rest:
+            return acc
+        arg = rest.pop(0)
+        if arg in schema:
+            try:
+                acc[arg] = {subarg: rest.pop(0) for subarg in schema[arg]}
+                rec(rest, acc)
+            except IndexError:
+                value = " ".join([arg] + list(acc[arg].values()))
+                expected = " ".join([arg] + list(schema[arg].keys()))
+                raise ParseError(value, expected)
+        else:
+            raise ParseError(arg, "One of " + ", ".join(schema.keys()))
+    return rec(rest, {})
+
+
 class Finder(object):
     def __init__(self, uri, verbose=True, timeout=3, **kwargs):
         self.uri = uri
