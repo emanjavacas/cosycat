@@ -176,10 +176,10 @@
 ;; Query metadata
 (defn new-query-metadata-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components
-    {{query-str :query-str corpus :corpus :as query-data} :query-data
-     project-name :project-name} :params}]
+    {{:keys [query-str corpus filter-opts sort-opts] :as query-data} :query-data
+     project-name :project-name id :id default :default :or {query-default "unseen"}} :params}]
   (let [{:keys [users]} (proj/get-project db username project-name)
-        new-query (proj/new-query-metadata db username project-name query-data)]
+        new-query (proj/new-query-metadata db username project-name id query-data default)]
     (send-clients
      ws {:type :new-query-metadata
          :data {:query new-query :project-name project-name}
@@ -188,30 +188,18 @@
      :target-clients (map :username users))
     new-query))
 
-(defn add-query-metadata-route
+(defn update-query-metadata-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components
-    {id :id discarded :discarded project-name :project-name} :params}]
+    {:keys [id hit-id status hit-num project-name]} :params}]
   (let [{:keys [users]} (proj/get-project db username project-name)
-        new-discarded (proj/add-query-metadata db username project-name {:id id :discarded discarded})]
+        _ (proj/update-query-metadata db username project-name id hit-id hit-num status)]
     (send-clients
-     ws {:type :add-query-metadata
-         :data {:query-id id :discarded new-discarded :project-name project-name}
+     ws {:type :update-query-metadata
+         :data {:id id :hit-id hit-id :status status :hit-num hit-num :project-name project-name}
          :by username}
      :source-client username
      :target-clients (map :username users))
-    new-discarded))
-
-(defn remove-query-metadata-route
-  [{{{username :username} :identity} :session {db :db ws :ws} :components
-    {id :id discarded :discarded project-name :project-name} :params}]
-  (let [{:keys [users]} (proj/get-project db username project-name)]
-    (proj/remove-query-metadata db username project-name {:id id :discarded discarded})
-    (send-clients
-     ws {:type :remove-query-metadata
-         :data {:query-id id :discarded discarded :project-name project-name}
-         :by username}
-     :source-client username
-     :target-clients (map :username users))))
+    {:hit-id hit-id :status status :id id}))
 
 (defn drop-query-metadata-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components
@@ -220,7 +208,7 @@
     (proj/drop-query-metadata db username project-name id)
     (send-clients
      ws {:type :drop-query-metadata
-         :data {:query-id id :project-name project-name}
+         :data {:id id :project-name project-name}
          :by username}
      :source-client username
      :target-clients (map :username users))))
@@ -234,10 +222,9 @@
       (POST "/remove-project" [] (make-default-route remove-project-route))
       (POST "/update-user-role" [] (make-default-route update-user-role))
       (context "/queries" []
-        (POST "/new-query-metadata" [] (make-default-route new-query-metadata-route))
-        (POST "/add-query-metadata" [] (make-default-route add-query-metadata-route))
-        (POST "/remove-query-metadata" [] (make-default-route remove-query-metadata-route))
-        (POST "/drop-query-metadata" [] (make-default-route drop-query-metadata-route)))
+        (POST "/new" [] (make-default-route new-query-metadata-route))
+        (POST "/update" [] (make-default-route update-query-metadata-route))
+        (POST "/drop" [] (make-default-route drop-query-metadata-route)))
       (context "/issues" []
         (POST "/new" [] (make-default-route add-project-issue-route))
         (context "/comment" []

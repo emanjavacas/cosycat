@@ -10,8 +10,9 @@
              :refer [default-project-session default-project-history default-settings]]
             [taoensso.timbre :as timbre]))
 
-(defn normalize-query-metadata [{:keys [discarded] :as query-metadata}]
-  (assoc query-metadata :discarded (set (map :hit discarded))))
+(defn normalize-query-metadata [{hits :hits :as query-metadata}]
+  (let [{:keys [kept discarded]} (group-by :status (vals hits))]
+    (assoc query-metadata :hits {:kept (set (map :hit kept)) :discarded (set (map :hit discarded))})))
 
 (defn normalize-queries [queries]
   (reduce-kv
@@ -288,82 +289,70 @@
 
 (re-frame/register-handler
  :query-new-metadata
- (fn [db _]
+ (fn [db [_ {:keys [id include-sort-opts? include-filter-opts? default]}]]
    (let [active-project (get-in db [:session :active-project])
-         {:keys [corpus]} (get-in db [:settings :query])         
+         {:keys [corpus filter-opts sort-opts]} (get-in db [:settings :query])         
          {query-str :query-str} (current-results db)]
-     (POST "/project/queries/new-query-metadata"
-           {:params {:project-name active-project
-                     :query-data {:query-str query-str :corpus corpus}}
+     (POST "/project/queries/new"
+           {:params (cond-> {:project-name active-project
+                             :id id
+                             :query-data (cond-> {:query-str query-str :corpus corpus}
+                                           include-sort-opts?   (assoc :sort-opts sort-opts)
+                                           include-filter-opts? (assoc :filter-opts filter-opts))}
+                      default (assoc :default default))
             :handler (query-new-metadata-handler active-project)
             :error-handler query-new-metadata-error-handler}))
    db))
 
 (re-frame/register-handler
- :add-query-metadata
+ :update-query-metadata
  standard-middleware
- (fn [db [_ {:keys [query-id discarded project-name]}]]
-   (update-in db [:projects project-name :queries query-id :discarded] conj discarded)))
+ (fn [db [_ {:keys [project-name id hit-id status]}]]
+   (let [query-default (get-in db [:projects project-name :queries id :default])
+         path [:projects project-name :queries id :hits]
+         other-status (if (= status "discarded") "kept" "discarded")]
+     (cond-> db
+       true                       (update-in (into path (keyword status))       conj hit-id)
+       (= query-default "unseen") (update-in (into path (keyword other-status)) disj hit-id)))))
 
-(defn query-add-metadata-handler [project-name]
-  (fn [{query-id :query-id {discarded :hit} :discarded}]
+(defn query-update-metadata-handler [project-name]
+  (fn [{:keys [id hit-id status]}]
     (re-frame/dispatch
-     [:add-query-metadata
-      {:query-id query-id :discarded discarded :project-name project-name}])))
+     [:update-query-metadata {:project-name project-name :id id :hit-id hit-id :status status}])))
 
 (re-frame/register-handler
- :query-add-metadata
+ :query-update-metadata
  standard-middleware
- (fn [db [_ hit-id query-id]]
+ (fn [db [_ hit-id id status hit-num]]
    (let [active-project (get-in db [:session :active-project])]
-     (POST "/project/queries/add-query-metadata"
+     (POST "/project/queries/update"
            {:params {:project-name active-project
-                     :id query-id
-                     :discarded hit-id}
-            :handler (query-add-metadata-handler active-project)
+                     :id id
+                     :hit-id hit-id
+                     :status status
+                     :hit-num hit-num}
+            :handler (query-update-metadata-handler active-project)
             :error-handler #(timbre/error "Error when storing query metadata")}))
-   db))
-
-(re-frame/register-handler
- :remove-query-metadata
- standard-middleware
- (fn [db [_ {:keys [query-id discarded project-name]}]]
-   (update-in db [:projects project-name :queries query-id :discarded] disj discarded)))
-
-(re-frame/register-handler
- :query-remove-metadata
- (fn [db [_ hit-id query-id]]
-   (let [active-project (get-in db [:session :active-project])]
-     (POST "/users/remove-query-metadata"
-           {:params {:project-name active-project
-                     :id query-id
-                     :discarded hit-id}
-            :handler #(re-frame/dispatch
-                       [:remove-query-metadata
-                        {:query-id query-id :discarded hit-id :project-name active-project}])
-            :error-handler #(timbre/error "Error when removing query metadata")}))
    db))
 
 (re-frame/register-handler
  :drop-query-metadata
  standard-middleware
- (fn [db [_ {:keys [query-id project-name]}]]
+ (fn [db [_ {:keys [id project-name]}]]
    (let [active-query (get-in db [:projects project-name :session :components :active-query])]
      (cond-> db
-       (= active-query query-id) (update-in
-                                  [:projects project-name :session :components]
-                                  dissoc :active-query)
-       true (update-in [:projects project-name :queries] dissoc query-id)))))
+       ;; unset active-query if it's dropped query
+       (= active-query id) (update-in [:projects project-name :session :components] dissoc :active-query)
+       ;; remove query from db
+       true (update-in [:projects project-name :queries] dissoc id)))))
 
 (re-frame/register-handler
  :query-drop-metadata
  (fn [db [_ query-id]]
    (let [active-project (get-in db [:session :active-project])]
-     (POST "/users/drop-query-metadata"
+     (POST "/project/queries/drop"
            {:params {:project-name active-project :id query-id}
-            :handler #(re-frame/dispatch
-                       [:drop-query-metadata
-                        {:query-id query-id :project-name active-project}])
+            :handler #(re-frame/dispatch [:drop-query-metadata {:id query-id :project-name active-project}])
             :error-handler #(timbre/error "Error when droping query metadata")})
      db)))
 

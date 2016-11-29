@@ -135,29 +135,18 @@
     (re-frame/dispatch [:notify {:message message :by by}]))
   db)
 
-(defmethod ws-handler :add-query-metadata
-  [db {{query-id :query-id {discarded :hit} :discarded project-name :project-name} :data by :by}]
+(defmethod ws-handler :update-query-metadata
+  [db {{:keys [id hit-id status hit-num project-name]} :data by :by}]
   (re-frame/dispatch
-   [:add-query-metadata
-    {:query-id query-id :discarded discarded :project-name project-name}])
+   [:update-query-metadata
+    {:id id :hit-id hit-id :status status :project-name project-name}])
   (let [message (format "\"%s\" has discarded a hit in a %s's query" by project-name)]
     (re-frame/dispatch [:notify {:message message :by by}]))
   db)
 
-(defmethod ws-handler :remove-query-metadata
-  [db {{query-id :query-id {discarded :hit} :discarded project-name :project-name} :data by :by}]
-  (re-frame/dispatch
-   [:remove-query-metadata
-    {:query-id query-id
-     :discarded discarded
-     :project-name project-name}])
-  (let [message (format "\"%s\" has removed added back a hit to a %s's query" by project-name)]
-    (re-frame/dispatch [:notify {:message message :by by}]))
-  db)
-
 (defmethod ws-handler :drop-query-metadata
-  [db {{query-id :query-id project-name :project-name} :data by :by}]
-  (re-frame/dispatch [:drop-query-metadata {:query-id query-id :project-name project-name}])
+  [db {{:keys [id project-name]} :data by :by}]
+  (re-frame/dispatch [:drop-query-metadata {:id id :project-name project-name}])
   (let [message (format "A query annotation was dropped in project %s" project-name)]
     (re-frame/dispatch [:notify {:message message :by by}]))
   db)

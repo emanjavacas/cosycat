@@ -2,7 +2,7 @@
   (:require [cosycat.routes.utils :refer [safe]]
             [cosycat.components.ws :refer [add-active-info]]
             [cosycat.db.users :refer [user-login-info users-public-info user-settings]]
-            [cosycat.db.projects :refer [get-projects]]
+            [cosycat.db.projects :refer [get-projects mongo-id->hit-id]]
             [cosycat.db.utils :refer [normalize-user]]
             [cosycat.app-utils :refer [dekeyword normalize-by]]
             [cosycat.utils :refer [join-path]]
@@ -13,7 +13,7 @@
             [clojure.walk :refer [keywordize-keys]]
             [clojure.data.json :as json]))
 
-;;; exceptions
+;;; Exceptions
 (defn ex-wrong-format []
   (ex-info "Wrong config file" {:error "wrong config file format"}))
 
@@ -53,7 +53,8 @@
       (timbre/info (format "Failed fetching corpus info for server [%s]" server))
       [])))
 
-;;; normalizers
+;;; Normalizers
+;;; Normalizers: tagsets
 (defn session-tagsets [tagset-paths]
   (if-let [dirs tagset-paths]
     (vec (for [dir dirs
@@ -62,6 +63,7 @@
                :let [abspath (join-path dir (.getName f))]]
            (-> abspath slurp json/read-str keywordize-keys)))))
 
+;;; Normalizers: corpora
 (defmulti session-corpus find-corpus-config-format)
 
 (defmethod session-corpus :short
@@ -77,31 +79,47 @@
 (defn session-corpora []
   (or (->> (env :corpora) (mapcat session-corpus) distinct vec) []))
 
+;;; Normalizers: users
 (defn session-users [db ws username]
   (let [users (->> (users-public-info db username)
+                   ;; remove me to separate user
                    (remove (fn [user] (= username (:username user))))
+                   ;; add active info
                    (mapv (fn [user] (add-active-info ws user))))]
     (normalize-by users :username)))
 
-(defn- get-user-project-settings [user-projects project-name]
+;;; Normalizers: projects
+(defn normalize-project-queries [{:keys [queries] :as project}]
+  (let [queries (-> ;; transform internal mongo-db-escaped hit-ids to normal hit-id
+                 (mapv (fn [{:keys [hits] :as query}]
+                         (let [normalized-hits (reduce-kv (fn [m k v] (assoc m (mongo-id->hit-id k) v)) {} hits)]
+                           (assoc query :hits normalized-hits)))
+                       queries)
+                 ;; normalize queries by id
+                 (normalize-by :id))]
+    (assoc project :queries queries)))
+
+(defn normalize-queries [projects]
+  (mapv normalize-project-queries projects))
+
+(defn get-user-project-settings [user-projects project-name]
   (get-in user-projects [(keyword project-name) :settings]))
 
-(defn- get-user-project-queries [user-projects project-name]
-  (-> (get-in user-projects [(keyword project-name) :queries])
-      (normalize-by :id)))
-
-(defn- merge-user-projects [projects user-projects]
+(defn merge-user-projects
+  "merge user-specific project info into project"
+  [projects user-projects]
   (mapv (fn [{:keys [name] :as project}]
-          (let [user-project-settings (get-user-project-settings user-projects name)
-                user-project-queries (get-user-project-queries user-projects name)]
+          (let [user-project-settings (get-user-project-settings user-projects name)]
             (cond-> project
-              user-project-settings (assoc :settings user-project-settings)
-              user-project-queries (assoc :queries user-project-queries))))
+              user-project-settings (assoc :settings user-project-settings))))
         projects))
 
 (defn session-projects [db username {user-projects :projects :as me}]
-  (-> (get-projects db username) (merge-user-projects user-projects)))
+  (-> (get-projects db username)
+      normalize-queries
+      (merge-user-projects user-projects)))
 
+;;; Normalizers: settings
 (defn session-settings [me]
   (get me :settings {}))
 

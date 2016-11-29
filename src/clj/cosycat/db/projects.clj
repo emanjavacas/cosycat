@@ -4,9 +4,9 @@
             [schema.core :as s]
             [cosycat.vcs :as vcs]
             [cosycat.utils :refer [new-uuid]]
-            [cosycat.app-utils :refer [server-project-name get-pending-users]]
+            [cosycat.app-utils :refer [server-project-name get-pending-users dekeyword]]
             [cosycat.schemas.project-schemas
-             :refer [project-schema project-user-schema issue-schema]]
+             :refer [project-schema project-user-schema issue-schema queries-schema]]
             [cosycat.roles :refer [check-project-role]]
             [cosycat.db.utils :refer [is-user? normalize-project]]
             [cosycat.components.db :refer [new-db colls]]
@@ -96,7 +96,7 @@
   (let [message (format "%s cannot drop query %s" username query-id)]
     (ex-info message
              {:code :cannot-drop-query
-              :data {:query-id query-id}
+              :data {:id query-id}
               :message message})))
 
 ;;; Checkers
@@ -429,35 +429,51 @@
 (defn new-query-metadata
   "Inserts new query into user db to allow for query-related metadata.
    Returns this query's id needed for further updates."
-  [{db-conn :db :as db} username project-name query-data]
+  [{db-conn :db :as db} username project-name query-id query-data query-default]
+  (s/validate (:query-data queries-schema) query-data)
   (check-user-in-project db username project-name)  
-  (let [now (System/currentTimeMillis), id (new-uuid)
-        query-metadata {:query-data query-data :id id :discarded [] :timestamp now :creator username}]
-   (check-query-exists db project-name query-data)
-   (mc/find-and-modify
-    db-conn (:projects colls)
-    {:name project-name}
-    {$push {:queries query-metadata}}
-    {:return-new false})
-   query-metadata))
+  (let [payload {:query-data query-data
+                 :id query-id
+                 :default query-default
+                 :hits []
+                 :timestamp (System/currentTimeMillis)
+                 :creator username}]
+    (check-query-exists db project-name query-data)
+    (mc/find-and-modify
+     db-conn (:projects colls)
+     {:name project-name}
+     {$push {:queries payload}}
+     {:return-new false})
+    payload))
 
-(defn add-query-metadata
-  [{db-conn :db :as db} username project-name {:keys [id discarded] :as payload}]
+(defn hit-id->mongo-id
+  [hit-id & {:keys [to-escape escape] :or {to-escape "." escape "-"}}]
+  (assert (not (re-find #"-" hit-id)) (format "hit-id cannot contain escape character [\"%s\"]" escape))
+  (clojure.string/replace hit-id to-escape escape))
+
+(defn mongo-id->hit-id
+  [mongo-id & {:keys [to-escape escape] :or {to-escape "." escape "-"}}]
+  (let [is-keyword? (keyword? mongo-id)]
+    (cond-> mongo-id
+      is-keyword? dekeyword
+      true (clojure.string/replace mongo-id escape to-escape))))
+
+(defn update-query-metadata
+  "Upsert new query hit data or modify a given hit-status "
+  [{db-conn :db :as db} username project-name query-id hit-id hit-num status]
   (check-user-in-project db username project-name)
-  (let [new-discarded {:hit discarded :timestamp (System/currentTimeMillis) :by username}]
+  (let [parsed-id (hit-id->mongo-id hit-id)
+        hit-data  {:hit-id hit-id
+                   :hit-num hit-num
+                   :timestamp (System/currentTimeMillis)
+                   :by username}]
     (mc/update
      db-conn (:projects colls)
-     {:name project-name "queries.id" id}
-     {$push {"queries.$.discarded" new-discarded}})
-    new-discarded))
-
-(defn remove-query-metadata
-  [{db-conn :db :as db} username project-name {:keys [id discarded] :as payload}]
-  (check-user-in-project db username project-name)  
-  (mc/update
-   db-conn (:projects colls)
-   {:name project-name "queries.id" id}
-   {$pull {"queries.$.discarded" {"hit" discarded}}}))
+     {:name project-name "queries.id" query-id}
+     {$set {(str "queries.$.hits." parsed-id ".status") status}
+      $setOnInsert {(str "queries.$.hits." parsed-id) hit-data}}
+     {:upsert true})
+    {:hit-id hit-id :status status}))
 
 (defn drop-query-metadata
   [{db-conn :db :as db} username project-name query-id]

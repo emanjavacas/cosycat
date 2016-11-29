@@ -61,13 +61,12 @@
     :new-project-user-role (make-schema {:data {:project-name s/Str :username s/Str :role s/Str}})
     ;; Projects queries
     :new-query-metadata (make-schema {:data {:query queries-schema :project-name s/Str}})
-    :add-query-metadata (make-schema {:data {:query-id s/Str
-                                             :discarded (:discarded queries-schema)
-                                             :project-name s/Str}})
-    :remove-query-metadata (make-schema {:data {:query-id s/Str
-                                                :discarded hit-id-schema
+    :update-query-metadata (make-schema {:data {:id s/Str
+                                                :hit-id s/Str
+                                                :status (get-in queries-schema [:hits s/Any :status])
+                                                :hit-num s/Int
                                                 :project-name s/Str}})
-    :drop-query-metadata (make-schema {:data {:query-id s/Str :project-name s/Str}})
+    :drop-query-metadata (make-schema {:data {:id s/Str :project-name s/Str}})
     ;; Users
     :new-user-avatar (make-schema {:data {:avatar avatar-schema :username s/Str}})
     :new-user-info (make-schema {:data {:update-map {s/Keyword s/Any} :username s/Str}})))
