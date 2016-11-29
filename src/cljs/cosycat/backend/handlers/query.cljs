@@ -107,7 +107,6 @@
  :query
  (fn [db [_ query-str & {:keys [set-active] :or {set-active false}}]]
    (let [{:keys [corpus query-opts sort-opts filter-opts]} (get-in db [:settings :query])]
-     (re-frame/dispatch [:unset-query-results])
      (re-frame/dispatch [:start-throbbing :results-frame])
      (if set-active
        (re-frame/dispatch [:set-active-query set-active])
@@ -194,7 +193,8 @@
            corpus (ensure-corpus (find-corpus-config db corpus))
            active-project (get-in db [:session :active-project])
            {:keys [hit]} (get-in db [:projects active-project :session :query :results-by-id id])
-           [left match right] (partition-by :match hit)
+           left (take-while (complement :match) hit)
+           right (take-while (complement :match) (reverse hit))
            words-left (if (= dir :left) (inc (count left)) (dec (count left)))
            words-right (if (= dir :right) (inc (count right)) (dec (count right)))]
        (query-hit corpus id {:words-left words-left :words-right words-right} update-hit))
