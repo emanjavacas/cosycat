@@ -25,13 +25,13 @@
          (doall (for [{id :id {:keys [corpus query-str]} :query-data :as query} @queries]
                   ^{:key id}
                   [bs/menu-item {:eventKey id}
-                   [:span [:strong query-str] [:span {:style {:margin-left "10px"}} corpus]]])))]])))
+                   [:span [:strong id] [:span {:style {:margin-left "10px"}} corpus]]])))]])))
 
 (defn on-click [has-query? active-query]
   (fn []
     (cond
       @active-query (re-frame/dispatch [:unset-active-query])      
-      @has-query? (re-frame/dispatch [:query-new-metadata]))))
+      @has-query?   (re-frame/dispatch [:open-modal :annotate-query]))))
 
 (defn annotate-query []
   (let [has-query? (re-frame/subscribe [:has-query?])

@@ -11,6 +11,7 @@
             [cosycat.query.components.sort-toolbar :refer [sort-toolbar]]
             [cosycat.query.components.snippet-modal :refer [snippet-modal]]
             [cosycat.query.components.minimize-panel :refer [minimize-panel]]
+            [cosycat.query.components.annotate-query-modal :refer [annotate-query-modal]]
             [cosycat.annotation.components.annotation-panel :refer [annotation-panel]]
             [cosycat.components :refer
              [error-panel throbbing-panel filter-annotation-buttons]]
@@ -187,4 +188,5 @@
        (if (= (first @panel-order) "annotation-panel")
          [:div.row [minimizable-query-frame]]
          [:div.row [minimizable-annotation-panel]])
-       [snippet-modal]])))
+       [snippet-modal]
+       [annotate-query-modal]])))

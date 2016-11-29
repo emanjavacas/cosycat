@@ -116,10 +116,6 @@ table#table-annotation tr.ann-row:hover {
     background-color: #fafafa;
 }
 
-table#query-metadata-table {
-    margin-bottom: 0px !important;
-}
-
-table#query-metadata-table tr td {
-    padding: 4px;
+div.row.highlightable:hover {
+    background-color: #fafafa;
 }
