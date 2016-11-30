@@ -7,36 +7,35 @@
             [cosycat.components :refer [dropdown-select]]
             [taoensso.timbre :as timbre]))
 
-(defn launch-query []
-  (let [queries (re-frame/subscribe [:project-queries])]
-    (fn []
-      [bs/dropdown
-       {:id "dropdown"
-        :pullRight true
-        :disabled (boolean (empty? @queries))
-        :onSelect #(re-frame/dispatch [:launch-query-from-metadata %2])}
-       [bs/dropdown-toggle
-        {:noCaret true}
-        [bs/glyphicon {:glyph "chevron-down"}]]
-       [bs/dropdown-menu        
-        (concat
-         [^{:key "header"} [bs/menu-item {:header true} "Select Query"]
-          ^{:key "divider"} [bs/menu-item {:divider true}]]
-         (doall (for [{id :id {:keys [corpus query-str]} :query-data :as query} @queries]
-                  ^{:key id}
-                  [bs/menu-item {:eventKey id}
-                   [:span [:strong id] [:span {:style {:margin-left "10px"}} corpus]]])))]])))
+(defn launch-query [queries]
+  (fn [queries]
+    [bs/dropdown
+     {:id "dropdown"
+      :pullRight true
+      :disabled (boolean (empty? @queries))
+      :onSelect #(re-frame/dispatch [:launch-query-from-metadata %2])}
+     [bs/dropdown-toggle
+      {:noCaret true}
+      [bs/glyphicon {:glyph "chevron-down"}]]
+     [bs/dropdown-menu
+      (concat
+       [^{:key "header"} [bs/menu-item {:header true} "Select Query"]
+        ^{:key "divider"} [bs/menu-item {:divider true}]]
+       (doall (for [{id :id {:keys [corpus query-str]} :query-data :as query} @queries]
+                ^{:key id}
+                [bs/menu-item {:eventKey id}
+                 [:span [:strong id] [:span {:style {:margin-left "10px"}} corpus]]])))]]))
 
 (defn on-click [has-query? active-query]
   (fn []
     (cond
-      @active-query (re-frame/dispatch [:unset-active-query])      
+      @active-query (re-frame/dispatch [:unset-active-query])
       @has-query?   (re-frame/dispatch [:open-modal :annotate-query]))))
 
-(defn annotate-query []
+(defn annotate-query [queries]
   (let [has-query? (re-frame/subscribe [:has-query?])
         active-query (re-frame/subscribe [:project-session :components :active-query])]
-    (fn []
+    (fn [queries]
       [bs/overlay-trigger
        {:placement "top"
         :overlay (reagent/as-component
@@ -47,7 +46,8 @@
         [bs/glyphicon {:glyph "pencil"}]]])))
 
 (defn annotate-query-dropdown []
-  (fn []
-    [bs/button-group
-     [annotate-query]
-     [launch-query]]))
+  (let [queries (re-frame/subscribe [:project-queries])]
+    (fn []
+      [bs/button-group
+       [annotate-query queries]
+       [launch-query queries]])))
