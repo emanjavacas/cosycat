@@ -241,18 +241,16 @@
                  filter-corpus (filter #(= @corpus (get-in % [:query-data :corpus]))))))))
 
 (re-frame/register-sub
- :discarded-hits
+ :active-project-query
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
-         path [:session :components :active-query]
-         active-query (reaction (get-in @db (into [:projects @active-project] path)))]
-     (reaction (get-in @db [:projects @active-project :queries @active-query :discarded])))))
+         active-query-id (reaction (get-in @db [:projects @active-project :session :components :active-query]))]
+     (reaction (get-in @db [:projects @active-project :queries @active-query-id])))))
 
-(re-frame/register-sub
- :discarded-hit
+(re-frame/register-sub                  ;assumes that there is an active query
+ :hit-status
  (fn [db [_ hit-id]]
    (let [active-project (reaction (get-in @db [:session :active-project]))
-         path [:session :components :active-query]
-         query (reaction (get-in @db (into [:projects @active-project] path)))
-         discarded (reaction (get-in @db [:projects @active-project :queries @query :discarded]))]
-     (reaction (contains? @discarded hit-id)))))
+         active-query-id (reaction (get-in @db [:projects @active-project :session :components :active-query]))
+         active-query (reaction (get-in @db [:projects @active-project :queries @active-query-id]))]
+     (reaction (get-in @active-query [:hits hit-id :status])))))

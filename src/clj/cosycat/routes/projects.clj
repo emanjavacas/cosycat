@@ -191,16 +191,20 @@
 
 (defn update-query-metadata-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components
-    {:keys [id hit-id status hit-num project-name]} :params}]
+    {:keys [id hit-id status project-name]} :params}]
   (let [{:keys [users]} (proj/get-project db username project-name)
-        _ (proj/update-query-metadata db username project-name id hit-id hit-num status)]
+        payload {:hit-id hit-id :id id :project-name project-name :status status}]
+    (cond
+        (= status "unseen")            (proj/remove-query-metadata db username project-name id hit-id)
+        (#{"kept" "discarded"} status) (proj/update-query-metadata db username project-name id hit-id status)
+        :else (throw (let [msg (format "Wrong status value [%s]" status)] (ex-info msg {:message msg }))))
     (send-clients
      ws {:type :update-query-metadata
-         :data {:id id :hit-id hit-id :status status :hit-num hit-num :project-name project-name}
+         :data payload
          :by username}
      :source-client username
      :target-clients (map :username users))
-    {:hit-id hit-id :status status :id id}))
+    payload))
 
 (defn drop-query-metadata-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components

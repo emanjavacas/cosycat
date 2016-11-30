@@ -63,8 +63,7 @@
     :new-query-metadata (make-schema {:data {:query queries-schema :project-name s/Str}})
     :update-query-metadata (make-schema {:data {:id s/Str
                                                 :hit-id s/Str
-                                                :status (get-in queries-schema [:hits s/Any :status])
-                                                :hit-num s/Int
+                                                :status (s/enum "kept" "discarded" "unseen")
                                                 :project-name s/Str}})
     :drop-query-metadata (make-schema {:data {:id s/Str :project-name s/Str}})
     ;; Users

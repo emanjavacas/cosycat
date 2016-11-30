@@ -10,26 +10,15 @@
              :refer [default-project-session default-project-history default-settings]]
             [taoensso.timbre :as timbre]))
 
-(defn normalize-query-metadata [{hits :hits :as query-metadata}]
-  (let [{:keys [kept discarded]} (group-by :status (vals hits))]
-    (assoc query-metadata :hits {:kept (set (map :hit kept)) :discarded (set (map :hit discarded))})))
-
-(defn normalize-queries [queries]
-  (reduce-kv
-   (fn [acc k v] (assoc acc k (normalize-query-metadata v)))
-   {}
-   queries))
-
 (defn normalize-projects
   "transforms server project to client project"
   [projects]
   (reduce
-   (fn [acc {:keys [name queries issues events] :as project}]
+   (fn [acc {:keys [name issues events] :as project}]
      (assoc acc name (cond-> project
                        true (assoc :session (default-project-session project))
                        issues (assoc :issues (zipmap (map :id issues) issues))
-                       events (assoc :events (zipmap (map :id events) events))
-                       queries (assoc :queries (normalize-queries queries)))))
+                       events (assoc :events (zipmap (map :id events) events)))))
    {}
    projects))
 
@@ -276,8 +265,7 @@
  :new-query-metadata
  standard-middleware
  (fn [db [_ {{:keys [id] :as query-metadata} :query project-name :project-name}]]
-   (let [normalized-query-metadata (normalize-query-metadata query-metadata)]
-     (assoc-in db [:projects project-name :queries id] normalized-query-metadata))))
+   (assoc-in db [:projects project-name :queries id] query-metadata)))
 
 (defn query-new-metadata-handler [project-name]
   (fn [{:keys [id] :as query-metadata}]
@@ -309,28 +297,39 @@
  :update-query-metadata
  standard-middleware
  (fn [db [_ {:keys [project-name id hit-id status]}]]
-   (let [query-default (get-in db [:projects project-name :queries id :default])
-         path [:projects project-name :queries id :hits]
-         other-status (if (= status "discarded") "kept" "discarded")]
+   (let [path [:projects project-name :queries id :hits]]
      (cond-> db
-       true                       (update-in (into path (keyword status))       conj hit-id)
-       (= query-default "unseen") (update-in (into path (keyword other-status)) disj hit-id)))))
+       (= status "unseen")    (update-in path dissoc hit-id)
+       (= status "discarded") (update-in (conj path hit-id) assoc :status status)
+       (= status "kept")      (update-in (conj path hit-id) assoc :status status)))))
 
 (defn query-update-metadata-handler [project-name]
   (fn [{:keys [id hit-id status]}]
     (re-frame/dispatch
      [:update-query-metadata {:project-name project-name :id id :hit-id hit-id :status status}])))
 
+(defn get-new-status [{default :default} previous-hit-status]
+  (get-in {"unseen" {"unseen" "discarded"
+                     "discarded" "kept"
+                     "kept" "unseen"}
+           "discarded" {"discarded" "kept"
+                        "kept" "discarded"}
+           "kept" {"discarded" "kept"
+                   "kept" "discarded"}}
+          [default previous-hit-status]))
+
 (re-frame/register-handler
  :query-update-metadata
  standard-middleware
- (fn [db [_ hit-id id status hit-num]]
-   (let [active-project (get-in db [:session :active-project])]
+ (fn [db [_ hit-id hit-num previous-hit-status]]
+   (let [active-project (get-in db [:session :active-project])
+         active-query-id (get-in db [:projects active-project :session :components :active-query])
+         active-query (get-in db [:projects active-project :queries active-query-id])]
      (POST "/project/queries/update"
            {:params {:project-name active-project
-                     :id id
+                     :id active-query-id
                      :hit-id hit-id
-                     :status status
+                     :status (get-new-status active-query previous-hit-status)
                      :hit-num hit-num}
             :handler (query-update-metadata-handler active-project)
             :error-handler #(timbre/error "Error when storing query metadata")}))

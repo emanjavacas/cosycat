@@ -55,12 +55,10 @@
    :description s/Str
    :timestamp s/Int
    :creator s/Str
-   :hits #?(:clj {s/Any {:timestamp s/Int
-                         :hit-id s/Any
-                         :hit-num s/Int
-                         :by s/Str
-                         :status (s/enum "discarded" "kept")}}
-            :cljs {:discarded #{s/Any} :kept #{s/Any}})})
+   :hits {s/Any {:timestamp s/Int
+                 :hit-id s/Any
+                 :by s/Str
+                 :status (s/enum "discarded" "kept")}}})
 
 ;;; project session schemas
 (def status-schema
@@ -98,6 +96,7 @@
            :created s/Int
            :creator s/Str
            :users project-users-schema
+           (s/optional-key :queries) {query-id-schema queries-schema}
            (s/optional-key :issues) [issue-schema]
            (s/optional-key :events) [event-schema]}
      :cljs {:name s/Str

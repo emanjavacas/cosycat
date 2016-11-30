@@ -30,10 +30,10 @@
       [:div
        [double-check-button show?]]]]))
 
-(defn counter-row [text hits]
+(defn counter-row [status hits]
   [:div.row.highlightable
-   [:div.col-lg-4.col-md-4.col-sm-4 [:span "Hits marked as " [:strong text]]]
-   [:div.col-lg-8.col-md-8.col-sm-8 [:span.text-muted (count hits)]]])
+   [:div.col-lg-4.col-md-4.col-sm-4 [:span "Hits marked as " [:strong status]]]
+   [:div.col-lg-8.col-md-8.col-sm-8 [:span.text-muted (count (filter #(= status (:status %)) (vals hits)))]]])
 
 (defn filter-opts-row [filter-opts]
   [:div.row.highlightable
@@ -46,9 +46,9 @@
    [:div.col-lg-8.col-md-8.col-sm-8 [:span.text-muted]]])
 
 (defn query-component
-  [{{:keys [query-str corpus filter-opts sort-opts]} :query-data {:keys [kept discarded]} :hits
+  [{{:keys [query-str corpus filter-opts sort-opts]} :query-data hits :hits
     description :description timestamp :timestamp id :id creator :creator default :default}]
-  (fn [{{:keys [query-str corpus filter-opts sort-opts]} :query-data {:keys [kept discarded]} :hits
+  (fn [{{:keys [query-str corpus filter-opts sort-opts]} :query-data hits :hits
         description :description timestamp :timestamp id :id creator :creator default :default}]
     [:div.container-fluid
      [:div.row
@@ -75,12 +75,12 @@
      (when sort-opts   [sort-opts-row sort-opts])
      (when (not= default "unseen")
        (if (= default "discarded")
-         [counter-row "kept" kept]
-         [counter-row "discarded" discarded]))
+         [counter-row "kept" hits]
+         [counter-row "discarded" hits]))
      (when (= default "unseen")
-       [counter-row "kept" kept])
+       [counter-row "kept" hits])
      (when (= default "unseen")
-       [counter-row "discarded" discarded])]))
+       [counter-row "discarded" hits])]))
 
 (defn queries-frame []
   (let [project-queries (re-frame/subscribe [:project-queries :filter-corpus false])
