@@ -362,7 +362,11 @@
  (fn [db [_ query-id]]
    (let [active-project (get-in db [:session :active-project])
          query (get-in db [:projects active-project :queries query-id])]
-     (if-let [{{query-str :query-str} :query-data} query]
+     (if-let [{{:keys [query-str filter-opts sort-opts corpus]} :query-data} query]
        (do (set! (.-value (.getElementById js/document "query-str")) query-str)
-           (re-frame/dispatch [:query query-str :set-active query-id]))))
-   db))
+           (re-frame/dispatch [:query query-str :set-active query-id])
+           (cond-> db
+             sort-opts (assoc-in [:settings :query :sort-opts] sort-opts)
+             filter-opts (assoc-in [:settings :query :filter-opts] filter-opts)
+             true (assoc-in [:settings :query :corpus] corpus)))
+       db))))
