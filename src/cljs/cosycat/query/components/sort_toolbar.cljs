@@ -70,8 +70,7 @@
                         :facet (->default-map ["sensitive" "insensitive"])};TODO
               :select-fn (sort-select-fn idx)}]))
          [bs/button
-          {:onClick #(re-frame/dispatch [:add-opts-map :sort-opts])
-           :bsStyle "primary"}
+          {:onClick #(re-frame/dispatch [:add-opts-map :sort-opts])}
           (if (zero? sort-opts-total)
             "add sort criterion"
             [bs/glyphicon {:glyph "plus"}])]

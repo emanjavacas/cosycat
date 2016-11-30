@@ -71,7 +71,7 @@
 (defn logout-route
   [{{{username :username} :identity} :session
     {ws :ws} :components}]
-  (send-clients ws {:type :logout :data {:username username}})
+  (send-clients ws {:type :logout :data {:username username}} :source-client username)
   (-> (redirect "/") (assoc :session {})))
 
 (defn jws-login-route

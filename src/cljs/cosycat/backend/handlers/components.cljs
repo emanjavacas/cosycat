@@ -160,7 +160,7 @@
    (let [active-project (get-in db [:session :active-project])
          path (into [:projects active-project :session :components] path)]
      (if (get-in db path)
-       (update-in db (pop path) dissoc (last path))
+       (assoc-in db path false)
        (assoc-in db path true)))))
 
 ;;; marking

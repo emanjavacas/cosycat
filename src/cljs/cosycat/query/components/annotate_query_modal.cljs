@@ -51,7 +51,7 @@
          :style {:overflow "hidden"
                  :max-height "100px"
                  :resize "vertical"}
-         :maxlength 500
+         :maxLength 500
          :value @description
          :placeholder "Describe your query to other humans"
          :on-change #(reset! description (.-value (.-target %)))}]]]]))

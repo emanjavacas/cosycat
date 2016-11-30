@@ -65,7 +65,7 @@
        [bs/button-toolbar
         [bs/button
          {:onClick #(do (swap! show? not) (reset! target (.-target %)))
-          :bsStyle "primary"}
+          :bsStyle (if (empty? @filter-opts) "default" "primary")}
          "Filters"]
         (when-not (empty? @filter-opts)
           [bs/button
