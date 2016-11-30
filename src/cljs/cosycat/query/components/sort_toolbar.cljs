@@ -55,8 +55,7 @@
   (fn [a b] (re-frame/dispatch [:set-settings [:query :sort-opts idx a] b])))
 
 (defn sort-button-toolbar []
-  (let [corpus (re-frame/subscribe [:settings :query :corpus])
-        sort-opts (re-frame/subscribe [:settings :query :sort-opts])
+  (let [sort-opts (re-frame/subscribe [:settings :query :sort-opts])
         sort-props (re-frame/subscribe [:corpus-config :info :sort-props])]
     (fn []
       (let [sort-opts-total (count @sort-opts)]
