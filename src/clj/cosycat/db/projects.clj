@@ -431,12 +431,13 @@
 (defn new-query-metadata
   "Inserts new query into user db to allow for query-related metadata.
    Returns this query's id needed for further updates."
-  [{db-conn :db :as db} username project-name query-id query-data query-default]
+  [{db-conn :db :as db} username project-name query-id query-data query-default description]
   (s/validate (:query-data queries-schema) query-data)
   (check-user-in-project db username project-name)  
   (let [payload {:query-data query-data
                  :id query-id
                  :default query-default
+                 :description description
                  :hits []
                  :timestamp (System/currentTimeMillis)
                  :creator username}]

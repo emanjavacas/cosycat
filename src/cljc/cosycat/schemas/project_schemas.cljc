@@ -52,6 +52,7 @@
                 (s/optional-key :sort-opts) [sort-opts-schema]}
    :id query-id-schema
    :default (s/enum "unseen" "kept" "discarded")
+   :description s/Str
    :timestamp s/Int
    :creator s/Str
    :hits #?(:clj {s/Any {:timestamp s/Int

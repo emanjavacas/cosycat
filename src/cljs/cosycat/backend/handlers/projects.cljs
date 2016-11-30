@@ -289,13 +289,14 @@
 
 (re-frame/register-handler
  :query-new-metadata
- (fn [db [_ {:keys [id include-sort-opts? include-filter-opts? default]}]]
+ (fn [db [_ {:keys [id include-sort-opts? include-filter-opts? default description]}]]
    (let [active-project (get-in db [:session :active-project])
          {:keys [corpus filter-opts sort-opts]} (get-in db [:settings :query])         
          {query-str :query-str} (current-results db)]
      (POST "/project/queries/new"
            {:params (cond-> {:project-name active-project
                              :id id
+                             :description description
                              :query-data (cond-> {:query-str query-str :corpus corpus}
                                            include-sort-opts?   (assoc :sort-opts sort-opts)
                                            include-filter-opts? (assoc :filter-opts filter-opts))}

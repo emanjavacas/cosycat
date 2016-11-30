@@ -177,9 +177,10 @@
 (defn new-query-metadata-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components
     {{:keys [query-str corpus filter-opts sort-opts] :as query-data} :query-data
-     project-name :project-name id :id default :default :or {query-default "unseen"}} :params}]
+     project-name :project-name id :id description :description
+     default :default :or {default "unseen"}} :params}]
   (let [{:keys [users]} (proj/get-project db username project-name)
-        new-query (proj/new-query-metadata db username project-name id query-data default)]
+        new-query (proj/new-query-metadata db username project-name id query-data default description)]
     (send-clients
      ws {:type :new-query-metadata
          :data {:query new-query :project-name project-name}
