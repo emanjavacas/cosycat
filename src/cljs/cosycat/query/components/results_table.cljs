@@ -53,45 +53,46 @@
       (when (and (zero? btn) (not (ignore-cell? e)))
         (swap! mouse-down? not)))))
 
-(defn hit-token [{:keys [id match marked anns]} color-map token-field]
-  (fn [{:keys [id match marked anns] :as token-map} color-map token-field]
-    (let [highlighted (if marked "highlighted " "")
-          color (when anns (highlight-annotation token-map @color-map))
-          is-match (when match "info")]
-      [:td
-       {:class (str highlighted is-match)
-        :style {:box-shadow color}
-        :data-id id}
-       (get token-map token-field)])))
+(defn hit-token [{:keys [id match marked anns]} color-map]
+  (let [token-field (re-frame/subscribe [:project-session :components :token-field])]
+    (fn [{:keys [id match marked anns] :as token-map} color-map]
+      (let [highlighted (if marked "highlighted " "")
+            color (when anns (highlight-annotation token-map @color-map))
+            is-match (when match "info")]
+        [:td
+         {:class (str highlighted is-match)
+          :style {:box-shadow color}
+          :data-id id}
+         (get token-map @token-field)]))))
 
 (defn on-double-click [hit-id]
   (fn [event]
     (.stopPropagation event)
     (re-frame/dispatch [:fetch-snippet hit-id])))
 
-(defn include-hit [hit-id query-id discarded?]
-  (fn [hit-id query-id discarded?]
-    (let [green "#5cb85c", red "#d9534f"]
-      (if discarded?
-        [bs/glyphicon
-         {:glyph "remove-circle"
-          :class "ignore"
-          :style {:color red :cursor "pointer"}
-          :onClick #(re-frame/dispatch [:query-remove-metadata hit-id query-id])}]
-        [bs/glyphicon
-         {:glyph "ok-circle"
-          :class "ignore"
-          :style {:color green :cursor "pointer"}
-          :onClick #(re-frame/dispatch [:query-add-metadata hit-id query-id])}]))))
+(defn get-color [status] (get {"kept" "#5cb85c", "discarded" "#d9534f", "unseen" "#A9A9A9"} status))
 
-(defn results-row [hit-num {:keys [id]} {:keys [color-map token-field break active-query]}]
-  (let [discarded? (re-frame/subscribe [:discarded-hit id])]
+(defn get-glyph [status] (get {"kept" "ok-circle", "discarded" "remove-circle" "unseen" "question-sign"} status))
+
+(defn hit-query-status [hit-id hit-num hit-status]
+  (fn [hit-id hit-num hit-status]
+    (let [hit-status (or @hit-status "unseen")]
+      [bs/glyphicon
+       {:glyph (get-glyph hit-status)
+        :class "ignore"
+        :style {:color (get-color hit-status) :cursor "pointer"}
+        :onClick #(re-frame/dispatch [:query-update-metadata hit-id hit-num hit-status])}])))
+
+(defn results-row [hit-num {:keys [id]} {:keys [color-map break active-query toggle-discarded]}]
+  (let [hit-status (re-frame/subscribe [:hit-status id])]
     (fn [hit-num
          {hit :hit id :id {:keys [num marked]} :meta :as hit-map}
-         {:keys [color-map token-field break active-query] :as opts}]
+         {:keys [color-map break active-query toggle-discarded] :as opts}]
       (let [row-class (merge-classes (when marked "marked") (when break "break"))
             background "#F9F9F9"]
-        [:tr {:class row-class :data-hit id}
+        [:tr {:class row-class
+              :data-hit id
+              :style {:visibility (when (and @toggle-discarded (= @hit-status "discarded")))}}
          (concat
           [^{:key (str hit-num "-check")}
            [:td.ignore
@@ -108,27 +109,32 @@
             [:label.checkbox-custom-label.ignore
              {:for (str hit-num "-check")
               :tab-index (inc hit-num)}]]
-           ;; discard
-           (when active-query
+           ;; query-annotation
+           (when @active-query
              ^{:key (str hit-num "-dis")}
              [:td.ignore
-              {:style {:background-color background :line-height "24px"}}
-              [include-hit id active-query @discarded?]])
+              {:style {:background-color background
+                       :text-align "center"
+                       :line-height "24px"
+                       :width "20px"}}
+              [hit-query-status id hit-num hit-status]])
            ;; hit number
            ^{:key (str hit-num "-num")}
            [:td.ignore.snippet-trigger
             {:style {:width "20px"
+                     :text-align "center"
                      :background-color background
                      :cursor "pointer"
-                     :line-height "35px"
-                     :padding "0px"}
+                     :line-height "36px"
+                     ;; add padding wrt first hit word
+                     :padding "0px 5px 0px 0px"}
              :on-double-click (on-double-click id)}
             [:label.ignore
              {:style {:font-weight "bold" :cursor "pointer"}}
              (inc (or num hit-num))]]]
           ;; hit
           (for [token hit]
-            ^{:key (str hit-num "-" (:id token))} [hit-token token color-map token-field]))]))))
+            ^{:key (str hit-num "-" (:id token))} [hit-token token color-map]))]))))
 
 (defn reduce-hits
   "returns hits indexed by `idx` and with a flag `break` indicating whether current hit belongs
@@ -145,8 +151,8 @@
   (let [results (re-frame/subscribe [:results])
         from (re-frame/subscribe [:project-session :query :results-summary :from])
         color-map (re-frame/subscribe [:filtered-users-colors])
-        active-query (re-frame/subscribe [:project-session :components :active-query])
-        token-field (re-frame/subscribe [:project-session :components :token-field])
+        toggle-discarded (re-frame/subscribe [:project-session :components :toggle-discarded])
+        active-query (re-frame/subscribe [:project-session :components :active-query])        
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]
     (fn []
@@ -161,12 +167,11 @@
         :style {:border-collapse "collapse"}}
        [:thead]
        [:tbody {:style {:font-size "12px"}}
-        (doall
-         (for [[idx {:keys [hit meta id] :as hit-map} break] (reduce-hits @results)
-               :let [hit-num (+ idx @from)]]
-           ^{:key hit-num}
-           [results-row hit-num hit-map
-            {:color-map color-map
-             :token-field @token-field
-             :break break
-             :active-query @active-query}]))]])))
+        (doall (for [[idx {:keys [hit meta id] :as hit-map} break] (reduce-hits @results)
+                     :let [hit-num (+ idx @from)]]
+                 ^{:key hit-num}
+                 [results-row hit-num hit-map
+                  {:color-map color-map
+                   :break break
+                   :toggle-discarded toggle-discarded
+                   :active-query active-query}]))]])))
