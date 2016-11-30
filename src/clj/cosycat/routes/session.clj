@@ -1,5 +1,5 @@
 (ns cosycat.routes.session
-  (:require [cosycat.routes.utils :refer [safe normalize-project-queries]]
+  (:require [cosycat.routes.utils :refer [safe]]
             [cosycat.components.ws :refer [add-active-info]]
             [cosycat.db.users :refer [user-login-info users-public-info user-settings]]
             [cosycat.db.projects :refer [get-projects]]
