@@ -91,11 +91,22 @@
         :select-fn #(re-frame/dispatch [:set-token-field (keyword %)])
         :header "Select prop to display"}])))
 
+(defn toggle-discarded-button []
+  (let [toggle-discarded (re-frame/subscribe [:project-session :components :toggle-discarded])]
+    (fn []
+      [bs/button
+       {:onClick #(re-frame/dispatch [:toggle-project-session-component [:toggle-discarded]])
+        :bsStyle (if-not @toggle-discarded "default" "primary")
+        :style {:font-size "12px" :height "34px"}}
+       "Toggle discarded"])))
+
 (defn mark-buttons []
-  [bs/button-toolbar
-   [token-field-button]
-   [mark-hits-btn]
-   [annotation-modal-button]])
+  (let [active-query (re-frame/subscribe [:project-session :components :active-query])]
+    [bs/button-toolbar
+     (when @active-query [toggle-discarded-button active-query])
+     [token-field-button]
+     [mark-hits-btn]
+     [annotation-modal-button]]))
 
 (defn results-toolbar []
   (fn []

@@ -30,6 +30,7 @@
                 :issue-filters {:status "all" :type "all"}
                 :event-filters {:type "all"}
                 :open-hits #{}
+                :toggle-discarded false
                 :token-field :word}
    :filtered-users (into #{} (map :username (:users project)))})
 
