@@ -17,6 +17,32 @@ class ParseError(Exception):
         self.expected = expected
 
 
+def parse_rest(rest, schema):
+    """
+    Recursively parse a list of rest arguments according to a schema.
+    A schema is a dict from optional argument to a list of corresponding
+    positional values:
+     {'output': ['filename']}
+    Returns a dict from optional arguments to dicts of positional argument
+    name to positional argument value.
+    """
+    def rec(rest, acc):
+        if not rest:
+            return acc
+        arg = rest.pop(0)
+        if arg in schema:
+            try:
+                acc[arg] = {subarg: rest.pop(0) for subarg in schema[arg]}
+                rec(rest, acc)
+            except IndexError:
+                value = " ".join([arg] + list(acc[arg].values()))
+                expected = " ".join([arg] + list(schema[arg].keys()))
+                raise ParseError(value, expected)
+        else:
+            raise ParseError(arg, "One of " + ", ".join(schema.keys()))
+    return rec(rest, {})
+
+
 class Finder(object):
     def __init__(self, uri, verbose=True, timeout=3, **kwargs):
         self.uri = uri
@@ -46,6 +72,7 @@ class Finder(object):
             print("    " + sugg)
 
     def query_filters(self):
+        """Parse currently stored filter values into a pymongo query dict"""
         def filter_value(val):
             if len(val) == 1:
                 filter_val = val[0]
@@ -126,7 +153,8 @@ class Finder(object):
 
     def do_show(self, args):
         """
-        Show the current value of a particular settings (e.g. filters)"""
+        Show the current value of a particular settings (e.g. filters).
+        """
         vals = ('filters', 'sort')
         assert len(args) == 1, "Specify at least one value"
         assert args[0] in vals, "Specify one of {vals}".format(vals=vals)
@@ -145,7 +173,12 @@ class Finder(object):
         Add a filter to the query.
         Multiple filters can be added using the following syntax:
           filter key1:value key2:value ...
-        Possible keys are [username, corpus, query]"""
+        Input a key to clear the filter for that key:
+          filter username
+        Input no arguments to clear all filters:
+          filter
+        Possible keys are [username, corpus, query]
+        """
 
         ALREADY_EXISTS = \
             "A value for filter {key} already exists, " + \
@@ -186,7 +219,7 @@ class Finder(object):
           sort field1:asc field2:des
         Specify `asc` or `des` for ascending or descending order.
         Order defaults to descending order.
-        Possible value for field are [timestamp,username,corpus].
+        Possible value for field are [timestamp, username, corpus].
         """
         orders = ('asc', 'des')
         for arg in args:
@@ -255,7 +288,7 @@ class Finder(object):
 
     def do_projects(self, args):
         """
-        Do operations on projects.
+        Show information about projects
           projects: show existing projects
         """
         if len(args) == 0:
@@ -265,23 +298,50 @@ class Finder(object):
     def do_count(self, args):
         """
         Count annotations using the current filters.
+        Specify a project to get only counts for that project:
+          count myProject
+        Multiple projects can be specified with commas:
+          count myProject,projectTest,otherProject
         """
         assert args, "Specify a project (e.g. GET) or 'all' for all projects"
-        project_count = "Found [{result}] annotations in project '{project}'"
-
-        def display_count(project):
-            result = project.find(self.query_filters()).count()
-            print(project_count.format(
-                result=result,
-                project=self.get_project_name(project.name)))
+        count_text = "Found [{result}] annotations in project '{name}'"
 
         if self.verbose:
             pprint(self.query_filters())
 
         project, *rest = args
+        rest_args = parse_rest(rest, {'groupby': ['key1,key2,etc'],
+                                      'output':  ['filename']})
         if project == 'all':
-            for project in self.get_projects():
-                display_count(project)
+            projects = self.get_project_names()
         else:
+            projects = project.split(',')
+        output = {}
+        for project_name in projects:
             project = self.get_project(project)
-            display_count(project)
+            if 'groupby' not in rest_args:
+                result = project.find(self.query_filters()).count()
+                output[project_name] = result
+            else:
+                keys = rest_args['groupby']['key1,key2,etc'].split(',')
+                groupkeys = {k: "$" + k for k in keys}
+                result = project.aggregate(
+                    [{"$match": self.query_filters()},
+                     {"$group": {"key": groupkeys, "count": {"$sum": 1}}}]
+                )
+                output[project_name] = list(result)
+            if 'output' in rest_args:
+                raise NotImplementedError()
+            else:
+                if 'groupby' not in rest_args:
+                    for project, result in output.items():
+                        print(count_text.format(result=result, name=project))
+                else:
+                    for project, result in output.items():
+                        print(project + "\n")
+                        header = list(sorted(result[0]['_id'].keys()))
+                        print('%-10s' * len(header) % tuple(header))
+                        for line in result:
+                            vals = [result['_id'][k] for k in header]
+                            print('%-10s' * len(header) % tuple(vals)
+                                  + '%-10d' % result['count'])
