@@ -1,10 +1,10 @@
 (ns cosycat.routes.session
-  (:require [cosycat.routes.utils :refer [safe]]
+  (:require [cosycat.routes.utils :refer [safe normalize-project-queries]]
             [cosycat.components.ws :refer [add-active-info]]
             [cosycat.db.users :refer [user-login-info users-public-info user-settings]]
-            [cosycat.db.projects :refer [get-projects mongo-id->hit-id]]
+            [cosycat.db.projects :refer [get-projects]]
             [cosycat.db.utils :refer [normalize-user]]
-            [cosycat.app-utils :refer [dekeyword normalize-by]]
+            [cosycat.app-utils :refer [dekeyword normalize-by mongo-id->hit-id]]
             [cosycat.utils :refer [join-path]]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]
@@ -89,34 +89,17 @@
     (normalize-by users :username)))
 
 ;;; Normalizers: projects
-(defn normalize-project-queries [{:keys [queries] :as project}]
-  (let [queries (-> ;; transform internal mongo-db-escaped hit-ids to normal hit-id
-                 (mapv (fn [{:keys [hits] :as query}]
-                         (let [normalized-hits (reduce-kv (fn [m k v] (assoc m (mongo-id->hit-id k) v)) {} hits)]
-                           (assoc query :hits normalized-hits)))
-                       queries)
-                 ;; normalize queries by id
-                 (normalize-by :id))]
-    (assoc project :queries queries)))
-
-(defn normalize-queries [projects]
-  (mapv normalize-project-queries projects))
-
-(defn get-user-project-settings [user-projects project-name]
-  (get-in user-projects [(keyword project-name) :settings]))
-
 (defn merge-user-projects
   "merge user-specific project info into project"
   [projects user-projects]
   (mapv (fn [{:keys [name] :as project}]
-          (let [user-project-settings (get-user-project-settings user-projects name)]
+          (let [user-project-settings (get-in user-projects [(keyword name) :settings])]
             (cond-> project
               user-project-settings (assoc :settings user-project-settings))))
         projects))
 
 (defn session-projects [db username {user-projects :projects :as me}]
   (-> (get-projects db username)
-      normalize-queries
       (merge-user-projects user-projects)))
 
 ;;; Normalizers: settings

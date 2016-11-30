@@ -4,7 +4,7 @@
             [schema.core :as s]
             [cosycat.vcs :as vcs]
             [cosycat.utils :refer [new-uuid]]
-            [cosycat.app-utils :refer [server-project-name get-pending-users dekeyword]]
+            [cosycat.app-utils :refer [server-project-name get-pending-users dekeyword hit-id->mongo-id]]
             [cosycat.schemas.project-schemas
              :refer [project-schema project-user-schema issue-schema queries-schema]]
             [cosycat.roles :refer [check-project-role]]
@@ -438,7 +438,7 @@
                  :id query-id
                  :default query-default
                  :description description
-                 :hits []
+                 :hits {}
                  :timestamp (System/currentTimeMillis)
                  :creator username}]
     (check-query-exists db project-name query-data)
@@ -449,34 +449,31 @@
      {:return-new false})
     payload))
 
-(defn hit-id->mongo-id
-  [hit-id & {:keys [to-escape escape] :or {to-escape "." escape "-"}}]
-  (assert (not (re-find #"-" hit-id)) (format "hit-id cannot contain escape character [\"%s\"]" escape))
-  (clojure.string/replace hit-id to-escape escape))
-
-(defn mongo-id->hit-id
-  [mongo-id & {:keys [to-escape escape] :or {to-escape "." escape "-"}}]
-  (let [is-keyword? (keyword? mongo-id)]
-    (cond-> mongo-id
-      is-keyword? dekeyword
-      true (clojure.string/replace mongo-id escape to-escape))))
-
 (defn update-query-metadata
   "Upsert new query hit data or modify a given hit-status "
-  [{db-conn :db :as db} username project-name query-id hit-id hit-num status]
+  [{db-conn :db :as db} username project-name query-id hit-id status]
   (check-user-in-project db username project-name)
   (let [parsed-id (hit-id->mongo-id hit-id)
-        hit-data  {:hit-id hit-id
-                   :hit-num hit-num
-                   :timestamp (System/currentTimeMillis)
-                   :by username}]
+        timestamp (System/currentTimeMillis)]
     (mc/update
      db-conn (:projects colls)
      {:name project-name "queries.id" query-id}
-     {$set {(str "queries.$.hits." parsed-id ".status") status}
-      $setOnInsert {(str "queries.$.hits." parsed-id) hit-data}}
-     {:upsert true})
-    {:hit-id hit-id :status status}))
+     {$set {(str "queries.$.hits." parsed-id ".status") status
+            (str "queries.$.hits." parsed-id ".hit-id") hit-id
+            (str "queries.$.hits." parsed-id ".timestamp") timestamp
+            (str "queries.$.hits." parsed-id ".by") username}})
+    {:hit-id hit-id :status status :timestamp timestamp :by username}))
+
+(defn remove-query-metadata
+  "Removes hit from query metadata"
+  [{db-conn :db :as db} username project-name query-id hit-id]
+  (check-user-in-project db username project-name)
+  (let [parsed-id (hit-id->mongo-id hit-id)]
+    (mc/update
+     db-conn (:projects colls)
+     {:name project-name "queries.id" query-id}
+     {$unset {(str "queries.$.hits." parsed-id) ""}}
+     {:upsert true})))
 
 (defn drop-query-metadata
   [{db-conn :db :as db} username project-name query-id]
