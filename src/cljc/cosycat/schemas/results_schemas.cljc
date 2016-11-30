@@ -1,5 +1,6 @@
 (ns cosycat.schemas.results-schemas
   (:require [schema.core :as s]
+            [cosycat.schemas.user-schemas :refer [sort-opts-schema filter-opts-schema]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]))
 
 ;;; hit/token schemas
@@ -44,6 +45,8 @@
     :query-str s/Str
     :query-time s/Int
     :has-next s/Bool
+    :sort-opts [sort-opts-schema]
+    :filter-opts [filter-opts-schema]
     :corpus s/Any}))
 
 (def query-results-schema

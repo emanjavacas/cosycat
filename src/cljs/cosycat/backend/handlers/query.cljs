@@ -68,13 +68,19 @@
    (re-frame/dispatch [:stop-throbbing :results-frame])
    (re-frame/dispatch [:fetch-annotations {:page-margins (page-margins results)}])
    (let [active-project (get-in db [:session :active-project])
+         ;; previous query-str
          query-str (get-in db [:projects active-project :session :query :results-summary :query-str])
-         path-fn (fn [key] [:projects active-project :session :query key])]
+         ;; path to query
+         path-to-query [:projects active-project :session :query]
+         ;; add current query settings to results-summary
+         sort-opts (get-in db [:settings :query :sort-opts])
+         filter-opts (get-in db [:settings :query :filter-opts])
+         results-summary (assoc results-summary :sort-opts sort-opts :filter-opts filter-opts)]
      (-> db
          (assoc-in [:projects active-project :session :status] status)
-         (update-in (path-fn :results-summary) merge results-summary)
-         (assoc-in (path-fn :results) (map :id results))
-         (update-in (path-fn :results-by-id) merge-results results query-str)))))
+         (update-in (conj path-to-query :results-summary) merge results-summary)
+         (assoc-in (conj path-to-query :results) (map :id results))
+         (update-in (conj path-to-query :results-by-id) merge-results results query-str)))))
 
 (re-frame/register-handler
  :unset-query-results
@@ -113,8 +119,10 @@
      (if set-active
        (re-frame/dispatch [:set-active-query set-active])
        (re-frame/dispatch [:unset-active-query]))
-     (re-frame/dispatch
-      [:register-user-project-event {:data {:query-str query-str :corpus corpus} :type "query"}])
+     (when-not set-active
+       ;; register query event only if it isn't a launched query
+       (re-frame/dispatch
+        [:register-user-project-event {:data {:query-str query-str :corpus corpus} :type "query"}]))
      (run-query (find-corpus-config db corpus) query-str query-opts sort-opts filter-opts)
      db)))
 
