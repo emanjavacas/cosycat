@@ -4,7 +4,7 @@
             [cosycat.db.users :refer [user-login-info users-public-info user-settings]]
             [cosycat.db.projects :refer [get-projects]]
             [cosycat.db.utils :refer [normalize-user]]
-            [cosycat.app-utils :refer [dekeyword normalize-by mongo-id->hit-id]]
+            [cosycat.app-utils :refer [dekeyword normalize-by]]
             [cosycat.utils :refer [join-path]]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]

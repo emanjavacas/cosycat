@@ -2,7 +2,7 @@
   (:require [ring.util.response :refer [redirect]]
             [buddy.auth :refer [authenticated?]]
             [taoensso.timbre :as timbre]
-            [cosycat.app-utils :refer [span->token-id deep-merge-with dekeyword mongo-id->hit-id normalize-by]]
+            [cosycat.app-utils :refer [span->token-id deep-merge-with dekeyword normalize-by]]
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.db.annotations :refer [find-annotation-owner]]
             [cosycat.db.projects :refer [find-project-by-name]]))
