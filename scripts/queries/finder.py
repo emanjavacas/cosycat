@@ -32,11 +32,13 @@ def parse_rest(rest, schema):
         arg = rest.pop(0)
         if arg in schema:
             try:
-                acc[arg] = {subarg: rest.pop(0) for subarg in schema[arg]}
-                rec(rest, acc)
+                acc[arg] = {}
+                for subarg in schema[arg]:
+                    acc[arg][subarg] = rest.pop(0)
+                return rec(rest, acc)
             except IndexError:
                 value = " ".join([arg] + list(acc[arg].values()))
-                expected = " ".join([arg] + list(schema[arg].keys()))
+                expected = " ".join([arg] + list(schema[arg]))
                 raise ParseError(value, expected)
         else:
             raise ParseError(arg, "One of " + ", ".join(schema.keys()))
@@ -44,12 +46,12 @@ def parse_rest(rest, schema):
 
 
 class Finder(object):
-    def __init__(self, uri, verbose=True, timeout=3, **kwargs):
+    def __init__(self, uri, db, verbose=True, timeout=3, **kwargs):
         self.uri = uri
         self.verbose = verbose
         self.timeout = timeout
         try:
-            self.conn = MongoClient(self.uri, **kwargs).cosycat
+            self.conn = MongoClient(self.uri, **kwargs)[db]
             print("Connected to {conn}".format(conn=self.conn))
         except pymongo.errors.ConnectionFailure as e:
             print("Couldn't connect to MongoDB: {e}".format(e=e))
@@ -327,7 +329,7 @@ class Finder(object):
                 groupkeys = {k: "$" + k for k in keys}
                 result = project.aggregate(
                     [{"$match": self.query_filters()},
-                     {"$group": {"key": groupkeys, "count": {"$sum": 1}}}]
+                     {"$group": {"_id": groupkeys, "count": {"$sum": 1}}}]
                 )
                 output[project_name] = list(result)
             if 'output' in rest_args:
@@ -338,10 +340,12 @@ class Finder(object):
                         print(count_text.format(result=result, name=project))
                 else:
                     for project, result in output.items():
-                        print(project + "\n")
                         header = list(sorted(result[0]['_id'].keys()))
-                        print('%-10s' * len(header) % tuple(header))
+                        maxlen = max([len(k) for k in header]) + 5
+                        padstr = '%-' + str(maxlen) + 's'
+                        print(project)
+                        print(padstr * len(header) % tuple(header))
                         for line in result:
-                            vals = [result['_id'][k] for k in header]
-                            print('%-10s' * len(header) % tuple(vals)
-                                  + '%-10d' % result['count'])
+                            vals = [line['_id'][k] for k in header]
+                            print(padstr * len(header) % tuple(vals)
+                                  + padstr % line['count'])
