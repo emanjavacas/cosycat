@@ -3,7 +3,8 @@
             [schema.coerce :as coerce]
             [taoensso.timbre :as timbre]
             [cosycat.app-utils :refer [deep-merge]]
-            [cosycat.schemas.user-schemas :refer [settings-schema filter-opts-schema sort-opts-schema]]
+            [cosycat.schemas.user-schemas
+             :refer [settings-schema filter-opts-schema sort-opts-schema]]
             [cosycat.schemas.event-schemas :refer [event-schema event-id-schema]]
             [cosycat.schemas.results-schemas :refer [query-results-schema]]))
 
@@ -45,6 +46,20 @@
 ;;; query-metadata schemas
 (def query-id-schema s/Any)
 
+(def query-hit-metadata-schema
+  #?(:clj  {:timestamp s/Int
+            :hit-id s/Any
+            :by s/Str
+            :status (s/enum "discarded" "kept")
+            :_version s/Any
+            (s/optional-key :project-name) s/Any
+            (s/optional-key :query-id) query-id-schema}
+     :cljs {:timestamp s/Int
+            :hit-id s/Any
+            :by s/Str
+            :status (s/enum "discarded" "kept")
+            (s/optional-key :_version) s/Any}))
+
 (def queries-schema                     ;metadata on previous stored queries
   {:query-data {:query-str s/Str
                 :corpus s/Str
@@ -55,10 +70,7 @@
    :description s/Str
    :timestamp s/Int
    :creator s/Str
-   :hits {s/Any {:timestamp s/Int
-                 :hit-id s/Any
-                 :by s/Str
-                 :status (s/enum "discarded" "kept")}}})
+   (s/optional-key :hits) {s/Any query-hit-metadata-schema}})
 
 ;;; project session schemas
 (def status-schema

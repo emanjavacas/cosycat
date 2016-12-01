@@ -33,14 +33,10 @@
       (update-in [:roles] (partial apply hash-set))))
 
 (defn normalize-project-queries [{:keys [queries] :as project}]
-  (let [queries (-> ;; transform internal mongo-db-escaped hit-ids to normal hit-id
-                 (mapv (fn [{:keys [hits] :as query}]
-                         (let [normalized-hits (reduce-kv (fn [m k v] (assoc m (mongo-id->hit-id k) v)) {} hits)]
-                           (assoc query :hits normalized-hits)))
-                       queries)
-                 ;; normalize queries by id
-                 (normalize-by :id))]
-    (assoc project :queries queries)))
+  (assoc project :queries (normalize-by queries :id)))
+
+(defn normalize-query-hit [query-hit]
+  (dissoc query-hit :_id :query-id :project-name))
 
 (defn normalize-project [{:keys [issues events queries] :as project}]
   (cond-> project

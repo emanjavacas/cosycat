@@ -4,11 +4,11 @@
             [schema.core :as s]
             [cosycat.vcs :as vcs]
             [cosycat.utils :refer [new-uuid]]
-            [cosycat.app-utils :refer [server-project-name get-pending-users dekeyword hit-id->mongo-id]]
+            [cosycat.app-utils :refer [server-project-name get-pending-users dekeyword]]
             [cosycat.schemas.project-schemas
              :refer [project-schema project-user-schema issue-schema queries-schema]]
             [cosycat.roles :refer [check-project-role]]
-            [cosycat.db.utils :refer [is-user? normalize-project]]
+            [cosycat.db.utils :refer [is-user? normalize-project normalize-query-hit]]
             [cosycat.components.db :refer [new-db colls]]
             [taoensso.timbre :as timbre]))
 
@@ -168,7 +168,7 @@
 
 (defn check-user-is-query-metadata-creator
   [{db-conn :db :as db} username project-name query-id]
-  (if-let [{:keys [creator]} (find-query-metadata db username project-name query-id)]
+  (if-let [{:keys [creator]} (find-query-metadata db project-name query-id)]
     (when-not (= username creator)
       (throw (ex-cannot-drop-query username query-id)))))
 
@@ -392,14 +392,23 @@
    :users "all"
    :timestamp (System/currentTimeMillis)})
 
+(declare -drop-query-metadata)
+
 (defn erase-project
   "drops the project annotations and removes the project info from users"
-  [{db-conn :db :as db} project-name users]
-  (vcs/drop db-conn (server-project-name project-name))
-  (mc/remove db-conn (:projects colls) {:name project-name})
-  ;; TODO: remove user.projects.project-name (events, settings)?
-  (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}})
-  nil)
+  [{db-conn :db :as db} project-name]
+  (let [{:keys [users queries]} (mc/find-one-as-map db-conn (:projects colls) {:name project-name})]
+    ;; drop project annotation database
+    (vcs/drop db-conn (server-project-name project-name))
+    ;; drop project from projects collection
+    (mc/remove db-conn (:projects colls) {:name project-name})
+    ;; remove project from
+    (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}})
+    ;; remove query-metadata from query
+    (doseq [{query-id :id} queries]
+      (-drop-query-metadata db project-name query-id))
+    ;; TODO: remove user.projects.project-name (events, settings)?)
+  nil))
 
 (defn remove-project
   "drops the collections and removes project from users info (as per `erase-project`)
@@ -416,11 +425,16 @@
                   (add-project-issue db username project-name (make-delete-issue username)))
           {:keys [pending-users NA-users agreed-users]} (get-pending-users issue users)]
       (if (empty? pending-users)
-        (do (timbre/info "Erasing project" project-name) (erase-project db project-name users))
+        (do (timbre/info "Erasing project" project-name) (erase-project db project-name))
         (do (timbre/info "Pending users to project remove" project-name) issue)))))
 
 ;;; Query metadata
-(defn find-query-metadata [{db-conn :db :as db} username project-name query-id]
+(defn get-hit-meta-id [{:keys [project-name query-id hit-id]}]
+  (apply str (interpose "." [project-name query-id hit-id])))
+
+(defn find-query-metadata
+  "returns query metadata (excluding actual query hit metadata)"
+  [{db-conn :db :as db} project-name query-id]
   (-> (mc/find-one-as-map
        db-conn (:projects colls)
        {:name project-name
@@ -428,17 +442,32 @@
        {"queries.id" 1})
       (get-in [:queries query-id])))
 
+(defn find-query-hit-metadata
+  ([{db-conn :db :as db} project-name query-id]
+   (->> (mc/find-maps db-conn (:queries colls) {:project-name project-name :query-id query-id})
+        (mapv normalize-query-hit)))
+  ([{db-conn :db :as db} project-name query-id hit-id]
+   (let [id (get-hit-meta-id {:project-name project-name :query-id query-id :hit-id hit-id})]
+     (-> (mc/find-one-as-map db-conn (:queries colls) {:_id id})
+         normalize-query-hit))))
+
+(defn ensure-query-index [{db-conn :db :as db}]
+  (mc/ensure-index
+   db-conn (:queries colls)
+   (array-map :query-id 1 :project-name 1 :hit-id 1)
+   {:unique true}))
+
 (defn new-query-metadata
   "Inserts new query into user db to allow for query-related metadata.
    Returns this query's id needed for further updates."
   [{db-conn :db :as db} username project-name query-id query-data query-default description]
   (s/validate (:query-data queries-schema) query-data)
-  (check-user-in-project db username project-name)  
+  (check-user-in-project db username project-name)
+  (ensure-query-index db)
   (let [payload {:query-data query-data
                  :id query-id
                  :default query-default
                  :description description
-                 :hits {}
                  :timestamp (System/currentTimeMillis)
                  :creator username}]
     (check-query-exists db project-name query-data)
@@ -449,37 +478,50 @@
      {:return-new false})
     payload))
 
+(defn insert-query-metadata
+  "Insert annotation metadata for a new hit"
+  [{db-conn :db :as db} username project-name query-id hit-id status]
+  (let [id (get-hit-meta-id {:project-name project-name :query-id query-id :hit-id hit-id})]
+    (-> (vcs/insert-and-return
+            db-conn (:queries colls)
+            {:project-name project-name
+             :query-id query-id
+             :hit-id hit-id
+             :status status
+             :timestamp (System/currentTimeMillis)
+             :by username
+             :_id id})
+        normalize-query-hit)))
+
 (defn update-query-metadata
   "Upsert new query hit data or modify a given hit-status "
-  [{db-conn :db :as db} username project-name query-id hit-id status]
+  [{db-conn :db :as db} username project-name query-id hit-id status version]
   (check-user-in-project db username project-name)
-  (let [parsed-id (hit-id->mongo-id hit-id)
-        timestamp (System/currentTimeMillis)]
-    (mc/update
-     db-conn (:projects colls)
-     {:name project-name "queries.id" query-id}
-     {$set {(str "queries.$.hits." parsed-id ".status") status
-            (str "queries.$.hits." parsed-id ".hit-id") hit-id
-            (str "queries.$.hits." parsed-id ".timestamp") timestamp
-            (str "queries.$.hits." parsed-id ".by") username}})
-    {:hit-id hit-id :status status :timestamp timestamp :by username}))
+  (let [id (get-hit-meta-id {:project-name project-name :query-id query-id :hit-id hit-id})]
+    (-> (vcs/find-and-modify
+         db-conn (:queries colls) version {:_id id}
+         {$set {:status status :hit-id hit-id :timestamp (System/currentTimeMillis) :by username}}
+         {:return-new true})
+        normalize-query-hit)))
 
 (defn remove-query-metadata
   "Removes hit from query metadata"
-  [{db-conn :db :as db} username project-name query-id hit-id]
+  [{db-conn :db :as db} username project-name query-id hit-id version]
   (check-user-in-project db username project-name)
-  (let [parsed-id (hit-id->mongo-id hit-id)]
-    (mc/update
-     db-conn (:projects colls)
-     {:name project-name "queries.id" query-id}
-     {$unset {(str "queries.$.hits." parsed-id) ""}}
-     {:upsert true})))
+  (let [id (get-hit-meta-id {:project-name project-name :query-id query-id :hit-id hit-id})]
+    (vcs/remove-by-id db-conn (:queries colls) version id)))
+
+(defn- -drop-query-metadata [{db-conn :db :as db} project-name query-id]
+  (mc/remove db-conn (:queries colls) {:project-name project-name :query-id query-id}))
 
 (defn drop-query-metadata
   [{db-conn :db :as db} username project-name query-id]
   (check-user-in-project db username project-name)
   (check-user-is-query-metadata-creator db username project-name query-id)
+  ;; remove query from project
   (mc/update
    db-conn (:projects colls)
    {:name project-name}
-   {$pull {:queries {:id query-id}}}))
+   {$pull {:queries {:id query-id}}})
+  ;; remove query-metadata from queries collections
+  (-drop-query-metadata db project-name query-id))

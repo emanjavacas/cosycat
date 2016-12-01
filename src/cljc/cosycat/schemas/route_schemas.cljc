@@ -4,7 +4,8 @@
             [cosycat.schemas.annotation-schemas
              :refer [annotation-schema span-schema cpos-schema token-id-schema ann-key-schema]]
             [cosycat.schemas.project-schemas
-             :refer [project-schema issue-schema project-user-schema queries-schema]]
+             :refer [project-schema issue-schema project-user-schema
+                     queries-schema query-hit-metadata-schema]]
             [cosycat.schemas.user-schemas :refer [avatar-schema]]
             [cosycat.schemas.app-state-schemas :refer [public-user-schema]]
             [cosycat.schemas.results-schemas :refer [hit-id-schema]]
@@ -61,10 +62,10 @@
     :new-project-user-role (make-schema {:data {:project-name s/Str :username s/Str :role s/Str}})
     ;; Projects queries
     :new-query-metadata (make-schema {:data {:query queries-schema :project-name s/Str}})
-    :update-query-metadata (make-schema {:data {:id s/Str
-                                                :hit-id s/Str
-                                                :status (s/enum "kept" "discarded" "unseen")
+    :update-query-metadata (make-schema {:data {:query-hit query-hit-metadata-schema
+                                                :query-id s/Str
                                                 :project-name s/Str}})
+    :remove-query-metadata (make-schema {:data {:hit-id s/Str :query-id s/Str :project-name s/Str}})
     :drop-query-metadata (make-schema {:data {:id s/Str :project-name s/Str}})
     ;; Users
     :new-user-avatar (make-schema {:data {:avatar avatar-schema :username s/Str}})

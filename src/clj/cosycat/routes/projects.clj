@@ -1,6 +1,6 @@
 (ns cosycat.routes.projects
   (:require [compojure.core :refer [routes context POST GET]]
-            [cosycat.app-utils :refer [server-project-name]]
+            [cosycat.app-utils :refer [server-project-name normalize-by]]
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.routes.utils
              :refer [make-default-route ex-user check-user-rights normalize-anns]]
@@ -174,34 +174,52 @@
     project-user))
 
 ;; Query metadata
+(defn fetch-query-metadata-route
+  [{{{username :username} :identity} :session {db :db} :components
+    {project-name :project-name id :id} :params}]
+  (check-user-rights db username project-name :read)
+  (-> (proj/find-query-hit-metadata db project-name id)
+      (normalize-by :hit-id)))
+
 (defn new-query-metadata-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components
     {{:keys [query-str corpus filter-opts sort-opts] :as query-data} :query-data
      project-name :project-name id :id description :description
      default :default :or {default "unseen"}} :params}]
   (let [{:keys [users]} (proj/get-project db username project-name)
-        new-query (proj/new-query-metadata db username project-name id query-data default description)]
+        data (proj/new-query-metadata db username project-name id query-data default description)]
     (send-clients
      ws {:type :new-query-metadata
-         :data {:query new-query :project-name project-name}
+         :data {:query data :project-name project-name}
          :by username}
      :source-client username
      :target-clients (map :username users))
-    new-query))
+    data))
 
 (defn update-query-metadata-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components
-    {:keys [id hit-id status project-name]} :params}]
+    {:keys [id hit-id status project-name version]} :params}]
   (let [{:keys [users]} (proj/get-project db username project-name)
-        payload {:hit-id hit-id :id id :project-name project-name :status status}]
-    (cond
-        (= status "unseen")            (proj/remove-query-metadata db username project-name id hit-id)
-        (#{"kept" "discarded"} status) (proj/update-query-metadata db username project-name id hit-id status)
-        :else (throw (let [msg (format "Wrong status value [%s]" status)] (ex-info msg {:message msg }))))
+        payload (if-let [_ (proj/find-query-hit-metadata db project-name id hit-id)]
+                  (proj/update-query-metadata db username project-name id hit-id status version)
+                  (proj/insert-query-metadata db username project-name id hit-id status))]
     (send-clients
      ws {:type :update-query-metadata
-         :data payload
+         :data {:query-hit payload
+                :query-id id
+                :project-name project-name}
          :by username}
+     :source-client username
+     :target-clients (map :username users))
+    payload))
+
+(defn remove-query-metadata-route
+  [{{{username :username} :identity} :session {db :db ws :ws} :components
+    {:keys [id hit-id project-name version]} :params}]
+  (let [{:keys [users]} (proj/get-project db username project-name)
+        payload {:project-name project-name :id id :hit-id hit-id}]
+    (proj/remove-query-metadata db username project-name id hit-id version)
+    (send-clients ws {:type :remove-query-metadata :data payload :by username}
      :source-client username
      :target-clients (map :username users))
     payload))
@@ -210,6 +228,7 @@
   [{{{username :username} :identity} :session {db :db ws :ws} :components
     {id :id project-name :project-name} :params}]
   (let [{:keys [users]} (proj/get-project db username project-name)]
+    (check-user-rights db username project-name :delete)
     (proj/drop-query-metadata db username project-name id)
     (send-clients
      ws {:type :drop-query-metadata
@@ -227,14 +246,16 @@
       (POST "/remove-project" [] (make-default-route remove-project-route))
       (POST "/update-user-role" [] (make-default-route update-user-role))
       (context "/queries" []
+        (GET "/fetch" [] (make-default-route fetch-query-metadata-route))
         (POST "/new" [] (make-default-route new-query-metadata-route))
         (POST "/update" [] (make-default-route update-query-metadata-route))
+        (POST "/remove" [] (make-default-route remove-query-metadata-route))
         (POST "/drop" [] (make-default-route drop-query-metadata-route)))
       (context "/issues" []
         (POST "/new" [] (make-default-route add-project-issue-route))
         (context "/comment" []
           (POST "/new" [] (make-default-route comment-on-project-issue-route))
-          (POST "/delete" [] (make-default-route delete-comment-on-project-issue-route)))             
+          (POST "/delete" [] (make-default-route delete-comment-on-project-issue-route))) 
         (context "/annotation-edit" []
           (POST "/open" [] (make-default-route open-annotation-edit-route))
           (POST "/resolve" [] (make-default-route resolve-annotation-edit-route)))))))

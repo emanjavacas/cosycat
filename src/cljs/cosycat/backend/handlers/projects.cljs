@@ -1,7 +1,7 @@
 (ns cosycat.backend.handlers.projects
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
-            [ajax.core :refer [POST]]
+            [ajax.core :refer [POST GET]]
             [cosycat.utils :refer [format current-results]]
             [cosycat.app-utils :refer [get-pending-users deep-merge update-coll]]
             [cosycat.routes :refer [nav!]]
@@ -267,6 +267,35 @@
  (fn [db [_ {{:keys [id] :as query-metadata} :query project-name :project-name}]]
    (assoc-in db [:projects project-name :queries id] query-metadata)))
 
+(re-frame/register-handler
+ :update-query-metadata
+ standard-middleware
+ (fn [db [_ {project-name :project-name query-id :query-id {:keys [hit-id] :as query-hit} :query-hit}]]
+   (let [path [:projects project-name :queries query-id :hits]]
+     (update-in db path assoc hit-id query-hit))))
+
+(re-frame/register-handler
+ :remove-query-metadata
+ standard-middleware
+ (fn [db [_ {:keys [hit-id id project-name]}]]
+   (update-in db [:projects project-name :queries id :hits] dissoc hit-id)))
+
+(re-frame/register-handler
+ :add-query-annotation
+ standard-middleware
+ (fn [db [_ project-name query-id hits]]
+   (assoc-in db [:projects project-name :queries query-id :hits] hits)))
+
+(re-frame/register-handler
+ :fetch-query-annotation
+ standard-middleware
+ (fn [db [_ {:keys [project-name query-id]}]]
+   (GET "/project/queries/fetch"
+        {:params {:project-name project-name :id query-id}
+         :handler #(re-frame/dispatch [:add-query-annotation project-name query-id %])
+         :error-handler #(timbre/error "Error while fetching annotation query")})
+   db))
+
 (defn query-new-metadata-handler [project-name]
   (fn [{:keys [id] :as query-metadata}]
     (re-frame/dispatch [:set-active-query id])
@@ -279,7 +308,7 @@
  :query-new-metadata
  (fn [db [_ {:keys [id include-sort-opts? include-filter-opts? default description]}]]
    (let [active-project (get-in db [:session :active-project])
-         {:keys [corpus filter-opts sort-opts]} (get-in db [:settings :query])         
+         {:keys [corpus filter-opts sort-opts]} (get-in db [:settings :query])
          {query-str :query-str} (current-results db)]
      (POST "/project/queries/new"
            {:params (cond-> {:project-name active-project
@@ -293,22 +322,7 @@
             :error-handler query-new-metadata-error-handler}))
    db))
 
-(re-frame/register-handler
- :update-query-metadata
- standard-middleware
- (fn [db [_ {:keys [project-name id hit-id status]}]]
-   (let [path [:projects project-name :queries id :hits]]
-     (cond-> db
-       (= status "unseen")    (update-in path dissoc hit-id)
-       (= status "discarded") (update-in (conj path hit-id) assoc :status status)
-       (= status "kept")      (update-in (conj path hit-id) assoc :status status)))))
-
-(defn query-update-metadata-handler [project-name]
-  (fn [{:keys [id hit-id status]}]
-    (re-frame/dispatch
-     [:update-query-metadata {:project-name project-name :id id :hit-id hit-id :status status}])))
-
-(defn get-new-status [{default :default} previous-hit-status]
+(defn get-new-status [default previous-hit-status]
   (get-in {"unseen" {"unseen" "discarded"
                      "discarded" "kept"
                      "kept" "unseen"}
@@ -318,21 +332,68 @@
                    "kept" "discarded"}}
           [default previous-hit-status]))
 
+(defn get-action [default new-status]
+  (get-in {"unseen" {"unseen" :remove
+                     "discarded" :update
+                     "kept" :update}
+           "discarded" {"discarded" :remove
+                        "kept" :update}
+           "kept" {"discarded" :update
+                   "kept" :remove}}
+          [default new-status]))
+
+(re-frame/register-handler
+ :dispatch-query-metadata
+ (fn [db [_ hit-id previous-hit-status]]
+   (let [project-name (get-in db [:session :active-project])
+         query-id (get-in db [:projects project-name :session :components :active-query])
+         {:keys [default]} (get-in db [:projects project-name :queries query-id])
+         version (get-in db [:projects project-name :queries query-id :hits hit-id :_version])
+         new-status (get-new-status default previous-hit-status)
+         action (get-action default new-status)]
+     (case action
+       :update (re-frame/dispatch
+                [:query-update-metadata project-name query-id hit-id new-status version])       
+       :remove (do ;; remove needs version
+                 (assert version (str "Couldn't find version for hit-id " hit-id))
+                 (re-frame/dispatch [:query-remove-metadata project-name query-id hit-id version])))
+     db)))
+
+(defn query-update-metadata-handler [project-name query-id]
+  (fn [{:keys [hit-id status _version timestamp by] :as query-hit}]
+    (re-frame/dispatch
+     [:update-query-metadata
+      {:project-name project-name :query-id query-id :query-hit query-hit}])))
+
 (re-frame/register-handler
  :query-update-metadata
  standard-middleware
- (fn [db [_ hit-id hit-num previous-hit-status]]
-   (let [active-project (get-in db [:session :active-project])
-         active-query-id (get-in db [:projects active-project :session :components :active-query])
-         active-query (get-in db [:projects active-project :queries active-query-id])]
-     (POST "/project/queries/update"
-           {:params {:project-name active-project
-                     :id active-query-id
-                     :hit-id hit-id
-                     :status (get-new-status active-query previous-hit-status)
-                     :hit-num hit-num}
-            :handler (query-update-metadata-handler active-project)
-            :error-handler #(timbre/error "Error when storing query metadata")}))
+ (fn [db [_ project-name query-id hit-id new-status version]]
+   (POST "/project/queries/update"
+         {:params {:project-name project-name
+                   :id query-id
+                   :hit-id hit-id
+                   :version version
+                   :status new-status}
+          :handler (query-update-metadata-handler project-name query-id)
+          :error-handler #(timbre/error "Error when updating query metadata")})
+   db))
+
+(defn query-remove-metadata-handler
+  [{:keys [project-name id hit-id] :as opts}]
+  (re-frame/dispatch [:remove-query-metadata opts]))
+
+(re-frame/register-handler
+ :query-remove-metadata
+ standard-middleware
+ (fn [db [_ project-name query-id hit-id version]]
+   (POST "/project/queries/remove"
+         {:params {:project-name project-name
+                   :id query-id
+                   :hit-id hit-id
+                   :version version}
+          :handler query-remove-metadata-handler
+          :error-handler #(timbre/error "Error when updating query metadata")})
    db))
 
 (re-frame/register-handler
@@ -342,7 +403,8 @@
    (let [active-query (get-in db [:projects project-name :session :components :active-query])]
      (cond-> db
        ;; unset active-query if it's dropped query
-       (= active-query id) (update-in [:projects project-name :session :components] dissoc :active-query)
+       (= active-query id)
+       (update-in [:projects project-name :session :components] dissoc :active-query)
        ;; remove query from db
        true (update-in [:projects project-name :queries] dissoc id)))))
 
@@ -352,7 +414,8 @@
    (let [active-project (get-in db [:session :active-project])]
      (POST "/project/queries/drop"
            {:params {:project-name active-project :id query-id}
-            :handler #(re-frame/dispatch [:drop-query-metadata {:id query-id :project-name active-project}])
+            :handler #(re-frame/dispatch
+                       [:drop-query-metadata {:id query-id :project-name active-project}])
             :error-handler #(timbre/error "Error when droping query metadata")})
      db)))
 
@@ -361,6 +424,8 @@
  (fn [db [_ query-id]]
    (let [active-project (get-in db [:session :active-project])
          query (get-in db [:projects active-project :queries query-id])]
+     (when-not (:hits query)
+       (re-frame/dispatch [:fetch-query-annotation {:project-name active-project :query-id query-id}]))
      (if-let [{{:keys [query-str filter-opts sort-opts corpus]} :query-data} query]
        (do (set! (.-value (.getElementById js/document "query-str")) query-str)
            (re-frame/dispatch [:query query-str :set-active query-id])

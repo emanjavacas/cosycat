@@ -23,6 +23,6 @@
 (defn new-db [url]
   (map->DB {:url url}))
 
-(def colls {:projects "projects" :users "users"})
+(def colls {:projects "projects" :users "users" :queries "queries"})
 
 
