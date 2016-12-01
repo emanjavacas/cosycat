@@ -31,19 +31,20 @@
        [double-check-button show?]]]]))
 
 (defn counter-row [status hits]
-  [:div.row.highlightable
-   [:div.col-lg-4.col-md-4.col-sm-4 [:span "Hits marked as " [:strong status]]]
-   [:div.col-lg-8.col-md-8.col-sm-8 [:span.text-muted (count (filter #(= status (:status %)) (vals hits)))]]])
+  (let [num-hits (count (filter #(= status (:status %)) (vals hits)))]
+    [:div.row.highlightable
+     [:div.col-lg-6.col-md-6.col-sm-6 [:span "Hits marked as " [:strong status]]]
+     [:div.col-lg-6.col-md-6.col-sm-6 [:span.text-muted num-hits]]]))
 
 (defn filter-opts-row [filter-opts]
   [:div.row.highlightable
-   [:div.col-lg-4.col-md-4.col-sm-4 [:span [:strong "Filters"]]]
-   [:div.col-lg-8.col-md-8.col-sm-8 [:span.text-muted]]])
+   [:div.col-lg-6.col-md-6.col-sm-6 [:span [:strong "Filters"]]]
+   [:div.col-lg-6.col-md-6.col-sm-6 [:span.text-muted]]])
 
 (defn sort-opts-row [sort-opts]
   [:div.row.highlightable
-   [:div.col-lg-4.col-md-4.col-sm-4 [:span [:strong "Sort criteria"]]]
-   [:div.col-lg-8.col-md-8.col-sm-8 [:span.text-muted]]])
+   [:div.col-lg-6.col-md-6.col-sm-6 [:span [:strong "Sort criteria"]]]
+   [:div.col-lg-6.col-md-6.col-sm-6 [:span.text-muted]]])
 
 (defn query-component
   [{{:keys [query-str corpus filter-opts sort-opts]} :query-data hits :hits
@@ -51,36 +52,43 @@
   (fn [{{:keys [query-str corpus filter-opts sort-opts]} :query-data hits :hits
         description :description timestamp :timestamp id :id creator :creator default :default}]
     [:div.container-fluid
-     [:div.row
-      [:div.col-lg-10.col-sm-10
-       [:p {:style {:font-size "18px" :margin-bottom "2px"}} id]
-       [:span description]
-       [:br]
-       [:span.text-muted "Created by " [:strong creator] " on " (human-time timestamp)]]
-      [:div.col-lg-2.col-sm-2.text-right
-       [bs/button
-        {:style {:cursor "pointer"} :onClick #(re-frame/dispatch [:open-modal :remove-query id])}
-        [bs/glyphicon {:glyph "trash"}]]]]
-     [:div.row {:style {:height "10px"}}]
-     [:div.row.highlightable
-      [:div.col-lg-4.col-md-4.col-sm-4 [:strong "Query String"]]
-      [:div.col-lg-8.col-md-8.col-sm-8 [:code query-str]]]
-     [:div.row.highlightable
-      [:div.col-lg-4.col-md-4.col-sm-4 [:strong "Corpus"]]
-      [:div.col-lg-8.col-md-8.col-sm-8 [:span.text-muted corpus]]]
-     [:div.row.highlightable
-      [:div.col-lg-4.col-md-4.col-sm-4 [:strong "Default hit value"]]
-      [:div.col-lg-8.col-md-8.col-sm-8 [:span.text-muted default]]]
-     (when filter-opts [filter-opts-row filter-opts])
-     (when sort-opts   [sort-opts-row sort-opts])
-     (when (not= default "unseen")
-       (if (= default "discarded")
-         [counter-row "kept" hits]
-         [counter-row "discarded" hits]))
-     (when (= default "unseen")
-       [counter-row "kept" hits])
-     (when (= default "unseen")
-       [counter-row "discarded" hits])]))
+     [:div.row.pad
+      [:div.container-fluid
+       [:div.row
+        [:div.col-lg-10.col-sm-10
+         [:p {:style {:font-size "18px" :margin-bottom "2px"}} id]
+         [:span description]
+         [:br]
+         [:span.text-muted "Created by " [:strong creator] " on " (human-time timestamp)]]
+        [:div.col-lg-2.col-sm-2.text-right
+         [bs/button
+          {:style {:cursor "pointer"} :onClick #(re-frame/dispatch [:open-modal :remove-query id])}
+          [bs/glyphicon {:glyph "trash"}]]]]]]
+     [:div.row.pad
+      [:div.col-lg-6.col-md-6.col-sm-6
+       [:div.container-fluid.pad
+        [:div.row {:style {:height "10px"}}]
+        [:div.row.highlightable
+         [:div.col-lg-6.col-md-6.col-sm-6 [:strong "Query String"]]
+         [:div.col-lg-6.col-md-6.col-sm-6 [:code query-str]]]
+        [:div.row.highlightable
+         [:div.col-lg-6.col-md-6.col-sm-6 [:strong "Corpus"]]
+         [:div.col-lg-6.col-md-6.col-sm-6 [:span.text-muted corpus]]]
+        [:div.row.highlightable
+         [:div.col-lg-6.col-md-6.col-sm-6 [:strong "Default hit value"]]
+         [:div.col-lg-6.col-md-6.col-sm-6 [:span.text-muted default]]]
+        (when (not= default "unseen")
+          (if (= default "discarded")
+            [counter-row "kept" hits]
+            [counter-row "discarded" hits]))
+        (when (= default "unseen")
+          [counter-row "kept" hits])
+        (when (= default "unseen")
+          [counter-row "discarded" hits])]]
+      [:div.col-lg-6.col-md-6.col-sm-6
+       [:div.container-fluid.pad
+        (when filter-opts [filter-opts-row filter-opts])
+        (when sort-opts   [sort-opts-row sort-opts])]]]]))
 
 (defn queries-frame []
   (let [project-queries (re-frame/subscribe [:project-queries :filter-corpus false])

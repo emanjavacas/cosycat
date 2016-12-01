@@ -70,18 +70,19 @@
     (.stopPropagation event)
     (re-frame/dispatch [:fetch-snippet hit-id])))
 
-(defn get-color [status] (get {"kept" "#5cb85c", "discarded" "#d9534f", "unseen" "#A9A9A9"} status))
+(defn get-color [status]
+  (get {"kept" "#5cb85c", "discarded" "#d9534f", "unseen" "#A9A9A9"} status))
 
-(defn get-glyph [status] (get {"kept" "ok-circle", "discarded" "remove-circle" "unseen" "question-sign"} status))
+(defn get-glyph [status]
+  (get {"kept" "ok-circle", "discarded" "remove-circle" "unseen" "question-sign"} status))
 
-(defn hit-query-status [hit-id hit-num hit-status]
-  (fn [hit-id hit-num hit-status]
-    (let [hit-status (or @hit-status "unseen")]
-      [bs/glyphicon
-       {:glyph (get-glyph hit-status)
-        :class "ignore"
-        :style {:color (get-color hit-status) :cursor "pointer"}
-        :onClick #(re-frame/dispatch [:query-update-metadata hit-id hit-num hit-status])}])))
+(defn hit-query-status [hit-id hit-status]
+  (fn [hit-id hit-status]
+    [bs/glyphicon
+     {:glyph (get-glyph @hit-status)
+      :class "ignore"
+      :style {:color (get-color @hit-status) :cursor "pointer"}
+      :onClick #(re-frame/dispatch [:dispatch-query-metadata hit-id @hit-status])}]))
 
 (defn results-row [hit-num {:keys [id]} {:keys [color-map break active-query toggle-discarded]}]
   (let [hit-status (re-frame/subscribe [:hit-status id])]
@@ -92,7 +93,8 @@
             background "#F9F9F9"]
         [:tr {:class row-class
               :data-hit id
-              :style {:visibility (when (and @toggle-discarded (= @hit-status "discarded")))}}
+              ;; hide hit if discarded and toggle is on
+              :style {:display (when (and @toggle-discarded (= @hit-status "discarded")) "none")}}
          (concat
           [^{:key (str hit-num "-check")}
            [:td.ignore
@@ -117,7 +119,7 @@
                        :text-align "center"
                        :line-height "24px"
                        :width "20px"}}
-              [hit-query-status id hit-num hit-status]])
+              [hit-query-status id hit-status]])
            ;; hit number
            ^{:key (str hit-num "-num")}
            [:td.ignore.snippet-trigger

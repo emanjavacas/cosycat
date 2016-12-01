@@ -244,13 +244,18 @@
  :active-project-query
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
-         active-query-id (reaction (get-in @db [:projects @active-project :session :components :active-query]))]
+         subpath [:session :components :active-query]
+         active-query-id (reaction (get-in @db (into [:projects @active-project] subpath)))]
      (reaction (get-in @db [:projects @active-project :queries @active-query-id])))))
+
+(defn get-hit-status [hit-id {:keys [hits default]}]
+  (or (get-in hits [hit-id :status]) default))
 
 (re-frame/register-sub                  ;assumes that there is an active query
  :hit-status
  (fn [db [_ hit-id]]
    (let [active-project (reaction (get-in @db [:session :active-project]))
-         active-query-id (reaction (get-in @db [:projects @active-project :session :components :active-query]))
+         subpath [:session :components :active-query]
+         active-query-id (reaction (get-in @db (into [:projects @active-project] subpath)))
          active-query (reaction (get-in @db [:projects @active-project :queries @active-query-id]))]
-     (reaction (get-in @active-query [:hits hit-id :status])))))
+     (reaction (get-hit-status hit-id @active-query)))))
