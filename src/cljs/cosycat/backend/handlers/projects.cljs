@@ -271,8 +271,7 @@
  :update-query-metadata
  standard-middleware
  (fn [db [_ {project-name :project-name query-id :query-id {:keys [hit-id] :as query-hit} :query-hit}]]
-   (let [path [:projects project-name :queries query-id :hits]]
-     (update-in db path assoc hit-id query-hit))))
+   (update-in db [:projects project-name :queries query-id :hits] assoc hit-id query-hit)))
 
 (re-frame/register-handler
  :add-query-annotation
@@ -353,7 +352,7 @@
  :query-update-metadata
  (fn [db [_ hit-id previous-hit-status]]
    (if-let [_ (get-in db [:session :throbbing? :query-update-metadata])]
-     ;; don't trigger (update is running)
+     ;; don't trigger (event is locked/running)
      db
      (let [project-name (get-in db [:session :active-project])
            query-id (get-in db [:projects project-name :session :components :active-query])
@@ -394,15 +393,19 @@
             :error-handler #(timbre/error "Error when droping query metadata")})
      db)))
 
+(defn reset-query-str-input [new-query-str]
+  (set! (.-value (.getElementById js/document "query-str")) new-query-str))
+
 (re-frame/register-handler
  :launch-query-from-metadata
  (fn [db [_ query-id]]
    (let [active-project (get-in db [:session :active-project])
          query (get-in db [:projects active-project :queries query-id])]
+     ;; ask for hits if query is launched for the first time
      (when-not (:hits query)
        (re-frame/dispatch [:fetch-query-annotation {:project-name active-project :query-id query-id}]))
      (if-let [{{:keys [query-str filter-opts sort-opts corpus]} :query-data} query]
-       (do (set! (.-value (.getElementById js/document "query-str")) query-str)
+       (do (reset-query-str-input query-str)
            (re-frame/dispatch [:query query-str :set-active query-id])
            (cond-> db
              sort-opts (assoc-in [:settings :query :sort-opts] sort-opts)
