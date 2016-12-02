@@ -41,38 +41,30 @@
        (throw (ex-info ~@args)))))
 
 (defn- assert-version [version doc]
-  (let [data {:message :missing-version :data doc}]
-    (assert-ex-info version "Document is not vcs-controled" data)))
+  (let [message "Document is not vcs-controled"
+        data {:message message :code :missing-version :data doc}]
+    (assert-ex-info version message data)))
 
 (defn- assert-sync [version db-version]
-  (let [data {:message :version-mismatch :data {:db db-version :user version}}]
-    (assert-ex-info (= db-version version) "Version mismatch" data)))
+  (let [message "Version mismatch"
+        data {:message message :code :version-mismatch :data {:db db-version :user version}}]
+    (assert-ex-info (= db-version version) message data)))
 
 ;;; Exceptions
-(defn- ex-internal [e]
-  (let [{message :message ex :class} (bean e)
-        stacktrace (mapv str (.getStackTrace e))]
-    (ex-info "Internal Exception"
-             {:message :internal :data {:exception (str ex) :stacktrace stacktrace}})))
-
 (defn- ex-insert [doc e]
-  (let [{message :message ex :class} (bean e)
-        stacktrace (mapv str (.getStackTrace e))]
-    (ex-info "Couldn't insert vcs version"
-             {:message :insert-error :data {:doc doc :exception (str ex) :stacktrace stacktrace}})))
-
-(defn- ex-version
-  "exception for not-matching version updates"
-  [{last-vcs-version :_version} {new-doc-version :_version}]
-  (ex-info
-   "Claimed version not in sync with collection version"
-   {:message :unsync-version
-    :data {:last-vcs-version last-vcs-version :claimed-version new-doc-version}}))
+  (let [{ex :class} (bean e)
+        stacktrace (mapv str (.getStackTrace e))
+        message "Couldn't insert vcs version"]
+    (ex-info message
+             {:message message
+              :code :insert-error
+              :data {:doc doc :exception (str ex) :stacktrace stacktrace}})))
 
 (defn- ex-id
   "exception for not-matching document ids"
   [id]
-  (ex-info "Couldn't find document by id" {:message :doc-not-found :data {:id id}}))
+  (let [message "Couldn't find document by id"]
+    (ex-info message {:message message :code :doc-not-found :data {:id id}})))
 
 ;;; find operations:
 ;;; find-*
@@ -148,9 +140,9 @@
          ;; return updated document
          res)
        (catch clojure.lang.ExceptionInfo e
-         (let [{message :message {doc :doc e :exception st :stacktrace} :data} (ex-data e)]
+         (let [{code :code {doc :doc e :exception st :stacktrace} :data} (ex-data e)]
            (timbre/debug "Caught Exception: [" e "]\nStacktrace:\n" (format-stacktrace st))
-           (if (= message :insert-error)
+           (if (= code :insert-error)
              (rollback-update db coll _id doc)
              (throw e))))))
 
@@ -158,9 +150,9 @@
   (try (apply-monger-thunk)
        (insert-version db (assoc doc :_remove true))
        (catch clojure.lang.ExceptionInfo e
-         (let [{message :message {doc :doc e :exception st :stacktrace} :data} (ex-data e)]
+         (let [{code :code {doc :doc e :exception st :stacktrace} :data} (ex-data e)]
            (timbre/debug "Caught Exception: [" e "]\nStacktrace:\n" (format-stacktrace st))
-           (if (= message :insert-error)
+           (if (= code :insert-error)
              (rollback-update db coll _id doc)
              (throw e))))))
 
@@ -172,8 +164,10 @@
      ([db coll doc] (wrapped-func db coll doc nil))
      ([db coll doc concern]
       (let [{version :_version :as new-doc} (version-setter doc)]
-        (assert-ex-info "Version missing from insert" {:message :missing-version :data new-doc})
-        (if concern (f db coll new-doc concern) (f db coll new-doc)))))))
+        (assert-version version new-doc)
+        (if concern
+          (f db coll new-doc concern)
+          (f db coll new-doc)))))))
 
 (defn- wrap-modify
   "Function wrapper for native monger `find-and-modify`, `update` & `update-by-id`.

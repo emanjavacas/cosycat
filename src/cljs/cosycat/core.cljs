@@ -88,6 +88,7 @@
   ;; declare app routes
   (routes/app-routes)
   ;; handle refreshes
+  (routes/nav! "/")
   ;; (.addEventListener js/window "beforeunload" ls/dump-db) ;; disable this (too buggy)
   ;; render root
   (mount-root))

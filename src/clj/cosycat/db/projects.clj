@@ -439,8 +439,9 @@
        db-conn (:projects colls)
        {:name project-name
         "queries.id" query-id}
-       {"queries.id" 1})
-      (get-in [:queries query-id])))
+       {"queries.$.id" 1})
+      :queries
+      first))
 
 (defn find-query-hit-metadata
   ([{db-conn :db :as db} project-name query-id]
@@ -503,13 +504,6 @@
          {$set {:status status :hit-id hit-id :timestamp (System/currentTimeMillis) :by username}}
          {:return-new true})
         normalize-query-hit)))
-
-(defn remove-query-metadata
-  "Removes hit from query metadata"
-  [{db-conn :db :as db} username project-name query-id hit-id version]
-  (check-user-in-project db username project-name)
-  (let [id (get-hit-meta-id {:project-name project-name :query-id query-id :hit-id hit-id})]
-    (vcs/remove-by-id db-conn (:queries colls) version id)))
 
 (defn- -drop-query-metadata [{db-conn :db :as db} project-name query-id]
   (mc/remove db-conn (:queries colls) {:project-name project-name :query-id query-id}))
