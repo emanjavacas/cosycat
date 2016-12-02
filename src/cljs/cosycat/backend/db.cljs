@@ -5,10 +5,29 @@
     :sort-opts {:position "match" :attribute "word" :facet "insensitive"}
     :filter-opts {:attribute "title" :value "random"}))
 
+(def verbosity-settings
+  {:signup true
+   :login true
+   :logout true
+   :remove-project true
+   :new-project-issue true
+   :update-project-issue true
+   :close-project-issue true
+   :add-project-user true
+   :new-project-user true
+   :remove-project-user true
+   :new-project-user-role true
+   :new-query-metadata true
+   :update-query-metadata true
+   :drop-query-metadata true
+   :new-user-avatar true
+   :new-user-info true})
+
 (defn default-settings
   [& {:keys [corpora] :or {corpora []}}]
   (let [corpus (first (map :corpus corpora))]
-    {:notifications {:delay 7500}
+    {:notifications {:delay 7500
+                     :verbosity verbosity-settings}
      :query {:query-opts {:context 5 :from 0 :page-size 5}
              :sort-opts []
              :filter-opts []

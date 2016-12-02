@@ -159,12 +159,7 @@
                  :mult "[%s] inserted %d annotations!"}}
     :error {:token "Couldn't store annotation with id %d. Reason: [%s]"
             :IOB "Couldn't store span annotation for range [%d-%d]. Reason: [%s]"
-            :mult   "Couldn't store %d annotations! Reason: [%s]"}}
-   :info  "%s says: %s"
-   :signup "Hooray! %s has joined the team!"
-   :login "%s is ready for science"
-   :logout "%s is leaving us for a while"
-   :new-project "You've been added to project \"%s\" by %s"})
+            :mult   "Couldn't store %d annotations! Reason: [%s]"}}})
 
 (defn get-msg [path & args]
   (let [fmt (get-in notification-msgs path)]

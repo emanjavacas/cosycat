@@ -43,7 +43,8 @@
 
 (defmethod get-update-map :appearance
   [_ settings]
-  {:notifications {:delay (get-in settings [:notifications :delay])}})
+  {:notifications {:delay (get-in settings [:notifications :delay])
+                   :verbosity (get-in settings [:notifications :verbosity])}})
 
 (defmethod get-update-map :tagsets
   [_ {:keys [tagsets] :as settings}]

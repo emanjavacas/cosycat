@@ -21,7 +21,9 @@
    :snippet-opts {:snippet-size s/Int :snippet-delta s/Int}})
 
 (def settings-schema
-  {:notifications {:delay s/Int} ;overridable by project-setts
+  {:notifications {:delay s/Int
+                   ;; restrict notifications of ws-events
+                   (s/optional-key :verbosity) {s/Keyword s/Bool}}
    :query query-opts-schema
    (s/optional-key :tagsets) [s/Any]})
 
