@@ -12,14 +12,10 @@
 
 ;;; General
 (defn new-project-route
-  [{{project-name :project-name desc :description users :users} :params
+  [{{project-name :project-name desc :description} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (let [project (proj/new-project db username project-name desc users)]
-    (send-clients
-     ws {:type :new-project :data {:project project} :by username}
-     :source-client username
-     :target-clients (map :username users))
+  (let [project (proj/new-project db username project-name desc)]
     project))
 
 (defn remove-project-route
