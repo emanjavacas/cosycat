@@ -66,7 +66,8 @@
   [{last-vcs-version :_version} {new-doc-version :_version}]
   (ex-info
    "Claimed version not in sync with collection version"
-   {:message :unsync-version :data {:last-vcs-version last-vcs-version :claimed-version new-doc-version}}))
+   {:message :unsync-version
+    :data {:last-vcs-version last-vcs-version :claimed-version new-doc-version}}))
 
 (defn- ex-id
   "exception for not-matching document ids"
@@ -104,23 +105,31 @@
   (-> doc (assoc :docId id) (dissoc :_id)))
 
 (defn- insert-version
-  "inserts the last modified version of a document into the vcs collection"
+  "inserts the last modified version of a document into the vcs collection.
+   Note that any write attempt on the target collection (not the _vcs collection) that results
+   in a duplicate insert into the _vcs collections (as per _version and docId fields), will fail"
   [db {:keys [_version _id] :as doc} & {:keys [merge-field] :as args :or {merge-field :history}}]
   (mc/ensure-index db *hist-coll-name* (array-map :_version 1 :docId 1) {:unique true})
-  (timbre/info "Inserting document version" _version "of doc id" _id)
+  (timbre/info "Inserting document version" _version "of doc" _id)
   (try (mc/insert db *hist-coll-name* (with-doc-id doc))
-       (catch Throwable t
-         (throw (ex-insert doc t)))))
+       (catch com.mongodb.DuplicateKeyException e
+         (timbre/info "Found duplicate version of doc" _id "with version" _version)
+         (throw (ex-insert doc e)))
+       (catch Throwable e
+         (timbre/info "Caught internal exception [" (str e) "]")
+         (throw (ex-insert doc e)))))
 
 (defn- doc-version-setter [doc]
   (assoc doc :_version 0))
 
 (defn- rollback-update [db coll id doc]
   (timbre/info "Rollbacking update of doc" id "to" doc)
-  (mc/update-by-id db coll id doc))
+  (mc/update-by-id db coll id doc)
+  ;; return doc to account for :return-new cases
+  doc)
 
 (defn- update-version-document
-  "version setter for document updates with mongodb operators; fns: update, update-by-id, find-and-modify"
+  "version setter for doc updates with mongodb operators; fns: update, update-by-id, find-and-modify"
   [update-document]
   (let [new-doc (deep-merge update-document {$inc {:_version 1}})]
     (timbre/info "Applying update-map" new-doc)
@@ -132,9 +141,12 @@
    and inserting the doc version previous to the modification into the vcs collection.
    It returns the updated document in case of successfull update."
   [db coll {:keys [_id] :as doc} apply-monger-thunk]
-  (try (let [res (apply-monger-thunk) ;applies f with right version
-             _ (insert-version db doc)] ;insert previous version in vcs coll
-         res)                           ;return updated document
+  (try (let [;; applies f with right version
+             res (apply-monger-thunk)
+             ;; insert previous version in vcs coll
+             _ (insert-version db doc)]
+         ;; return updated document
+         res)
        (catch clojure.lang.ExceptionInfo e
          (let [{message :message {doc :doc e :exception st :stacktrace} :data} (ex-data e)]
            (timbre/debug "Caught Exception: [" e "]\nStacktrace:\n" (format-stacktrace st))
@@ -169,18 +181,22 @@
    monger f signature in third position, which works as a lock"
   [f]
   (fn wrapped-func
-    ([db coll version conditions-or-id document]
-     (wrapped-func db coll version conditions-or-id document {}))
-    ([db coll version {:keys [_id] :as conditions-or-id} document {:keys [multi upsert remove] :as opts}]
+    ([db coll version conds-or-id document]
+     (wrapped-func db coll version conds-or-id document {}))
+    ([db coll version {:keys [_id] :as conds-or-id} document {:keys [multi upsert remove] :as opts}]
      (assert-ex-info (not multi) ":multi is not allowed" {:message :multi-not-allowed :data opts})
      (assert-ex-info (not upsert) ":upsert is not allowed" {:message :upsert-not-allowed :data opts})
      (assert-ex-info (not remove) ":remove is not allowed" {:message :remove-not-allowed :data opts})
-     (if-let [{db-version :_version :as doc} (mc/find-one-as-map db coll {:_id (or _id conditions-or-id)})]
-       (let [thunk #(f db coll conditions-or-id (update-version-document document) opts)]
-         (assert-version db-version doc) ;version is missing
-         (assert-sync version db-version) ;wrong version claimed (caller is out of sync)
-         (handle-insert db coll doc thunk)) ;do insert/update and eventual rollback in case of error
-       (throw (ex-id (or _id conditions-or-id))))))) ;couldn't find original document
+     (if-let [{db-version :_version :as doc} (mc/find-one-as-map db coll {:_id (or _id conds-or-id)})]
+       (let [thunk #(f db coll conds-or-id (update-version-document document) opts)]
+         ;; version is missing
+         (assert-version db-version doc)
+         ;; wrong version claimed (caller is out of sync)
+         (assert-sync version db-version)
+         ;; do insert/update and eventual rollback in case of error
+         (handle-insert db coll doc thunk))
+       ;; couldn't find original document
+       (throw (ex-id (or _id conds-or-id)))))))
 
 (defn- wrap-remove
   "Function wrapper for native monger `remove` & `remove-by-id`.
@@ -189,18 +205,18 @@
   [f]
   (fn wrapped-func
     ([db coll version] (wrapped-func db coll version nil))
-    ([db coll version {:keys [_id] :as conditions-or-id}]
-     (assert-ex-info (or _id conditions-or-id) "Bulk remove is not allowed. Missing id" conditions-or-id)
-     (if-let [{db-version :_version :as doc} (mc/find-one-as-map db coll {:_id (or _id conditions-or-id)})]
-       (let [thunk #(f db coll conditions-or-id)]
+    ([db coll version {:keys [_id] :as conds-or-id}]
+     (assert-ex-info (or _id conds-or-id) "Bulk remove is not allowed. Missing id" conds-or-id)
+     (if-let [{db-version :_version :as doc} (mc/find-one-as-map db coll {:_id (or _id conds-or-id)})]
+       (let [thunk #(f db coll conds-or-id)]
          (assert-version db-version doc)
          (assert-sync version db-version)
          (handle-remove db coll doc thunk))
-       (throw (ex-id (or _id conditions-or-id)))))))
+       (throw (ex-id (or _id conds-or-id)))))))
 
 ;;; public wrapper api
 (def find-and-modify
-  "(find-and-modify db coll version cons doc {:keys [fields sort remove return-new upsert keywordize]})"
+  "(find-and-modify db coll version cons doc {:keys [fields sort remove return-new keywordize]})"
   (wrap-modify mc/find-and-modify))
 
 (def update
@@ -246,13 +262,15 @@
 
 ;;; utility functions
 (defn check-sync-by-id [db coll id claimed-version]
-  (assert-ex-info (integer? claimed-version) "Version has to be integer" {:type (type claimed-version)})
+  (assert-ex-info
+   (integer? claimed-version)
+   "Version has to be integer" {:type (type claimed-version)})
   (if-let [{db-version :_version :as doc} (mc/find-one-as-map db coll {:_id id})]
     (when-not (= db-version claimed-version)
       (assert-sync claimed-version db-version))))
 
-(defn make-collection [args]            ;TODO
-  ;; add indices and stuff on vcs collection to speed-up searching
+(defn make-collection [args]
+  ;; TODO: add indices and stuff on vcs collection to speed-up searching
   )
 
 (defmacro with-hist-coll
