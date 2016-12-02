@@ -30,6 +30,9 @@
   ;; (ObjectId.) ;or just use mongodb's id
   )
 
+(defn format-stacktrace [stacktrace]
+  (apply str (interleave (repeat "\t") stacktrace (repeat "\n"))))
+
 (defmacro assert-ex-info
   "Evaluates expr and throws an exception if it does not evaluate to logical true."
   [x & args]
@@ -133,7 +136,8 @@
              _ (insert-version db doc)] ;insert previous version in vcs coll
          res)                           ;return updated document
        (catch clojure.lang.ExceptionInfo e
-         (let [{message :message doc :data} (ex-data e)]
+         (let [{message :message {doc :doc e :exception st :stacktrace} :data} (ex-data e)]
+           (timbre/debug "Caught Exception: [" e "]\nStacktrace:\n" (format-stacktrace st))
            (if (= message :insert-error)
              (rollback-update db coll _id doc)
              (throw e))))))
@@ -142,7 +146,8 @@
   (try (apply-monger-thunk)
        (insert-version db (assoc doc :_remove true))
        (catch clojure.lang.ExceptionInfo e
-         (let [{message :message doc :data} (ex-data e)]
+         (let [{message :message {doc :doc e :exception st :stacktrace} :data} (ex-data e)]
+           (timbre/debug "Caught Exception: [" e "]\nStacktrace:\n" (format-stacktrace st))
            (if (= message :insert-error)
              (rollback-update db coll _id doc)
              (throw e))))))
