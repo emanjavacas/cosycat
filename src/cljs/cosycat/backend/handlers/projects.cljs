@@ -275,24 +275,22 @@
      (update-in db path assoc hit-id query-hit))))
 
 (re-frame/register-handler
- :remove-query-metadata
- standard-middleware
- (fn [db [_ {:keys [hit-id id project-name]}]]
-   (update-in db [:projects project-name :queries id :hits] dissoc hit-id)))
-
-(re-frame/register-handler
  :add-query-annotation
  standard-middleware
  (fn [db [_ project-name query-id hits]]
-   (assoc-in db [:projects project-name :queries query-id :hits] hits)))
+   (update-in db [:projects project-name :queries query-id :hits] deep-merge hits)))
+
+(defn fetch-query-annotation-handler [project-name query-id]
+  (fn [hits-by-id-map]
+    (re-frame/dispatch [:add-query-annotation project-name query-id hits-by-id-map])))
 
 (re-frame/register-handler
  :fetch-query-annotation
  standard-middleware
- (fn [db [_ {:keys [project-name query-id]}]]
+ (fn [db [_ {:keys [project-name query-id hit-id]}]]
    (GET "/project/queries/fetch"
-        {:params {:project-name project-name :id query-id}
-         :handler #(re-frame/dispatch [:add-query-annotation project-name query-id %])
+        {:params (cond-> {:project-name project-name :id query-id} hit-id (assoc :hit-id hit-id))
+         :handler (fetch-query-annotation-handler project-name query-id)
          :error-handler #(timbre/error "Error while fetching annotation query")})
    db))
 
@@ -332,69 +330,38 @@
                    "kept" "discarded"}}
           [default previous-hit-status]))
 
-(defn get-action [default new-status]
-  (get-in {"unseen" {"unseen" :remove
-                     "discarded" :update
-                     "kept" :update}
-           "discarded" {"discarded" :remove
-                        "kept" :update}
-           "kept" {"discarded" :update
-                   "kept" :remove}}
-          [default new-status]))
-
-(re-frame/register-handler
- :dispatch-query-metadata
- (fn [db [_ hit-id previous-hit-status]]
-   (let [project-name (get-in db [:session :active-project])
-         query-id (get-in db [:projects project-name :session :components :active-query])
-         {:keys [default]} (get-in db [:projects project-name :queries query-id])
-         version (get-in db [:projects project-name :queries query-id :hits hit-id :_version])
-         new-status (get-new-status default previous-hit-status)
-         action (get-action default new-status)]
-     (case action
-       :update (re-frame/dispatch
-                [:query-update-metadata project-name query-id hit-id new-status version])       
-       :remove (do ;; remove needs version
-                 (assert version (str "Couldn't find version for hit-id " hit-id))
-                 (re-frame/dispatch [:query-remove-metadata project-name query-id hit-id version])))
-     db)))
-
 (defn query-update-metadata-handler [project-name query-id]
   (fn [{:keys [hit-id status _version timestamp by] :as query-hit}]
     (re-frame/dispatch
      [:update-query-metadata
       {:project-name project-name :query-id query-id :query-hit query-hit}])))
 
+(defn query-update-metadata-error-handler [project-name query-id hit-id]
+  (fn [{{:keys [message code]} :response}]
+    (re-frame/dispatch [:notify {:message message}])
+    (case code
+      :version-mismatch (re-frame/dispatch
+                         [:fetch-query-annotation
+                          {:project-name project-name query-id query-id :hit-id hit-id}])
+      (re-frame/dispatch [:notify {:message (str "Unknown internal error " message)}]))))
+
 (re-frame/register-handler
  :query-update-metadata
- standard-middleware
- (fn [db [_ project-name query-id hit-id new-status version]]
-   (POST "/project/queries/update"
-         {:params {:project-name project-name
-                   :id query-id
-                   :hit-id hit-id
-                   :version version
-                   :status new-status}
-          :handler (query-update-metadata-handler project-name query-id)
-          :error-handler #(timbre/error "Error when updating query metadata")})
-   db))
-
-(defn query-remove-metadata-handler
-  [{:keys [project-name id hit-id] :as opts}]
-  (re-frame/dispatch [:remove-query-metadata opts]))
-
-(re-frame/register-handler
- :query-remove-metadata
- standard-middleware
- (fn [db [_ project-name query-id hit-id version]]
-   (POST "/project/queries/remove"
-         {:params {:project-name project-name
-                   :id query-id
-                   :hit-id hit-id
-                   :version version}
-          :handler query-remove-metadata-handler
-          :error-handler #(timbre/error "Error when updating query metadata")})
-   db))
+ (fn [db [_ hit-id previous-hit-status]]
+   (let [project-name (get-in db [:session :active-project])
+         query-id (get-in db [:projects project-name :session :components :active-query])
+         {:keys [default]} (get-in db [:projects project-name :queries query-id])
+         version (get-in db [:projects project-name :queries query-id :hits hit-id :_version])
+         new-status (get-new-status default previous-hit-status)]
+     (POST "/project/queries/update"
+           {:params {:project-name project-name
+                     :id query-id
+                     :hit-id hit-id
+                     :version version
+                     :status new-status}
+            :handler (query-update-metadata-handler project-name query-id)
+            :error-handler (query-update-metadata-error-handler project-name query-id hit-id)})
+     db)))
 
 (re-frame/register-handler
  :drop-query-metadata

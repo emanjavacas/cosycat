@@ -82,7 +82,7 @@
      {:glyph (get-glyph @hit-status)
       :class "ignore"
       :style {:color (get-color @hit-status) :cursor "pointer"}
-      :onClick #(re-frame/dispatch [:dispatch-query-metadata hit-id @hit-status])}]))
+      :onClick #(re-frame/dispatch [:query-update-metadata hit-id @hit-status])}]))
 
 (defn results-row [hit-num {:keys [id]} {:keys [color-map break active-query toggle-discarded]}]
   (let [hit-status (re-frame/subscribe [:hit-status id])]

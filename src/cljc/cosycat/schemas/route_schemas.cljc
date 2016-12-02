@@ -65,7 +65,6 @@
     :update-query-metadata (make-schema {:data {:query-hit query-hit-metadata-schema
                                                 :query-id s/Str
                                                 :project-name s/Str}})
-    :remove-query-metadata (make-schema {:data {:hit-id s/Str :query-id s/Str :project-name s/Str}})
     :drop-query-metadata (make-schema {:data {:id s/Str :project-name s/Str}})
     ;; Users
     :new-user-avatar (make-schema {:data {:avatar avatar-schema :username s/Str}})

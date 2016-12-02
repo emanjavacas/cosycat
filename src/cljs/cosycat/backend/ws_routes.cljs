@@ -142,13 +142,6 @@
     (re-frame/dispatch [:notify {:message message :by by}]))
   db)
 
-(defmethod ws-handler :remove-query-metadata
-  [db {{:keys [hit-id query-id project-name] :as data} :data by :by}]
-  (re-frame/dispatch [:remove-query-metadata data])
-  (let [message (format "\"%s\" has discarded a hit in a %s's query" by project-name)]
-    (re-frame/dispatch [:notify {:message message :by by}]))
-  db)
-
 (defmethod ws-handler :drop-query-metadata
   [db {{:keys [id project-name]} :data by :by}]
   (re-frame/dispatch [:drop-query-metadata {:id id :project-name project-name}])

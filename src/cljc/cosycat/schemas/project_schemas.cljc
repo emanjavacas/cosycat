@@ -50,14 +50,14 @@
   #?(:clj  {:timestamp s/Int
             :hit-id s/Any
             :by s/Str
-            :status (s/enum "discarded" "kept")
+            :status (s/enum "discarded" "kept" "unseen")
             :_version s/Any
             (s/optional-key :project-name) s/Any
             (s/optional-key :query-id) query-id-schema}
      :cljs {:timestamp s/Int
             :hit-id s/Any
             :by s/Str
-            :status (s/enum "discarded" "kept")
+            :status (s/enum "discarded" "kept" "unseen")
             (s/optional-key :_version) s/Any}))
 
 (def queries-schema                     ;metadata on previous stored queries

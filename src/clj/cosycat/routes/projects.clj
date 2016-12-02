@@ -176,10 +176,14 @@
 ;; Query metadata
 (defn fetch-query-metadata-route
   [{{{username :username} :identity} :session {db :db} :components
-    {project-name :project-name id :id} :params}]
+    {project-name :project-name id :id hit-id :hit-id} :params}]
   (check-user-rights db username project-name :read)
-  (-> (proj/find-query-hit-metadata db project-name id)
-      (normalize-by :hit-id)))
+  (if hit-id
+    (-> (proj/find-query-hit-metadata db project-name id hit-id)
+        vector
+        (normalize-by :hit-id))
+    (-> (proj/find-query-hit-metadata db project-name id)
+        (normalize-by :hit-id))))
 
 (defn new-query-metadata-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components
@@ -213,17 +217,6 @@
      :target-clients (map :username users))
     payload))
 
-(defn remove-query-metadata-route
-  [{{{username :username} :identity} :session {db :db ws :ws} :components
-    {:keys [id hit-id project-name version]} :params}]
-  (let [{:keys [users]} (proj/get-project db username project-name)
-        payload {:project-name project-name :id id :hit-id hit-id}]
-    (proj/remove-query-metadata db username project-name id hit-id version)
-    (send-clients ws {:type :remove-query-metadata :data payload :by username}
-     :source-client username
-     :target-clients (map :username users))
-    payload))
-
 (defn drop-query-metadata-route
   [{{{username :username} :identity} :session {db :db ws :ws} :components
     {id :id project-name :project-name} :params}]
@@ -249,7 +242,6 @@
         (GET "/fetch" [] (make-default-route fetch-query-metadata-route))
         (POST "/new" [] (make-default-route new-query-metadata-route))
         (POST "/update" [] (make-default-route update-query-metadata-route))
-        (POST "/remove" [] (make-default-route remove-query-metadata-route))
         (POST "/drop" [] (make-default-route drop-query-metadata-route)))
       (context "/issues" []
         (POST "/new" [] (make-default-route add-project-issue-route))
