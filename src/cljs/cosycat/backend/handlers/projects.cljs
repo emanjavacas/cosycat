@@ -332,12 +332,16 @@
 
 (defn query-update-metadata-handler [project-name query-id]
   (fn [{:keys [hit-id status _version timestamp by] :as query-hit}]
+    ;; unlock event
+    (re-frame/dispatch [:stop-throbbing :query-update-metadata])
     (re-frame/dispatch
      [:update-query-metadata
       {:project-name project-name :query-id query-id :query-hit query-hit}])))
 
 (defn query-update-metadata-error-handler [project-name query-id hit-id]
   (fn [{{:keys [message code]} :response}]
+    ;; unlock event
+    (re-frame/dispatch [:stop-throbbing :query-update-metadata])
     (re-frame/dispatch [:notify {:message message}])
     (case code
       :version-mismatch (re-frame/dispatch
@@ -348,20 +352,24 @@
 (re-frame/register-handler
  :query-update-metadata
  (fn [db [_ hit-id previous-hit-status]]
-   (let [project-name (get-in db [:session :active-project])
-         query-id (get-in db [:projects project-name :session :components :active-query])
-         {:keys [default]} (get-in db [:projects project-name :queries query-id])
-         version (get-in db [:projects project-name :queries query-id :hits hit-id :_version])
-         new-status (get-new-status default previous-hit-status)]
-     (POST "/project/queries/update"
-           {:params {:project-name project-name
-                     :id query-id
-                     :hit-id hit-id
-                     :version version
-                     :status new-status}
-            :handler (query-update-metadata-handler project-name query-id)
-            :error-handler (query-update-metadata-error-handler project-name query-id hit-id)})
-     db)))
+   (if-let [_ (get-in db [:session :throbbing? :query-update-metadata])]
+     ;; don't trigger (update is running)
+     db
+     (let [project-name (get-in db [:session :active-project])
+           query-id (get-in db [:projects project-name :session :components :active-query])
+           {:keys [default]} (get-in db [:projects project-name :queries query-id])
+           version (get-in db [:projects project-name :queries query-id :hits hit-id :_version])
+           new-status (get-new-status default previous-hit-status)]
+       (POST "/project/queries/update"
+             {:params {:project-name project-name
+                       :id query-id
+                       :hit-id hit-id
+                       :version version
+                       :status new-status}
+              :handler (query-update-metadata-handler project-name query-id)
+              :error-handler (query-update-metadata-error-handler project-name query-id hit-id)})
+       ;; unlock event
+       (assoc-in db [:session :throbbing? :query-update-metadata] true)))))
 
 (re-frame/register-handler
  :drop-query-metadata
