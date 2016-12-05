@@ -25,6 +25,11 @@
          :show-match? false
          :show-hit-id? false])})))
 
+(defn issue-resolve-buttons []
+  [bs/button-toolbar
+   [bs/button {:bsStyle "success"} "Accept"]
+   [bs/button {:bsStyle "danger"} "Reject"]])
+
 (defn annotation-edit-message
   [{{{old-value :value key :key} :ann {doc :doc {:keys [B O] :as scope} :scope type :type} :span
      new-value :value corpus :corpus} :data by :by :as issue}]  
@@ -33,30 +38,22 @@
     [:div.col-lg-6.col-sm-6
      [:h5 [:span
            [:strong (capitalize by)]
-           " suggest to change annotation key " [bs/label key]
-           " from " [bs/label {:bsStyle "primary"} old-value]
-           " to " [bs/label {:bsStyle "primary"} new-value] "."]]
+           " suggests to change annotation key " [bs/label key]
+           " from value " [bs/label {:bsStyle "primary"} old-value]
+           " to value " [bs/label {:bsStyle "primary"} new-value] "."]]
      (let [tokens (if (= type "token") 1 (inc (- O B)))]
        [:h5 [:span
              "Annotation is in corpus " [:strong corpus]
              " in document " [:strong doc]
-             " and spans " [:strong tokens] (if (> tokens 1) " tokens." " token.")]])
-     [:h5 [:span "Go back to "
-           [:a
-            {:style {:cursor "pointer"}
-             :onClick #(re-frame/dispatch [:notify {:message "To be implemented"}])}
-            "query"]
-           "."]]]
+             " and spans " [:strong tokens] (if (> tokens 1) " tokens." " token.")]])]
     [:div.col-lg-6.col-sm-6
      [:div.pull-right
-      [bs/button-toolbar
-       [bs/button {:bsStyle "success"} "Accept"]
-       [bs/button {:bsStyle "danger"} "Reject"]]]]]])
+      [issue-resolve-buttons]]]]])
 
 (defn annotation-edit-component [issue]
   (fn [issue]
     [:div.container-fluid
-     ;; todo: add refresh button (new anns, more hit context, etc.)
+     ;; TODO: add refresh button (new anns, more hit context, etc.)
      [:div.row [annotation-edit-message issue]]
      [:div.row {:style {:height "10px"}}]
      [:div.row [collapsible-issue-panel "Show hit" hit-component issue :show-hit]]
