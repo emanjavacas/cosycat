@@ -25,17 +25,52 @@
          :show-match? false
          :show-hit-id? false])})))
 
-(defn issue-resolve-buttons []
+(defn issue-resolve-buttons [issue-id & {:keys [commment]}]
   [bs/button-toolbar
-   [bs/button {:bsStyle "success"} "Accept"]
-   [bs/button {:bsStyle "danger"} "Reject"]])
+   [bs/button
+    {:bsStyle "success"
+     :onClick #(re-frame/dispatch [:close-annotation-issue issue-id "accepted" ])}
+    "Accept"]
+   [bs/button
+    {:bsStyle "danger"
+     :onClick #(re-frame/dispatch [:close-annotation-issue issue-id "rejected"])}
+    "Reject"]])
+
+(defn close-issue-modal []
+  (let [close-annotation-issue-modal (re-frame/subscribe [:modals :close-annotation-issue])
+        comment (reagent/atom "")]
+    (fn []
+      [bs/modal
+       {:show @close-annotation-issue-modal}
+       [bs/modal-header
+        {:closeButton true
+         :onHide #(re-frame/dispatch [:close-modal :close-annotation-issue])}
+        [:h4 "You want to close the issue?"]]
+       [bs/modal-body
+        [:div.container-fluid
+         [:div.row
+          [:div.form-group
+           [:div.input-group
+            [:span.input-group-addon [bs/glyphicon {:glyph "pencil"}]]
+            [:textarea.form-control
+             {:type "text"
+              :style {:overflow "hidden"
+                      :max-height "100px"
+                      :resize "vertical"}
+              :maxLength 500
+              :value @comment
+              :placeholder "Comment on your closing decision"
+              :on-change #(reset! comment (.-value (.-target %)))}]]]]]]
+       [bs/modal-footer
+        [:div.pull-right
+         [issue-resolve-buttons (:id @close-annotation-issue-modal) :comment @comment]]]])))
 
 (defn annotation-edit-message
   [{{{old-value :value key :key} :ann {doc :doc {:keys [B O] :as scope} :scope type :type} :span
-     new-value :value corpus :corpus} :data by :by :as issue}]  
+     new-value :value corpus :corpus} :data by :by issue-id :id :as issue}]  
   [:div.container-fluid
    [:div.row
-    [:div.col-lg-6.col-sm-6
+    [:div.col-lg-8.col-sm-8
      [:h5 [:span
            [:strong (capitalize by)]
            " suggests to change annotation key " [bs/label key]
@@ -46,9 +81,11 @@
              "Annotation is in corpus " [:strong corpus]
              " in document " [:strong doc]
              " and spans " [:strong tokens] (if (> tokens 1) " tokens." " token.")]])]
-    [:div.col-lg-6.col-sm-6
+    [:div.col-lg-4.col-sm-4
      [:div.pull-right
-      [issue-resolve-buttons]]]]])
+      [bs/button
+       {:onClick #(re-frame/dispatch [:open-modal :close-annotation-issue issue])}
+       "Close issue"]]]]])
 
 (defn annotation-edit-component [issue]
   (fn [issue]
@@ -57,4 +94,5 @@
      [:div.row [annotation-edit-message issue]]
      [:div.row {:style {:height "10px"}}]
      [:div.row [collapsible-issue-panel "Show hit" hit-component issue :show-hit]]
-     [:div.row [issue-thread-component issue :collapsible? true]]]))
+     [:div.row [issue-thread-component issue :collapsible? true]]
+     [close-issue-modal]]))

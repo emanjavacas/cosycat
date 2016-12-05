@@ -137,16 +137,21 @@
  :open-annotation-remove-issue
  (make-annotation-issue-handler "annotation-remove"))
 
+(defn close-annotation-issue-handler [{:keys [project-name issue]}]
+  (re-frame/dispatch [:update-project-issue project-name issue])
+  (re-frame/dispatch [:notify {:message "Issue was succesfully closed"}]))
+
 (re-frame/register-handler
  :close-annotation-issue
- (fn [db [_ issue-id action]]
+ (fn [db [_ issue-id action & {:keys [comment]}]]
    (let [active-project (get-in db [:session :active-project])]
      (POST "/project/issues/annotation/close"
-           {:params {:project-name active-project
-                     :issue-id issue-id
-                     :action action}
-            :handler #()
-            :error-handler #()}))))
+           {:params (cond-> {:project-name active-project
+                             :issue-id issue-id
+                             :action action}
+                      comment (assoc :comment comment))
+            :handler close-annotation-issue-handler
+            :error-handler error-handler}))))
 
 ;;; Users
 (re-frame/register-handler              ;add user to project in client-db

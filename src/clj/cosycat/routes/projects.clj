@@ -55,7 +55,7 @@
     {{username :username} :identity} :session
     {{db-conn :db :as db} :db ws :ws} :components}]
   ;; check the target annotation is on sync
-  (anns/check-sync-by-id db-conn (server-project-name project-name) _id _version)
+  (anns/check-sync-by-id db (server-project-name project-name) _id _version)
   ;; check annotation has already issue
   (proj/check-annotation-has-issue db project-name _id)
   (let [issue-payload {:by username
@@ -116,7 +116,7 @@
        :hit-id hit-id}))
 
 (defn close-annotation-edit-route
-  [{{project-name :project-name issue-id :issue-id issue-action :action} :params
+  [{{project-name :project-name issue-id :issue-id issue-action :action :as params} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (let [{issue-type :type :as issue} (proj/get-project-issue db project-name issue-id)
@@ -126,7 +126,8 @@
     (check-user-rights db username project-name required-action)
     (try (let [payload (close-annotation-issue db project-name issue issue-action)
                ;; this shouldn't fail
-               closed-issue (proj/close-issue db username project-name issue-id)
+               close-data (select-keys params [:action :comment])
+               closed-issue (proj/close-issue db username project-name issue-id close-data)
                ws-type (case issue-type
                          "annotation-remove" :remove-annotation
                          "annotation-edit" :annotation)]

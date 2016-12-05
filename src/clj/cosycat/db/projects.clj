@@ -372,10 +372,14 @@
    db username project-name issue-id
    {$set {(format "issues.$.comments.%s.deleted" comment-id) true}}))
 
-(defn close-issue [db username project-name issue-id]
+(defn close-issue [db username project-name issue-id {:keys [action comment]}]
   (update-project-issue
    db username project-name issue-id
-   {$set {"issues.$.status" "closed"}}))
+   {$set {"issues.$.status" "closed"
+          "issues.$.resolve" (cond-> {:status action
+                                      :timestamp (System/currentTimeMillis)
+                                      :by username}
+                               comment (assoc :comment comment))}}))
 
 (defn set-user-delete-agree
   [db username project-name issue-id]
