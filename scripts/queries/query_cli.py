@@ -64,6 +64,8 @@ if __name__ == '__main__':
             recur(finder.parse(text))
         except KeyboardInterrupt:
             finder.do_exit(None)
+        except EOFError:
+            finder.do_exit(None)
         except NotImplementedError:
             print("Functionality is not yet implemented... :-(")
         except ParseError as e:

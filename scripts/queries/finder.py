@@ -9,6 +9,8 @@ from collections import defaultdict
 import pymongo
 from pymongo import MongoClient
 
+import printers
+
 
 class ParseError(Exception):
     def __init__(self, value, expected, *args, **kwargs):
@@ -297,6 +299,13 @@ class Finder(object):
             for project_name in self.get_project_names():
                 print(project_name)
 
+    def groupcounts(self, project, groupkeys):
+        result = project.aggregate(
+            [{"$match": self.query_filters()},
+             {"$group": {"_id": {k: "$" + k for k in groupkeys},
+                         "count": {"$sum": 1}}}])
+        return list(result)
+
     def do_count(self, args):
         """
         Count annotations using the current filters.
@@ -306,46 +315,39 @@ class Finder(object):
           count myProject,projectTest,otherProject
         """
         assert args, "Specify a project (e.g. GET) or 'all' for all projects"
-        count_text = "Found [{result}] annotations in project '{name}'"
 
         if self.verbose:
             pprint(self.query_filters())
 
+        # parse arguments
         project, *rest = args
-        rest_args = parse_rest(rest, {'groupby': ['key1,key2,etc'],
-                                      'output':  ['filename']})
+        parsed_args = parse_rest(rest, {'groupby': ['key1,key2,etc'],
+                                        'output':  ['filename']})
+
+        # gather projects
         if project == 'all':
             projects = self.get_project_names()
         else:
             projects = project.split(',')
-        output = {}
+
         for project_name in projects:
-            project = self.get_project(project)
-            if 'groupby' not in rest_args:
-                result = project.find(self.query_filters()).count()
-                output[project_name] = result
+
+            # compute counts
+            project = self.get_project(project_name)
+            if 'groupby' in parsed_args:
+                groupkeys = parsed_args['groupby']['key1,key2,etc'].split(',')
+                counts = self.groupcounts(project, groupkeys)
             else:
-                keys = rest_args['groupby']['key1,key2,etc'].split(',')
-                groupkeys = {k: "$" + k for k in keys}
-                result = project.aggregate(
-                    [{"$match": self.query_filters()},
-                     {"$group": {"_id": groupkeys, "count": {"$sum": 1}}}]
-                )
-                output[project_name] = list(result)
-            if 'output' in rest_args:
-                raise NotImplementedError()
-            else:
-                if 'groupby' not in rest_args:
-                    for project, result in output.items():
-                        print(count_text.format(result=result, name=project))
+                counts = project.find(self.query_filters()).count()
+
+            # display output
+            if 'output' in parsed_args:
+                if 'groupby' in parsed_args:
+                    raise NotImplementedError()
                 else:
-                    for project, result in output.items():
-                        header = list(sorted(result[0]['_id'].keys()))
-                        maxlen = max([len(k) for k in header]) + 5
-                        padstr = '%-' + str(maxlen) + 's'
-                        print(project)
-                        print(padstr * len(header) % tuple(header))
-                        for line in result:
-                            vals = [line['_id'][k] for k in header]
-                            print(padstr * len(header) % tuple(vals)
-                                  + padstr % line['count'])
+                    raise NotImplementedError()
+            else:
+                if 'groupby' in parsed_args:
+                    printers.print_count_group(counts, project_name)
+                else:
+                    printers.print_count(counts, project_name)
