@@ -144,10 +144,13 @@
 
 (defmethod ws-handler :update-query-metadata
   [db {{:keys [project-name query-id query-hit] :as data} :data by :by}]
-  (re-frame/dispatch [:update-query-metadata data])
-  (when (should-notify? db :update-query-metadata)
-    (let [message (format "\"%s\" has discarded a hit in a %s's query" by project-name)]
-      (re-frame/dispatch [:notify {:message message :by by}])))
+  (let [active-query (get-in db [:projects project-name :session :components :active-query])]
+    (when (= active-query query-id)
+      ;; only update if query is active (i.e. query hits have been retrieved)
+      (re-frame/dispatch [:update-query-metadata data]))
+    (when (should-notify? db :update-query-metadata)
+      (let [message (format "\"%s\" has discarded a hit in a %s's query" by project-name)]
+        (re-frame/dispatch [:notify {:message message :by by}]))))
   db)
 
 (defmethod ws-handler :drop-query-metadata
