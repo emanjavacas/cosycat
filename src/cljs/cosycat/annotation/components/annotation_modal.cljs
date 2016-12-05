@@ -52,7 +52,7 @@
                 ann-data {:_version _version :_id _id :hit-id hit-id :value new-val :span span}]
           :when (not= new-val (:value ann))]
     (re-frame/dispatch [:notify {:message "Edit not authorized"}])
-    ;; (re-frame/dispatch [:open-annotation-edit ann-data users])
+    ;; (re-frame/dispatch [:open-annotation-edit-issue ann-data users])
     ))
 
 (defn trigger-dispatch

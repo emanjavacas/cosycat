@@ -11,7 +11,8 @@
         (re-find #"[.-]"      @query-id) "Disallowed characters \".\", \"-\""))
 
 (defn on-dispatch
-  [{:keys [query-id include-sort-opts? include-filter-opts? default description] :as data} has-input-error?]
+  [{:keys [query-id include-sort-opts? include-filter-opts? default description] :as data}
+   has-input-error?]
   (fn []
     (if-let [[key error] (validate-data data)]
       (reset! (get has-input-error? key) error)
@@ -28,7 +29,8 @@
   (fn [query-id has-input-error?]
     [:div.row
      [:div.form-group
-      {:class (when (and (not (empty? @query-id)) @(:query-id has-input-error?)) "has-error has-feedback")}
+      {:class (when (and (not (empty? @query-id)) @(:query-id has-input-error?))
+                "has-error has-feedback")}
       [:div.input-group
        [:span.input-group-addon [bs/glyphicon {:glyph "tag"}]]
        [:input.form-control
@@ -86,8 +88,10 @@
       :select-fn #(reset! default %)}]))
 
 (defn submit-button
-  [{:keys [query-id include-sort-opts? include-filter-opts? description default]} has-input-error?]
-  (fn [{:keys [query-id include-sort-opts? include-filter-opts? description default]} has-input-error?]
+  [{:keys [query-id include-sort-opts? include-filter-opts? description default]}
+   has-input-error?]
+  (fn [{:keys [query-id include-sort-opts? include-filter-opts? description default]}
+       has-input-error?]
     [bs/button
      {:onClick (on-dispatch {:query-id query-id
                              :include-sort-opts? include-sort-opts?

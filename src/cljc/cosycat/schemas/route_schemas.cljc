@@ -54,7 +54,7 @@
     ;; Projects issues
     :new-project-issue (make-schema {:data {:project-name s/Str :issue issue-schema}})
     :update-project-issue (make-schema {:data {:project-name s/Str :issue issue-schema}})
-    ;; :close-project-issue (make-schame {:data {:project-name s/Str}})
+    :close-project-issue (make-schema {:data {:project-name s/Str :issue issue-schema}})
     ;; Projects users
     :add-project-user (make-schema {:data {:project project-schema}})
     :new-project-user (make-schema {:data {:user project-user-schema :project-name s/Str}})

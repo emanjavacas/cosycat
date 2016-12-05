@@ -21,7 +21,7 @@
    :data {s/Any s/Any}
    (s/optional-key :resolve)
    {:status (s/enum "accepted" "rejected")
-    :comment s/Str
+    (s/optional-key :comment) s/Str
     :timestamp s/Str
     :by s/Str}
    (s/optional-key :comments)

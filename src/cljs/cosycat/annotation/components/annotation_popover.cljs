@@ -20,7 +20,7 @@
       {:update-map {:_id _id :_version _version :value new-value :hit-id hit-id}}])
     ;; dispatch update edit
     (let [users (vec (into #{my-name} (map :username history)))]
-      (re-frame/dispatch [:open-annotation-edit (assoc ann-data :value new-value) users]))))
+      (re-frame/dispatch [:open-annotation-edit-issue (assoc ann-data :value new-value) users]))))
 
 (defn dispatch-remove [{:keys [_id _version username history] :as ann-map} hit-id my-name my-role]
   (if (may-edit? :update username my-name my-role)
@@ -29,7 +29,7 @@
     ;; dispatch remote edit
     (let [users (vec (into #{my-name} (map :username history)))]
       (re-frame/dispatch
-       [:open-annotation-remove
+       [:open-annotation-remove-issue
         {:_version _version :_id _id :hit-id hit-id :users users}]))))
 
 (defn trigger-update [ann-map hit-id new-value my-name my-role & [on-dispatch]]
@@ -112,8 +112,17 @@
           ^{:key (str "spacer-" ann-map-or-idx)}
           [spacer-row])))]))
 
+(defn key-val [{:keys [key value]}]
+  [:div
+   [:span {:style {:padding-left "5px"}} key]
+   [:span {:style {:text-align "left" :margin-left "7px"}}
+    [bs/label
+     {:bsStyle "primary"
+      :style {:float "right" :font-size "100%"}}
+     value]]])
+
 (defn annotation-popover
-  [{{:keys [timestamp username history _version] :as ann} :ann-map
+  [{{:keys [timestamp username history _version ann] :as ann-map} :ann-map
     hit-id :hit-id on-dispatch :on-dispatch editable? :editable?
     :or {editable? true}}]
   (let [user (re-frame/subscribe [:user username])
@@ -135,10 +144,11 @@
                   [:div.row.pad.pull-right (human-time timestamp)]]]]])
       :style {:max-width "100%"}}
      [:div.container-fluid
-      (when editable?
-        [:div.row {:style {:background-color "#e2e2e2"}}
-         [new-value-input ann hit-id @my-name @my-role on-dispatch]])
+      [:div.row {:style {:background-color "#e2e2e2"}}
+       (if editable?
+         [new-value-input ann-map hit-id @my-name @my-role on-dispatch]
+         [key-val ann])]
       [:div.row {:style {:height "8px"}}]
       [:div.row [:table (when-not (empty? history)
-                          [history-body history ann hit-id @my-name @my-role on-dispatch
+                          [history-body history ann-map hit-id @my-name @my-role on-dispatch
                            :editable? editable?])]]]]))
