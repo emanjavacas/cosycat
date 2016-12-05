@@ -177,16 +177,18 @@
         :init true}])))
 
 (defn query-panel []
-  (let [panel-order (re-frame/subscribe [:project-session :components :panel-order])
+  (let [query-frame-open? (re-frame/subscribe [:project-session :components :panel-open "query-frame"])
         throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
     (fn []
       [:div.container-fluid.pad
        {:style {:width "100%" :padding "0px 10px 0px 10px"}}
-       (if (= (first @panel-order) "annotation-panel")
-         [:div.row [minimizable-annotation-panel]]
-         [:div.row [minimizable-query-frame]])
-       (if (= (first @panel-order) "annotation-panel")
-         [:div.row [minimizable-query-frame]]
-         [:div.row [minimizable-annotation-panel]])
+       ;; show open panel first
+       (if @query-frame-open?
+         [:div
+          [:div.row [minimizable-query-frame]]
+          [:div.row [minimizable-annotation-panel]]]
+         [:div
+          [:div.row [minimizable-annotation-panel]]
+          [:div.row [minimizable-query-frame]]])
        [snippet-modal]
        [annotate-query-modal]])))

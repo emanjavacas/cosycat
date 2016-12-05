@@ -34,6 +34,11 @@
              :snippet-opts {:snippet-size 50 :snippet-delta 25}
              :corpus corpus}}))
 
+(defn get-project-settings [db project-name]
+  (or (get-in db [:projects project-name :settings]) ;project-related settings
+      (get-in db [:me :settings])                    ;global settings
+      (default-settings :corpora (:corpora db))))
+
 (def default-session
   {:active-panel :front-panel
    :active-project nil})

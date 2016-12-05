@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [cosycat.app-utils :refer [deep-merge]]
             [cosycat.backend.middleware :refer [standard-middleware]]
-            [cosycat.backend.db :refer [default-opts-map]]
+            [cosycat.backend.db :refer [default-opts-map get-project-settings]]
             [ajax.core :refer [POST GET]]
             [taoensso.timbre :as timbre]))
 
@@ -12,6 +12,14 @@
  (fn [db [_ path value]]
    (let [settings (get-in db [:settings])]
      (assoc-in db [:settings] (assoc-in settings path value)))))
+
+(re-frame/register-handler              ;reset settings (eventually using project-settings)
+ :reset-settings
+ standard-middleware
+ (fn [db [_ & {:keys [init] :or {init {}}}]]
+   (let [active-project (get-in db [:session :active-project])
+         project-settings (deep-merge (get-project-settings db active-project) init)]
+     (update db :settings deep-merge project-settings))))
 
 (re-frame/register-handler
  :update-settings

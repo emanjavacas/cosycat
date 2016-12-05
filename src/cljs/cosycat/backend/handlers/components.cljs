@@ -1,9 +1,26 @@
 (ns cosycat.backend.handlers.components
   (:require [re-frame.core :as re-frame]
-            [cosycat.backend.middleware :refer [standard-middleware no-debug-middleware]]
+            [cosycat.backend.middleware
+             :refer [standard-middleware no-debug-middleware check-project-exists]]
             [cosycat.utils :refer [time-id has-marked? update-token]]
             [cosycat.app-utils :refer [deep-merge disjconj]]
+            [cosycat.backend.db :refer [get-project-settings]]
             [taoensso.timbre :as timbre]))
+
+(re-frame/register-handler
+ :remove-active-project
+ standard-middleware
+ (fn [db _]
+   (assoc-in db [:session :active-project] nil)))
+
+(re-frame/register-handler
+ :set-active-project
+ (conj standard-middleware check-project-exists)
+ (fn [db [_ {:keys [project-name]}]]
+   (let [project-settings (get-project-settings db project-name)]
+     (-> db
+         (assoc-in [:session :active-project] project-name)
+         (update :settings deep-merge project-settings)))))
 
 (re-frame/register-handler
  :open-modal
@@ -43,27 +60,6 @@
  (fn [db [_ component-id]]
    (update-in db [:session :component-error] dissoc component-id)))
 
-(defn ensure-first [v value]
-  (let [filtered (seq (filter #(= % value) v))
-        removed (remove #(= % value) v)]
-    (into (vec (or filtered [value])) (vec removed))))
-
-(defn ensure-last [v value]
-  (let [filtered (seq (filter #(= % value) v))
-        removed (remove #(= % value) v)]
-    (into (vec removed) (vec (or filtered [value])))))
-
-(re-frame/register-handler
- :panel-order
- standard-middleware
- (fn [db [_ id dir]]
-   (let [active-project (get-in db [:session :active-project])
-         path [:projects active-project :session :components :panel-order]]
-     (case dir
-       :top (update-in db path ensure-first id)
-       :bottom (update-in db path ensure-last id)
-       (throw (js/Error "dir must be `:top` or `:bottom`"))))))
-
 (re-frame/register-handler
  :panel-open
  standard-middleware
@@ -83,8 +79,7 @@
          other-panel (if (= should-open "query-frame") "annotation-panel" "query-frame")]
      (-> db
          (assoc-in (into path [:panel-open should-open]) true)
-         (assoc-in (into path [:panel-open other-panel]) false)
-         (update-in (into path [:panel-order]) ensure-first should-open)))))
+         (assoc-in (into path [:panel-open other-panel]) false)))))
 
 (re-frame/register-handler
  :open-hit

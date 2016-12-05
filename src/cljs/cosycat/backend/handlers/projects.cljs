@@ -5,9 +5,10 @@
             [cosycat.utils :refer [format current-results]]
             [cosycat.app-utils :refer [get-pending-users deep-merge update-coll]]
             [cosycat.routes :refer [nav!]]
-            [cosycat.backend.middleware :refer [standard-middleware check-project-exists]]
+            [cosycat.backend.middleware :refer [standard-middleware]]
             [cosycat.backend.db
-             :refer [default-project-session default-project-history default-settings]]
+             :refer [default-project-session default-project-history default-settings
+                     get-project-settings]]
             [taoensso.timbre :as timbre]))
 
 (defn normalize-projects
@@ -22,34 +23,7 @@
    {}
    projects))
 
-(re-frame/register-handler
- :remove-active-project
- standard-middleware
- (fn [db _]
-   (assoc-in db [:session :active-project] nil)))
-
-(defn get-project-settings [db project-name]
-  (or (get-in db [:projects project-name :settings]) ;project-related settings
-      (get-in db [:me :settings])                    ;global settings
-      (default-settings :corpora (:corpora db))))    ;default settings
-
-(re-frame/register-handler
- :reset-settings
- standard-middleware
- (fn [db [_ & {:keys [init] :or {init {}}}]]
-   (let [active-project (get-in db [:session :active-project])
-         project-settings (deep-merge (get-project-settings db active-project) init)]
-     (update db :settings deep-merge project-settings))))
-
-(re-frame/register-handler
- :set-active-project
- (conj standard-middleware check-project-exists)
- (fn [db [_ {:keys [project-name]}]]
-   (let [project-settings (get-project-settings db project-name)]
-     (-> db
-         (assoc-in [:session :active-project] project-name)
-         (update :settings deep-merge project-settings)))))
-
+;;; General
 (re-frame/register-handler              ;add project to client-db
  :add-project
  standard-middleware
