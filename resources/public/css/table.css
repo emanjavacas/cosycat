@@ -63,12 +63,12 @@ table#table-annotation td {
     text-overflow: ellipsis;
 }
 
-table#table-annotation tr td {
+table#table-annotation > tbody > tr > td {
     width: 100%;
     display: table-cell;
 }
 
-table#table-annotation tr.queue-row:hover {
+table#table-annotation > tbody > tr.queue-row:hover {
     opacity: 0.8;
     color: black !important;
 }
@@ -77,7 +77,7 @@ table td.has-annotation {
     background-color: #E7E7E7;
 }
 
-table#table-annotation td.is-span {
+table#table-annotation > tbody > tr > td.is-span {
     box-shadow: 0 -3px #b8d6cf inset;
 }
 

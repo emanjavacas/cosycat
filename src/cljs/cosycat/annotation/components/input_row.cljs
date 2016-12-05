@@ -106,20 +106,19 @@
 
 (defn pager-cell [hit-id]
   (fn [hit-id]
-    (let [glyph-style {:font-size "small" :cursor "pointer"}]
-      [:td {:style {:padding "0px" :line-height "1.3em"}}
-       [:span
-        [bs/glyphicon
-         {:class "hit-pager"
-          :style glyph-style
-          :glyph "chevron-left"
-          :onClick (on-click-pager hit-id :left)}]
-        (nbsp :n 4)
-        [bs/glyphicon
-         {:class "hit-pager"
-          :style glyph-style
-          :glyph "chevron-right"
-          :onClick (on-click-pager hit-id :right)}]]])))
+    [:td {:style {:padding "0" :line-height "1.3em"}}
+     [:table
+      {:display "table-cell" :width "100%"}
+      [:tbody
+       [:tr
+        [:td.hit-pager
+         {:style {:font-size "small" :cursor "pointer"}
+          :onClick (on-click-pager hit-id :left)}
+         [bs/glyphicon {:glyph "chevron-left"}]]
+        [:td.hit-pager
+         {:style {:font-size "small" :cursor "pointer"}
+          :onClick (on-click-pager hit-id :right)}
+         [bs/glyphicon {:glyph "chevron-right"}]]]]]]))
 
 (defn input-row
   [{hit :hit hit-id :id meta :meta :as hit-map} & {:keys [unmerge-on-dispatch?]}]

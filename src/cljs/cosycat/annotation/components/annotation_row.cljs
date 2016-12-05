@@ -8,15 +8,6 @@
             [cosycat.annotation.components.annotation-popover :refer [annotation-popover]]
             [taoensso.timbre :as timbre]))
 
-(defn key-val
-  [{{k :key v :value} :ann user :username time :timestamp}]
-  [:div
-   [:span {:style {:text-align "right" :margin-left "7px"}}
-    [bs/label
-     {:bsStyle "primary"
-      :style {:font-size "85%"}}
-     v]]])
-
 (defn annotation-cell-style
   [color-map username highlight?]
   (let [color (get color-map username)]
@@ -28,28 +19,33 @@
 (defn annotation-cell
   [ann-map hit-id token-id colspan color-map & {:keys [editable? highlight?]}]
   (let [open? (reagent/atom false), target (reagent/atom nil)]
-    (fn [{username :username anns :anns :as ann-map}
+    (fn [{username :username anns :anns {value :value} :ann :as ann-map}
          hit-id token-id colspan color-map & {:keys [editable? highlight?]}]
       [:td.ann-cell
        {:style (annotation-cell-style @color-map username highlight?)
         :colSpan colspan
         :on-click #(do (reset! target (.-target %)) (swap! open? not))}
-       [:div
-        [key-val ann-map]
-        [bs/overlay
-         {:show @open?
-          :target (fn [] @target) ;DOMNode
-          :rootClose true
-          :onHide #(swap! open? not) ;called when rootClose triggers
-          :placement "top"}
-         (annotation-popover
-          {:ann-map ann-map
-           :hit-id hit-id
-           :on-dispatch #(swap! open? not)
-           :editable? editable?})]]])))
+       [bs/label {:bsStyle "primary" :style {:font-size "85%"}} value]
+       [bs/overlay
+        {:show @open?
+         :target (fn [] @target) ;DOMNode
+         :rootClose true
+         :onHide #(swap! open? not) ;called when rootClose triggers
+         :placement "top"}
+        (annotation-popover
+         {:ann-map ann-map
+          :hit-id hit-id
+          :on-dispatch #(swap! open? not)
+          :editable? editable?})]])))
 
 (defn annotation-key [key]
-  [:td [bs/label {:style {:font-size "90%"}} key]])
+  (fn [key]
+    [bs/overlay-trigger
+     {:placement "right"
+      :overlay (reagent/as-component [bs/tooltip {:id "tooltip"} key])}
+     [:td
+      {:style {:text-align "center"}}
+      [bs/label {:style {:font-size "90%"}} key]]]))
 
 (defn is-B-IOB? [{{{B :B O :O} :scope type :type} :span} token-id]
   (and (= type "IOB") (= B (-> (parse-token-id token-id) :id))))

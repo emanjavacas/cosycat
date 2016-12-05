@@ -108,7 +108,7 @@ div.well.selected:hover {
     height: 230%;
 }
 
-.hit-pager:hover {
+td.hit-pager:hover {
     color: #158cba;
 }
 

@@ -21,9 +21,11 @@
 (defn user-brand-span [username active-project]
   (fn [username active-project]
     [:span
-     (when @active-project {:style {:cursor "pointer"} :onClick #(nav! (str "/project/" @active-project))})
+     (when @active-project
+       {:style {:cursor "pointer"}
+        :onClick #(nav! (str "/project/" @active-project))})
      username
-     (when @active-project [:span.truncate {:style {:white-space "nowrap"}} (str "@" @active-project)])]))
+     (when @active-project [:span.truncate (str "@" @active-project)])]))
 
 (defn user-brand-component [active-project]
   (let [user (re-frame/subscribe [:me])]
