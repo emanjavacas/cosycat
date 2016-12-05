@@ -349,19 +349,18 @@
   ([{db-conn :db :as db} username project-name issue-id update-map]
    (update-project-issue db username project-name issue-id {} update-map))
   ([{db-conn :db :as db} username project-name issue-id query-map update-map]
-   (let [{users :users :as issue} (get-project-issue db project-name issue-id)]
-     (check-user-in-issue db project-name username issue-id)
-     (->> (mc/find-and-modify db-conn (:projects colls)
-                              (merge query-map {:name project-name "issues.id" issue-id})
-                              update-map
-                              {:return-new true :fields {:issues 1}})
-          :issues
-          (filter #(= issue-id (:id %)))
-          first))))
+   (->> (mc/find-and-modify db-conn (:projects colls)
+                            (merge query-map {:name project-name "issues.id" issue-id})
+                            update-map
+                            {:return-new true :fields {:issues 1}})
+        :issues
+        (filter #(= issue-id (:id %)))
+        first)))
 
 (defn comment-on-issue [db username project-name issue-id comment & {:keys [parent-id]}]
   (let [timestamp (System/currentTimeMillis), id (new-uuid)
         comment-map {:by username :comment comment :timestamp timestamp :id id}]
+    (check-user-in-issue db project-name username issue-id)
     (update-project-issue
      db username project-name issue-id
      (cond-> {$set {(str "issues.$.comments." id) comment-map}}

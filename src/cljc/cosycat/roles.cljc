@@ -1,17 +1,10 @@
 (ns cosycat.roles)
 
-(defn app-roles [role]
-  (let [roles {:admin ::admin
-               :user ::user}]
-    (get roles role nil)))
-
-(derive ::admin ::user)
-
 (def project-user-roles-descs
-  {"guest" "Can read the annotations but nothing more."
-   "user" "Can read the annotation and suggests changes, but not edit them."
-   "project-lead" "Person in charge of the global research goals. Can edit but is not allowed to delete annotations."
-   "creator" "Almighty creator of the project. Nothing lies beneath his/her power."})
+  {"guest" "Can read annotations and suggest changes but nothing more."
+   "user" "Can read annotations, suggest changes, insert annotations and edit their own annotations."
+   "project-lead" "Person in charge of the global research goals. Can edit everyone's annotations."
+   "creator" "Almighty creator of the project. Nothing lies beyond their power."})
 
 (def project-user-roles
   ["guest" "user" "project-lead"])
@@ -28,7 +21,7 @@
   {:update #{"owner" "creator" "project-lead"}
    :delete #{"owner" "creator" "project-lead"}
    :write  #{"owner" "creator" "project-lead" "user"}
-   :read   #{"owner" "creator" "project-lead" "user" "guest"}});retrieve project
+   :read   #{"owner" "creator" "project-lead" "user" "guest"}})
 
 (defn check-role [roles-map action role]
   (boolean (some #{role} (get roles-map action))))

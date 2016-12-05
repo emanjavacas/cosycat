@@ -74,7 +74,9 @@
   (assoc doc merge-field vcs-history))
 
 (defn find-history
-  "retrieves document history from the backup collection"
+  "retrieves document history from the backup collection
+   a truthy value to `reverse` returns the history starting
+   from the beginning (previous in time)"
   [db doc-id & {:keys [reverse] :or {reverse false}}]
   (not-empty
    (with-collection db *hist-coll-name*
@@ -255,14 +257,6 @@
     (mc/update db *hist-coll-name* {:docId {$in ids}} {$push {:_remove true}} {:multi true})))
 
 ;;; utility functions
-(defn check-sync-by-id [db coll id claimed-version]
-  (assert-ex-info
-   (integer? claimed-version)
-   "Version has to be integer" {:type (type claimed-version)})
-  (if-let [{db-version :_version :as doc} (mc/find-one-as-map db coll {:_id id})]
-    (when-not (= db-version claimed-version)
-      (assert-sync claimed-version db-version))))
-
 (defn make-collection [args]
   ;; TODO: add indices and stuff on vcs collection to speed-up searching
   )

@@ -54,6 +54,20 @@
   (when-let [existing-span-annotation (find-span-annotation-by-key db project corpus key span)]
     (throw (ex-overlapping-span (:span existing-span-annotation) span))))
 
+(defn check-sync-by-id
+  "check if a document in a given collection is in sync with vcs database"
+  [{db-conn :db :as db} project-name id claimed-version]
+  (assert-ex-info
+   (integer? claimed-version) "Version has to be integer" {:type (type claimed-version)})
+  (let [coll (server-project-name project-name)]
+    (if-let [{db-version :_version} (mc/find-one-as-map db-conn coll {:_id id})]
+      (when-not (= db-version claimed-version)
+        (let [message "Version mismatch"]
+          (assert-ex-info
+           message
+           {:message message :code :version-mismatch
+            :data {:db db-version :user claimed-version}}))))))
+
 ;;; Finders
 (defn find-annotation-by-id [{db-conn :db} project id]
   (mc/find-one-as-map db-conn (server-project-name project) {:_id id}))
@@ -99,7 +113,7 @@
     "span.scope" {$in (range B (inc O))}}))
 
 (defn with-history
-  "aux func to avoid sending bson-objectids to the client"
+  "wrapper function over vcs/with-history to avoid sending bson-objectids to the client"
   [db doc]
   (vcs/with-history db doc :on-history-doc #(dissoc % :_id :docId)))
 
@@ -148,3 +162,8 @@
   (assert-ex-info (and version id) "annotation update requires annotation id/version" ann-map)
   (timbre/info "Removing annotation" (str ann-map))
   (vcs/remove-by-id db-conn (server-project-name project) version id))
+
+(defn revert-annotation [{db-conn :db :as db} project {version :_version id :_id :as ann}]
+  (if-let [history (vcs/find-history db-conn id)]
+    (let [previous (first history)]
+      (update-annotation db project (assoc previous :_version version)))))

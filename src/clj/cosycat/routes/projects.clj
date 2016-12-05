@@ -4,10 +4,10 @@
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.routes.utils
              :refer [make-default-route ex-user check-user-rights normalize-anns]]
-            [cosycat.vcs :refer [check-sync-by-id]]
             [cosycat.db.projects :as proj]
             [cosycat.db.annotations :as anns]
             [cosycat.components.ws :refer [send-clients send-client]]
+            [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
 ;;; General
@@ -55,7 +55,7 @@
     {{username :username} :identity} :session
     {{db-conn :db :as db} :db ws :ws} :components}]
   ;; check the target annotation is on sync
-  (check-sync-by-id db-conn (server-project-name project-name) _id _version)
+  (anns/check-sync-by-id db-conn (server-project-name project-name) _id _version)
   ;; check annotation has already issue
   (proj/check-annotation-has-issue db project-name _id)
   (let [issue-payload {:by username
