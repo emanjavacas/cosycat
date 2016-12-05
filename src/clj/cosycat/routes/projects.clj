@@ -98,35 +98,57 @@
     issue))
 
 ;;; Issues :close-project-issue
-(defmulti resolve-annotation-issue (fn [db project-name {issue-type :type}] issue-type))
+(defmulti close-annotation-issue (fn [db project-name {issue-type :type} issue-action] issue-type))
 
-(defmethod resolve-annotation-issue "annotation-edit"
-  [db project-name {issue-data :data :as issue}]
-  (let [{:keys [hit-id] :as new-ann} (anns/update-annotation db project-name issue-data)]
-    {:anns (normalize-anns [new-ann]) :project project-name :hit-id hit-id}))
+(defmethod close-annotation-issue "annotation-edit"
+  [db project-name {{:keys [hit-id] :as issue-data} :data :as issue} issue-action]
+  (let [new-ann (anns/update-annotation db project-name issue-data)]
+      {:anns (normalize-anns [new-ann])
+       :project project-name
+       :hit-id hit-id}))
 
-(defn resolve-annotation-edit-route
-  [{{project-name :project-name action :action issue-id :issue-id} :params
+(defmethod close-annotation-issue "annotation-remove"
+  [db project-name {{{key :key} :ann hit-id :hit-id span :span :as issue-data} :data} issue-action]
+  (do (anns/remove-annotation db project-name issue-data)
+      {:key key
+       :span span
+       :project project-name
+       :hit-id hit-id}))
+
+(defn close-annotation-edit-route
+  [{{project-name :project-name issue-id :issue-id issue-action :action} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  ;; check if user is authorized to execute resolve
-  (let [issue (proj/get-project-issue db project-name issue-id)
+  (let [{issue-type :type :as issue} (proj/get-project-issue db project-name issue-id)
         {:keys [users]} (proj/find-project-by-name db project-name)
-        ann-payload (resolve-annotation-issue db project-name issue)
-        closed-issue (proj/close-issue db username project-name issue-id)]
-    ;; send annotation update
-    (send-clients
-     ws {:type :annotation :data ann-payload}
-     :target-clients (map :username users))
-    ;; send issue update
-    (send-clients
-     ws {:type :close-project-issue
-         :data {:issue closed-issue :project-name project-name}
-         :by username}
-     :source-client username
-     :target-clients (map :username users))
-    ;; send issue to source client
-    closed-issue))
+        required-action (case issue-type "annotation-remove" :delete "annotation-edit" :update)]
+    ;; check if user is authorized to execute close
+    (check-user-rights db username project-name required-action)
+    (try (let [payload (close-annotation-issue db project-name issue issue-action)
+               ;; this shouldn't fail
+               closed-issue (proj/close-issue db username project-name issue-id)
+               ws-type (case issue-type
+                         "annotation-remove" :remove-annotation
+                         "annotation-edit" :annotation)]
+           ;; send annotation update
+           (send-clients
+            ws {:type ws-type :data payload}
+            :target-clients (map :username users))
+           ;; send issue update
+           (send-clients
+            ws {:type :close-project-issue
+                :data {:issue closed-issue :project-name project-name}
+                :by username}
+            :source-client username
+            :target-clients (map :username users))
+           ;; send closed-issue to source client
+           closed-issue)
+         (catch Exception e
+           (let [{:keys [message data] :as exception} (bean e)
+                 payload {:message message :data :data}]
+             (timbre/error (if (:dev? env) (str exception) (str payload)))
+             ;; TODO revert annotation to current status
+             (assoc payload :status :error))))))
 
 ;;; Users
 (defn add-user-route
@@ -244,6 +266,6 @@
         (context "/comment" []
           (POST "/new" [] (make-default-route comment-on-project-issue-route))
           (POST "/delete" [] (make-default-route delete-comment-on-project-issue-route))) 
-        (context "/annotation-edit" []
+        (context "/annotation" []
           (POST "/open" [] (make-default-route open-annotation-edit-route))
-          (POST "/resolve" [] (make-default-route resolve-annotation-edit-route)))))))
+          (POST "/close" [] (make-default-route close-annotation-edit-route)))))))

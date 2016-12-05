@@ -55,6 +55,7 @@
           :error-handler error-handler})
    db))
 
+;;; Issues
 (re-frame/register-handler              ;add project update to client-db
  :update-project-issue
  standard-middleware
@@ -113,29 +114,41 @@
                              [:notify {:message "Couldn't delete comment" :status :error}])})
      db)))
 
-(defn open-annotation-fn [issue-type]  
+(defn make-annotation-issue-handler [issue-type]
   (fn [db [_ ann-data users]] ;; ann-data is (assoc previous-ann :value new-ann-value)
-    (let [project (get-in db [:session :active-project])
-          corpus (get-in db [:projects project :session :query :results-summary :corpus])
-          query (get-in db [:projects project :session :query :results-summary :query-str])
+    (let [active-project (get-in db [:session :active-project])
+          corpus (get-in db [:projects active-project :session :query :results-summary :corpus])
+          query (get-in db [:projects active-project :session :query :results-summary :query-str])
           ann-data (assoc ann-data :corpus corpus :query query)]
-      (POST "/project/issues/annotation-edit/open"
-            {:params {:project-name project
+      (POST "/project/issues/annotation/open"
+            {:params {:project-name active-project
                       :type issue-type
                       :users users
                       :ann-data ann-data}
-             :handler (project-add-issue-handler project)
+             :handler (project-add-issue-handler active-project)
              :error-handler error-handler})
       db)))
 
 (re-frame/register-handler
- :open-annotation-edit
- (open-annotation-fn "annotation-edit"))
+ :open-annotation-edit-issue
+ (make-annotation-issue-handler "annotation-edit"))
 
 (re-frame/register-handler
- :open-annotation-remove
- (open-annotation-fn "annotation-remove"))
+ :open-annotation-remove-issue
+ (make-annotation-issue-handler "annotation-remove"))
 
+(re-frame/register-handler
+ :close-annotation-issue
+ (fn [db [_ issue-id action]]
+   (let [active-project (get-in db [:session :active-project])]
+     (POST "/project/issues/annotation/close"
+           {:params {:project-name active-project
+                     :issue-id issue-id
+                     :action action}
+            :handler #()
+            :error-handler #()}))))
+
+;;; Users
 (re-frame/register-handler              ;add user to project in client-db
  :add-project-user
  standard-middleware
