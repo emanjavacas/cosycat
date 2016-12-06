@@ -62,21 +62,21 @@
 (defmethod issue-component :default [issue] [:div (str issue)])
 
 (defn issue-filter [issues]
-  (let [status-sub (re-frame/subscribe [:project-session :components :issue-filters :status])
-        type-sub (re-frame/subscribe [:project-session :components :issue-filters :type])]
+  (let [status-filter (re-frame/subscribe [:project-session :components :issue-filters :status])
+        type-filter (re-frame/subscribe [:project-session :components :issue-filters :type])]
     (fn []
       [bs/button-toolbar
        [dropdown-select
         {:label "status: "
          :header "Filter issues by status"
-         :model @status-sub
+         :model @status-filter
          :options (map #(->map % %) ["open" "closed" "all"])
          :select-fn
          #(re-frame/dispatch [:set-project-session-component [:issue-filters :status] %])}]
        [dropdown-select
         {:label "type: "
          :header "Filter issues by type"
-         :model @type-sub
+         :model @type-filter
          :options (map #(->map % %) (->> (vals @issues) (mapv :type) (into #{"all"}) vec))
          :select-fn
          #(re-frame/dispatch [:set-project-session-component [:issue-filters :type] %])}]])))
@@ -97,13 +97,19 @@
                      :when (should-display-issue? issue @issue-filters)]
                  ^{:key id} [issue-container issue]))]])))
 
+(defn has-open-issues? [status-filter issues]
+  (and (= status-filter "open") (empty? (filter #(= "open" (:status %)) issues))))
+
 (defn issues-frame []
-  (let [issues (re-frame/subscribe [:active-project :issues])]
+  (let [issues (re-frame/subscribe [:active-project :issues])
+        status-filter (re-frame/subscribe [:project-session :components :issue-filters :status])]
     (fn []
       [:div.container-fluid
        [:div.row.pull-right [:div.col-lg-12 [issue-filter issues]]]
        [:div.row {:style {:height "50px"}}]
        [:div.row
         [:div.col-lg-12
-         [issues-panel issues]]]])))
+         (if (has-open-issues? @status-filter (vals @issues))
+           [:div.text-center [:h2.text-muted "No open issues"]]
+           [issues-panel issues])]]])))
 

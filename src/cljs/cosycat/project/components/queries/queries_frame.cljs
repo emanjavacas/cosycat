@@ -85,9 +85,11 @@
     (fn []
       [:div.container-fluid
        [remove-query-modal show?]
-       [bs/list-group
-        (doall (for [{id :id :as query-metadata} @project-queries]
-                 ^{:key id}
-                 [bs/list-group-item
-                  (reagent/as-component
-                   [query-component query-metadata])]))]])))
+       (if (empty? @project-queries)
+         [:div.text-center [:h2.text-muted "This project doesn't have queries yet"]]
+         [bs/list-group
+          (doall (for [{id :id :as query-metadata} @project-queries]
+                   ^{:key id}
+                   [bs/list-group-item
+                    (reagent/as-component
+                     [query-component query-metadata])]))])])))

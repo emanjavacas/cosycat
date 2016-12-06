@@ -36,13 +36,16 @@
 
 (defn events-panel [events event-filters]
   (fn [events event-filters]
-    [bs/list-group
-     [css-transition-group {:transition-name "updates"
-                            :transition-enter-timeout 650
-                            :transition-leave-timeout 650}
-      (doall (for [{:keys [id type payload] :as event} (sort-by :timestamp > @events)
-                   :when (should-display-event? event @event-filters)]
-               ^{:key id} [event-component event]))]]))
+    [:div
+     (if (empty? @events)
+       [:div.text-center [:h2.text-muted "This project doesn't have events"]]
+       [bs/list-group
+        [css-transition-group {:transition-name "updates"
+                               :transition-enter-timeout 650
+                               :transition-leave-timeout 650}
+         (doall (for [{:keys [id type payload] :as event} (sort-by :timestamp > @events)
+                      :when (should-display-event? event @event-filters)]
+                  ^{:key id} [event-component event]))]])]))
 
 (defn events-frame []
   (let [active-project (re-frame/subscribe [:active-project :name])
