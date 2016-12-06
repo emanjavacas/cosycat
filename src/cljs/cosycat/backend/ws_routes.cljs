@@ -23,8 +23,8 @@
   (update-in db [:session :throbbing?] dissoc))
 
 (defmethod ws-handler :remove-annotation
-  [db {{:keys [key span project hit-id]} :data}]
-  (re-frame/dispatch [:remove-annotation project hit-id key span])
+  [db {{:keys [key span project-name hit-id] :as remove-payload} :data}]
+  (re-frame/dispatch [:remove-annotation remove-payload])
   db)
 
 ;;; Auth

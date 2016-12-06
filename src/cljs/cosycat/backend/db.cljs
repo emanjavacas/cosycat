@@ -51,7 +51,7 @@
    :components {:panel-order ["query-frame" "annotation-panel"]
                 :panel-open {"query-frame" true "annotation-panel" false}
                 :active-project-frame :users
-                :issue-filters {:status "all" :type "all"}
+                :issue-filters {:status "open" :type "all"}
                 :event-filters {:type "all"}
                 :open-hits #{}
                 :toggle-discarded false
