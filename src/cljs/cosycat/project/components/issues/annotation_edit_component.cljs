@@ -29,11 +29,13 @@
   [bs/button-toolbar
    [bs/button
     {:bsStyle "success"
-     :onClick #(re-frame/dispatch [:close-annotation-issue issue-id "accepted" ])}
+     :onClick #(do (re-frame/dispatch [:close-modal :close-annotation-issue])
+                   (re-frame/dispatch [:close-annotation-issue issue-id "accepted" ]))}
     "Accept"]
    [bs/button
     {:bsStyle "danger"
-     :onClick #(re-frame/dispatch [:close-annotation-issue issue-id "rejected"])}
+     :onClick #(do (re-frame/dispatch [:close-modal :close-annotation-issue])
+                   (re-frame/dispatch [:close-annotation-issue issue-id "rejected"]))}
     "Reject"]])
 
 (defn close-issue-modal []
@@ -65,27 +67,42 @@
         [:div.pull-right
          [issue-resolve-buttons (:id @close-annotation-issue-modal) :comment @comment]]]])))
 
+(defn annotation-status-message
+  [issuer {:keys [by timestamp status] :as resolve-data}]
+  (cond
+    (= status "accepted")
+    [:span [:strong (capitalize by)] " " [:span {:style {:color "green"}} "accepted"] " to change "]
+    (= status "rejected")
+    [:span [:strong (capitalize by)] " " [:span {:style {:color "red"}} "rejected"] " changing "]
+    (nil? resolve-data)
+    [:span [:strong (capitalize issuer)] " suggests to change "]))
+
 (defn annotation-edit-message
-  [{{{old-value :value key :key} :ann {doc :doc {:keys [B O] :as scope} :scope type :type} :span
-     new-value :value corpus :corpus} :data by :by issue-id :id :as issue}]  
-  [:div.container-fluid
-   [:div.row
-    [:div.col-lg-10.col-sm-10
-     [:h5 [:span
-           [:strong (capitalize by)]
-           " suggests to change annotation key " [bs/label key]
-           " from value " [bs/label {:bsStyle "primary"} old-value]
-           " to value " [bs/label {:bsStyle "primary"} new-value] "."]]
-     (let [tokens (if (= type "token") 1 (inc (- O B)))]
-       [:h5 [:span
-             "Annotation is in corpus " [:strong corpus]
-             " in document " [:strong doc]
-             " and spans " [:strong tokens] (if (> tokens 1) " tokens." " token.")]])]
-    [:div.col-lg-2.col-sm-2
-     [:div.pull-right
-      [bs/button
-       {:onClick #(re-frame/dispatch [:open-modal :close-annotation-issue issue])}
-       "Close issue"]]]]])
+  [{issue-data :data issuer :by issue-id :id resolve :resolve :as issue}]
+  (fn [{issue-data :data issuer :by issue-id :id resolve :resolve :as issue}]
+    (let [{{old-value :value key :key} :ann
+           {doc :doc {:keys [B O]} :scope type :type} :span
+           new-value :value
+           corpus :corpus} issue-data]
+      [:div.container-fluid
+       [:div.row
+        [:div.col-lg-10.col-sm-10
+         [:h5 [:span
+               [annotation-status-message issuer resolve]
+               " annotation key " [bs/label key]
+               " from value " [bs/label {:bsStyle "primary"} old-value]
+               " to value " [bs/label {:bsStyle "primary"} new-value] "."]]
+         (let [tokens (if (= type "token") 1 (inc (- O B)))]
+           [:h5 [:span
+                 "Annotation is in corpus " [:strong corpus]
+                 " in document " [:strong doc]
+                 " and spans " [:strong tokens] (if (> tokens 1) " tokens." " token.")]])]
+        [:div.col-lg-2.col-sm-2
+         (when (nil? resolve)
+           [:div.pull-right
+            [bs/button
+             {:onClick #(re-frame/dispatch [:open-modal :close-annotation-issue issue])}
+             "Close issue"]])]]])))
 
 (defn annotation-edit-component [issue]
   (fn [issue]

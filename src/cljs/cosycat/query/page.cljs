@@ -97,7 +97,7 @@
       [:div.container-fluid
        [:div.row
         [:div.col-lg-10
-         [:span "Showing: " [:strong @query-size] " results for query: " [:code @query-str]]]]])))
+         [:span.truncate "Showing: " [:strong @query-size] " results for query: " [:code @query-str]]]]])))
 
 (defn annotation-closed-header []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
@@ -146,7 +146,7 @@
                        (dec (.-eventKey this))]))}])))
 
 (defn hits-toolbar []
-  [bs/button-toolbar
+  [bs/button-group
    [open-hits-btn]
    [close-hits-btn]
    [unmark-hits-btn]])

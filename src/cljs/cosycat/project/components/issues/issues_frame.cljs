@@ -2,6 +2,7 @@
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
+            [clojure.string :refer [capitalize]]
             [cosycat.utils :refer [->map human-time]]
             [cosycat.app-utils :refer [dekeyword]]
             [cosycat.components :refer [dropdown-select user-thumb css-transition-group]]
@@ -20,10 +21,13 @@
     (fn [& opts]
       [user-thumb {:style {:margin "10px"}} (or @href "img/avatars/server.png")])))
 
-(defn issue-timestamp [username timestamp]
+(defn issue-timestamp
+  [username timestamp {resolved-by :by resolved-when :timestamp status :status :as resolve-data}]
   [:span.text-muted
    {:style {:margin-left "30px" :font-size "14px"}}
-   [:span "Issued by " [:strong username] " " (human-time timestamp)]])
+   [:span "Issued by " [:strong username] " " (human-time timestamp)]
+   (when resolve-data
+     [:span ". " (capitalize status) " by " [:strong resolved-by] " " (human-time resolved-when)])])
 
 (defn status-icon [status]
   (let [green "#5cb85c", red "#d9534f"]
@@ -42,7 +46,7 @@
    :annotation-edit "Annotation edit suggestion"})
 
 (defn issue-container [issue]
-  (fn [{data :data timestamp :timestamp status :status by :by type :type :as issue}]
+  (fn [{data :data timestamp :timestamp status :status by :by type :type resolve :resolve :as issue}]
     [bs/list-group-item
      (reagent/as-component
       [:div.container-fluid
@@ -51,7 +55,7 @@
          [:div.container-fluid
           [:div.row
            [:h4 [:span [status-icon status]] (get-issue-name (keyword type))]
-           [issue-timestamp by timestamp]]]]
+           [issue-timestamp by timestamp resolve]]]]
         [:div.col-lg-2.col-sm-2.text-right [issuer-thumb :username by]]]
        [:div.row {:style {:height "10px"}}]
        [:div.row {:style {:margin-left "10px"}} [issue-component issue]]])]))
