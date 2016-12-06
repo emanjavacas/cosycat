@@ -161,6 +161,7 @@
                           :id (str project-events-str ".id")
                           :_id 0}}
                {$match {:timestamp {$lt from}}}]
+        ;; TODO: in case of repeated events, they should be sorted using the highest value in repeated
         max-events       (into [{$sort {:timestamp -1 :repeated -1}} {$limit max-events}])
         (not max-events) (conj {$sort {:timestamp -1 :repeated -1}}))))))
 

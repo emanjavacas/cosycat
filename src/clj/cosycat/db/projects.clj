@@ -25,21 +25,21 @@
     (ex-info message
              {:code :project-exists
               :message message
-              :data {:project project-name}})))
+              :data {:project-name project-name}})))
 
 (defn ex-non-existing-project [project-name]
   (let [message "Project doesn't exist"]
     (ex-info message
              {:code :missing-project
               :message message
-              :data {:project project-name}})))
+              :data {:project-name project-name}})))
 
 (defn ex-user-project [username project-name]
   (let [message "User is not in project"]
     (ex-info message
              {:code :user-not-in-project
               :message message
-              :data {:username username :project project-name}})))
+              :data {:username username :project-name project-name}})))
 
 (defn ex-rights [username action role]
   (let [message (str username " doesn't have sufficient rights")]

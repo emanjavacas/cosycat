@@ -27,12 +27,12 @@
 (def annotation-route-schema
   (make-schema {:data {:hit-id (s/if vector? [hit-id-schema] hit-id-schema)
                        :anns {token-id-schema {s/Str annotation-schema}}
-                       :project s/Str}}))
+                       :project-name s/Str}}))
 
 (def remove-annotation-route-schema
   (make-schema {:data {:key ann-key-schema
                        :span span-schema
-                       :project s/Str
+                       :project-name s/Str
                        :hit-id hit-id-schema}}))
 
 (defn ws-from-server

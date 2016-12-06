@@ -102,18 +102,20 @@
 
 (defmethod close-annotation-issue "annotation-edit"
   [db project-name {{:keys [hit-id] :as issue-data} :data :as issue} issue-action]
-  (let [new-ann (anns/update-annotation db project-name issue-data)]
+  (when (= issue-action "accepted")
+    (let [new-ann (anns/update-annotation db project-name issue-data)]
       {:anns (normalize-anns [new-ann])
-       :project project-name
-       :hit-id hit-id}))
+       :project-name project-name
+       :hit-id hit-id})))
 
 (defmethod close-annotation-issue "annotation-remove"
   [db project-name {{{key :key} :ann hit-id :hit-id span :span :as issue-data} :data} issue-action]
-  (do (anns/remove-annotation db project-name issue-data)
-      {:key key
-       :span span
-       :project project-name
-       :hit-id hit-id}))
+  (when (= issue-action "accepted")
+    (do (anns/remove-annotation db project-name issue-data)
+        {:key key
+         :span span
+         :project-name project-name
+         :hit-id hit-id})))
 
 (defn close-annotation-edit-route
   [{{project-name :project-name issue-id :issue-id issue-action :action :as params} :params
@@ -121,35 +123,45 @@
     {db :db ws :ws} :components}]
   (let [{issue-type :type :as issue} (proj/get-project-issue db project-name issue-id)
         {:keys [users]} (proj/find-project-by-name db project-name)
+        close-data (select-keys params [:action :comment])
         required-action (case issue-type "annotation-remove" :delete "annotation-edit" :update)]
-    ;; check if user is authorized to execute close
-    (check-user-rights db username project-name required-action)
-    (try (let [payload (close-annotation-issue db project-name issue issue-action)
-               ;; this shouldn't fail
-               close-data (select-keys params [:action :comment])
-               closed-issue (proj/close-issue db username project-name issue-id close-data)
-               ws-type (case issue-type
-                         "annotation-remove" :remove-annotation
-                         "annotation-edit" :annotation)]
-           ;; send annotation update
-           (send-clients
-            ws {:type ws-type :data payload}
-            :target-clients (map :username users))
-           ;; send issue update
-           (send-clients
-            ws {:type :close-project-issue
-                :data {:issue closed-issue :project-name project-name}
-                :by username}
-            :source-client username
-            :target-clients (map :username users))
-           ;; send closed-issue to source client
-           closed-issue)
-         (catch Exception e
-           (let [{:keys [message data] :as exception} (bean e)
-                 payload {:message message :data :data}]
-             (timbre/error (if (:dev? env) (str exception) (str payload)))
-             ;; TODO revert annotation to current status
-             (assoc payload :status :error))))))
+    (try
+      ;; check if user is authorized to execute close
+      (check-user-rights db username project-name required-action)
+      (let [{:keys [anns] :as ann-payload} (close-annotation-issue db project-name issue issue-action)
+            closed-issue (try (proj/close-issue db username project-name issue-id close-data)
+                              (catch Throwable e
+                                (anns/revert-annotation db project-name (first (vals anns)))
+                                (throw e)))]
+        ;; send annotation update
+        (when (= issue-action "accepted")
+          (send-clients
+           ws {:type (case issue-type
+                       "annotation-remove" :remove-annotation
+                       "annotation-edit" :annotation)
+               :data ann-payload}
+           :target-clients (map :username users)))
+        ;; send issue update
+        (send-clients
+         ws {:type :close-project-issue
+             :data {:issue closed-issue :project-name project-name}
+             :by username}
+         :source-client username
+         :target-clients (map :username users))
+        ;; send closed-issue to source client
+        {:status :ok
+         :data (cond-> {:issue-payload closed-issue}
+                 (= issue-action "accepted") (assoc :ann-payload ann-payload))})
+      (catch clojure.lang.ExceptionInfo e
+        (let [{:keys [message data] :as exception} (bean e)
+              payload {:message message :data data :status :error}]
+          (timbre/error (if (:dev? env) (str exception) (str payload)))
+          payload))
+      (catch Exception e
+        (let [{message :message exception-class :class :as exception} (bean e)
+              payload {:message message :data {:exception exception-class} :status :error}]
+          (timbre/error (if (:dev? env) (str exception) (str payload)))
+          payload)))))
 
 ;;; Users
 (defn add-user-route

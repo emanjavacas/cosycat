@@ -163,7 +163,9 @@
   (timbre/info "Removing annotation" (str ann-map))
   (vcs/remove-by-id db-conn (server-project-name project) version id))
 
-(defn revert-annotation [{db-conn :db :as db} project {version :_version id :_id :as ann}]
+(defn revert-annotation
+  "updates annotation to lastest previous state"
+  [{db-conn :db :as db} project {version :_version id :_id :as ann}]
   (if-let [history (vcs/find-history db-conn id)]
     (let [previous (first history)]
       (update-annotation db project (assoc previous :_version version)))))
