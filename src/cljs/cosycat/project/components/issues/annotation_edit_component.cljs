@@ -41,7 +41,7 @@
         comment (reagent/atom "")]
     (fn []
       [bs/modal
-       {:show @close-annotation-issue-modal}
+       {:show (boolean @close-annotation-issue-modal)}
        [bs/modal-header
         {:closeButton true
          :onHide #(re-frame/dispatch [:close-modal :close-annotation-issue])}
@@ -70,7 +70,7 @@
      new-value :value corpus :corpus} :data by :by issue-id :id :as issue}]  
   [:div.container-fluid
    [:div.row
-    [:div.col-lg-8.col-sm-8
+    [:div.col-lg-10.col-sm-10
      [:h5 [:span
            [:strong (capitalize by)]
            " suggests to change annotation key " [bs/label key]
@@ -81,7 +81,7 @@
              "Annotation is in corpus " [:strong corpus]
              " in document " [:strong doc]
              " and spans " [:strong tokens] (if (> tokens 1) " tokens." " token.")]])]
-    [:div.col-lg-4.col-sm-4
+    [:div.col-lg-2.col-sm-2
      [:div.pull-right
       [bs/button
        {:onClick #(re-frame/dispatch [:open-modal :close-annotation-issue issue])}

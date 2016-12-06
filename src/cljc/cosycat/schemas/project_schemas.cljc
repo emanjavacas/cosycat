@@ -22,7 +22,7 @@
    (s/optional-key :resolve)
    {:status (s/enum "accepted" "rejected")
     (s/optional-key :comment) s/Str
-    :timestamp s/Str
+    :timestamp s/Int
     :by s/Str}
    (s/optional-key :comments)
    ;; comments are stored as objects indexed by comment id
