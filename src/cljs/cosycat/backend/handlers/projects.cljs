@@ -137,21 +137,31 @@
  :open-annotation-remove-issue
  (make-annotation-issue-handler "annotation-remove"))
 
-(defn close-annotation-issue-handler [{:keys [project-name issue]}]
-  (re-frame/dispatch [:update-project-issue project-name issue])
-  (re-frame/dispatch [:notify {:message "Issue was succesfully closed"}]))
+(defn close-annotation-issue-handler [project-name issue-type]
+  (fn [{:keys [status message data]}]
+    (if (= status :error)
+      (re-frame/dispatch [:notify {:message (format "Couldn't close issue. Reason [%s]" message) :status :error}])
+      (let [{{{:keys [status]} :resolve :as issue-payload} :issue-payload ann-payload :ann-payload} data]
+        (re-frame/dispatch [:update-project-issue project-name issue-payload])
+        (when (and (= issue-type "annotation-edit") (= status "accepted"))
+          (re-frame/dispatch [:add-annotation ann-payload]))
+        (when (and (= issue-type "annotation-remove") (= status "accepted"))
+          (re-frame/dispatch [:remove-annotation ann-payload]))
+        (re-frame/dispatch [:notify {:message "Issue was succesfully closed"}])))))
 
 (re-frame/register-handler
  :close-annotation-issue
  (fn [db [_ issue-id action & {:keys [comment]}]]
-   (let [active-project (get-in db [:session :active-project])]
+   (let [active-project (get-in db [:session :active-project])
+         {:keys [type]} (get-in db [:projects active-project :issues issue-id])]
      (POST "/project/issues/annotation/close"
            {:params (cond-> {:project-name active-project
                              :issue-id issue-id
                              :action action}
                       comment (assoc :comment comment))
-            :handler close-annotation-issue-handler
-            :error-handler error-handler}))))
+            :handler (close-annotation-issue-handler active-project type)
+            :error-handler error-handler})
+     db)))
 
 ;;; Users
 (re-frame/register-handler              ;add user to project in client-db
