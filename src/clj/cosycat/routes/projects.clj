@@ -3,7 +3,7 @@
             [cosycat.app-utils :refer [server-project-name normalize-by]]
             [cosycat.roles :refer [check-annotation-role]]
             [cosycat.routes.utils
-             :refer [make-default-route ex-user check-user-rights normalize-anns]]
+             :refer [make-default-route make-safe-route ex-user check-user-rights normalize-anns]]
             [cosycat.db.projects :as proj]
             [cosycat.db.annotations :as anns]
             [cosycat.components.ws :refer [send-clients send-client]]
@@ -240,7 +240,6 @@
   [{{{username :username} :identity} :session {db :db ws :ws} :components
     {id :id project-name :project-name} :params}]
   (let [{:keys [users]} (proj/get-project db username project-name)]
-    (check-user-rights db username project-name :delete)
     (proj/drop-query-metadata db username project-name id)
     (send-clients
      ws {:type :drop-query-metadata
@@ -269,4 +268,4 @@
           (POST "/delete" [] (make-default-route delete-comment-on-project-issue-route))) 
         (context "/annotation" []
           (POST "/open" [] (make-default-route open-annotation-edit-route))
-          (POST "/close" [] (make-default-route close-annotation-edit-route)))))))
+          (POST "/close" [] (make-safe-route close-annotation-edit-route)))))))

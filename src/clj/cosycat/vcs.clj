@@ -251,15 +251,25 @@
   (wrap-insert mc/insert-and-return))
 
 ;;; collection-wide operations
-(defn drop [db coll]
+(defn bulk-remove
+  "remove all vcs-docs from the vcs collection matching `conditions` as per `mongo.collection/remove`"
+  [db conditions]
+  (mc/remove db *hist-coll-name* conditions))
+
+(defn drop
+  "remove a vcs-controlled collection, if `set-remove` is true all vcs-versions of docs in 
+   that collection are given a field `:_remove` with value `true`"
+  [db coll & {:keys [set-remove] :or {set-remove true}}]
   (let [ids (->> (mc/find-maps db coll {}) (mapv :_id))]
     (mc/drop db coll)
-    (mc/update db *hist-coll-name* {:docId {$in ids}} {$push {:_remove true}} {:multi true})))
+    (if set-remove
+      (mc/update db *hist-coll-name* {:docId {$in ids}} {$push {:_remove true}} {:multi true})
+      (bulk-remove db {:docId {$in ids}}))))
 
 ;;; utility functions
-(defn make-collection [args]
+(defn ensure-vcs-indices [db]
   ;; TODO: add indices and stuff on vcs collection to speed-up searching
-  )
+  (mc/ensure-index db *hist-coll-name* (array-map :_version 1 :docId 1) {:unique true}))
 
 (defmacro with-hist-coll
   "a macro to avoid referring to lib-config dynamic vars directly"

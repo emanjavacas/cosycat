@@ -2,6 +2,7 @@
   (:require [monger.core :as mg]
             [monger.collection :as mc]
             [com.stuartsierra.component :as component]
+            [cosycat.vcs :as vcs]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
 
@@ -12,6 +13,7 @@
     (if (and conn db)
       component
       (let [{:keys [conn db]} (mg/connect-via-uri url)]
+        (vcs/ensure-vcs-indices db)
         (assoc component :db db :conn conn))))
   (stop [component]
     (timbre/info "Shutting down DB")

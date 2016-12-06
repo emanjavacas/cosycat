@@ -395,7 +395,7 @@
    :users "all"
    :timestamp (System/currentTimeMillis)})
 
-(declare -drop-query-metadata)
+(declare drop-query-hit-metadata)
 
 (defn erase-project
   "drops the project annotations and removes the project info from users"
@@ -409,7 +409,7 @@
     (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}})
     ;; remove query-metadata from query
     (doseq [{query-id :id} queries]
-      (-drop-query-metadata db project-name query-id))
+      (drop-query-hit-metadata db project-name query-id))
     ;; TODO: remove user.projects.project-name (events, settings)?)
   nil))
 
@@ -455,9 +455,9 @@
      (-> (mc/find-one-as-map db-conn (:queries colls) {:_id id})
          normalize-query-hit))))
 
-(defn ensure-query-index [{db-conn :db :as db}]
+(defn ensure-query-index [db]
   (mc/ensure-index
-   db-conn (:queries colls)
+   db (:queries colls)
    (array-map :query-id 1 :project-name 1 :hit-id 1)
    {:unique true}))
 
@@ -467,7 +467,7 @@
   [{db-conn :db :as db} username project-name query-id query-data query-default description]
   (s/validate (:query-data queries-schema) query-data)
   (check-user-in-project db username project-name)
-  (ensure-query-index db)
+  (ensure-query-index db-conn)
   (let [payload {:query-data query-data
                  :id query-id
                  :default query-default
@@ -508,10 +508,14 @@
          {:return-new true})
         normalize-query-hit)))
 
-(defn- -drop-query-metadata [{db-conn :db :as db} project-name query-id]
+(defn drop-query-hit-metadata
+  "drop query hits related with a given query (also remove any eventual vcs docs)"
+  [{db-conn :db :as db} project-name query-id]
+  (vcs/bulk-remove db-conn {:query-id query-id})
   (mc/remove db-conn (:queries colls) {:project-name project-name :query-id query-id}))
 
 (defn drop-query-metadata
+  "drop query metadata and hits related to it as per `drop-query-hit-metadata`"
   [{db-conn :db :as db} username project-name query-id]
   (check-user-in-project db username project-name)
   (check-user-is-query-metadata-creator db username project-name query-id)
@@ -521,4 +525,4 @@
    {:name project-name}
    {$pull {:queries {:id query-id}}})
   ;; remove query-metadata from queries collections
-  (-drop-query-metadata db project-name query-id))
+  (drop-query-hit-metadata db project-name query-id))
