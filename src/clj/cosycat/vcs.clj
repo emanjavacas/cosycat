@@ -4,8 +4,7 @@
              (similarly to timestamp vectors)."}
   cosycat.vcs
   (:refer-clojure :exclude [sort find update remove drop])
-  (:require [cosycat.components.db :refer [new-db]]
-            [monger.core :as mg]
+  (:require [monger.core :as mg]
             [monger.collection :as mc]
             [monger.query :refer :all]
             [monger.operators :refer :all]
