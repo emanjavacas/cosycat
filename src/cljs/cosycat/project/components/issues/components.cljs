@@ -13,4 +13,4 @@
         {:on-click #(re-frame/dispatch [:toggle-project-session-component [:issues issue-id panel-id]])
          :style {:font-size "16px" :cursor "pointer"}}
         header]
-       (when @expanded? [:div.panel-body [child issue]])])))
+       (when @expanded? [child issue])])))
