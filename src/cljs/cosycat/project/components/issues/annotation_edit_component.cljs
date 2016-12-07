@@ -104,12 +104,12 @@
              {:onClick #(re-frame/dispatch [:open-modal :close-annotation-issue issue])}
              "Close issue"]])]]])))
 
-(defn annotation-edit-component [issue]
-  (fn [issue]
+(defn annotation-edit-component [{resolve :resolve :as issue}]
+  (fn [{resolve :resolve :as issue}]
     [:div.container-fluid
      ;; TODO: add refresh button (new anns, more hit context, etc.)
      [:div.row [annotation-edit-message issue]]
      [:div.row {:style {:height "10px"}}]
      [:div.row [collapsible-issue-panel "Show hit" hit-component issue :show-hit]]
-     [:div.row [issue-thread-component issue :collapsible? true]]
+     [:div.row [issue-thread-component issue :collapsible? true :commentable? (nil? resolve)]]
      [close-issue-modal]]))

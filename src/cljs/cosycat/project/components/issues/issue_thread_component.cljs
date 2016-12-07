@@ -39,12 +39,12 @@
          :style {:cursor "pointer"}}
         [bs/glyphicon {:glyph "send"}]]])))
 
-(defn comment-component [{:keys [comment timestamp by deleted] :as comment-map} issue-id]
+(defn comment-component [{:keys [comment timestamp by deleted] :as comment-map} issue-id & {:keys [commentable?]}]
   (let [href (re-frame/subscribe [:user by :avatar :href])
         highlighted "rgba(227, 227, 227, 0.5)"
         my-name (re-frame/subscribe [:me :username])
         show-comment-input? (reagent/atom false)]
-    (fn [{:keys [comment timestamp by id deleted] :as comment-map} issue-id]
+    (fn [{:keys [comment timestamp by id deleted] :as comment-map} issue-id & {:keys [commentable?]}]
       [:div.panel.panel-default {:style {:border-width "1px" :margin-bottom "0"}}
        [:div.panel-body
         {:style {:padding "10px" :background-color (when @show-comment-input? highlighted)}}
@@ -69,10 +69,10 @@
                   "Delete"])
                [:a {:style style
                     :onClick #(swap! show-comment-input? not)}
-                (if @show-comment-input? "Dismiss" "Reply")]])])
-         (when @show-comment-input?
+                (if (and commentable? @show-comment-input?) "Dismiss" "Reply")]])])
+         (when (and commentable? @show-comment-input?)
            [:div.row {:style {:height "10px"}}])
-         (when @show-comment-input?
+         (when (commentable? @show-comment-input?)
            [:div.row [thread-comment-input issue-id :parent-id id]])]]])))
 
 (defn comments->tree
@@ -91,27 +91,27 @@
          flatten ;; flatten to single items
          (partition 2)))) ;; partition to (depth comment-id) tuples
 
-(defn thread-component [{issue-id :id comments :comments :as issue}]
-  (fn [{issue-id :id comments :comments :as issue}]
+(defn thread-component [{issue-id :id comments :comments :as issue} & {:keys [commentable?]}]
+  (fn [{issue-id :id comments :comments :as issue} & {:keys [commentable?]}]
     [:div.container-fluid
      (doall (for [[depth comment-id] (comments->tree (vals comments))
                   :let [{:keys [id] :as comment-map} (get comments (keyword comment-id))]]
               ^{:key id} [:div.row
                           {:style {:padding-left (when (pos? depth) (str (* 20 depth) "px"))}}
-                          [comment-component comment-map issue-id]]))]))
+                          [comment-component comment-map issue-id :commentable? commentable?]]))]))
 
-(defn issue-thread [issue]
-  (fn [{comments :comments issue-id :id :as issue}]
+(defn issue-thread [issue & {:keys [commentable?]}]
+  (fn [{comments :comments issue-id :id :as issue} & {:keys [commentable?]}]
     [:div.container-fluid
-     [:div.row [thread-comment-input issue-id]]
+     (when commentable? [:div.row [thread-comment-input issue-id]])
      [:div.row {:style {:height "10px"}}]
-     (when comments [:div.row [thread-component issue]])]))
+     (when comments [:div.row [thread-component issue :commentable? commentable?]])]))
 
-(defn issue-thread-component [issue & {:keys [collapsible?] :or {collapsible? true}}]
-  (fn [{:keys [comments] :as issue} & {:keys [collapsible?] :or {collapsible? true}}]
+(defn issue-thread-component [issue & {:keys [collapsible? commentable?]}]
+  (fn [{:keys [comments] :as issue} & {:keys [collapsible?] :or {collapsible? true commentable? true}}]
     (let [deleted-comments (count (filter :deleted (vals comments)))
           valid-comments (- (count comments) deleted-comments)
           title (str "Show thread (" valid-comments " comments)")]
       (if collapsible?
         [collapsible-issue-panel title issue-thread issue :show-thread]
-        [issue-thread issue]))))
+        [issue-thread issue :commentable? commentable?]))))
