@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [ajax.core :refer [POST GET]]
-            [cosycat.utils :refer [format current-results]]
+            [cosycat.utils :refer [format current-results now]]
             [cosycat.app-utils :refer [get-pending-users deep-merge update-coll]]
             [cosycat.routes :refer [nav!]]
             [cosycat.backend.middleware :refer [standard-middleware]]
@@ -119,7 +119,7 @@
     (let [active-project (get-in db [:session :active-project])
           corpus (get-in db [:projects active-project :session :query :results-summary :corpus])
           query (get-in db [:projects active-project :session :query :results-summary :query-str])
-          ann-data (assoc ann-data :corpus corpus :query query)]
+          ann-data (assoc ann-data :corpus corpus :query query :timestamp (now))]
       (POST "/project/issues/annotation/open"
             {:params {:project-name active-project
                       :type issue-type
