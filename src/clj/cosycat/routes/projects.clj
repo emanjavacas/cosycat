@@ -133,7 +133,7 @@
                               (catch Throwable e
                                 (anns/revert-annotation db project-name (first (vals anns)))
                                 (throw e)))]
-        ;; send annotation update
+        ;; send annotation update in case of accepted issue
         (when (= issue-action "accepted")
           (send-clients
            ws {:type (case issue-type
@@ -148,7 +148,7 @@
              :by username}
          :source-client username
          :target-clients (map :username users))
-        ;; send closed-issue to source client
+        ;; send closed-issue to source client (and annotation updated in case of accepted issue)
         {:status :ok
          :data (cond-> {:issue-payload closed-issue}
                  (= issue-action "accepted") (assoc :ann-payload ann-payload))})
