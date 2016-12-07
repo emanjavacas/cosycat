@@ -115,7 +115,7 @@
      db)))
 
 (defn make-annotation-issue-handler [issue-type]
-  (fn [db [_ ann-data users]] ;; ann-data is (assoc previous-ann :value new-ann-value)
+  (fn [db [_ ann-data & {:keys [users] :or {users "all"}}]] ;default to users for now
     (let [active-project (get-in db [:session :active-project])
           corpus (get-in db [:projects active-project :session :query :results-summary :corpus])
           query (get-in db [:projects active-project :session :query :results-summary :query-str])

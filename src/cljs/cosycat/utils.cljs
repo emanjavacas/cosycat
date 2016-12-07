@@ -132,7 +132,7 @@
   [s]
   (let [[k v] (gstr/splitLimit s "=" 2)]
     (if (and (not (empty? k)) (not (empty? v)))
-      [k v])))
+      {:key k :value v})))
 
 (defn highlight-annotation
   "if a given token has annotations it computes a color for the user with the most

@@ -135,12 +135,6 @@
       :ok
       (throw (ex-last-user project-name)))))
 
-(defn check-user-in-issue
-  [{db-conn :db :as db} project-name username issue-id]
-  (let [{:keys [users]} (get-project-issue db project-name issue-id)]
-    (when-not (or (= "all" users) (some #(= username %) users))
-      (throw (ex-user-issue username issue-id)))))
-
 (defn check-user-is-comment-author
   [{db-conn :db :as db} project-name username issue-id comment-id]
   (let [{{{:keys [by]} (keyword comment-id)} :comments} (get-project-issue db project-name issue-id)]
@@ -360,7 +354,7 @@
 (defn comment-on-issue [db username project-name issue-id comment & {:keys [parent-id]}]
   (let [timestamp (System/currentTimeMillis), id (new-uuid)
         comment-map {:by username :comment comment :timestamp timestamp :id id}]
-    (check-user-in-issue db project-name username issue-id)
+    (check-user-in-project db username project-name)
     (update-project-issue
      db username project-name issue-id
      (cond-> {$set {(str "issues.$.comments." id) comment-map}}

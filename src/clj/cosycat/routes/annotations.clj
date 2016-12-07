@@ -21,12 +21,14 @@
     (throw (ex-open-issue id))))
 
 (defn general-route
-  "abstraction over routes to factor out code"
-  [db ws username project-name {:keys [f payload-f]}
+  "abstraction over routes to factor out code. Takes a `db-thunk` that is called with no arguments
+   and performes writes to the database and a `payload-formatter` that is called with the output
+   of `db-thunk` and returns the expected route payload"
+  [db ws username project-name {:keys [db-thunk payload-formatter]}
    & {:keys [message-type] :or {message-type :annotation}}]
   (try (let [users (->> (find-project-by-name db project-name) :users (map :username))
-             out (f)
-             data (payload-f out)]
+             out (db-thunk)
+             data (payload-formatter out)]
          (send-clients
           ws {:type message-type :data data}
           :source-client username :target-clients users)
@@ -44,27 +46,27 @@
 
 (defn insert-annotation-route*
   "handles errors within the success callback to ease polymorphic payloads (bulk inserts)"
-  [db ws username project-name {hit-id :hit-id :as ann-map}]
+  [db ws username project-name corpus {hit-id :hit-id :as ann-map}]
   (general-route db ws username project-name
-   {:f (fn []
-         (check-user-rights db username project-name :write)
-         (anns/insert-annotation db project-name (assoc ann-map :username username)))
-    :payload-f (fn [new-ann] {:anns (normalize-anns [new-ann]) :project-name project-name :hit-id hit-id})}))
+   {:db-thunk (fn []
+                (check-user-rights db username project-name :write)
+                (anns/insert-annotation db project-name (assoc ann-map :username username :corpus corpus)))
+    :payload-formatter (fn [new-ann] {:anns (normalize-anns [new-ann]) :project-name project-name :hit-id hit-id})}))
 
 (defmulti insert-annotation-route (fn [{{:keys [ann-map]} :params}] (type ann-map)))
 
 (defmethod insert-annotation-route clojure.lang.PersistentArrayMap
-  [{{{hit-id :hit-id span :span :as ann} :ann-map project-name :project-name} :params
+  [{{{hit-id :hit-id span :span :as ann} :ann-map project-name :project-name corpus :corpus} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (insert-annotation-route* db ws username project-name ann))
+  (insert-annotation-route* db ws username project-name corpus ann))
 
 (defmethod insert-annotation-route clojure.lang.PersistentVector
-  [{{anns :ann-map project-name :project-name :as data} :params
+  [{{anns :ann-map project-name :project-name corpus :corpus} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (mapv (fn [ann]
-          (insert-annotation-route* db ws username project-name ann))
+          (insert-annotation-route* db ws username project-name corpus ann))
         anns))
 
 (defn update-annotation-route
@@ -72,22 +74,22 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (general-route db ws username project-name
-   {:f (fn []
-         (check-annotation-has-issue db project-name id)
-         (check-user-rights db username project-name :update id)
-         (anns/update-annotation db project-name (assoc update-map :username username)))
-    :payload-f (fn [new-ann] {:anns (normalize-anns [new-ann]) :project-name project-name :hit-id hit-id})}))
+   {:db-thunk (fn []
+                (check-annotation-has-issue db project-name id)
+                (check-user-rights db username project-name :update id)
+                (anns/update-annotation db project-name (assoc update-map :username username)))
+    :payload-formatter (fn [new-ann] {:anns (normalize-anns [new-ann]) :project-name project-name :hit-id hit-id})}))
 
 (defn remove-annotation-route
   [{{project-name :project-name hit-id :hit-id {{key :key} :ann id :_id span :span :as ann-map} :ann} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (general-route db ws username project-name
-   {:f (fn []
-         (check-annotation-has-issue db project-name id)
-         (check-user-rights db username project-name :delete id)
-         (anns/remove-annotation db project-name ann-map))
-    :payload-f (fn [_] {:project-name project-name :hit-id hit-id :key key :span span})}
+   {:db-thunk (fn []
+                (check-annotation-has-issue db project-name id)
+                (check-user-rights db username project-name :delete id)
+                (anns/remove-annotation db project-name ann-map))
+    :payload-formatter (fn [_] {:project-name project-name :hit-id hit-id :key key :span span})}
    :message-type :remove-annotation))
 
 (defn fetch-annotation-range-route

@@ -149,12 +149,30 @@
                 (throw #?(:clj (ex-info msg {:token-id token-id})
                           :cljs (js/Error. msg))))))
 
-(defn parse-hit-id                      ;TODO: corpus independent
+(defn parse-hit-id ;TODO: currently assuming mbg-format for hit-ids (doc-id.match-first.match-last)
   [hit-id]
   (let [[_ doc-id hit-start hit-end] (re-find #"(.*)\.([^\.]*)\.([^\.]*)" hit-id)]
     {:doc-id doc-id :hit-start hit-start :hit-end hit-end}))
 
+(defn validate-span-docs [doc-from doc-to]
+  ;; return nil if both doc-ids are missing
+  (when (or doc-from doc-to)
+    (cond
+      ;; one doc is missing
+      (or (and (nil? doc-to) (not (nil? doc-from)))
+          (and (nil? doc-to) (not (nil? doc-from))))
+      ["Doc is missing from token id" :error]
+      ;; different doc id
+      (not (= doc-from doc-to))
+      [(str "Annotation spans over multiple documents [" doc-from "-" doc-to "]") :error]
+      ;; not missing and same doc id
+      (= doc-from doc-to)
+      [nil :ok])))
+
 (defn token-id->span
+  "convert a token id into the corresponding valid span map.
+   passing a second token id will return a IOB span-type.
+   validation is done when parsing the token-id into different components"
   ([token-id]
    (let [{doc :doc scope :id} (parse-token-id token-id)]
      (if doc
@@ -162,11 +180,13 @@
        {:type "token" :scope scope})))
   ([token-from token-to]
    (let [{doc-from :doc scope-from :id} (parse-token-id token-from)
-         {doc-to :doc scope-to :id} (parse-token-id token-to)]
-     (if (and doc-from doc-to)
-       (do (assert (= doc-from doc-to) "Annotation spans over document end")
-           {:type "IOB" :scope {:B scope-from :O scope-to} :doc doc-from})
-       {:type "IOB" :scope {:B scope-from :O scope-to}}))))
+         {doc-to :doc scope-to :id} (parse-token-id token-to)
+         base-span {:type "IOB" :scope {:B scope-from :O scope-to}}]
+     (if-let [[message status] (validate-span-docs doc-from doc-to)]
+       (if (= status :error)
+         (throw #?(:cljs (js/Error. message) :clj (ex-info message {})))
+         (assoc base-span :doc doc-from))
+       base-span))))
 
 (defn span->token-id
   "computes token-id(s) from a given span, returns a range in case of IOB span"

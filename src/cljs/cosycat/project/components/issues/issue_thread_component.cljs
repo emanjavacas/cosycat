@@ -8,13 +8,16 @@
             [cosycat.project.components.issues.components :refer [collapsible-issue-panel]]
             [taoensso.timbre :as timbre]))
 
+(defn is-return? [keys-pressed]
+  (and (contains? keys-pressed 13) (not (contains? keys-pressed 16))))
+
 (defn dispatch-comment
   ([value issue-id parent-id]
    (when-not (empty? @value)
      (re-frame/dispatch
       [:comment-on-issue {:comment @value :issue-id issue-id :parent-id parent-id}])))
   ([value issue-id parent-id keys-pressed]
-   (when (and (contains? @keys-pressed 13) (not (contains? @keys-pressed 16)))
+   (when (is-return? @keys-pressed)
      (dispatch-comment value issue-id parent-id))))
 
 (defn thread-comment-input [issue-id & {:keys [parent-id]}]
@@ -33,13 +36,14 @@
          :on-key-up #(swap! keys-pressed disjconj (.-keyCode %))
          :on-key-down #(swap! keys-pressed disjconj (.-keyCode %))
          :on-key-press #(dispatch-comment value issue-id parent-id keys-pressed)
-         :on-change #(reset! value (.-value (.-target %)))}]
+         :on-change #(when-not (is-return? @keys-pressed) (reset! value (.-value (.-target %))))}]
        [:span.input-group-addon
         {:onClick #(dispatch-comment value issue-id parent-id)
          :style {:cursor "pointer"}}
         [bs/glyphicon {:glyph "send"}]]])))
 
-(defn comment-component [{:keys [comment timestamp by deleted] :as comment-map} issue-id & {:keys [commentable?]}]
+(defn comment-component
+  [{:keys [comment timestamp by deleted] :as comment-map} issue-id & {:keys [commentable?]}]
   (let [href (re-frame/subscribe [:user by :avatar :href])
         highlighted "rgba(227, 227, 227, 0.5)"
         my-name (re-frame/subscribe [:me :username])
@@ -72,7 +76,7 @@
                 (if (and commentable? @show-comment-input?) "Dismiss" "Reply")]])])
          (when (and commentable? @show-comment-input?)
            [:div.row {:style {:height "10px"}}])
-         (when (commentable? @show-comment-input?)
+         (when (and commentable? @show-comment-input?)
            [:div.row [thread-comment-input issue-id :parent-id id]])]]])))
 
 (defn comments->tree
@@ -103,12 +107,15 @@
 (defn issue-thread [issue & {:keys [commentable?]}]
   (fn [{comments :comments issue-id :id :as issue} & {:keys [commentable?]}]
     [:div.container-fluid
-     (when commentable? [:div.row [thread-comment-input issue-id]])
+     (when commentable?
+       [:div.row [thread-comment-input issue-id]])
+     [:div.row [:div.panel-body [thread-comment-input issue-id]]]
      [:div.row {:style {:height "10px"}}]
      (when comments [:div.row [thread-component issue :commentable? commentable?]])]))
 
 (defn issue-thread-component [issue & {:keys [collapsible? commentable?]}]
-  (fn [{:keys [comments] :as issue} & {:keys [collapsible?] :or {collapsible? true commentable? true}}]
+  (fn [{:keys [comments] :as issue} & {:keys [collapsible? commentable?]
+                                       :or {collapsible? true commentable? true}}]
     (let [deleted-comments (count (filter :deleted (vals comments)))
           valid-comments (- (count comments) deleted-comments)
           title (str "Show thread (" valid-comments " comments)")]
