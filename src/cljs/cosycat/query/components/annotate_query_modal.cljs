@@ -7,8 +7,9 @@
             [taoensso.timbre :as timbre]))
 
 (defn validate-data [{:keys [query-id include-sort-opts? include-filter-opts?]}]
-  (cond (re-find #"[ \t\n\r]" @query-id) "Disallowed whitespace"
-        (re-find #"[.-]"      @query-id) "Disallowed characters \".\", \"-\""))
+  (cond (empty? @query-id)               [:query-id "Empty query name"]
+        (re-find #"[ \t\n\r]" @query-id) [:query-id "Disallowed whitespace"]
+        (re-find #"[.-]"      @query-id) [:query-id "Disallowed characters \".\", \"-\""]))
 
 (defn on-dispatch
   [{:keys [query-id include-sort-opts? include-filter-opts? default description] :as data}
@@ -29,8 +30,7 @@
   (fn [query-id has-input-error?]
     [:div.row
      [:div.form-group
-      {:class (when (and (not (empty? @query-id)) @(:query-id has-input-error?))
-                "has-error has-feedback")}
+      {:class (when @(:query-id has-input-error?) "has-error has-feedback")}
       [:div.input-group
        [:span.input-group-addon [bs/glyphicon {:glyph "tag"}]]
        [:input.form-control
@@ -39,7 +39,7 @@
          :value @query-id
          :placeholder "Annotation query name"
          :on-change #(reset! query-id (.-value (.-target %)))}]]
-      (when (and (not (empty? @query-id)) @(:query-id has-input-error?))
+      (when @(:query-id has-input-error?)
         [:span.help-block @(:query-id has-input-error?)])]]))
 
 (defn query-description-row [description]

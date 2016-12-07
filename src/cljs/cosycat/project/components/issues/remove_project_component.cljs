@@ -16,11 +16,10 @@
       (if (= one "you")
         [:span [:strong "You"] " want to remove the project."]
         [:span [:strong one] " wants to remove the project."])
-      (let [sep (if (< 2 (count others)) ", " "")]
+      (let [sep (if (> (count others) 1) ", " "")]
         [:span (doall (for [other (cons (capitalize (first others)) (rest others))]
                         ^{:key (str other "-" issue-id)}
-                        [:span [:strong other]
-                         sep]))
+                        [:span [:strong other] sep]))
          " and "
          [:strong one]
          " want to remove the project."]))))
