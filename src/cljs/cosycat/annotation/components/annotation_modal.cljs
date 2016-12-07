@@ -34,10 +34,10 @@
 ;;; Dispatch operations
 (defn dispatch-new-annotations [ann-map tokens]
   (re-frame/dispatch
-   [:dispatch-annotation
+   [:dispatch-bulk-annotation
     ann-map                    ;ann-map
     (->> tokens (map :hit-id)) ;hit-ids
-    (->> tokens (map :id))])) ;token-ids
+    (->> tokens (map :id))]))  ;token-ids
 
 (defn dispatch-annotation-updates [{{:keys [key value]} :ann :as ann-map} tokens]
   (doseq [{hit-id :hit-id {ann key} :anns} tokens
@@ -46,38 +46,41 @@
      [:update-annotation
       {:update-map {:_id _id :_version _version :value value :hit-id hit-id}}])))
 
-(defn suggest-annotation-edits [ann-key new-val anns me]
+(defn suggest-annotation-edits [{ann-key :key new-value :value :as new-ann} anns me]
   (doseq [{{{:keys [_id _version ann span history]} ann-key} :anns hit-id :hit-id} anns
           :let [users (vec (into #{me} (map :username history)))
-                ann-data {:_version _version :_id _id :hit-id hit-id :value new-val :span span}]
-          :when (not= new-val (:value ann))]
+                ann-data {:_version _version :_id _id :hit-id hit-id :value new-value :span span}]
+          ;; skip casses without real change
+          :when (not= new-value (:value ann))]
     (re-frame/dispatch [:notify {:message "Edit not authorized"}])
+    ;; TODO: think of a good way of doing the following:
     ;; (re-frame/dispatch [:open-annotation-edit-issue ann-data users])
     ))
 
 (defn trigger-dispatch
-  [action {:keys [value marked-tokens current-ann me my-role unselect-checked?]}]
-  (if-let [[key val] (parse-annotation @value)]
+  [action {:keys [value marked-tokens current-ann me my-role unselect? span-type]}]
+  (when-let [new-ann (parse-annotation @value)]
     (let [{:keys [empty-annotation existing-annotation-owner existing-annotation]}
           (group-tokens @marked-tokens @current-ann @me)]
       (cond
-        ;; user is not authorized
+        ;; shortcut if user is not authorized
         (not (check-annotation-role action @my-role)) (notify-not-authorized action @my-role)
         ;; user suggestion to change
         (and (empty? empty-annotation)
              (empty? existing-annotation-owner)
              (not (empty? existing-annotation)))
-        (suggest-annotation-edits key val existing-annotation @me)
+        (suggest-annotation-edits new-ann existing-annotation @me)
         ;; dispatch annotations
-        :else (let [ann-map {:ann {:key key :value val}}]
+        :else (let [ann-map {:ann new-ann}]
                 (dispatch-new-annotations ann-map empty-annotation)
                 (dispatch-annotation-updates ann-map existing-annotation-owner)
-                (when @unselect-checked? (deselect-tokens empty-annotation))
-                (when @unselect-checked? (deselect-tokens existing-annotation-owner))))
+                (when @unselect?
+                  (do (deselect-tokens empty-annotation)
+                      (deselect-tokens existing-annotation-owner)))))
       ;; finally
-      (reset! value "")
-      (reset! current-ann "")
-      (re-frame/dispatch [:close-modal :annotation-modal]))))
+      (do (reset! value "")
+          (reset! current-ann "")
+          (re-frame/dispatch [:close-modal :annotation-modal])))))
 
 ;;; Components
 (defn update-current-ann [current-ann value]
@@ -86,13 +89,12 @@
           [_ key] (re-find #"([^=]+)=?" input-data)]
       (reset! current-ann key))))
 
-(defn on-key-press
-  [{:keys [value marked-tokens current-ann me my-role] :as opts}]
+(defn on-key-press [opts]
   (wrap-key 13 (fn [] (trigger-dispatch :write opts))))
 
 (defn annotation-input [marked-tokens opts]
   (let [tagsets (re-frame/subscribe [:selected-tagsets])]
-    (fn [marked-tokens {:keys [value current-ann me my-role] :as opts}]
+    (fn [marked-tokens {:keys [value current-ann] :as opts}]
       [:table
        {:width "100%"}
        [:tbody
@@ -166,14 +168,16 @@
   (let [me (re-frame/subscribe [:me :username])
         show? (re-frame/subscribe [:modals :annotation-modal])
         my-role (re-frame/subscribe [:active-project-role])
-        unselect-checked? (reagent/atom false)
+        unselect? (reagent/atom false)
+        span-type (reagent/atom "token")
         value (reagent/atom "")]
     (fn [marked-tokens current-ann]
       (let [opts {:value value
                   :me me
                   :my-role my-role
                   :current-ann current-ann
-                  :unselect-checked? unselect-checked?
+                  :unselect? unselect?
+                  :span-type span-type
                   :marked-tokens marked-tokens}]
         [bs/modal
          {:class "large"
@@ -195,8 +199,8 @@
            [:label
             [:input
              {:type "checkbox"
-              :checked @unselect-checked?
-              :on-change #(swap! unselect-checked? not)}]
+              :checked @unselect?
+              :on-change #(swap! unselect? not)}]
             [:span.text-muted "Unselect after dispatch?"]]]
           [bs/button
            {:className "pull-right"
@@ -214,7 +218,6 @@
           :style {:opacity (if (disabled? marked-tokens)  0.65 1)
                   :cursor (if (disabled? marked-tokens) "auto" "pointer")
                   :height "34px"}
-          :onClick #(when-not (disabled? marked-tokens)
-                      (re-frame/dispatch [:open-modal :annotation-modal]))}
+          :onClick #(when-not (disabled? marked-tokens) (re-frame/dispatch [:open-modal :annotation-modal]))}
          [:div [:i.zmdi.zmdi-edit]
           [annotation-modal marked-tokens current-ann]]]))))

@@ -15,16 +15,14 @@
      [:update-annotation
       {:update-map {:_id _id :_version _version :value new-value :hit-id hit-id}}])
     ;; dispatch update edit
-    (let [users (vec (into #{my-name} (map :username history)))]
-      (re-frame/dispatch [:open-annotation-edit-issue (assoc ann-map :value new-value) users]))))
+    (re-frame/dispatch [:open-annotation-edit-issue (assoc ann-map :value new-value)])))
 
 (defn dispatch-remove [{:keys [_id _version username history] :as ann-map} hit-id my-name my-role]
   (if (may-edit? :update username my-name my-role)
     ;; dispatch remove
     (re-frame/dispatch [:delete-annotation {:ann-map ann-map :hit-id hit-id}])
     ;; dispatch remote edit
-    (let [users (vec (into #{my-name} (map :username history)))]
-      (re-frame/dispatch [:open-annotation-remove-issue ann-map users]))))
+    (re-frame/dispatch [:open-annotation-remove-issue ann-map])))
 
 (defn trigger-update [ann-map hit-id new-value my-name my-role & [on-dispatch]]
   (fn [e]
@@ -63,11 +61,9 @@
               :on-change #(reset! text-atom (.. % -target -value))}])]]))))
 
 (defn history-row [ann-map current-ann hit-id my-name my-role on-dispatch & {:keys [editable?]}]
-  (fn [{{value :value} :ann timestamp :timestamp :as ann-map}
-       {version :_version id :_id username :username :as current-ann}
-       hit-id on-dispatch
+  (fn [{{value :value} :ann timestamp :timestamp username :username} current-ann hit-id on-dispatch
        & {:keys [editable?]}]
-    (let [may-edit (may-edit? :update username my-name my-role)
+    (let [may-edit (may-edit? :update (:username current-ann) my-name my-role)
           tooltip-text (if may-edit
                          "Click to restore this version"
                          "Click to suggest revert to this version")]

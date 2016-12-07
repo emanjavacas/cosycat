@@ -43,13 +43,13 @@
         :merge   (swap! chans merge data))
       (recur))))
 
-(defn handle-span-dispatch
+(defn dispatch-span-annotation
   [ann-map hit-id token-ids chans unmerge-on-dispatch?]
   (let [sorted-ids (sort-by #(-> % parse-token-id :id) token-ids)
         from (first sorted-ids)
         to (last sorted-ids)]
     (when unmerge-on-dispatch? (unmerge-cells (first token-ids) chans))
-    (re-frame/dispatch [:dispatch-annotation ann-map hit-id from to])))
+    (re-frame/dispatch [:dispatch-simple-annotation ann-map hit-id from to])))
 
 (defn on-key-down
   "`unmerge-on-dispatch?` is a bool indicating whether to clear selection after dispatch"
@@ -57,12 +57,12 @@
   (fn [pressed]
     (.stopPropagation pressed)
     (when (= 13 (.-keyCode pressed))
-      (if-let [[key val] (parse-annotation (.. pressed -target -value))]
-        (let [ann-map {:ann {:key key :value val} :query query}]
+      (if-let [new-ann (parse-annotation (.. pressed -target -value))]
+        (let [ann-map {:ann new-ann :query query}]
           (condp = (count token-ids)
             0 (re-frame/dispatch [:notify {:message "Empty selection"}])
-            1 (re-frame/dispatch [:dispatch-annotation ann-map hit-id (first token-ids)])
-            (handle-span-dispatch ann-map hit-id token-ids chans unmerge-on-dispatch?))
+            1 (re-frame/dispatch [:dispatch-simple-annotation ann-map hit-id (first token-ids)])
+            (dispatch-span-annotation ann-map hit-id token-ids chans unmerge-on-dispatch?))
           (reset! value ""))))))
 
 (defn input-component [{hit-id :id :as hit-map} token-id chans unmerge-on-dispatch?]

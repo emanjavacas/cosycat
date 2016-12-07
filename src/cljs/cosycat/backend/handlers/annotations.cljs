@@ -128,12 +128,6 @@
  (fn [db _]))
 
 ;;; Outgoing annotations
-(s/defn make-annotation :- annotation-schema
-  ([ann-map hit-id token-id]
-   (merge ann-map {:hit-id hit-id :span (token-id->span token-id) :timestamp (now)}))
-  ([ann-map hit-id token-from token-to]
-   (merge ann-map {:hit-id hit-id :span (token-id->span token-from token-to) :timestamp (now)})))
-
 (defmulti dispatch-annotation-handler
   "Variadic handler for successful annotations. Dispatches are based on whether
   ann-map is a vector (bulk annotation payload) or a map (single annotation payload)"
@@ -168,18 +162,46 @@
 (defn error-handler [& args]
   (re-frame/dispatch [:notify {:message "Unrecognized internal error"}]))
 
-(declare package-annotation)
+(re-frame/register-handler
+ :dispatch-simple-annotation
+ (fn [db [_ {ann-query :query :as ann-map} hit-id token-id & [token-to]]]
+   (let [project-name (get-in db [:session :active-project])
+         query (or ann-query (get-in db [:projects project-name :session :query :results-summary :query-str]))
+         span (if token-to (token-id->span token-id token-to) (token-id->span token-id))
+         ann-map (assoc ann-map :hit-id hit-id :span span :timestamp (now) :query query)]
+     (re-frame/dispatch [:dispatch-annotation ann-map]))
+   db))
+
+(defn package-ann-maps [db-query ann-map hit-ids token-ids & [token-to's]]
+  {:pre [#(when token-to's (= (count token-ids) (count token-to's)))]}
+  ;; TODO: we should try to pass real query (as done with single annotations)
+  (let [timestamp (now)]
+    (if token-to's
+      (mapv (fn [hit-id token-from token-to]
+              (let [span (token-id->span token-from token-to)]
+                (assoc ann-map :hit-id hit-id :span span :timestamp timestamp :query db-query)))
+            hit-ids token-ids token-to's)
+      (mapv (fn [hit-id token-id]
+              (let [span (token-id->span token-id)]
+                (assoc ann-map :hit-id hit-id :span span :timestamp timestamp :query db-query)))
+            hit-ids token-ids))))
+
+(re-frame/register-handler
+ :dispatch-bulk-annotation
+ (fn [db [_ ann-map hit-ids token-ids & [token-to's]]]
+   (let [project-name (get-in db [:session :active-project])
+         db-query (get-in db [:projects project-name :session :query :results-summary :query-str])         
+         ann-maps (package-ann-maps db-query ann-map hit-ids token-ids token-to's)]
+     (re-frame/dispatch [:dispatch-annotation ann-maps]))
+   db))
 
 (re-frame/register-handler
  :dispatch-annotation
- (fn [db [_ {ann-query :query :as ann-map} & args]]
+ (fn [db [_ ann-map-or-maps]]
    (let [project-name (get-in db [:session :active-project])
-         corpus (get-in db [:projects project-name :session :query :results-summary :corpus])
-         db-query (get-in db [:projects project-name :session :query :results-summary :query-str])
-         ann-map (assoc ann-map :corpus corpus :query (or ann-query db-query))]
-     (assert (:query ann-map) "missing `query` in ann-map")
+         corpus (get-in db [:projects project-name :session :query :results-summary :corpus])]
      (try (POST "/annotation/new"
-                {:params (apply package-annotation ann-map project-name args)
+                {:params {:ann-map ann-map-or-maps :project-name project-name :corpus corpus}
                  :handler dispatch-annotation-handler
                  :error-handler error-handler})
           (catch :default e
@@ -228,29 +250,3 @@
             :handler remove-annotation-handler
             :error-handler error-handler})
      db)))
-
-;;; annotation dispatch utils
-(defmulti package-annotation
-  "packages annotation data for the server. It only supports bulk payloads for token annotations"
-  (fn [ann-map-or-maps project-name hit-id token-id & [token-to]]
-    [(type ann-map-or-maps) (coll? token-id)]))
-
-(defmethod package-annotation ;; simple token annotation
-  [cljs.core/PersistentArrayMap false]
-  ([ann-map project-name hit-id token-id]
-   {:project-name project-name :ann-map (make-annotation ann-map hit-id token-id)})
-  ([ann-map project-name hit-id token-from token-to]
-   {:project-name project-name :ann-map (make-annotation ann-map hit-id token-from token-to)}))
-
-(defmethod package-annotation ;; bulk token annotation
-  [cljs.core/PersistentArrayMap true]
-  [ann-map project-name hit-ids token-ids]
-  (->> (mapv (fn [token-id hit-id] (make-annotation ann-map hit-id token-id)) token-ids hit-ids)
-       (assoc {:project-name project-name} :ann-map)))
-
-(defmethod package-annotation
-  [cljs.core/PersistentVector true]
-  [anns project-name hit-ids token-ids]
-  (assert (apply = (map count [anns hit-ids])) "Each ann must have a hit-id")
-  (->> (mapv (fn [ann hit-id token-id] (make-annotation ann hit-id token-id)) anns hit-ids token-ids)
-       (assoc {:project-name project-name} :ann-map)))
