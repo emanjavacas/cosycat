@@ -31,3 +31,7 @@
 
 (defn check-annotation-role [action role]
   (check-role annotation-roles action role))
+
+(defn may-edit? [action username my-name my-role]
+  (let [role (if (= username my-name) "owner" my-role)]
+    (check-annotation-role action role)))
