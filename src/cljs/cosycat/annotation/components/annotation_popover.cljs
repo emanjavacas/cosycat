@@ -3,16 +3,12 @@
             [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [cosycat.utils :refer [human-time by-id]]
-            [cosycat.roles :refer [check-annotation-role]]
+            [cosycat.roles :refer [may-edit?]]
             [cosycat.components :refer [user-thumb]]
             [taoensso.timbre :as timbre]))
 
-(defn may-edit? [action username my-name my-role]
-  (let [role (if (= username my-name) "owner" my-role)]
-    (check-annotation-role action role)))
-
 (defn dispatch-update
-  [{:keys [_id _version username history] :as ann-data} hit-id new-value my-name my-role]
+  [{:keys [_id _version username history] :as ann-map} hit-id new-value my-name my-role]
   (if (may-edit? :update username my-name my-role)
     ;; dispatch update
     (re-frame/dispatch
@@ -20,7 +16,7 @@
       {:update-map {:_id _id :_version _version :value new-value :hit-id hit-id}}])
     ;; dispatch update edit
     (let [users (vec (into #{my-name} (map :username history)))]
-      (re-frame/dispatch [:open-annotation-edit-issue (assoc ann-data :value new-value) users]))))
+      (re-frame/dispatch [:open-annotation-edit-issue (assoc ann-map :value new-value) users]))))
 
 (defn dispatch-remove [{:keys [_id _version username history] :as ann-map} hit-id my-name my-role]
   (if (may-edit? :update username my-name my-role)
@@ -28,9 +24,7 @@
     (re-frame/dispatch [:delete-annotation {:ann-map ann-map :hit-id hit-id}])
     ;; dispatch remote edit
     (let [users (vec (into #{my-name} (map :username history)))]
-      (re-frame/dispatch
-       [:open-annotation-remove-issue
-        {:_version _version :_id _id :hit-id hit-id :users users}]))))
+      (re-frame/dispatch [:open-annotation-remove-issue ann-map users]))))
 
 (defn trigger-update [ann-map hit-id new-value my-name my-role & [on-dispatch]]
   (fn [e]

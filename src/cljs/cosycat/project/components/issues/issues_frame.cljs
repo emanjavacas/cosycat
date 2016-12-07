@@ -6,8 +6,8 @@
             [cosycat.utils :refer [->map human-time]]
             [cosycat.app-utils :refer [dekeyword]]
             [cosycat.components :refer [dropdown-select user-thumb css-transition-group]]
-            [cosycat.project.components.issues.annotation-edit-component
-             :refer [annotation-edit-component]]
+            [cosycat.project.components.issues.annotation-issue-component
+             :refer [annotation-issue-component]]
             [cosycat.project.components.issues.remove-project-component
              :refer [remove-project-component]]
             [taoensso.timbre :as timbre]))
@@ -41,9 +41,14 @@
         :class "ignore"
         :style {:color green :margin-right "10px"}}])))
 
-(def get-issue-name
+(def issue-type->description
   {:delete-project-agree "Delete project"
-   :annotation-edit "Annotation edit suggestion"})
+   :annotation-edit "Suggestion to edit annotation"
+   :annotation-remove "Suggestion to remove annotation"})
+
+(def description->issue-name* (reduce-kv (fn [m k v] (assoc m v k)) {} issue-type->description))
+(defn description->issue-type [description]
+  (get description->issue-name* description))
 
 (defn issue-container [issue]
   (fn [{data :data timestamp :timestamp status :status by :by type :type resolve :resolve :as issue}]
@@ -54,14 +59,15 @@
         [:div.col-lg-10.col-sm-10
          [:div.container-fluid
           [:div.row
-           [:h4 [:span [status-icon status]] (get-issue-name (keyword type))]
+           [:h4 [:span [status-icon status]] (issue-type->description (keyword type))]
            [issue-timestamp by timestamp resolve]]]]
         [:div.col-lg-2.col-sm-2.text-right [issuer-thumb :username by]]]
        [:div.row {:style {:height "10px"}}]
        [:div.row {:style {:margin-left "10px"}} [issue-component issue]]])]))
 
 (defmulti issue-component (fn [{issue-type :type}] (keyword issue-type)))
-(defmethod issue-component :annotation-edit [issue] [annotation-edit-component issue])
+(defmethod issue-component :annotation-edit [issue] [annotation-issue-component issue])
+(defmethod issue-component :annotation-remove [issue] [annotation-issue-component issue])
 (defmethod issue-component :delete-project-agree [issue] [remove-project-component issue])
 (defmethod issue-component :default [issue] [:div (str issue)])
 
@@ -75,15 +81,16 @@
          :header "Filter issues by status"
          :model @status-filter
          :options (map #(->map % %) ["open" "closed" "all"])
-         :select-fn
-         #(re-frame/dispatch [:set-project-session-component [:issue-filters :status] %])}]
-       [dropdown-select
-        {:label "type: "
-         :header "Filter issues by type"
-         :model @type-filter
-         :options (map #(->map % %) (->> (vals @issues) (mapv :type) (into #{"all"}) vec))
-         :select-fn
-         #(re-frame/dispatch [:set-project-session-component [:issue-filters :type] %])}]])))
+         :select-fn #(re-frame/dispatch
+                      [:set-project-session-component [:issue-filters :status] %])}]
+       (let [options (->> (vals @issues) (mapv :type) (into #{"all"}))]
+         [dropdown-select
+          {:label "type: "
+           :header "Filter issues by type"
+           :model @type-filter
+           :options (map #(->map % %) (vec options))
+           :select-fn #(re-frame/dispatch
+                        [:set-project-session-component [:issue-filters :type] %])}])])))
 
 (defn should-display-issue?
   [{issue-status :status issue-type :type} {status-filter :status type-filter :type}]
