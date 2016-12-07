@@ -17,13 +17,22 @@
   (fn []
     (if-let [[key error] (validate-data data)]
       (reset! (get has-input-error? key) error)
-      (do (re-frame/dispatch
+      (do
+        ;; reset init values
+        (doseq [a (vals has-input-error?)]
+          (reset! a false))
+          (reset! query-id "")
+          (reset! description "")
+          (reset! default "unseen")
+          ;; dispatch query
+          (re-frame/dispatch
            [:query-new-metadata
             {:id @query-id
              :description @description
              :include-sort-opts? @include-sort-opts?
              :include-filter-opts? @include-filter-opts?
              :default @default}])
+          ;; close modal
           (re-frame/dispatch [:close-modal :annotate-query])))))
 
 (defn query-input-row [query-id has-input-error?]
