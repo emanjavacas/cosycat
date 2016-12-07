@@ -177,6 +177,8 @@
 (re-frame/register-sub
  :user
  (fn [db [_ username & path]]
+   ;; fetch user info if not available
+   (when-not (get-user @db username) (re-frame/dispatch [:fetch-user-info username]))
    (let [user (reaction (get-user @db username))]
      (if path
        (reaction (get-in @user path))
