@@ -1,4 +1,4 @@
-(ns cosycat.project.components.issues.annotation-edit-component
+(ns cosycat.project.components.issues.annotation-issue-component
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
@@ -68,31 +68,36 @@
          [issue-resolve-buttons (:id @close-annotation-issue-modal) :comment @comment]]]])))
 
 (defn annotation-status-message
-  [issuer {:keys [by timestamp status] :as resolve-data}]
-  (cond
-    (= status "accepted")
-    [:span [:strong (capitalize by)] " " [:span {:style {:color "green"}} "accepted"] " to change "]
-    (= status "rejected")
-    [:span [:strong (capitalize by)] " " [:span {:style {:color "red"}} "rejected"] " changing "]
-    (nil? resolve-data)
-    [:span [:strong (capitalize issuer)] " suggests to change "]))
+  [{issuer :by issue-type :type
+    {{old-value :value key :key} :ann new-value :value} :data}
+   {:keys [by timestamp status] :as resolve-data}]
+  (let [action (if (= issue-type "annotation-remove") "remove" "change")
+        action-ing (str (subs action 0 (dec (count action))) "ing")]
+    [:span
+     ;; action info
+     (cond
+       (= status "accepted")
+       [:span [:strong (capitalize by)] " " [:span {:style {:color "green"}} "accepted"] " to " action]
+       (= status "rejected")
+       [:span [:strong (capitalize by)] " " [:span {:style {:color "red"}} "rejected"] " " action-ing]
+       (nil? resolve-data)
+       [:span [:strong (capitalize issuer)] " suggests to " action])
+     ;; annotation info
+     " annotation key " [bs/label key]
+     " with value " [bs/label {:bsStyle "primary"} old-value]
+     (when (= issue-type "annotation-edit")
+       [:span " to value " [bs/label {:bsStyle "primary"} new-value]])
+     "."]))
 
 (defn annotation-edit-message
   [{issue-data :data issuer :by issue-id :id resolve :resolve :as issue}]
   (fn [{issue-data :data issuer :by issue-id :id resolve :resolve :as issue}]
-    (let [{{old-value :value key :key} :ann
-           {doc :doc {:keys [B O]} :scope type :type} :span
-           new-value :value
-           corpus :corpus} issue-data]
+    (let [{{doc :doc {:keys [B O]} :scope span-type :type} :span corpus :corpus} issue-data]
       [:div.container-fluid
        [:div.row
         [:div.col-lg-10.col-sm-10
-         [:h5 [:span
-               [annotation-status-message issuer resolve]
-               " annotation key " [bs/label key]
-               " from value " [bs/label {:bsStyle "primary"} old-value]
-               " to value " [bs/label {:bsStyle "primary"} new-value] "."]]
-         (let [tokens (if (= type "token") 1 (inc (- O B)))]
+         [:h5 [annotation-status-message issue resolve]]
+         (let [tokens (if (= span-type "token") 1 (inc (- O B)))]
            [:h5 [:span
                  "Annotation is in corpus " [:strong corpus]
                  " in document " [:strong doc]
@@ -104,8 +109,8 @@
              {:onClick #(re-frame/dispatch [:open-modal :close-annotation-issue issue])}
              "Close issue"]])]]])))
 
-(defn annotation-edit-component [{resolve :resolve :as issue}]
-  (fn [{resolve :resolve :as issue}]
+(defn annotation-issue-component [{resolve :resolve issue-type :type :as issue}]
+  (fn [{resolve :resolve issue-type :type :as issue}]
     [:div.container-fluid
      ;; TODO: add refresh button (new anns, more hit context, etc.)
      [:div.row [annotation-edit-message issue]]
