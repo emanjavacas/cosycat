@@ -2,6 +2,7 @@
   (:require [compojure.core :refer [routes context POST GET]]
             [cosycat.app-utils :refer [server-project-name normalize-by]]
             [cosycat.roles :refer [check-annotation-role]]
+            [cosycat.utils :refer [assert-ex-info]]
             [cosycat.routes.utils
              :refer [make-default-route make-safe-route ex-user check-user-rights normalize-anns]]
             [cosycat.db.projects :as proj]
@@ -9,6 +10,16 @@
             [cosycat.components.ws :refer [send-clients send-client]]
             [config.core :refer [env]]
             [taoensso.timbre :as timbre]))
+
+;;; Checkers
+(defn check-new-query-input
+  [{{:keys [query-str corpus] :as query-data} :query-data id :id default :default :as params}]
+  (cond (empty? id)     [id "Query name can't be empty"]
+        (empty? corpus) [corpus "Corpus can't be empty"]))
+
+;;; Exceptions
+(defn ex-invalid-input [message input-data]
+  (ex-info message {:code :invalid-input :message message :data {:input-data input-data}}))
 
 ;;; General
 (defn new-project-route
@@ -220,7 +231,9 @@
   [{{{username :username} :identity} :session {db :db ws :ws} :components
     {{:keys [query-str corpus filter-opts sort-opts] :as query-data} :query-data
      project-name :project-name id :id description :description
-     default :default :or {default "unseen"}} :params}]
+     default :default :or {default "unseen"} :as params} :params}]
+  (when-let [[message input-data] (check-new-query-input params)]
+    (throw (ex-invalid-input message input-data)))
   (let [{:keys [users]} (proj/get-project db username project-name)
         data (proj/new-query-metadata db username project-name id query-data default description)]
     (send-clients
