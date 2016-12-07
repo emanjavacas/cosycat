@@ -11,27 +11,26 @@
         (re-find #"[ \t\n\r]" @query-id) [:query-id "Disallowed whitespace"]
         (re-find #"[.-]"      @query-id) [:query-id "Disallowed characters \".\", \"-\""]))
 
+(defn reset!-input-atoms [has-input-error? query-id description default]
+  (doseq [validation-atom (vals has-input-error?)] (reset! validation-atom false))
+  (reset! query-id "")
+  (reset! description "")
+  (reset! default "unseen"))
+
 (defn on-dispatch
   [{:keys [query-id include-sort-opts? include-filter-opts? default description] :as data}
    has-input-error?]
   (fn []
     (if-let [[key error] (validate-data data)]
       (reset! (get has-input-error? key) error)
-      (do
-        ;; reset init values
-        (doseq [a (vals has-input-error?)]
-          (reset! a false))
-          (reset! query-id "")
-          (reset! description "")
-          (reset! default "unseen")
-          ;; dispatch query
-          (re-frame/dispatch
+      (do (re-frame/dispatch
            [:query-new-metadata
             {:id @query-id
              :description @description
              :include-sort-opts? @include-sort-opts?
              :include-filter-opts? @include-filter-opts?
-             :default @default}])
+             :default @default}
+            :on-dispatch #(reset!-input-atoms has-input-error? query-id description default)])
           ;; close modal
           (re-frame/dispatch [:close-modal :annotate-query])))))
 

@@ -305,7 +305,7 @@
 
 (re-frame/register-handler
  :query-new-metadata
- (fn [db [_ {:keys [id include-sort-opts? include-filter-opts? default description]}]]
+ (fn [db [_ {:keys [id include-sort-opts? include-filter-opts? default description]} & {:keys [on-dispatch]}]]
    (let [active-project (get-in db [:session :active-project])
          {:keys [corpus filter-opts sort-opts]} (get-in db [:settings :query])
          {query-str :query-str} (current-results db)]
@@ -319,6 +319,7 @@
                       default (assoc :default default))
             :handler (query-new-metadata-handler active-project)
             :error-handler query-new-metadata-error-handler}))
+   (when on-dispatch (on-dispatch))
    db))
 
 (defn get-new-status [default previous-hit-status]

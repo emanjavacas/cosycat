@@ -25,17 +25,19 @@
          :show-match? false
          :show-hit-id? false])})))
 
-(defn issue-resolve-buttons [issue-id & {:keys [commment]}]
+(defn issue-resolve-buttons [{issue-id :id :as issue} & {:keys [commment]}]
   [bs/button-toolbar
    [bs/button
     {:bsStyle "success"
      :onClick #(do (re-frame/dispatch [:close-modal :close-annotation-issue])
-                   (re-frame/dispatch [:close-annotation-issue issue-id "accepted" ]))}
+                   (re-frame/dispatch [:close-annotation-issue issue-id "accepted" ])
+                   (re-frame/dispatch [:fetch-issue-hit {:issue issue :context 6}]))}
     "Accept"]
    [bs/button
     {:bsStyle "danger"
      :onClick #(do (re-frame/dispatch [:close-modal :close-annotation-issue])
-                   (re-frame/dispatch [:close-annotation-issue issue-id "rejected"]))}
+                   (re-frame/dispatch [:close-annotation-issue issue-id "rejected"])
+                   (re-frame/dispatch [:fetch-issue-hit {:issue issue :context 6}]))}
     "Reject"]])
 
 (defn close-issue-modal []
@@ -65,7 +67,7 @@
               :on-change #(reset! comment (.-value (.-target %)))}]]]]]]
        [bs/modal-footer
         [:div.pull-right
-         [issue-resolve-buttons (:id @close-annotation-issue-modal) :comment @comment]]]])))
+         [issue-resolve-buttons @close-annotation-issue-modal :comment @comment]]]])))
 
 (defn annotation-status-message
   [{issuer :by issue-type :type
