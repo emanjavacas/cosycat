@@ -54,7 +54,7 @@
                 :issue-filters {:status "open" :type "all"}
                 :event-filters {:type "all"}
                 :open-hits #{}
-                :toggle-discarded false
+                :toggle-hits "none"
                 :token-field :word}
    :filtered-users (into #{} (map :username (:users project)))})
 

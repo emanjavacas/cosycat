@@ -84,17 +84,17 @@
       :style {:color (get-color @hit-status) :cursor "pointer"}
       :onClick #(re-frame/dispatch [:query-update-metadata hit-id @hit-status])}]))
 
-(defn results-row [hit-num {:keys [id]} {:keys [color-map break active-query toggle-discarded]}]
+(defn results-row [hit-num {:keys [id]} {:keys [color-map break active-query toggle-hits]}]
   (let [hit-status (re-frame/subscribe [:hit-status id])]
     (fn [hit-num
          {hit :hit id :id {:keys [num marked]} :meta :as hit-map}
-         {:keys [color-map break active-query toggle-discarded] :as opts}]
+         {:keys [color-map break active-query toggle-hits] :as opts}]
       (let [row-class (merge-classes (when marked "marked") (when break "break"))
             background "#F9F9F9"]
         [:tr {:class row-class
               :data-hit id
               ;; hide hit if discarded and toggle is on
-              :style {:display (when (and @toggle-discarded (= @hit-status "discarded")) "none")}}
+              :style {:display (when (and (not= @toggle-hits "none") (= @hit-status @toggle-hits)) "none")}}
          (concat
           [^{:key (str hit-num "-check")}
            [:td.ignore
@@ -153,7 +153,7 @@
   (let [results (re-frame/subscribe [:results])
         from (re-frame/subscribe [:project-session :query :results-summary :from])
         color-map (re-frame/subscribe [:filtered-users-colors])
-        toggle-discarded (re-frame/subscribe [:project-session :components :toggle-discarded])
+        toggle-hits (re-frame/subscribe [:project-session :components :toggle-hits])
         active-query (re-frame/subscribe [:project-session :components :active-query])        
         mouse-down? (reagent/atom false)
         highlighted? (reagent/atom false)]
@@ -175,5 +175,5 @@
                  [results-row hit-num hit-map
                   {:color-map color-map
                    :break break
-                   :toggle-discarded toggle-discarded
+                   :toggle-hits toggle-hits
                    :active-query active-query}]))]])))
