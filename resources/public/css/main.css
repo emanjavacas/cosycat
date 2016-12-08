@@ -134,3 +134,7 @@ span.log-line:hover {
 .highlightable:hover {
     background-color: #fafafa;
 }
+
+span.hit-refresher:hover {
+    color: #158cba;
+}

@@ -10,11 +10,13 @@
              :refer [issue-thread-component]]
             [taoensso.timbre :as timbre]))
 
+(def context 6)
+
 (defn hit-component [{{hit-map :hit-map} :meta issue-id :id :as issue}]
   (let [color-map (re-frame/subscribe [:project-users-colors])]
     (reagent/create-class
      {:component-will-mount
-      #(when-not hit-map (re-frame/dispatch [:fetch-issue-hit {:issue issue :context 6}]))
+      #(when-not hit-map (re-frame/dispatch [:fetch-issue-hit {:issue issue :context context}]))
       :reagent-render
       (fn [{{new-value :value {:keys [value key]} :ann {{B :B :as scope} :scope} :span} :data
             {{:keys [hit]} :hit-map} :meta}]
@@ -31,13 +33,13 @@
     {:bsStyle "success"
      :onClick #(do (re-frame/dispatch [:close-modal :close-annotation-issue])
                    (re-frame/dispatch [:close-annotation-issue issue-id "accepted" ])
-                   (re-frame/dispatch [:fetch-issue-hit {:issue issue :context 6}]))}
+                   (re-frame/dispatch [:fetch-issue-hit {:issue issue :context context}]))}
     "Accept"]
    [bs/button
     {:bsStyle "danger"
      :onClick #(do (re-frame/dispatch [:close-modal :close-annotation-issue])
                    (re-frame/dispatch [:close-annotation-issue issue-id "rejected"])
-                   (re-frame/dispatch [:fetch-issue-hit {:issue issue :context 6}]))}
+                   (re-frame/dispatch [:fetch-issue-hit {:issue issue :context context}]))}
     "Reject"]])
 
 (defn close-issue-modal []
@@ -111,12 +113,26 @@
              {:onClick #(re-frame/dispatch [:open-modal :close-annotation-issue issue])}
              "Close issue"]])]]])))
 
+(defn collapsible-header [{issue-id :id :as issue}]
+  (let [open? (re-frame/subscribe [:project-session :components :issues issue-id :show-hit])]
+    (fn [{issue-id :id :as issue}]
+      [:div "Show hit"
+       (when @open?
+         [:span.hit-refresher
+          {:style {:float "right"}}
+          [bs/glyphicon
+           {:glyph "refresh"
+            :onClick (fn [e]
+                       (.stopPropagation e)
+                       (re-frame/dispatch
+                        [:fetch-issue-hit {:issue issue :context context}]))}]])])))
+
 (defn annotation-issue-component [{resolve :resolve issue-type :type :as issue}]
   (fn [{resolve :resolve issue-type :type :as issue}]
     [:div.container-fluid
      ;; TODO: add refresh button (new anns, more hit context, etc.)
      [:div.row [annotation-edit-message issue]]
      [:div.row {:style {:height "10px"}}]
-     [:div.row [collapsible-issue-panel "Show hit" hit-component issue :show-hit]]
+     [:div.row [collapsible-issue-panel [collapsible-header issue] hit-component issue :show-hit]]
      [:div.row [issue-thread-component issue :collapsible? true :commentable? (nil? resolve)]]
      [close-issue-modal]]))
