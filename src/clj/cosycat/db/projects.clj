@@ -302,12 +302,13 @@
       :issues
       first))
 
-(defn find-annotation-issue [{db-conn :db :as db} project-name id]
+(defn find-annotation-issue [{db-conn :db :as db} project-name id & {:keys [status]}]
   (-> (mc/find-one-as-map
        db-conn (:projects colls)
-       {:name project-name
-        "issues.type" "annotation-edit"
-        "issues.data._id" id}
+       (cond-> {:name project-name
+                "issues.type" {$in ["annotation-edit" "annotation-remove"]}
+                "issues.data._id" id}
+         (not (nil? status)) (assoc "issues.status" status))
        {"issues.$.type" 1})
       :issues
       first))

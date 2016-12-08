@@ -16,8 +16,8 @@
     (ex-info message {:message message :data {:id id}})))
 
 ;;; Checkers
-(defn check-annotation-has-issue [db project-name id]
-  (if-let [issue (find-annotation-issue db project-name id)]
+(defn check-annotation-has-open-issue [db project-name id]
+  (if-let [issue (find-annotation-issue db project-name id :status "open")]
     (throw (ex-open-issue id))))
 
 (defn general-route
@@ -75,7 +75,7 @@
     {db :db ws :ws} :components}]
   (general-route db ws username project-name
    {:db-thunk (fn []
-                (check-annotation-has-issue db project-name id)
+                (check-annotation-has-open-issue db project-name id)
                 (check-user-rights db username project-name :update id)
                 (anns/update-annotation db project-name (assoc update-map :username username)))
     :payload-formatter (fn [new-ann] {:anns (normalize-anns [new-ann]) :project-name project-name :hit-id hit-id})}))
@@ -86,7 +86,7 @@
     {db :db ws :ws} :components}]
   (general-route db ws username project-name
    {:db-thunk (fn []
-                (check-annotation-has-issue db project-name id)
+                (check-annotation-has-open-issue db project-name id)
                 (check-user-rights db username project-name :delete id)
                 (anns/remove-annotation db project-name ann-map))
     :payload-formatter (fn [_] {:project-name project-name :hit-id hit-id :key key :span span})}
