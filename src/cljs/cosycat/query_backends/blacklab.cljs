@@ -30,16 +30,17 @@
       :route :sort-query
       :sort-map (bl-parse-sort-opts sort-opts)}))
 
+  (p/transform-query-data [corpus data opts] (identity data))
+
+  (p/transform-query-error-data [corpus data] (identity data))
+
   (p/snippet [this query-str {:keys [snippet-size] :as snippet-map} hit-id dir]
     (p/handle-query
      this "/blacklab"
      {:corpus corpus-name
       :query-str query-str
       :snippet-size snippet-size
-      :route :snippet}))
-  
-  (p/transform-data [corpus data] (identity data))
-  (p/transform-error-data [corpus data] (identity data)))
+      :route :snippet})))
 
 (defn make-blacklab-corpus [{:keys [corpus-name]}]
   (->BlacklabCorpus corpus-name))

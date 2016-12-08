@@ -194,6 +194,8 @@
        (do (timbre/warn (format "Event :update-hit but coultn't find hit id [%s]" (str id)))
            db)))))
 
+(defn debug [data] (timbre/debug data))
+
 (re-frame/register-handler ;; shift window around hit left or right
  :shift-hit
  standard-middleware
@@ -207,7 +209,7 @@
            right (take-while (complement :match) (reverse hit))
            words-left (if (= dir :left) (inc (count left)) (dec (count left)))
            words-right (if (= dir :right) (inc (count right)) (dec (count right)))]
-       (query-hit corpus id {:words-left words-left :words-right words-right} update-hit))
+       (query-hit corpus id {:words-left words-left :words-right words-right} update-hit debug))
      db)))
 
 (defn fetch-issue-id-handler
@@ -231,7 +233,7 @@
  (fn [db [_ {{{:keys [hit-id corpus]} :data :as issue} :issue context :context}]]
    (let [corpus (ensure-corpus (find-corpus-config db corpus))
          handler (fetch-issue-id-handler issue context :with-annotations? true)]
-     (query-hit corpus hit-id {:words-left context :words-right context} handler)
+     (query-hit corpus hit-id {:words-left context :words-right context} handler debug)
      db)))
 
 (re-frame/register-handler

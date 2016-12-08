@@ -1,13 +1,9 @@
 (ns cosycat.query-backends.blacklab-server
-  (:require [ajax.core :refer [GET]]
-            [cljs.core.async :refer [chan >! <! put! close! timeout sliding-buffer take!]]
-            [cosycat.ajax-jsonp :refer [jsonp]]
+  (:require [cosycat.ajax-jsonp :refer [jsonp]]
             [cosycat.query-backends.protocols :as p]
             [cosycat.utils :refer [keywordify]]
             [cosycat.app-utils :refer [->int parse-hit-id]]
-            [cosycat.localstorage :refer [with-ls-cache]]
-            [taoensso.timbre :as timbre])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+            [taoensso.timbre :as timbre]))
 
 (declare ->BlacklabServerCorpus)
 
@@ -17,7 +13,7 @@
    return a partial count for a given query"
   [corpus-name {:keys [server web-service on-counting-callback]
                 :or {on-counting-callback identity}}]
-  (let [timeout-ids (atom []), callback-id (atom -1)]
+  (let [timeout-ids (atom []), callback-id (atom 0)]
     (->BlacklabServerCorpus
      corpus-name server web-service on-counting-callback timeout-ids callback-id)))
 
@@ -36,83 +32,101 @@
 ;;; handle counting callbacks
 (declare on-counting clear-timeout)
 
-;;; handle internal sort state (blacklab-server is stateless)
-(declare maybe-reset-last-action set-last-action get-sort-opts)
-
 (defn base-query
   ([corpus query-str {:keys [context from page-size] :as query-opts} sort-opts filter-opts]
    (let [server (.-server corpus) web-service (.-web-service corpus) index (.-index corpus)]
      (p/handle-query
-      corpus (bl-server-url server web-service index)
-      ;; transform params to bl-query params
-      (cond-> {:patt query-str          
-               :wordsaroundhit context
-               :first from
-               :number page-size
-               :jsonp "callback"}
-        (not (empty? sort-opts)) (merge {:sort (bl-server-sort-str sort-opts)})
-        (not (empty? filter-opts)) (merge {:filter (bl-server-filter-str filter-opts)})
-        ;; overwrite default query params
-        true (merge default-query-params))
-      :method jsonp)))
+      {:corpus corpus
+       :url (bl-server-url server web-service index)
+       :params (cond-> {:patt query-str          
+                        :wordsaroundhit context
+                        :first from
+                        :number page-size
+                        :jsonp "callback"}
+                 (not (empty? sort-opts)) (merge {:sort (bl-server-sort-str sort-opts)})
+                 (not (empty? filter-opts)) (merge {:filter (bl-server-filter-str filter-opts)})
+                 ;; overwrite default query params
+                 true (merge default-query-params))
+       :method jsonp})))
   ([corpus query-str query-opts] (base-query corpus query-str query-opts nil nil)))
 
 (deftype BlacklabServerCorpus [index server web-service callback timeout-ids callback-id]
+  
+  ;; implementation for the Corpus protocol
   p/Corpus
+  
   (p/query [this query-str query-opts]
     (clear-timeout timeout-ids)
     (base-query this query-str query-opts))
-
+  
   (p/query-sort [this query-str query-opts sort-opts filter-opts]
     (base-query this query-str query-opts sort-opts filter-opts))
-
-  (p/query-hit [_ hit-id {:keys [words-left words-right] :or {words-left 0 words-right 0}} handler]
-    (let [{:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)
-          jsonp-callback-str (str "callback" (swap! callback-id inc))]
-      (jsonp (bl-server-url server web-service index :resource (str "docs/" doc-id "/snippet"))
-             {:params {:wordsaroundhit (max words-left words-right)
-                       :hitstart (->int hit-start)
-                       :hitend (->int hit-end)
-                       :jsonp jsonp-callback-str}              
-              :json-callback-str jsonp-callback-str
-              :handler #(-> % (normalize-query-hit hit-id words-left words-right) handler)
-              :error-handler #(timbre/error %)})))
-
-  (p/snippet [_ query-str {:keys [snippet-size snippet-delta] :as snippet-opts} hit-id dir]
-    (let [{:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)]
-      (jsonp (bl-server-url server web-service index :resource (str "docs/" doc-id "/snippet"))
-             {:params {:wordsaroundhit (+ snippet-delta snippet-size)
-                       :hitstart (->int hit-start)
-                       :hitend (->int hit-end)
-                       :jsonp "callbackSnippet"}
-              :json-callback-str "callbackSnippet"
-              :handler #(-> % (normalize-snippet hit-id dir) (p/snippet-handler jsonp))
-              :error-handler #(p/snippet-error-handler % jsonp)})))
   
-  (p/transform-data [_ data]
-    (let [{{:keys [message code] :as error} :error :as cljs-data}
-          (js->clj data :keywordize-keys true)]
-      (if error
-        {:message message :code code}
-        (let [{summary :summary hits :hits doc-infos :docInfos} cljs-data
-              {{from :first :as params} :searchParam counting? :stillCounting} summary
-              uri (bl-server-url server web-service index)]
-          (when counting? (on-counting timeout-ids {:uri uri :params params :callback callback}))
-          {:results-summary (normalize-results-summary summary)
-           :results (normalize-results doc-infos hits from)
-           :status {:status :ok}}))))
- 
-  (p/transform-error-data [_ data]
-    (identity data))
+  (p/transform-query-data [_ data opts]
+    (let [{summary :summary hits :hits doc-infos :docInfos} data
+          {{from :first :as params} :searchParam counting? :stillCounting} summary
+          uri (bl-server-url server web-service index)]
+      (when counting? (on-counting timeout-ids {:uri uri :params params :callback callback}))
+      {:results-summary (normalize-results-summary summary)
+       :results (normalize-results doc-infos hits from)
+       :status {:status :ok}}))
+  
+  (p/transform-query-error-data [_ data] (identity data))
 
-  (p/corpus-info [_]
-    (let [uri (bl-server-url server web-service index :resource "")]
-      (if-let [corpus-info (some-> (with-ls-cache uri) keywordify)]
-        (p/corpus-info-handler corpus-info)
-        (jsonp uri {:params {:jsonp "callbackInfo"} ;avoid overwriting jsonp callback `callback`
-                    :json-callback-str "callbackInfo"
-                    :handler #(->> % normalize-corpus-info (with-ls-cache uri) p/corpus-info-handler)
-                    :error-handler #(timbre/error %)})))))
+  (p/snippet [this query-str {:keys [snippet-size snippet-delta] :as snippet-opts} hit-id dir]
+    (let [{:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)]
+      (p/handle-snippet
+       {:corpus this
+        :url (bl-server-url server web-service index :resource (str "docs/" doc-id "/snippet"))
+        :params {:wordsaroundhit (+ snippet-delta snippet-size)
+                 :hitstart (->int hit-start)
+                 :hitend (->int hit-end)}
+        :opts {:hit-id hit-id :dir dir}
+        :method jsonp})))
+
+  (p/transform-snippet-data [_ data {:keys [hit-id dir] :as opts}] (normalize-snippet data opts))
+  
+  (p/transform-snippet-error-data [_ {:keys [error]}] error)
+  
+  (p/query-hit [this hit-id opts handler error-handler]
+    (let [{:keys [words-left words-right] :or {words-left 0 words-right 0}} opts
+          {:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)]
+      (p/handle-query-hit
+       {:corpus this
+        :url (bl-server-url server web-service index :resource (str "docs/" doc-id "/snippet"))
+        :params {:wordsaroundhit (max words-left words-right)
+                 :hitstart (->int hit-start)
+                 :hitend (->int hit-end)}
+        :opts {:hit-id hit-id :words-left words-left :words-right words-right}
+        :handler handler
+        ;; just print on error
+        :error-handler #(timbre/debug %)
+        :method jsonp})))
+
+  (p/transform-query-hit-data [this data {:keys [hit-id words-left words-right] :as opts}]
+    (normalize-query-hit data opts))
+
+  (p/transform-query-hit-error-data [_ {:keys [error]}] error)
+  
+  (p/corpus-info [this]
+    (p/handle-corpus-info
+     {:corpus this
+      :url (bl-server-url server web-service index :resource "")
+      :params {}
+      :method jsonp}))
+
+  (p/transform-corpus-info-data [_ data opts] (normalize-corpus-info data))
+  
+  (p/transform-corpus-info-error-data [_ data] (identity data))
+  
+  ;; Implementation for the JsonpCorpus protocol
+  p/JsonpCorpus
+
+  (p/is-error? [_ {{:keys [message code] :as error} :error}]
+    (not (nil? error)))
+
+  (p/callback-id [_]
+    (swap! callback-id inc)))
 
 ;;; Parse cosycat args -> blacklab-server params
 (defn join-params [& params]
@@ -199,7 +213,7 @@
          {{props :basicProperties main-prop :mainProperty} :contents} :complexFields
          corpus-name :indexName
          word-count :tokenCount
-         status :status} (js->clj data :keywordize-keys true)]
+         status :status} data]
     {:corpus-info {:corpus-name corpus-name
                    :word-count word-count
                    :created created
@@ -210,30 +224,24 @@
      :sort-props props}))
 
 (defn normalize-query-hit
-  [data hit-id words-left words-right]
-  (let [{error :error :as data} (js->clj data :keywordize-keys true)]
-    (if error
-      data
-      (let [{doc-id :doc-id start :hit-start end :hit-end} (parse-hit-id hit-id)
-            bl-hit (normalize-bl-hit (assoc data :docPid doc-id :start start :end end))
-            [left match right] (partition-by :match (:hit bl-hit))
-            left (reverse (take (min (count left) words-left) (reverse left)))
-            right (take (min (count right) words-right) right)]
-        (assoc bl-hit :hit (vec (concat left match right)))))))
+  [data {:keys [hit-id words-left words-right]}]
+  (let [{doc-id :doc-id start :hit-start end :hit-end} (parse-hit-id hit-id)
+        bl-hit (normalize-bl-hit (assoc data :docPid doc-id :start start :end end))
+        [left match right] (partition-by :match (:hit bl-hit))
+        left (reverse (take (min (count left) words-left) (reverse left)))
+        right (take (min (count right) words-right) right)]
+    (assoc bl-hit :hit (vec (concat left match right)))))
 
 (defn normalize-snippet
-  [data hit-id dir]
-  (let [{error :error :as data} (js->clj data :keywordize-keys true)]
-    (if error
-      data
-      (let [{doc-id :doc-id start :hit-start end :hit-end} (parse-hit-id hit-id)
-            bl-hit (normalize-bl-hit (assoc data :docPid doc-id :start start :end end))
-            [left match right] (partition-by :match (:hit bl-hit))]
-        {:snippet (cond-> {:match match :left left :right right}
-                    (= dir :left) (dissoc :right)
-                    (= dir :right) (dissoc :left)
-                    :else identity)
-         :hit-id hit-id}))))
+  [data {:keys [hit-id dir]}]
+  (let [{doc-id :doc-id start :hit-start end :hit-end} (parse-hit-id hit-id)
+        bl-hit (normalize-bl-hit (assoc data :docPid doc-id :start start :end end))
+        [left match right] (partition-by :match (:hit bl-hit))]
+    {:snippet (cond-> {:match match :left left :right right}
+                (= dir :left) (dissoc :right)
+                (= dir :right) (dissoc :left)
+                :else identity)
+     :hit-id hit-id}))
 
 ;;; handle counting callbacks
 (defn clear-timeout [timeout-ids]
