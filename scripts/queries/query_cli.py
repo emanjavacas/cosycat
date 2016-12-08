@@ -1,5 +1,6 @@
 
 import os
+import traceback
 
 from prompt_class_completer import ClassCompleter
 from finder import Finder, ParseError
@@ -73,3 +74,8 @@ if __name__ == '__main__':
                   format(value=e.value, expected=e.expected))
         except AssertionError as e:
             print("Bad input value: {assertion}".format(assertion=e))
+        except ValueError as e:
+            print("Bad input value: {message}".format(message=e.args[0]))
+        except Exception as e:
+            print("Unrecognized error:")
+            print("\t" + traceback.format_exc().replace("\n", "\n\t"))

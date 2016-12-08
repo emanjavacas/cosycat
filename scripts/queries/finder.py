@@ -9,7 +9,7 @@ from collections import defaultdict
 import pymongo
 from pymongo import MongoClient
 
-import printers
+import writers
 
 
 class ParseError(Exception):
@@ -17,6 +17,10 @@ class ParseError(Exception):
         super(ParseError, self).__init__(*args, **kwargs)
         self.value = value
         self.expected = expected
+
+
+def get_extension(filename):
+    return filename.split('.')[-1]
 
 
 def parse_rest(rest, schema):
@@ -342,10 +346,15 @@ class Finder(object):
 
             # display output
             if 'output' in parsed_args:
-                if 'groupby' in parsed_args:
-                    raise NotImplementedError()
+                outfile = parsed_args['output']
+                ext = get_extension(outfile)
+                if ext == 'csv':
+                    if 'groupby' in parsed_args:
+                        writers.csv_count_group(result, project, outfile)
+                    else:
+                        writers.csv_count(result, project, outfile)
                 else:
-                    raise NotImplementedError()
+                    raise ValueError("Unrecognized extension [%s]" % ext)
             else:
                 if 'groupby' in parsed_args:
                     printers.print_count_group(counts, project_name)
