@@ -95,7 +95,7 @@
   (let [toggle-hits (re-frame/subscribe [:project-session :components :toggle-hits])]
     (fn []
       [dropdown-select
-       {:header "Select hits to discard"
+       {:header "Select hits to hide"
         :label "Hide hits: "
         :model @toggle-hits
         :options (mapv #(->map % %) ["none" "kept" "discarded" "unseen"])

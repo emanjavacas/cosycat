@@ -37,7 +37,7 @@
       (if (= one "you")
         [:span [you-pending :capitalize? true] " are pending to decide on this issue."]
         [:span [:strong one] " is pending to decide on this issue."])
-      (let [sep (if (< 2 (count others)) ", " "")]
+      (let [sep (if (> (count others) 1) ", " "")]
         [:span (doall (for [other (cons (capitalize (first others)) (rest others))]
                         ^{:key (str other "-" issue-id)}
                         [:span (cond

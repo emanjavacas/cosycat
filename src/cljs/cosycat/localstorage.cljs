@@ -16,13 +16,18 @@
 (defn put
   "set `key' in browser's localStorage to `val`."
   [key val]
-  (let [json-val (js/JSON.stringify (clj->js val))]
+  (when-let [json-val (try (js/JSON.stringify (clj->js val))
+                           (catch :default e
+                             (timbre/error "Couldn't parse clj data" val "Error:" e)))]
     (.setItem (.-localStorage js/window) key json-val)))
 
 (defn fetch
   "returns value of `key' from browser's localStorage."
   [key & {:keys [parse] :or {parse true}}]
-  (-> (.getItem (.-localStorage js/window) key) js/JSON.parse js->clj))
+  (when-let [ls-val (.getItem (.-localStorage js/window) key)]
+    (try (-> ls-val js/JSON.parse js->clj)
+         (catch :defaul e
+           (timbre/debug "Couldn't parse stored js value" ls-val "Error: " e)))))
 
 (defn delete
   "remove the browser's localStorage value for the given `key`"
@@ -55,7 +60,7 @@
       (let [parsed-db (-> (fetch :db) (get backup) keywordify coercion-fn)]
         (assoc-in parsed-db [:session :notifications] {}))
       (catch :default e
-        (timbre/error "Couldn't coerce DB")))))
+        (timbre/error "Couldn't coerce DB" "Error:" e)))))
 
 (defn get-backups
   "fetches all backup timestamps in sorted order (youngest first)"

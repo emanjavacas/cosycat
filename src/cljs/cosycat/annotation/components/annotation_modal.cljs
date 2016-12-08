@@ -218,6 +218,7 @@
           :style {:opacity (if (disabled? marked-tokens)  0.65 1)
                   :cursor (if (disabled? marked-tokens) "auto" "pointer")
                   :height "34px"}
-          :onClick #(when-not (disabled? marked-tokens) (re-frame/dispatch [:open-modal :annotation-modal]))}
+          :onClick #(when-not (disabled? marked-tokens)
+                      (re-frame/dispatch [:open-modal :annotation-modal]))}
          [:div [:i.zmdi.zmdi-edit]
           [annotation-modal marked-tokens current-ann]]]))))

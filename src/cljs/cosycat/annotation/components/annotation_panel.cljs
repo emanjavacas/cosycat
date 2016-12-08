@@ -45,7 +45,7 @@
   (fn [{hit :hit hit-id :id meta :meta} color-map & {:keys [editable? show-match? show-hit-id?]}]
     (into
      [:tr
-      {:style {:background-color "#f5f5f5" :cursor (when editable? "pointer") :width "100%"}}]
+      {:style {:background-color "#e6e6e6" :cursor (when editable? "pointer") :width "100%"}}]
      (-> (for [{id :id :as token} hit]
            ^{:key (str "hit" hit-id id)}
            [hit-cell token hit-id color-map :editable? editable? :show-match? show-match?])
