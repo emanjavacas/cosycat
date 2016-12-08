@@ -7,69 +7,69 @@ schemas.
 
 ``` json
 {
-  "ann": {
-	"key"  : {
-		"type": "String",
-		"required": true
-		},
-	"value": {
-		"type": "String",
-		"required": true
-		}
-  },
-  "span": {
-    "type": "Enum",
-	"required": true,
-	"values": [
-		{
-			"type": "token",
-			"scope": {
-				"type": "Integer",
-				"required": true
+    "ann": {
+	    "key"  : {
+		    "type": "String",
+	        "required": true
+	    },
+        "value": {
+		    "type": "String",
+	        "required": true
+	    }
+    },
+    "span": {
+        "type": "Enum",
+	    "required": true,
+	    "values": [
+		    {
+			    "type": "token",
+                "scope": {
+				    "type": "Integer",
+	                "required": true
 				},
-			"doc": {
-				"type": "Any",
-				"required": false
-			}
-		},
-		{
-			"type": "IOB",
-			"scope": {
-				"B": {
-					"type": "Integer",
-					"required": true
-				},
-				"O": {
-					"type": "Integer",
-					"required": true
-				}
-			},
-			"doc": {
-				"type": "Any",
-				"required": false
-			}
-		}
-	],
+	            "doc": {
+				    "type": "Any",
+	                "required": false
+                }
+	        },
+	        {
+			    "type": "IOB",
+	            "scope": {
+	                "B": {
+					    "type": "Integer",
+                        "required": true
+	                },
+	                "O": {
+					    "type": "Integer",
+	                    "required": true
+                    }
+                },
+	            "doc": {
+				    "type": "Any",
+                    "required": false
+                }
+            }
+        ]
+    },
 	"username": {
 			"type": "String",
 			"required": true
-		},
-		"timestamp": {
-			"type": "Integer",
-			"required": true
-		},
-		"corpus": {
-			"type": "String",
-			"required": false
-			},
-		"query": {
-			"type": "String",
-			"required": false
-		},
-		"hit-id": {
-			"type": "Any",
-			"required": false
-		}
-	}
+	},
+    "timestamp": {
+		"type": "Integer",
+        "required": true
+    },
+    "corpus": {
+        "type": "String",
+        "required": false
+    },
+    "query": {
+        "type": "String",
+        "required": false
+    },
+    "hit-id": {
+        "type": "Any",
+        "required": false
+    }
 }
 ```
