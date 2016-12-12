@@ -131,9 +131,10 @@
   (-> (find-annotation-by-id db project ann-id) :username))
 
 ;;; Query annotations
-;;; TODO: annotation queries specified by #{key, value, timestamp, username, corpus, query}
-;;; do a quick grouping based on group-field (e.g. group by hit-id?)
-(defn query-annotations [{db-conn :db :as db} project query-map & {:keys [group-field]}])
+(defn query-annotations
+  [{db-conn :db :as db} project query-map & {:keys [with-history] :or {with-history true}}]
+  (cond->> (mc/find-maps db-conn (server-project-name project) query-map)
+    with-history (map (partial vcs/with-history db-conn))))
 
 ;;; Setters
 (defn insert-annotation

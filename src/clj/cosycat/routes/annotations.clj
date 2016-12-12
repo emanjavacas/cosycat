@@ -1,5 +1,6 @@
 (ns cosycat.routes.annotations
   (:require [compojure.core :refer [routes context POST GET]]
+            [monger.operators :refer :all]
             [cosycat.utils :refer [->int assert-ex-info]]
             [cosycat.routes.utils
              :refer [make-safe-route make-default-route unwrap-arraymap
@@ -118,13 +119,55 @@
        (filter identity)
        vec))
 
-;;; TODO
+(defn build-query-map
+  "thread a base query-map through a sequence of conditional statements
+  transforming API input into mongodb query syntax"
+  [base-map {{:keys [key value]} :ann username :username {:keys [from to] :as timestamp} :timestamp}]
+  (cond-> base-map
+    key (assoc "ann.key" key)
+    value (assoc "ann.value" value)
+    username (assoc :username username)
+    (and from to) (assoc $and [{:timestamp {$gte from}} {:timestamp {$lt to}}])
+    (and from (nil? to)) (assoc :timestamp {$gte from})
+    (and to (nil? from)) (assoc :timestamp {$lt to})))
+
+(defn same-doc?
+  "annotation may have a doc field, which can be used to shortcut
+  further proximity computations"
+  [{from-doc :doc} {to-doc :doc}]
+  (when (and from-doc to-doc)
+    (= from-doc to-doc)))
+
+(defn span-offset
+  "assumes second argument correspondes to an annotation located later in the corpus"
+  [{{from-B :B :as from-scope} :scope from-type :type :as from-span}
+   {{to-B :B :as to-scope} :scope to-type :type :as to-span}]
+  (if-not (same-doc? from-span to-span)
+    -1
+    (- (or to-B to-scope) (or from-B from-scope))))
+
 (defn query-annotations
-  [{{query-map :query-map project-name :project-name} :params
+  ([{db-conn :db :as db} project-name corpus query-map]
+   (anns/query-annotations db project-name (build-query-map {:corpus corpus} query-map)))
+  ([{db-conn :db :as db} project-name corpus query-map context]
+   (let [annotations (query-annotations db project-name corpus query-map)]
+    (loop [pivot (first annotations)
+           queue (next annotations)
+           current [(first annotations)]
+           acc []]
+      (if (nil? queue)
+        (conj acc current)
+        (let [offset (span-offset (:span pivot) (:span (first queue)))]
+          (if (and (pos? offset) (< offset (* 2 context)))
+            (recur pivot (next queue) (conj current (first queue)) acc)
+            (recur (first queue) (next queue) [(first queue)] (conj acc current)))))))))
+
+(defn query-annotations-route
+  [{{query-map :query-map context :context corpus :corpus project-name :project-name} :params
     {{username :username} :identity} :session
     {db :db} :components}]
   (check-user-rights db username project-name :read)
-  (anns/query-annotations db project-name {}))
+  (query-annotations db project-name corpus query-map context))
 
 ;;; Routes
 (defn annotation-routes []
@@ -135,4 +178,4 @@
     (POST "/remove" [] (make-safe-route remove-annotation-route))
     (GET "/range" [] (make-default-route fetch-annotation-range-route))
     (GET "/page" [] (make-default-route fetch-annotation-page-route))
-    (GET "/query" [] (make-default-route query-annotations)))))
+    (GET "/query" [] (make-default-route query-annotations-route)))))
