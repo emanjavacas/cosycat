@@ -99,7 +99,7 @@ class Finder(object):
             method = getattr(self, "do_" + cmd)
             return method(args)
 
-        except AttributeError:
+        except AttributeError as e:
             self._print_suggestions(cmd)
             return
 
@@ -304,11 +304,22 @@ class Finder(object):
                 print(project_name)
 
     def groupcounts(self, project, groupkeys):
-        result = project.aggregate(
+        result = []
+        cursor = project.aggregate(
             [{"$match": self.query_filters()},
              {"$group": {"_id": {k: "$" + k for k in groupkeys},
                          "count": {"$sum": 1}}}])
-        return list(result)
+        for row in cursor:      # transform mongodb cursor output
+            row_dict = {}
+            row_dict['count'] = row['count']
+            for key, value in row["_id"].items():
+                assert key != "count", "Found count field in groupby keys"
+                row_dict[key] = value
+            result.append(row_dict)
+        return result
+
+    def simplecounts(self, project):
+        return project.find(self.query_filters()).count()
 
     def do_count(self, args):
         """
@@ -334,29 +345,34 @@ class Finder(object):
         else:
             projects = project.split(',')
 
+        by_project = {}
         for project_name in projects:
+            project = self.get_project(project_name)
 
             # compute counts
-            project = self.get_project(project_name)
             if 'groupby' in parsed_args:
                 groupkeys = parsed_args['groupby']['key1,key2,etc'].split(',')
                 counts = self.groupcounts(project, groupkeys)
+                if counts:
+                    by_project[project_name] = counts
+                else:
+                    print("Empty results for project [%s]" % project_name)
             else:
-                counts = project.find(self.query_filters()).count()
+                by_project[project_name] = self.simplecounts(project)
 
-            # display output
-            if 'output' in parsed_args:
-                outfile = parsed_args['output']
-                ext = get_extension(outfile)
-                if ext == 'csv':
-                    if 'groupby' in parsed_args:
-                        writers.csv_count_group(result, project, outfile)
-                    else:
-                        writers.csv_count(result, project, outfile)
-                else:
-                    raise ValueError("Unrecognized extension [%s]" % ext)
-            else:
+        # display output
+        if 'output' in parsed_args:
+            outfile = parsed_args['output']['filename']
+            ext = get_extension(outfile)
+            if ext == 'csv':
                 if 'groupby' in parsed_args:
-                    writers.print_count_group(counts, project_name)
+                    writers.csv_count_group(by_project, outfile)
                 else:
-                    writers.print_count(counts, project_name)
+                    writers.csv_count(by_project, outfile)
+            else:
+                raise ValueError("Unrecognized extension [%s]" % ext)
+        else:
+            if 'groupby' in parsed_args:
+                writers.print_count_group(by_project)
+            else:
+                writers.print_count(by_project)
