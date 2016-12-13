@@ -357,6 +357,6 @@ class Finder(object):
                     raise ValueError("Unrecognized extension [%s]" % ext)
             else:
                 if 'groupby' in parsed_args:
-                    printers.print_count_group(counts, project_name)
+                    writers.print_count_group(counts, project_name)
                 else:
-                    printers.print_count(counts, project_name)
+                    writers.print_count(counts, project_name)
