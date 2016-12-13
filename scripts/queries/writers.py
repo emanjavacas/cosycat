@@ -46,7 +46,7 @@ def print_count_group(by_project):
 def csv_count(by_project, outfile):
     results = [{'count': c, 'project': p} for p, c in by_project.items()]
     header = header_from_results(results)
-    with open(outfile, 'w') as f:
+    with open(outfile, 'w', newline='') as f:
         csvwriter = csv.DictWriter(f, delimiter=',', fieldnames=header)
         # write header
         csvwriter.writerow({field: field for field in header})
@@ -60,7 +60,7 @@ def csv_count_group(by_project, outfile):
                for p, counts in by_project.items()
                for row in counts]
     header = header_from_results(results)
-    with open(outfile, 'w') as f:
+    with open(outfile, 'w', newline='') as f:
         csvwriter = csv.DictWriter(f, delimiter=',', fieldnames=header)
         # write header
         csvwriter.writerow({field: field for field in header})
