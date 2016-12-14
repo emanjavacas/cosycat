@@ -1,5 +1,6 @@
 (ns cosycat.db.annotations
   (:require [monger.collection :as mc]
+            [monger.query :as mq]
             [monger.operators :refer :all]
             [taoensso.timbre :as timbre]
             [cosycat.app-utils :refer [server-project-name]]
@@ -118,55 +119,71 @@
   (vcs/with-history db doc :on-history-doc #(dissoc % :_id :docId)))
 
 (defn find-annotations
-  [{db-conn :db :as db} project corpus from size & {:keys [history doc] :or {history true} :as opts}]
+  [{db-conn :db :as db} project-name corpus from size
+   & {:keys [history doc] :or {history true} :as opts}]
   (cond->> (mc/find-maps
-            db-conn (server-project-name project)
+            db-conn (server-project-name project-name)
             {"corpus" corpus
              "span.doc" doc ;if doc is null, get docs without span.doc and docs with span.doc == null
              $or [{$and [{"span.scope" {$gte from}} {"span.scope" {$lt (+ from size)}}]}
                   {$and [{"span.scope.B" {$lte (+ from size)}} {"span.scope.O" {$gt from}}]}]})
     history (mapv (partial with-history db-conn))))
 
-(defn find-annotation-owner [db project ann-id]
-  (-> (find-annotation-by-id db project ann-id) :username))
+(defn find-annotation-owner [db project-name ann-id]
+  (-> (find-annotation-by-id db project-name ann-id) :username))
 
 ;;; Query annotations
 (defn query-annotations
-  [{db-conn :db :as db} project query-map & {:keys [with-history] :or {with-history true}}]
-  (cond->> (mc/find-maps db-conn (server-project-name project) query-map)
+  [{db-conn :db :as db} project-name query-map page-num page-size
+   & {:keys [with-history sort-fields] :or {with-history true sort-fields []}}]
+  ;; (mc/find-maps db-conn (server-project-name project) query-map)
+  (cond->> (mq/with-collection db-conn (server-project-name project-name)
+             (mq/find query-map)
+             (mq/sort (apply array-map (into ["span.scope" 1 "span.scope.B" 1] sort-fields)))
+             (mq/paginate :page page-num :per-page page-size))
     with-history (map (partial vcs/with-history db-conn))))
+
+;; (let [{db-conn :db :as db} (:db cosycat.main/system)
+;;       project-name (server-project-name "myTest")]
+;;   ;; (mc/find-maps db-conn project-name {"ann.key" "a"})
+;;   (-> (mq/with-collection db-conn project-name
+;;         (mq/find {})
+;;         (mq/limit 15)
+;;         (mq/snapshot))
+;;       count))
 
 ;;; Setters
 (defn insert-annotation
-  [{db-conn :db :as db} project {username :username :as ann-map}]
-  (check-insert db project ann-map)
+  [{db-conn :db :as db} project-name {username :username :as ann-map}]
+  (check-insert db project-name ann-map)
   (timbre/info "Inserting annotation" (str ann-map))
-  (vcs/insert-and-return db-conn (server-project-name project) (assoc ann-map :_id (vcs/new-uuid))))
+  (let [ann-map (assoc ann-map :_id (vcs/new-uuid))]
+    (vcs/insert-and-return db-conn (server-project-name project-name) ann-map)))
 
 (defn update-annotation
-  [{db-conn :db :as db} project
+  [{db-conn :db :as db} project-name
    {username :username timestamp :timestamp query :query hit-id :hit-id corpus :corpus
     value :value version :_version id :_id :as update-map}
    & {:keys [history] :or {history true}}]
   (assert-ex-info (and version id) "annotation update requires annotation id/version" update-map)
   (cond->> (vcs/find-and-modify
-            db-conn (server-project-name project)
+            db-conn (server-project-name project-name)
             version  
-            {:_id id}    ;conditions
+            {:_id id}
             {$set {"ann.value" value "timestamp" timestamp "username" username
                    "query" query "corpus" corpus "hit-id" hit-id}}
             {:return-new true})
     history (with-history db-conn)))
 
 (defn remove-annotation
-  [{db-conn :db :as db} project {version :_version id :_id :as ann-map}]
+  [{db-conn :db :as db} project-name {version :_version id :_id :as ann-map}]
   (assert-ex-info (and version id) "annotation update requires annotation id/version" ann-map)
   (timbre/info "Removing annotation" (str ann-map))
-  (vcs/remove-by-id db-conn (server-project-name project) version id))
+  (vcs/remove-by-id db-conn (server-project-name project-name) version id))
 
 (defn revert-annotation
   "updates annotation to lastest previous state"
-  [{db-conn :db :as db} project {version :_version id :_id :as ann}]
+  [{db-conn :db :as db} project-name {version :_version id :_id :as ann}]
   (if-let [history (vcs/find-history db-conn id)]
     (let [previous (first history)]
-      (update-annotation db project (assoc previous :_version version)))))
+      (update-annotation db project-name (assoc previous :_version version)))))

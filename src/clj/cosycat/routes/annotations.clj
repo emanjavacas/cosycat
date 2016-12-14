@@ -119,14 +119,18 @@
        (filter identity)
        vec))
 
+;;; Annotation queries
 (defn build-query-map
   "thread a base query-map through a sequence of conditional statements
   transforming API input into mongodb query syntax"
-  [base-map {{:keys [key value]} :ann username :username {:keys [from to] :as timestamp} :timestamp}]
-  (cond-> base-map
-    key (assoc "ann.key" key)
-    value (assoc "ann.value" value)
-    username (assoc :username username)
+  [base-map {{ann-key :key ann-value :value} :ann username :username corpus :corpus
+             {:keys [from to] :as timestamp} :timestamp}]
+  ;; TODO: type check the input
+  (cond-> {}
+    ann-key (assoc "ann.key" ann-key)
+    ann-value (assoc "ann.value" ann-value)
+    corpus (assoc :corpus {$in corpus})
+    username (assoc :username {$in username})
     (and from to) (assoc $and [{:timestamp {$gte from}} {:timestamp {$lt to}}])
     (and from (nil? to)) (assoc :timestamp {$gte from})
     (and to (nil? from)) (assoc :timestamp {$lt to})))
@@ -147,10 +151,10 @@
     (- (or to-B to-scope) (or from-B from-scope))))
 
 (defn query-annotations
-  ([{db-conn :db :as db} project-name corpus query-map]
-   (anns/query-annotations db project-name (build-query-map {:corpus corpus} query-map)))
-  ([{db-conn :db :as db} project-name corpus query-map context]
-   (let [annotations (query-annotations db project-name corpus query-map)]
+  ([{db-conn :db :as db} project-name page-num page-size query-map]
+   (anns/query-annotations db project-name (build-query-map query-map)))
+  ([{db-conn :db :as db} project-name page-num page-size query-map context]
+   (let [annotations (query-annotations db project-name page-num page-size query-map)]
     (loop [pivot (first annotations)
            queue (next annotations)
            current [(first annotations)]
@@ -158,16 +162,17 @@
       (if (nil? queue)
         (conj acc current)
         (let [offset (span-offset (:span pivot) (:span (first queue)))]
-          (if (and (pos? offset) (< offset (* 2 context)))
+          (if (and (pos? offset) (< offset context))
             (recur pivot (next queue) (conj current (first queue)) acc)
             (recur (first queue) (next queue) [(first queue)] (conj acc current)))))))))
 
 (defn query-annotations-route
-  [{{query-map :query-map context :context corpus :corpus project-name :project-name} :params
+  [{{query-map :query-map context :context project-name :project-name
+     {:keys [page-num page-size]} :page} :params
     {{username :username} :identity} :session
     {db :db} :components}]
   (check-user-rights db username project-name :read)
-  (query-annotations db project-name corpus query-map context))
+  (query-annotations db project-name page-num page-size query-map context))
 
 ;;; Routes
 (defn annotation-routes []
