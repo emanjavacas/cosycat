@@ -31,6 +31,13 @@
      (assoc-in db (into [:projects active-project :session] path) value))))
 
 (re-frame/register-handler
+ :update-project-session
+ standard-middleware
+ (fn [db [_ path update-fn]]
+   (let [active-project (get-in db [:session :active-project])]
+     (update-in db (into [:projects active-project :session] path) update-fn))))
+
+(re-frame/register-handler
  :set-active-panel
  standard-middleware
  (fn [db [_ active-panel]]

@@ -261,3 +261,11 @@
          active-query-id (reaction (get-in @db (into [:projects @active-project] subpath)))
          active-query (reaction (get-in @db [:projects @active-project :queries @active-query-id]))]
      (reaction (get-hit-status hit-id @active-query)))))
+
+(re-frame/register-sub
+ :review-query-opts-selected?
+ (fn [db [_ label value]]
+   (let [active-project (reaction (get-in @db [:session :active-project]))
+         subpath [:projects @active-project :session :review :query-opts :query-map label]
+         the-set (reaction (get-in @db subpath))]
+     (reaction (contains? @the-set value)))))

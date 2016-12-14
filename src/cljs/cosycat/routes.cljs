@@ -44,6 +44,9 @@
   (defroute "/project/:project-name/query" {project-name :project-name}
     (re-frame/dispatch [:set-active-project {:project-name project-name}])
     (re-frame/dispatch [:set-active-panel :query-panel]))
+  (defroute "/project/:project-name/review" {project-name :project-name}
+    (re-frame/dispatch [:set-active-project {:project-name project-name}])
+    (re-frame/dispatch [:set-active-panel :review-panel]))
   (defroute "/project/:project-name/settings" {project-name :project-name}
     (re-frame/dispatch [:set-active-project {:project-name project-name}])
     (re-frame/dispatch [:set-active-panel :settings-panel]))

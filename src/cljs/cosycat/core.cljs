@@ -20,6 +20,7 @@
             [cosycat.admin.page :refer [admin-panel]]
             [cosycat.front.page :refer [front-panel]]
             [cosycat.error.page :refer [error-panel]]
+            [cosycat.review.page :refer [review-panel]]
             [cosycat.backend.ws :refer [open-ws-channel]]
             [cosycat.key-bindings :refer [bind-panel-keys]]
             [cosycat.routes :as routes]
@@ -43,6 +44,7 @@
 (defmulti panels identity)
 (defmethod panels :front-panel [] [#'front-panel])
 (defmethod panels :query-panel [] [#'query-panel])
+(defmethod panels :review-panel [] [#'review-panel])
 (defmethod panels :project-panel [] [#'project-panel])
 (defmethod panels :settings-panel [] [#'settings-panel])
 (defmethod panels :admin-panel [] [#'admin-panel])

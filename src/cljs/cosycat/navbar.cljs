@@ -112,6 +112,12 @@
                      :href #(str "#/project/" @active-project "/query")
                      :label "Query"
                      :icon "zmdi-search"}])
+         ;; review
+         (when (and @active-project (not= @active-panel :front-panel))
+           [navlink {:target :review-panel
+                     :href #(str "#/project/" @active-project "/review")
+                     :label "Review"
+                     :icon "zmdi-repeat"}])
          ;; settings
          [navlink {:target :settings-panel
                    :href #(if @active-project
