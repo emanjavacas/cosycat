@@ -73,7 +73,7 @@
     (reset! query-str-atom @query-str)))
 
 (defn query-toolbar []
-  (let [query-str (re-frame/subscribe [:project-session :query :results-summary :query-str])]    
+  (let [query-str (re-frame/subscribe [:project-session :query :results :results-summary :query-str])]
     (reagent/create-class
      {:component-did-mount #(set! (.-value (.getElementById js/document "query-str")) @query-str)
       :reagent-render

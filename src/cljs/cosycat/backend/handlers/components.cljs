@@ -74,9 +74,9 @@
  (fn [db _]
    (let [active-project (get-in db [:session :active-project])
          path [:projects active-project :session :components]
-         is-open (get-in db (into path [:panel-open "query-frame"]))
-         should-open (if is-open "annotation-panel" "query-frame")
-         other-panel (if (= should-open "query-frame") "annotation-panel" "query-frame")]
+         is-open (get-in db (into path [:panel-open :query-frame]))
+         should-open (if is-open :annotation-frame :query-frame)
+         other-panel (if (= should-open :query-frame) :annotation-frame :query-frame)]
      (-> db
          (assoc-in (into path [:panel-open should-open]) true)
          (assoc-in (into path [:panel-open other-panel]) false)))))
@@ -101,7 +101,7 @@
  standard-middleware
  (fn [db _]
    (let [active-project (get-in db [:session :active-project])
-         results (get-in db [:projects active-project :session :query :results-by-id])
+         results (get-in db [:projects active-project :session :query :results :results-by-id])
          marked-hits (filter #(get-in % [:meta :marked]) (vals results))]
      (assoc-in db [:projects active-project :session :components :open-hits]
                (apply hash-set (map :id marked-hits))))))
@@ -164,7 +164,7 @@
  standard-middleware
  (fn [db [_ {:keys [hit-id flag]}]]
    (let [active-project (get-in db [:session :active-project])
-         path [:projects active-project :session :query :results-by-id hit-id :meta :marked]]
+         path [:projects active-project :session :query :results :results-by-id hit-id :meta :marked]]
      (assoc-in db path (boolean flag)))))
 
 (re-frame/register-handler
@@ -172,18 +172,18 @@
  standard-middleware
  (fn [db _]
    (let [active-project (get-in db [:session :active-project])
-         path-to-results [:projects active-project :session :query :results-by-id]]
+         path-to-results [:projects active-project :session :query :results :results-by-id]]
      (reduce (fn [acc hit-id]
                (assoc-in acc (into path-to-results [hit-id :meta :marked]) true))
              db
-             (get-in db [:projects active-project :session :query :results])))))
+             (get-in db [:projects active-project :session :query :results :results])))))
 
 (re-frame/register-handler
  :unmark-hits
  standard-middleware
  (fn [db _]
    (let [active-project (get-in db [:session :active-project])
-         path-to-results [:projects active-project :session :query :results-by-id]]
+         path-to-results [:projects active-project :session :query :results :results-by-id]]
      (reduce (fn [acc hit-id]
                (assoc-in acc (into path-to-results [hit-id :meta :marked]) false))
              db
@@ -198,7 +198,7 @@
  standard-middleware
  (fn [db [_ {:keys [hit-id token-id]}]]
    (let [active-project (get-in db [:session :active-project])
-         path [:projects active-project :session :query :results-by-id hit-id]
+         path [:projects active-project :session :query :results :results-by-id hit-id]
          hit (get-in db path)]
      (assoc-in db path (update-token hit token-id mark-token)))))
 
@@ -207,7 +207,7 @@
  standard-middleware
  (fn [db [_ {:keys [hit-id token-id]}]]
    (let [active-project (get-in db [:session :active-project])
-         hit-map (get-in db [:projects active-project :session :query :results-by-id hit-id])
+         hit-map (get-in db [:projects active-project :session :query :results :results-by-id hit-id])
          hit-map (assoc-in hit-map [:meta :has-marked] (boolean (has-marked? hit-map token-id)))
-         path [:projects active-project :session :query :results-by-id hit-id]]
+         path [:projects active-project :session :query :results :results-by-id hit-id]]
      (assoc-in db path (update-token hit-map token-id unmark-token)))))

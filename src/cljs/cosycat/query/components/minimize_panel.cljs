@@ -10,11 +10,7 @@
     [:div.container-fluid
      [:div.row
       [:span.pull-right
-       [bs/button-toolbar
-        (let [other-panel (if (= id "query-frame") "annotation-panel" "query-frame")
-              dir (if @open :bottom :top)]
-          [bs/button {:onClick #(re-frame/dispatch [:swap-panels])}
-           [bs/glyphicon {:glyph "sort"}]])]]
+       [bs/button {:onClick #(re-frame/dispatch [:swap-panels])} [bs/glyphicon {:glyph "sort"}]]]
       (if @open [open-header] [closed-header])]]))
 
 (defn minimize-panel

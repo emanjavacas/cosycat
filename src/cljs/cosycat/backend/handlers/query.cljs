@@ -68,10 +68,10 @@
    (re-frame/dispatch [:stop-throbbing :results-frame])
    (re-frame/dispatch [:fetch-annotations {:page-margins (page-margins results)}])
    (let [active-project (get-in db [:session :active-project])
-         ;; previous query-str
-         query-str (get-in db [:projects active-project :session :query :results-summary :query-str])
          ;; path to query
-         path-to-query [:projects active-project :session :query]
+         path-to-query  [:projects active-project :session :query :results]         
+         ;; previous query-str         
+         query-str (get-in db (into path-to-query [:results-summary :query-str]))
          ;; add current query settings to results-summary
          sort-opts (get-in db [:settings :query :sort-opts])
          filter-opts (get-in db [:settings :query :filter-opts])
@@ -186,15 +186,16 @@
    (let [{doc-id :doc-id} (parse-hit-id id)
          active-project (get-in db [:session :active-project])
          start (->> hit first :id parse-token-id :id)
-         end (->> hit last :id parse-token-id :id)]
-     (if-let [current-hit (get-in db [:projects active-project :session :query :results-by-id id])]
+         end (->> hit last :id parse-token-id :id)
+         path-to-hit [:projects active-project :session :query :results :results-by-id id]]
+     (if-let [current-hit (get-in db path-to-hit)]
        (do (re-frame/dispatch
             [:fetch-annotations {:page-margins [{:start start :end end :hit-id id :doc doc-id}]}])
-           (assoc-in db [:projects active-project :session :query :results-by-id id :hit] hit))
+           (assoc-in db (into path-to-hit [:hit]) hit))
        (do (timbre/warn (format "Event :update-hit but coultn't find hit id [%s]" (str id)))
            db)))))
 
-(defn debug [data] (timbre/debug data))
+(defn error-handler [data] (timbre/debug data))
 
 (re-frame/register-handler ;; shift window around hit left or right
  :shift-hit
@@ -204,12 +205,14 @@
      (let [{:keys [corpus]} (get-in db [:settings :query])
            corpus (ensure-corpus (find-corpus-config db corpus))
            active-project (get-in db [:session :active-project])
-           {:keys [hit]} (get-in db [:projects active-project :session :query :results-by-id id])
+           path-to-hit [:projects active-project :session :query :results :results-by-id id]
+           {:keys [hit]} (get-in db path-to-hit)
            left (take-while (complement :match) hit)
            right (take-while (complement :match) (reverse hit))
            words-left (if (= dir :left) (inc (count left)) (dec (count left)))
-           words-right (if (= dir :right) (inc (count right)) (dec (count right)))]
-       (query-hit corpus id {:words-left words-left :words-right words-right} update-hit debug))
+           words-right (if (= dir :right) (inc (count right)) (dec (count right)))
+           words-map {:words-left words-left :words-right words-right}]
+       (query-hit corpus id words-map update-hit error-handler))
      db)))
 
 (defn fetch-issue-id-handler
@@ -233,9 +236,19 @@
  (fn [db [_ {{{:keys [hit-id corpus]} :data :as issue} :issue context :context}]]
    (let [corpus (ensure-corpus (find-corpus-config db corpus))
          handler (fetch-issue-id-handler issue context :with-annotations? true)]
-     (query-hit corpus hit-id {:words-left context :words-right context} handler debug)
+     (query-hit corpus hit-id {:words-left context :words-right context} handler error-handler)
      db)))
 
 (re-frame/register-handler
- :fetch-annotation-query-hit
- (fn [db [_ {:keys [hit-id]}]]))        ;perhaps with annotations included?
+ :query-review
+ standard-middleware
+ (fn [db _]
+   (let [active-project (get-in db [:session :active-project])
+         {:keys [query-map sort-opts context]} (get-in db [:settings :review ])
+         ]
+     )))
+
+;; {query-map :query-map
+;;  context :context
+;;  project-name :project-name
+;;  {:keys [page-num page-size]} :page}

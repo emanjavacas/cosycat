@@ -44,8 +44,8 @@
 
 (defmethod add-annotations cljs.core/PersistentArrayMap
   [db {project-name :project-name hit-id :hit-id anns :anns}]
-  (let [results-by-id (get-in db [:projects project-name :session :query :results-by-id])
-        path [:projects project-name :session :query :results-by-id hit-id :hit]]
+  (let [results-by-id (get-in db [:projects project-name :session :query :results :results-by-id])
+        path [:projects project-name :session :query :results :results-by-id hit-id :hit]]
     (if (contains? results-by-id hit-id)
       ;; found hit by id
       (update-in db path update-hit anns)
@@ -68,8 +68,8 @@
  :remove-annotation
  standard-middleware
  (fn [db [_ {project-name :project-name hit-id :hit-id key :key {type :type :as span} :span}]]
-   (let [path [:projects project-name :session :query :results-by-id hit-id :hit]
-         results (vals (get-in db [:projects project-name :session :query :results-by-id]))
+   (let [path [:projects project-name :session :query :results :results-by-id hit-id :hit]
+         results (vals (get-in db [:projects project-name :session :query :results :results-by-id]))
          token-id-or-ids (span->token-id span)]
      (if-let [hit (get-in db path)]
        ;; found hit by id
@@ -96,7 +96,7 @@
  standard-middleware
  (fn [db [_ {:keys [page-margins]}]] ;; [{:start token-id :end token-id :hit-id .. :doc ..}]
    (let [project-name (get-in db [:session :active-project])
-         corpus (get-in db [:projects project-name :session :query :results-summary :corpus])
+         corpus (get-in db [:projects project-name :session :query :results :results-summary :corpus])
          margins (count page-margins)
          partition-size 20]
      (re-frame/dispatch [:start-throbbing :fetch-annotations])
@@ -166,7 +166,8 @@
  :dispatch-simple-annotation
  (fn [db [_ {ann-query :query :as ann-map} hit-id token-id & [token-to]]]
    (let [project-name (get-in db [:session :active-project])
-         query (or ann-query (get-in db [:projects project-name :session :query :results-summary :query-str]))
+         path-to-query [:projects project-name :session :query :results :results-summary :query-str]
+         query (or ann-query (get-in db path-to-query))
          span (if token-to (token-id->span token-id token-to) (token-id->span token-id))
          ann-map (assoc ann-map :hit-id hit-id :span span :timestamp (now) :query query)]
      (re-frame/dispatch [:dispatch-annotation ann-map]))
@@ -190,7 +191,8 @@
  :dispatch-bulk-annotation
  (fn [db [_ ann-map hit-ids token-ids & [token-to's]]]
    (let [project-name (get-in db [:session :active-project])
-         db-query (get-in db [:projects project-name :session :query :results-summary :query-str])         
+         path-to-query [:projects project-name :session :query :results :results-summary :query-str]
+         db-query (get-in db path-to-query)
          ann-maps (package-ann-maps db-query ann-map hit-ids token-ids token-to's)]
      (re-frame/dispatch [:dispatch-annotation ann-maps]))
    db))
@@ -199,7 +201,7 @@
  :dispatch-annotation
  (fn [db [_ ann-map-or-maps]]
    (let [project-name (get-in db [:session :active-project])
-         corpus (get-in db [:projects project-name :session :query :results-summary :corpus])]
+         corpus (get-in db [:projects project-name :session :query :results :results-summary :corpus])]
      (try (POST "/annotation/new"
                 {:params {:ann-map ann-map-or-maps :project-name project-name :corpus corpus}
                  :handler dispatch-annotation-handler
@@ -222,8 +224,9 @@
  :update-annotation
  (fn [db [_ {{:keys [_version _id hit-id value] :as update-map} :update-map}]]
    (let [project-name (get-in db [:session :active-project])
-         corpus (get-in db [:projects project-name :session :query :results-summary :corpus])
-         query (get-in db [:projects project-name :session :query :results-summary :query-str])
+         path-to-results [:projects project-name :session :query :results]
+         corpus (get-in db (into path-to-results [:results-summary :corpus]))
+         query (get-in db (into path-to-results [:results-summary :query-str]))
          update-map (assoc update-map :timestamp (.now js/Date) :corpus corpus :query query)]
      (POST "/annotation/update"
            {:params {:update-map update-map :project-name project-name}
@@ -244,7 +247,7 @@
  :delete-annotation
  (fn [db [_ {:keys [ann-map hit-id]}]]
    (let [project-name (get-in db [:session :active-project])
-         corpus (get-in db [:projects project-name :session :query :results-summary :corpus])]
+         corpus (get-in db [:projects project-name :session :query :results :results-summary :corpus])]
      (POST "/annotation/remove"
            {:params {:project-name project-name :hit-id hit-id :ann ann-map}
             :handler remove-annotation-handler

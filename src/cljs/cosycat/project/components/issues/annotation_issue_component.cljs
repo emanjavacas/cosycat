@@ -4,7 +4,7 @@
             [react-bootstrap.components :as bs]
             [clojure.string :refer [capitalize]]
             [cosycat.utils :refer [format]]
-            [cosycat.annotation.components.annotation-panel :refer [annotation-component]]
+            [cosycat.annotation.components.annotation-frame :refer [annotation-component]]
             [cosycat.project.components.issues.components :refer [collapsible-issue-panel]]
             [cosycat.project.components.issues.issue-thread-component
              :refer [issue-thread-component]]

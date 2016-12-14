@@ -92,7 +92,7 @@
 (defn current-results [db]
   (let [active-project (get-in db [:session :active-project])
         project (get-in db [:projects active-project])]
-    (get-in project [:session :query :results-summary])))
+    (get-in project [:session :query :results :results-summary])))
 
 (defn has-marked?
   "for a given `hit-map` we look if the current marke update leaves marked tokens behind."

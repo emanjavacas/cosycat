@@ -29,10 +29,15 @@
         :on-key-press (dispatch-new-filter filter-name value)
         :on-change #(reset! value (.-value (.-target %)))}])))
 
+(defn on-value-span-click [clicked? has-value? filter-name]
+  (fn []
+    (swap! clicked? not)
+    (when has-value? (re-frame/dispatch [:remove-filter-opt filter-name]))))
+
 (defn value-span [filter-name filter-value {:keys [clicked? has-value?]}]
   (fn [filter-name filter-value {:keys [clicked? has-value?]}]
     [:div.text-muted
-     {:on-click #(do (swap! clicked? not) (when has-value? (re-frame/dispatch [:remove-filter-opt filter-name])))
+     {:on-click (on-value-span-click clicked? has-value? filter-name)
       :style {:cursor "pointer" :height span-height :margin-top "10px"}}
      filter-value]))
 
@@ -49,9 +54,10 @@
         [:div.container-fluid
          [:div.row filter-name]
          [:div.row
-          (cond (and @clicked? (not filter-value)) [filter-input filter-name clicked?]
-                filter-value [value-span filter-name filter-value {:clicked? clicked? :has-value? true}]
-                :else [value-span filter-name "..." {:clicked? clicked? :has-value? false}])]]]])))
+          (let [opts {:clicked? clicked?}]
+            (cond (and @clicked? (not filter-value)) [filter-input filter-name clicked?]
+                  filter-value [value-span filter-name filter-value (assoc opts :has-value? true)]
+                  :else [value-span filter-name "..." (assoc opts :has-value? false)]))]]]])))
 
 (defn current-filter [filter-opts filter-name]
   (some #(when (= filter-name (:attribute %)) %) filter-opts))
@@ -91,11 +97,12 @@
                        :onClick #(swap! show? not)}
                       "✕"]]]])}
          [:div.container-fluid
-          (doall (for [[row-idx row] (map-indexed vector (partition-all 3 (vals @corpus-metadata)))]
-                   ^{:key row-idx}
-                   [:div.row.pad
-                    (doall (for [{filter-name :fieldName :as field} row
-                                 :let [{filter-value :value} (current-filter @filter-opts filter-name)]]
-                             ^{:key filter-name}
-                             [:div.col-sm-4.col-md-4.pad [filter-field field filter-value]]))]))]]]])))
+          (doall
+           (for [[row-idx row] (map-indexed vector (partition-all 3 (vals @corpus-metadata)))]
+             ^{:key row-idx}
+             [:div.row.pad
+              (doall (for [{filter-name :fieldName :as field} row
+                           :let [{filter-value :value} (current-filter @filter-opts filter-name)]]
+                       ^{:key filter-name}
+                       [:div.col-sm-4.col-md-4.pad [filter-field field filter-value]]))]))]]]])))
 

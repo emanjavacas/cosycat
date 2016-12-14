@@ -59,7 +59,7 @@
     :label [:div "next" [:i.zmdi.zmdi-arrow-right {:style {:margin-left "10px"}}]]]])
 
 (defn query-result-label []
-  (let [results-summary (re-frame/subscribe [:project-session :query :results-summary])]
+  (let [results-summary (re-frame/subscribe [:project-session :query :results :results-summary])]
     (fn []
       (let [{{from :from to :to} :page query-size :query-size} @results-summary]
         [:label

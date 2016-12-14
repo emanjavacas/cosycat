@@ -12,11 +12,12 @@
             [cosycat.query.components.snippet-modal :refer [snippet-modal]]
             [cosycat.query.components.minimize-panel :refer [minimize-panel]]
             [cosycat.query.components.annotate-query-modal :refer [annotate-query-modal]]
-            [cosycat.annotation.components.annotation-panel :refer [annotation-panel]]
+            [cosycat.annotation.components.annotation-frame :refer [annotation-frame]]
             [cosycat.components :refer
              [error-panel throbbing-panel filter-annotation-buttons]]
             [taoensso.timbre :as timbre]))
 
+;;; Query frame
 (defn parse-query-error-msg [message]
   (let [re #"Query: (.+) ; has error at position: (\d+)"
         [_ query-str at] (first (re-seq re message))]
@@ -39,8 +40,8 @@
 
 (defn results-frame []
   (let [status (re-frame/subscribe [:project-session :status])
-        query-size (re-frame/subscribe [:project-session :query :results-summary :query-size])
-        query-str (re-frame/subscribe [:project-session :query :results-summary :query-str])
+        query-size (re-frame/subscribe [:project-session :query :results :results-summary :query-size])
+        query-str (re-frame/subscribe [:project-session :query :results :results-summary :query-str])
         throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
     (fn []
       (let [{:keys [status content]} @status]
@@ -49,9 +50,6 @@
           (= :error status)   [error-panel-by-type content]
           (zero? @query-size) [no-results-panel @query-str]
           :else               [results-table])))))
-
-(defn query-frame-spacer []
-  [:div.row {:style {:margin-top "5px"}}])
 
 (defn animate [throbbing? progress? value {:keys [max-val fps increase] :as opts}]
   (if (< @value max-val)
@@ -63,7 +61,7 @@
     (do (reset! progress? false) (reset! value 0))))
 
 (defn progress-bar
-  [throbbing? & {:keys [fps max-val increase] :or {fps 15 max-val 100 increase 2}}]
+  [throbbing? & {:keys [fps max-val increase] :or {fps 15 max-val 100 increase 2} :as opts}]
   (let [value (reagent/atom 0)]
     (fn [throbbing? & opts]
       (let [progress? (reagent/atom @throbbing?)]
@@ -79,33 +77,44 @@
     (fn []
       [:div.container-fluid
        [query-toolbar]
-       [query-frame-spacer]
+       [:div.row {:style {:margin-top "5px"}}]
        (when @has-query? [sort-toolbar])
        (when @has-query-results? [progress-bar fetching-annotations?])
        (when @has-query-results? [results-toolbar])
-       [query-frame-spacer]
+       [:div.row {:style {:margin-top "5px"}}]
        [results-frame]])))
 
-(defn label-closed-header [label]
-  (fn []
-    [:div.container-fluid [:div.row [:div.col-lg-10 [:div label]]]]))
+(defn query-frame-open-header []
+  [:div.container-fluid [:div.row [:div.col-lg-10 [:span.pull-left [:h4 "Query Panel"]]]]])
 
-(defn query-panel-closed-header []
-  (let [query-str (re-frame/subscribe [:project-session :query :results-summary :query-str])
-        query-size (re-frame/subscribe [:project-session :query :results-summary :query-size])]
+(defn query-frame-closed-header []
+  (let [path-to-results [:project-session :query :results]
+        query-str (re-frame/subscribe (into path-to-results [:results-summary :query-str]))
+        query-size (re-frame/subscribe (into path-to-results [:results-summary :query-size]))]
     (fn []
       [:div.container-fluid
        [:div.row
         [:div.col-lg-10
-         [:span.truncate "Showing: " [:strong @query-size] " results for query: " [:code @query-str]]]]])))
+         [:span.truncate
+          "Showing: " [:strong @query-size]
+          " results for query: " [:code @query-str]]]]])))
 
+(defn minimizable-query-frame []
+  [minimize-panel
+   {:child query-frame
+    :id :query-frame
+    :open-header query-frame-open-header
+    :closed-header query-frame-closed-header}])
+
+;;; annotaiton frame
 (defn annotation-closed-header []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
     (fn []
       [:div.container-fluid
        [:div.row
         [:div.col-lg-10
-         (str "Annotation panel (" (count @marked-hits) " selected hits)")]]])))
+         [:h5
+          (str "Annotation panel (" (count @marked-hits) " selected hits)")]]]])))
 
 (defn unmark-hits-btn []
   [bs/button
@@ -159,25 +168,18 @@
       [:div.col-lg-3.col-sm-3 [:div.pull-right [hits-toolbar]]]
       [:div.col-lg-3.col-sm-3 [:div.pull-right [marked-hits-pager]]]]]))
 
-(defn minimizable-query-frame []
-  [minimize-panel
-   {:child query-frame
-    :id "query-frame"
-    :open-header (label-closed-header "Query Panel")
-    :closed-header query-panel-closed-header}])
-
-(defn minimizable-annotation-panel []
+(defn minimizable-annotation-frame []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
     (when-not (zero? (count @marked-hits))
       [minimize-panel
-       {:child annotation-panel
-        :id "annotation-panel"
+       {:child annotation-frame
+        :id :annotation-frame
         :closed-header annotation-closed-header
         :open-header annotation-open-header
         :init true}])))
 
 (defn query-panel []
-  (let [query-frame-open? (re-frame/subscribe [:project-session :components :panel-open "query-frame"])
+  (let [query-frame-open? (re-frame/subscribe [:project-session :components :panel-open :query-frame])
         throbbing? (re-frame/subscribe [:throbbing? :results-frame])]
     (fn []
       [:div.container-fluid.pad
@@ -186,9 +188,9 @@
        (if @query-frame-open?
          [:div
           [:div.row [minimizable-query-frame]]
-          [:div.row [minimizable-annotation-panel]]]
+          [:div.row [minimizable-annotation-frame]]]
          [:div
-          [:div.row [minimizable-annotation-panel]]
+          [:div.row [minimizable-annotation-frame]]
           [:div.row [minimizable-query-frame]]])
        [snippet-modal]
        [annotate-query-modal]])))

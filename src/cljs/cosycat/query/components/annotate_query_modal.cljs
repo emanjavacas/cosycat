@@ -118,9 +118,10 @@
         query-id (reagent/atom "")
         description (reagent/atom "")
         include-sort-opts? (reagent/atom false)
-        sort-opts (re-frame/subscribe [:project-session :query :results-summary :sort-opts])
+        path-to-results [:project-session :query :results]
+        sort-opts (re-frame/subscribe (into path-to-results [:results-summary :sort-opts]))
         include-filter-opts? (reagent/atom false)
-        filter-opts (re-frame/subscribe [:project-session :query :results-summary :filter-opts])
+        filter-opts (re-frame/subscribe (into path-to-results [:results-summary :filter-opts]))
         default (reagent/atom "unseen")]
     (fn []
       [bs/modal

@@ -40,7 +40,7 @@
      (reaction (when-let [{:keys [hit-id]} @snippet-modal]
                  (let [active-project (reaction (get-in @db [:session :active-project]))
                        project (reaction (get-in @db [:projects @active-project]))]
-                   (get-in @project [:session :query :results-by-id hit-id])))))))
+                   (get-in @project [:session :query :results :results-by-id hit-id])))))))
 
 (re-frame/register-sub
  :session-has-error?
@@ -118,7 +118,7 @@
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))
-         results-summary (reaction (get-in @project [:session :query :results-summary]))]
+         results-summary (reaction (get-in @project [:session :query :results :results-summary]))]
      (reaction (not (empty? @results-summary))))))
 
 (re-frame/register-sub
@@ -126,7 +126,7 @@
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))
-         size (reaction (get-in @project [:session :query :results-summary :query-size]))]
+         size (reaction (get-in @project [:session :query :results :results-summary :query-size]))]
      (reaction (and (number? @size) (not (zero? @size)))))))
 
 (re-frame/register-sub
@@ -134,9 +134,9 @@
  (fn [db [_ & [hit-ids]]]
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))
-         results-by-id (reaction (get-in @project [:session :query :results-by-id]))]
+         results-by-id (reaction (get-in @project [:session :query :results :results-by-id]))]
      (if (empty? hit-ids)
-       (reaction (select-values @results-by-id (get-in @project [:session :query :results])))
+       (reaction (select-values @results-by-id (get-in @project [:session :query :results :results])))
        (reaction (select-values @results-by-id hit-ids))))))
 
 (re-frame/register-sub ;all marked hits, also if currently not in table-results
@@ -144,7 +144,7 @@
  (fn [db [_ {:keys [has-marked?]}]]
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))
-         results-by-id (reaction (get-in @project [:session :query :results-by-id]))]
+         results-by-id (reaction (get-in @project [:session :query :results :results-by-id]))]
      (reaction (vals (filter-marked-hits @results-by-id :has-marked? has-marked?))))))
 
 (re-frame/register-sub
@@ -152,7 +152,7 @@
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
          project (reaction (get-in @db [:projects @active-project]))
-         results-by-id (reaction (get-in @project [:session :query :results-by-id]))]
+         results-by-id (reaction (get-in @project [:session :query :results :results-by-id]))]
      (reaction (mapcat (fn [{:keys [hit id meta]}]
                          (->> hit (filter :marked) (map #(assoc % :hit-id id))))
                        (vals @results-by-id))))))

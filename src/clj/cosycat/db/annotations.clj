@@ -70,44 +70,44 @@
             :data {:db db-version :user claimed-version}}))))))
 
 ;;; Finders
-(defn find-annotation-by-id [{db-conn :db} project id]
-  (mc/find-one-as-map db-conn (server-project-name project) {:_id id}))
+(defn find-annotation-by-id [{db-conn :db} project-name id]
+  (mc/find-one-as-map db-conn (server-project-name project-name) {:_id id}))
 
-(defmulti find-span-annotation-by-key (fn [db project corpus ann-key {type :type}] type))
+(defmulti find-span-annotation-by-key (fn [db project-name corpus ann-key {type :type}] type))
 
 (defmethod find-span-annotation-by-key "token"
-  [{db-conn :db} project corpus ann-key {scope :scope doc :doc}]
+  [{db-conn :db} project-name corpus ann-key {scope :scope doc :doc}]
   (mc/find-one-as-map
-   db-conn (server-project-name project)
+   db-conn (server-project-name project-name)
    {"ann.key" ann-key
     "corpus" corpus
     "span.doc" doc
     $and [{"span.scope.B" {$lte scope}} {"span.scope.O" {$gte scope}}]}))
 
 (defmethod find-span-annotation-by-key "IOB"
-  [{db-conn :db} project corpus ann-key {{B :B O :O} :scope doc :doc}]
+  [{db-conn :db} project-name corpus ann-key {{B :B O :O} :scope doc :doc}]
   (mc/find-one-as-map
-   db-conn (server-project-name project)
+   db-conn (server-project-name project-name)
    {"ann.key" ann-key
     "corpus" corpus
     "span.doc" doc
     $and [{"span.scope.B" {$lte O}} {"span.scope.O" {$gte B}}]}))
 
-(defmulti find-token-annotation-by-key (fn [db project corpus ann-key {type :type}] type))
+(defmulti find-token-annotation-by-key (fn [db project-name corpus ann-key {type :type}] type))
 
 (defmethod find-token-annotation-by-key "token"
-  [{db-conn :db} project corpus ann-key {scope :scope doc :doc}]
+  [{db-conn :db} project-name corpus ann-key {scope :scope doc :doc}]
   (mc/find-one-as-map
-   db-conn (server-project-name project)
+   db-conn (server-project-name project-name)
    {"ann.key" ann-key
     "corpus" corpus
     "span.doc" doc
     "span.scope" scope}))
 
 (defmethod find-token-annotation-by-key "IOB"
-  [{db-conn :db} project corpus key {{B :B O :O} :scope doc :doc}]
+  [{db-conn :db} project-name corpus key {{B :B O :O} :scope doc :doc}]
   (mc/find-one-as-map
-   db-conn (server-project-name project)
+   db-conn (server-project-name project-name)
    {"ann.key" key
     "corpus" corpus
     "span.doc" doc

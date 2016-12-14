@@ -44,16 +44,24 @@
    :active-project nil})
 
 (defn default-project-session [project]
-  {:query {:results-summary {}
-           :results []
-           :results-by-id {}}
+  {:query {:results {:results-summary {}
+                     :results []
+                     :results-by-id {}}}
+   :review {:results {:results-summary {}
+                      :results-by-id {}}
+            :query-opts {:ann {}
+                         :context 10
+                         :sort-opts []
+                         :query-map {:corpus #{}
+                                     :username #{}
+                                     :timestamp {}}}}
    :status {}
-   :components {:panel-order ["query-frame" "annotation-panel"]
-                :panel-open {"query-frame" true "annotation-panel" false}
+   :components {:panel-open {:query-frame true :annotation-frame false}
                 :active-project-frame :users
                 :issue-filters {:status "open" :type "all"}
                 :event-filters {:type "all"}
                 :open-hits #{}
+                :review-input-open? {:ann false :value false}
                 :toggle-hits "none"
                 :token-field :word}
    :filtered-users (into #{} (map :username (:users project)))})

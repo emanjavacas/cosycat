@@ -151,7 +151,7 @@
 
 (defn results-table []
   (let [results (re-frame/subscribe [:results])
-        from (re-frame/subscribe [:project-session :query :results-summary :from])
+        from (re-frame/subscribe [:project-session :query :results :results-summary :from])
         color-map (re-frame/subscribe [:filtered-users-colors])
         toggle-hits (re-frame/subscribe [:project-session :components :toggle-hits])
         active-query (re-frame/subscribe [:project-session :components :active-query])        

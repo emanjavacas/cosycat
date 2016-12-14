@@ -217,6 +217,8 @@
 
 ;; Query metadata
 (defn fetch-query-metadata-route
+  "fetches annotated query hits for a given query. Single annotated query hits can be retrieved
+  by also passing a hit-id field"
   [{{{username :username} :identity} :session {db :db} :components
     {project-name :project-name id :id hit-id :hit-id} :params}]
   (check-user-rights db username project-name :read)

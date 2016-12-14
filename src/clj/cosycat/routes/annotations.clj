@@ -49,10 +49,13 @@
   "handles errors within the success callback to ease polymorphic payloads (bulk inserts)"
   [db ws username project-name corpus {hit-id :hit-id :as ann-map}]
   (general-route db ws username project-name
-   {:db-thunk (fn []
-                (check-user-rights db username project-name :write)
-                (anns/insert-annotation db project-name (assoc ann-map :username username :corpus corpus)))
-    :payload-formatter (fn [new-ann] {:anns (normalize-anns [new-ann]) :project-name project-name :hit-id hit-id})}))
+   {:db-thunk
+    (fn []
+      (check-user-rights db username project-name :write)
+      (anns/insert-annotation db project-name (assoc ann-map :username username :corpus corpus)))
+    :payload-formatter
+    (fn [new-ann]
+      {:anns (normalize-anns [new-ann]) :project-name project-name :hit-id hit-id})}))
 
 (defmulti insert-annotation-route (fn [{{:keys [ann-map]} :params}] (type ann-map)))
 
@@ -75,14 +78,18 @@
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (general-route db ws username project-name
-   {:db-thunk (fn []
-                (check-annotation-has-open-issue db project-name id)
-                (check-user-rights db username project-name :update id)
-                (anns/update-annotation db project-name (assoc update-map :username username)))
-    :payload-formatter (fn [new-ann] {:anns (normalize-anns [new-ann]) :project-name project-name :hit-id hit-id})}))
+   {:db-thunk
+    (fn []
+      (check-annotation-has-open-issue db project-name id)
+      (check-user-rights db username project-name :update id)
+      (anns/update-annotation db project-name (assoc update-map :username username)))
+    :payload-formatter
+    (fn [new-ann]
+      {:anns (normalize-anns [new-ann]) :project-name project-name :hit-id hit-id})}))
 
 (defn remove-annotation-route
-  [{{project-name :project-name hit-id :hit-id {{key :key} :ann id :_id span :span :as ann-map} :ann} :params
+  [{{project-name :project-name hit-id :hit-id
+     {{key :key} :ann id :_id span :span :as ann-map} :ann} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
   (general-route db ws username project-name

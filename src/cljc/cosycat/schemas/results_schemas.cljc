@@ -3,6 +3,7 @@
             [cosycat.schemas.user-schemas :refer [sort-opts-schema filter-opts-schema]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]))
 
+;;; Query
 ;;; hit/token schemas
 (def hit-token-schema
   {;; required keys
@@ -37,19 +38,27 @@
   [hit-id-schema])                             ;use hit-num instead?
 
 (def results-summary-schema
-  (s/conditional
-   empty? {}
-   :else
-   {:page {:from s/Int :to s/Int}
-    :query-size s/Int
-    :query-str s/Str
-    :query-time s/Int
-    :has-next s/Bool
-    :sort-opts [sort-opts-schema]
-    :filter-opts [filter-opts-schema]
-    :corpus s/Any}))
+  {:page {:from s/Int :to s/Int}
+   :query-size s/Int
+   :query-str s/Str
+   :query-time s/Int
+   :has-next s/Bool
+   :sort-opts [sort-opts-schema]
+   :filter-opts [filter-opts-schema]
+   :corpus s/Any})
 
 (def query-results-schema
-  {:results-summary results-summary-schema ;info about last query
-   :results (s/conditional empty? [] :else results-schema) ;current hits ids
+  {:results-summary (s/conditional empty? {} :else results-summary-schema)
+   :results (s/conditional empty? [] :else results-schema)
    :results-by-id (s/conditional empty? {} :else results-by-id-schema)})
+
+;;; Review
+(def review-results-summary-schema
+  {:query-size {:anns s/Int
+                :hits s/Int}
+   :page {:from s/Int :to s/Int}})
+
+(def review-results-schema
+  {:results-by-id (s/conditional empty? {} :else results-by-id-schema)
+   :results-summary (s/conditional empty? {} :else review-results-summary-schema)})
+

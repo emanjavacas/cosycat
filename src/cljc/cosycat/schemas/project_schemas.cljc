@@ -6,7 +6,8 @@
             [cosycat.schemas.user-schemas
              :refer [settings-schema filter-opts-schema sort-opts-schema]]
             [cosycat.schemas.event-schemas :refer [event-schema event-id-schema]]
-            [cosycat.schemas.results-schemas :refer [query-results-schema]]))
+            [cosycat.schemas.results-schemas
+             :refer [query-results-schema review-results-schema]]))
 
 ;;; project issues schemas
 (def issue-id-schema s/Any)
@@ -77,10 +78,36 @@
   {:status (s/enum :ok :error)
    (s/optional-key :content) {:message s/Str (s/optional-key :code) s/Str}})
 
+(def project-session-components-schema
+  {:panel-open {:query-frame s/Bool :annotation-frame s/Bool}
+   :active-project-frame (s/enum :users :events :issues :queries)   
+   :issue-filters {:status (s/enum "open" "closed" "all") :type s/Any}
+   :event-filters {:type s/Any}
+   :open-hits #{s/Any}
+   :review-input-open? {:ann s/Bool :value s/Bool}
+   :toggle-hits (s/enum "none" "kept" "discarded" "unseen")
+   :token-field s/Keyword
+   (s/optional-key :active-query) s/Str})
+
+;;; Review opts
+(def review-sort-opts-schema
+  {:attribute (s/enum [:ann :key] [:ann :value] :corpus :username :timestamp)
+   :direction (s/enum :ascending :descending)})
+
+(def review-opts-schema
+  {:context s/Int
+   :query-map {:ann {(s/optional-key :key) s/Str (s/optional-key :value) s/Str}
+               :corpus #{s/Str}
+               :username #{s/Str}
+               :timestamp {(s/optional-key :from) s/Int (s/optional-key :to) s/Int}}
+   :sort-opts [review-sort-opts-schema]})
+
 (def project-session-schema
-  {:query query-results-schema
+  {:query {:results query-results-schema}
+   :review {:results review-results-schema
+            :query-opts review-opts-schema}
    :status (s/conditional empty? {} :else status-schema)   
-   :components {s/Any s/Any}
+   :components project-session-components-schema
    :filtered-users #{s/Str}}) ;filter out annotations by other users
 
 (defn make-keys-optional [schema]

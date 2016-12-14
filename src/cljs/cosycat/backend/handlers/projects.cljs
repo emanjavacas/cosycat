@@ -117,8 +117,9 @@
 (defn make-annotation-issue-handler [issue-type]
   (fn [db [_ ann-data & {:keys [users] :or {users "all"}}]] ;default to users for now
     (let [active-project (get-in db [:session :active-project])
-          corpus (get-in db [:projects active-project :session :query :results-summary :corpus])
-          query (get-in db [:projects active-project :session :query :results-summary :query-str])
+          path-to-results [:projects active-project :session :query :results]
+          corpus (get-in db (into path-to-results [:results-summary :corpus]))
+          query (get-in db (into path-to-results [:results-summary :query-str]))
           ann-data (assoc ann-data :corpus corpus :query query :timestamp (now))]
       (POST "/project/issues/annotation/open"
             {:params {:project-name active-project
@@ -305,7 +306,8 @@
 
 (re-frame/register-handler
  :query-new-metadata
- (fn [db [_ {:keys [id include-sort-opts? include-filter-opts? default description]} & {:keys [on-dispatch]}]]
+ (fn [db [_ {:keys [id include-sort-opts? include-filter-opts? default description]}
+          & {:keys [on-dispatch]}]]
    (let [active-project (get-in db [:session :active-project])
          {:keys [corpus filter-opts sort-opts]} (get-in db [:settings :query])
          {query-str :query-str} (current-results db)]
