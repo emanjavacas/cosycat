@@ -150,14 +150,10 @@
     (throw (ex-annotation-has-issue project-name ann-id))))
 
 (defn check-query-exists
-  [{db-conn :db :as db} project-name {:keys [query-str corpus filter-opts sort-opts]}]
+  [{db-conn :db :as db} project-name query-id {:keys [query-str corpus filter-opts sort-opts]}]
   (when-let [query (mc/find-one-as-map
                     db-conn (:projects colls)
-                    (cond-> {:name project-name
-                             "queries.query-data.query-str" query-str
-                             "queries.query-data.corpus" corpus}
-                      filter-opts (assoc "queries.query-data.filter-opts" filter-opts)
-                      sort-opts (assoc "queries.query-data.sort-opts" sort-opts)))]
+                    {:name project-name "queries.id" query-id})]
     (throw (ex-query-exists query-str corpus))))
 
 (defn check-user-is-query-metadata-creator
@@ -469,7 +465,7 @@
                  :description description
                  :timestamp (System/currentTimeMillis)
                  :creator username}]
-    (check-query-exists db project-name query-data)
+    (check-query-exists db project-name query-id query-data)
     (mc/find-and-modify
      db-conn (:projects colls)
      {:name project-name}
