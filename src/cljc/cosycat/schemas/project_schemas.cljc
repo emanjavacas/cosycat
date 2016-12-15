@@ -84,7 +84,7 @@
    :issue-filters {:status (s/enum "open" "closed" "all") :type s/Any}
    :event-filters {:type s/Any}
    :open-hits #{s/Any}
-   :review-input-open? {:ann s/Bool :value s/Bool}
+   :review-input-open? {:key s/Bool :value s/Bool}
    :toggle-hits (s/enum "none" "kept" "discarded" "unseen")
    :token-field s/Keyword
    (s/optional-key :active-query) s/Str})
@@ -99,7 +99,7 @@
    :query-map {:ann {(s/optional-key :key) s/Str (s/optional-key :value) s/Str}
                :corpus #{s/Str}
                :username #{s/Str}
-               :timestamp {(s/optional-key :from) s/Int (s/optional-key :to) s/Int}}
+               :timestamp {(s/optional-key :from) s/Inst (s/optional-key :to) s/Inst}}
    :sort-opts [review-sort-opts-schema]})
 
 (def project-session-schema

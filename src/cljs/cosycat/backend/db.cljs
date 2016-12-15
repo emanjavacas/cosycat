@@ -61,7 +61,7 @@
                 :issue-filters {:status "open" :type "all"}
                 :event-filters {:type "all"}
                 :open-hits #{}
-                :review-input-open? {:ann false :value false}
+                :review-input-open? {:key false :value false}
                 :toggle-hits "none"
                 :token-field :word}
    :filtered-users (into #{} (map :username (:users project)))})
