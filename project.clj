@@ -1,6 +1,6 @@
 (defproject cosycat "0.1.5-alpha"
   :description "Corpus query interface plus annotations"
-  :license {:name "GNU v3.0"}  
+  :license {:name "GNU v3.0"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
@@ -21,6 +21,8 @@
                   :exclusions [org.webjars.bower/jquery cljsjs/react]]
                  [cljsjs/react-with-addons "0.14.3-0"]
                  [cljsjs/react-autosuggest "3.5.1-0"]
+                 [cljsjs/react-date-range "0.2.4-0"
+                  :exclusions [cljsjs/react-with-addons cljsjs/react]]
                  [re-frame "0.7.0-alpha"]
                  [secretary "1.2.3"]
                  [ring "1.4.0" :exclusions [ring/ring-jetty-adapter]]     
