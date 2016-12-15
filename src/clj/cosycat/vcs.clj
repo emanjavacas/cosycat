@@ -86,7 +86,7 @@
   "appends vcs history in a given document by document field `merge-field`"
   [db {:keys [_id] :as doc}
    & {:keys [reverse merge-field on-history-doc] :or {reverse false merge-field :history}}]
-  (if-let [vcs-history (find-history db _id :reverse reverse)]
+  (if-let [vcs-history (->> (find-history db _id :reverse reverse) (map #(dissoc % :_id)))]
     (merge-history doc merge-field (cond->> vcs-history on-history-doc (mapv on-history-doc)))
     doc))
 
