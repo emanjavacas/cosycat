@@ -34,6 +34,9 @@
 (defn ->int [s]
   (Integer/parseInt s))
 
+(defn ->long [s]
+  (Long/parseLong s))
+
 (defn ->keyword [s]
   (keyword (subs s 1)))
 

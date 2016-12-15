@@ -133,7 +133,13 @@
   (-> (find-annotation-by-id db project-name ann-id) :username))
 
 ;;; Query annotations
+(defn count-annotation-query
+  "return a count of documents matching a given query-map"
+  [{db-conn :db :as db} project-name query-map]
+  (mc/count db-conn (server-project-name project-name) query-map))
+
 (defn query-annotations
+  "paginate over a query of annotations"
   [{db-conn :db :as db} project-name query-map page-num page-size
    & {:keys [with-history sort-fields] :or {with-history true sort-fields []}}]
   ;; (mc/find-maps db-conn (server-project-name project) query-map)
@@ -142,15 +148,6 @@
              (mq/sort (apply array-map (into ["span.scope" 1 "span.scope.B" 1] sort-fields)))
              (mq/paginate :page page-num :per-page page-size))
     with-history (map (partial vcs/with-history db-conn))))
-
-;; (let [{db-conn :db :as db} (:db cosycat.main/system)
-;;       project-name (server-project-name "myTest")]
-;;   ;; (mc/find-maps db-conn project-name {"ann.key" "a"})
-;;   (-> (mq/with-collection db-conn project-name
-;;         (mq/find {})
-;;         (mq/limit 15)
-;;         (mq/snapshot))
-;;       count))
 
 ;;; Setters
 (defn insert-annotation

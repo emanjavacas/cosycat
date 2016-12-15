@@ -1,5 +1,6 @@
 (ns cosycat.backend.handlers.query
   (:require [re-frame.core :as re-frame]
+            [ajax.core :refer [GET]]
             [cosycat.backend.middleware :refer [standard-middleware no-debug-middleware]]
             [cosycat.backend.db :refer [default-project-session]]
             [cosycat.query-backends.core :refer [ensure-corpus]]
@@ -239,14 +240,33 @@
      (query-hit corpus hit-id {:words-left context :words-right context} handler error-handler)
      db)))
 
+(defn build-query-map
+  [{{ann-key :key ann-value :value} :ann
+    {:keys [from to]} :timestamp corpus :corpus username :username :as query-map}]
+  (cond-> {}
+    (not (empty? ann-key)) (assoc-in [:ann :key] ann-key)
+    (not (empty? ann-value)) (assoc-in [:ann :value] ann-value)
+    (not (empty? corpus)) (assoc :corpus (vec corpus))
+    (not (empty? username)) (assoc :username (vec username))
+    from (assoc-in [:timestamp :from] from)
+    to (assoc-in [:timestamp :to] to)))
+
 (re-frame/register-handler
  :query-review
  standard-middleware
  (fn [db _]
    (let [active-project (get-in db [:session :active-project])
-         {:keys [query-map sort-opts context]} (get-in db [:settings :review ])
-         ]
-     )))
+         path-to-query-opts [:projects active-project :session :review :query-opts]
+         {:keys [query-map context] :as query-opts} (get-in db path-to-query-opts)]
+     (println query-opts)
+     (GET "annotation/query"
+          {:params {:query-map (build-query-map query-map)
+                    :context context
+                    :page {:page-num 0 :page-size 10}
+                    :project-name active-project}
+           :handler #(.log js/console %)
+           :error-handler #(.log js/console %)})
+     db)))
 
 ;; {query-map :query-map
 ;;  context :context

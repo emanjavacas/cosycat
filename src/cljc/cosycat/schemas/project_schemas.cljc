@@ -99,7 +99,7 @@
    :query-map {:ann {(s/optional-key :key) s/Str (s/optional-key :value) s/Str}
                :corpus #{s/Str}
                :username #{s/Str}
-               :timestamp {(s/optional-key :from) s/Inst (s/optional-key :to) s/Inst}}
+               :timestamp {(s/optional-key :from) s/Int (s/optional-key :to) s/Int}}
    :sort-opts [review-sort-opts-schema]})
 
 (def project-session-schema

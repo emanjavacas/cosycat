@@ -1,7 +1,7 @@
 (ns cosycat.routes.annotations
   (:require [compojure.core :refer [routes context POST GET]]
             [monger.operators :refer :all]
-            [cosycat.utils :refer [->int assert-ex-info]]
+            [cosycat.utils :refer [->int ->long assert-ex-info]]
             [cosycat.routes.utils
              :refer [make-safe-route make-default-route unwrap-arraymap
                      check-user-rights normalize-anns]]
@@ -127,21 +127,6 @@
        vec))
 
 ;;; Annotation queries
-(defn build-query-map
-  "thread a base query-map through a sequence of conditional statements
-  transforming API input into mongodb query syntax"
-  [base-map {{ann-key :key ann-value :value} :ann username :username corpus :corpus
-             {:keys [from to] :as timestamp} :timestamp}]
-  ;; TODO: type check the input
-  (cond-> {}
-    ann-key (assoc "ann.key" ann-key)
-    ann-value (assoc "ann.value" ann-value)
-    corpus (assoc :corpus {$in corpus})
-    username (assoc :username {$in username})
-    (and from to) (assoc $and [{:timestamp {$gte from}} {:timestamp {$lt to}}])
-    (and from (nil? to)) (assoc :timestamp {$gte from})
-    (and to (nil? from)) (assoc :timestamp {$lt to})))
-
 (defn same-doc?
   "annotation may have a doc field, which can be used to shortcut
   further proximity computations"
@@ -157,21 +142,65 @@
     -1
     (- (or to-B to-scope) (or from-B from-scope))))
 
+(defn get-token-scope
+  "get the scope of a given annotation"
+  [{{{B :B :as scope} :scope} :span}]
+  (or B scope))
+
+(defn get-token-context
+  "return a map with info about the first and last token in a group of annotations"
+  [anns]
+  (let [token-ids (->> anns (map get-token-scope) (sort))]
+    {:min (first token-ids)
+     :max (last token-ids)}))
+
+(defn normalize-group
+  "transform a group of annotations into an structured map with contextual info"
+  [group]
+  (-> (get-token-context group) (assoc :anns group)))
+
+(defn group-by-hits
+  "group annotations in spans of at most `context` token positions. 
+   Output is normalized according to `normalize-group`"
+  [annotations context]
+  (loop [pivot (first annotations)
+         queue (next annotations)
+         group [(first annotations)]
+         acc []]
+    (if (nil? queue)
+      (if-not (empty? acc)
+        (conj acc (normalize-group group)))
+      (let [offset (span-offset (:span pivot) (:span (first queue)))]
+        (if (and (pos? offset) (< offset context))
+          (recur pivot (next queue) (conj group (first queue)) acc)
+          (recur (first queue) (next queue) [(first queue)] (conj acc (normalize-group group))))))))
+
+(defn build-query-map
+  "thread a base query-map through a sequence of conditional statements
+  transforming API input into mongodb query syntax"
+  [{{ann-key :key ann-value :value} :ann username :username corpus :corpus
+             {:keys [from to] :as timestamp} :timestamp}]
+  ;; TODO: type check the input
+  (cond-> {}
+    ann-key (assoc "ann.key" ann-key)
+    ann-value (assoc "ann.value" ann-value)
+    corpus (assoc :corpus {$in corpus})
+    username (assoc :username {$in username})
+    (and from to) (assoc $and [{:timestamp {$gte (->long from)}} {:timestamp {$lt (->long to)}}])
+    (and from (nil? to)) (assoc :timestamp {$gte (->long from)})
+    (and to (nil? from)) (assoc :timestamp {$lt (->long to)})))
+
 (defn query-annotations
   ([{db-conn :db :as db} project-name page-num page-size query-map]
-   (anns/query-annotations db project-name (build-query-map query-map)))
+   (anns/query-annotations db project-name (build-query-map query-map) page-num page-size))
   ([{db-conn :db :as db} project-name page-num page-size query-map context]
-   (let [annotations (query-annotations db project-name page-num page-size query-map)]
-    (loop [pivot (first annotations)
-           queue (next annotations)
-           current [(first annotations)]
-           acc []]
-      (if (nil? queue)
-        (conj acc current)
-        (let [offset (span-offset (:span pivot) (:span (first queue)))]
-          (if (and (pos? offset) (< offset context))
-            (recur pivot (next queue) (conj current (first queue)) acc)
-            (recur (first queue) (next queue) [(first queue)] (conj acc current)))))))))
+   (let [page-num (->int page-num), page-size (->int page-size), context (->int context)
+         annotations (query-annotations db project-name page-num page-size query-map)
+         grouped-by-hits (group-by-hits annotations context)]
+     {:page-size-hits (count grouped-by-hits)
+      :page-size-anns (count annotations)
+      :total-anns (anns/count-annotation-query db project-name query-map)
+      :grouped-data grouped-by-hits})))
 
 (defn query-annotations-route
   [{{query-map :query-map context :context project-name :project-name

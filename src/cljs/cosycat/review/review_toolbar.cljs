@@ -9,17 +9,23 @@
             [taoensso.timbre :as timbre]))
 
 ;;; Ann & context
-(defn on-input-open [label state-atom open?]
+(defn on-input-open [label open?]
   (fn []
-    (let [path [:review-input-open? label]]
+    (let [path [:review :query-opts :query-map :ann label]]
       (if-not @open?
-        (re-frame/dispatch [:set-project-session-component path true])
-        (do (re-frame/dispatch [:set-project-session-component path false])
-            (reset! state-atom nil))))))
+        (re-frame/dispatch [:set-project-session-component [:review-input-open? label] true])
+        (do (re-frame/dispatch [:set-project-session-component [:review-input-open? label] false])
+            (re-frame/dispatch [:set-project-session path nil]))))))
 
-(defn text-input [{:keys [label state-atom placeholder]}]
-  (let [open? (re-frame/subscribe [:project-session :components :review-input-open? label])]
-    (fn [{:keys [label state-atom placeholder]}]
+(defn on-change-label [label]
+  (fn [e]
+    (re-frame/dispatch
+     [:set-project-session [:review :query-opts :query-map :ann label] (.-value (.-target e))])))
+
+(defn text-input [{:keys [label placeholder]}]
+  (let [open? (re-frame/subscribe [:project-session :components :review-input-open? label])
+        model (re-frame/subscribe [:project-session :review :query-opts :query-map :ann label])]
+    (fn [{:keys [label placeholder]}]
       [:div.form-group
        {:style {:padding "0 5px"}}
        [:div.input-group
@@ -27,11 +33,11 @@
          {:type "text"
           :style {:width "90px"}
           :disabled (not @open?)
-          :placeholder (or placeholder (dekeyword label))
-          :value @state-atom
-          :on-change #(reset! state-atom (.-value (.-target %)))}]
+          :placeholder placeholder
+          :value @model
+          :on-change (on-change-label label)}]
         [:div.input-group-addon
-         {:onClick (on-input-open label state-atom open?)
+         {:onClick (on-input-open label open?)
           :style {:cursor "pointer"}}
          [bs/glyphicon
           {:glyph "pencil"}]]]])))
@@ -40,12 +46,12 @@
   (fn [v]
     (re-frame/dispatch [:set-project-session (into [:review :query-opts] path) v])))
 
-(defn main-inputs [{:keys [key-state-atom value-state-atom]}]
+(defn main-inputs []
   (let [context (re-frame/subscribe [:project-session :review :query-opts :context])]
-    (fn [{:keys [key-state-atom value-state-atom]}]
+    (fn []
       [:form.form-inline
-       [text-input {:label :key :state-atom key-state-atom :placeholder "Ann Key"}]
-       [text-input {:label :value :state-atom value-state-atom :placeholder "Ann Value"}]
+       [text-input {:label :key :placeholder "Ann Key"}]
+       [text-input {:label :value :placeholder "Ann Value"}]
        [dropdown-select
         {:label "context: "
          :header "Select a token context size"
@@ -112,16 +118,27 @@
 (defn get-selected [label value]
   (re-frame/subscribe [:review-query-opts-selected? label value]))
 
+(defn timestamp->moment [timestamp]
+  (-> timestamp (js/Date.) (js/moment.)))
+
+(defn moment->timestamp [moment]
+  (-> (.toDate moment) (.getTime)))
+
+(defn before [date days]
+  (js/Date. (.getFullYear date) (.getMonth date) (- (.getDate date) days)))
+
+(defn after [date days]
+  (js/Date. (.getFullYear date) (.getMonth date) (+ (.getDate date) days)))
+
 (defn select-range [data]
   (let [{:keys [startDate endDate] :as cljs-data} (js->clj data :keywordize-keys true)
-        new-timestamp {:from (.toDate startDate) :to (.toDate endDate)}]
+        new-timestamp {:from (moment->timestamp startDate) :to (moment->timestamp endDate)}]
     (re-frame/dispatch
      [:set-project-session [:review :query-opts :query-map :timestamp] new-timestamp])))
 
 (defn time-input-button []
   (let [open? (reagent/atom false), target (reagent/atom nil)
-        model (re-frame/subscribe [:project-session :review :query-opts :query-map :timestamp])
-        today (js/Date.)]
+        model (re-frame/subscribe [:project-session :review :query-opts :query-map :timestamp])]
     (fn []
       [bs/button-group
        [bs/button
@@ -142,13 +159,12 @@
          {:id "popover"
           :style {:max-width "none"}}
          [date-range
-          (let [{:keys [from to]} @model
-                start (js/moment. from)
-                end (js/moment. to)]
-            (cond-> {:onInit identity
-                     :onChange select-range
-                     :maxDate (js/moment. (js/Date.))}
-              (not (empty? @model)) (assoc :startDate start :endDate end)))]]]])))
+          (let [{:keys [from to] :as model-value} @model
+                start (timestamp->moment from)
+                end (timestamp->moment to)]
+            (cond-> {:onChange select-range
+                     :maxDate (js/moment. (after (js/Date.) 1))}
+              (not (empty? model-value)) (assoc :startDate start :endDate end)))]]]])))
 
 (defn rest-inputs []
   (let [users (re-frame/subscribe [:users])
@@ -178,18 +194,22 @@
                     {:key username :label username :selected? selected?})
          :has-selection? (not (empty? @user-select))}]])))
 
-(defn submit [{:keys [key-state-atom value-state-atom]}]
-  (fn [{:keys [key-state-atom value-state-atom]}]
+(defn dispatch-query-review []
+  (fn []
+    (re-frame/dispatch [:query-review])))
+
+(defn submit []
+  (fn []
     [bs/button
-     {:bsStyle "primary"}
+     {:bsStyle "primary"
+      :onClick (dispatch-query-review)}
      "Submit"]))
 
 (defn review-toolbar []
-  (let [key-state-atom (reagent/atom nil), value-state-atom (reagent/atom nil)]
-    (fn []
-      [:div.row
-       [:div.col-lg-5.col-md-6.text-left
-        [main-inputs {:key-state-atom key-state-atom :value-state-atom value-state-atom}]]
-       [:div.col-lg-6.col-md-5 [rest-inputs]]
-       [:div.col-lg-1.col-md-1.pull-right
-        [submit {:key-state-atom key-state-atom :value-state-atom value-state-atom}]]])))
+  (fn []
+    [:div.row
+     [:div.col-lg-5.col-md-6.text-left
+      [main-inputs]]
+     [:div.col-lg-6.col-md-5 [rest-inputs]]
+     [:div.col-lg-1.col-md-1.pull-right
+      [submit]]]))
