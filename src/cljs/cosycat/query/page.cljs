@@ -116,12 +116,6 @@
          [:h5
           (str "Annotation panel (" (count @marked-hits) " selected hits)")]]]])))
 
-(defn unmark-hits-btn []
-  [bs/button
-   {:onClick #(re-frame/dispatch [:unmark-hits])
-    :style {:font-size "12px" :height "34px"}}
-   "Unmark"])
-
 (defn close-hits-btn []
   [bs/button
    {:onClick #(re-frame/dispatch [:close-hits])
@@ -157,8 +151,7 @@
 (defn hits-toolbar []
   [bs/button-group
    [open-hits-btn]
-   [close-hits-btn]
-   [unmark-hits-btn]])
+   [close-hits-btn]])
 
 (defn annotation-open-header []
   (fn []

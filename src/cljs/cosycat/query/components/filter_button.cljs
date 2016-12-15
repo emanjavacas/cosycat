@@ -68,15 +68,14 @@
         filter-opts (re-frame/subscribe [:settings :query :filter-opts])]
     (fn []
       [:div.pull-right
-       [bs/button-toolbar
+       [bs/button-group
         [bs/button
          {:onClick #(do (swap! show? not) (reset! target (.-target %)))
           :bsStyle (if (empty? @filter-opts) "default" "primary")}
          "Filters"]
-        (when-not (empty? @filter-opts)
-          [bs/button
-           {:onClick #(re-frame/dispatch [:set-project-settings [:query :filter-opts] []])}
-           "Clear"])]
+        [bs/button
+         {:onClick #(re-frame/dispatch [:set-project-settings [:query :filter-opts] []])}
+         [bs/glyphicon {:glyph "erase"}]]]
        [bs/overlay
         {:show @show?
          :target (fn [] @target)

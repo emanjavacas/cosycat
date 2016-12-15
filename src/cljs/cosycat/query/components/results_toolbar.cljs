@@ -74,10 +74,15 @@
       [:div.col-lg-8.col-sm-8 [:div.pull-left [pager-buttons]]]]]))
 
 (defn mark-hits-btn []
-  [bs/button
-   {:onClick #(re-frame/dispatch [:mark-hits])
-    :style {:font-size "12px" :height "34px"}}
-   "Mark hits"])
+  [bs/button-group
+   [bs/button
+    {:onClick #(re-frame/dispatch [:mark-hits])
+     :style {:font-size "12px" :height "34px"}}
+    "Mark hits"]
+   [bs/button
+    {:onClick #(re-frame/dispatch [:unmark-hits])
+     :style {:font-size "12px" :height "34px"}}
+    [bs/glyphicon {:glyph "erase"}]]])
 
 (defn token-field-button []
   (let [metadata-fields (re-frame/subscribe [:corpus-config :info :sort-props])
