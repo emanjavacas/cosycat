@@ -2,7 +2,7 @@
   (:require [cosycat.ajax-jsonp :refer [jsonp]]
             [cosycat.query-backends.protocols :as p]
             [cosycat.utils :refer [keywordify]]
-            [cosycat.app-utils :refer [->int parse-hit-id]]
+            [cosycat.app-utils :refer [->int parse-hit-id make-hit-id]]
             [taoensso.timbre :as timbre]))
 
 (declare ->BlacklabServerCorpus)
@@ -71,7 +71,7 @@
        :results (normalize-results doc-infos hits from)
        :status {:status :ok}}))
   
-  (p/transform-query-error-data [_ data] (identity data))
+  (p/transform-query-error-data [_ {:keys [error]}] error)
 
   (p/snippet [this query-str {:keys [snippet-size snippet-delta] :as snippet-opts} hit-id dir]
     (let [{:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)]
@@ -117,7 +117,7 @@
 
   (p/transform-corpus-info-data [_ data opts] (normalize-corpus-info data))
   
-  (p/transform-corpus-info-error-data [_ data] (identity data))
+  (p/transform-corpus-info-error-data [_ {:keys [error]}] error)
   
   ;; Implementation for the JsonpCorpus protocol
   p/JsonpCorpus
@@ -184,7 +184,7 @@
    {:hit (concat (sub-hit left  doc-id (- start (count (:word left)))) ;assuming word is present
                  (sub-hit match doc-id start :is-match? true)
                  (sub-hit right doc-id end))
-    :id (apply str (interpose "." [doc-id start end]))})
+    :id (make-hit-id doc-id start end)})
   ([hit num doc]
    (assoc (normalize-bl-hit hit) :meta (normalize-meta num doc))))
 
@@ -224,7 +224,7 @@
      :sort-props props}))
 
 (defn normalize-query-hit
-  [data {:keys [hit-id words-left words-right]}]
+  [data {:keys [hit-id words-left words-right] :as opts}]
   (let [{doc-id :doc-id start :hit-start end :hit-end} (parse-hit-id hit-id)
         bl-hit (normalize-bl-hit (assoc data :docPid doc-id :start start :end end))
         [left match right] (partition-by :match (:hit bl-hit))

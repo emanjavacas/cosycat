@@ -28,8 +28,7 @@
       :jupiter [:div [:img {:src "img/jupiter.gif"}]])]
    [:div.row {:style {:height "55px"}}]])
 
-(defn error-panel [& {:keys [status content]}]
-  {:pre [(and status)]}
+(defn error-panel [{:keys [status content]}]
   [:div.container-fluid.text-center
    {:style {:padding "40px"}}
    [:div.row [:h3 [:span.text-muted status]]]

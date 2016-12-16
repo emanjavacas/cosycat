@@ -1,5 +1,6 @@
 (ns cosycat.query-backends.protocols
   (:require [re-frame.core :as re-frame]
+            [clojure.string :as string]
             [cosycat.utils :refer [format keywordify]]
             [cosycat.localstorage :refer [with-ls-cache]]
             [cosycat.ajax-jsonp :refer [jsonp]]
@@ -68,13 +69,13 @@
 (defn safe-error-handler [data]
   (re-frame/dispatch
    [:notify
-    {:message "A network timeout error occurred. This can have various causes. Contact admin!"
-     :code (str "Unrecognized error" ": " data)}]))
+    {:message "Looks like this is taking too long... This can have various causes. Contact admin!"
+     :code (cond-> "Unrecognized query error" (not (empty? data)) (string/join (str ": " data)))}]))
 
 ;;; Queries
 (defn- query-error-handler
-  [{:keys [message code]}]
-  (re-frame/dispatch [:query-error {:message message :code code :status :error}]))
+  [{:keys [message code] :as data}]
+  (re-frame/dispatch [:query-error {:message message :code code}]))
 
 (defn- query-handler
   [{results :results results-summary :results-summary :as payload}]
@@ -83,8 +84,8 @@
 (defn- safe-query-error-handler [data]
   (re-frame/dispatch
    [:query-error
-    {:message "A network timeout error occurred. This can have various causes. Contact admin!"
-     :code (str "Unrecognized query error" ": " data)}]))
+    {:message "Looks like this is taking too long... This can have various causes. Contact admin!"
+     :code (cond-> "Unrecognized query error" (not (empty? data)) (string/join (str ": " data)))}]))
 
 (defmulti handle-query
   "Helper fn for ajax/jsonp queries that simplifies protocol implementations.
@@ -176,7 +177,6 @@
            {:params (assoc params :jsonp jsonp-callback-str)
             :handler (fn [data]
                        (let [cljs-data (js->clj data :keywordize-keys true)]
-                         (println cljs-data)
                          (if-not (is-error? corpus cljs-data)
                            (-> (transform-query-hit-data corpus cljs-data opts) handler)
                            (-> (transform-query-hit-error-data corpus cljs-data) error-handler))))
@@ -233,9 +233,3 @@
                           (transform-corpus-info-error-data corpus)
                           corpus-info-error-handler))))
       :error-handler safe-error-handler})))
-
-(def corpus
-  {:corpus "mbg-index"
-   :type :blacklab-server
-   :args {:server "mbgserver.uantwerpen.be:8080"
-          :web-service "blacklab-server-1.6.0-SNAPSHOT"}})

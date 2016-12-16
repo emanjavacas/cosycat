@@ -55,7 +55,7 @@
        [dropdown-select
         {:label "context: "
          :header "Select a token context size"
-         :options (map #(->map % %) (range 20))
+         :options (map #(->map % %) (range 1 21))
          :model @context
          :select-fn (select-fn [:context])}]])))
 
@@ -121,8 +121,15 @@
 (defn timestamp->moment [timestamp]
   (-> timestamp (js/Date.) (js/moment.)))
 
+(defn today's-ms []
+  (let [now (js/Date.)]
+    (-> (.getMilliseconds now)
+        (+ (* 1000 (.getSeconds now)))
+        (+ (* 60000 (.getMinutes now)))
+        (+ (* 3600000 (.getHours now))))))
+
 (defn moment->timestamp [moment]
-  (-> (.toDate moment) (.getTime)))
+  (-> (.toDate moment) (.getTime) (+ (today's-ms))))
 
 (defn before [date days]
   (js/Date. (.getFullYear date) (.getMonth date) (- (.getDate date) days)))
@@ -163,7 +170,7 @@
                 start (timestamp->moment from)
                 end (timestamp->moment to)]
             (cond-> {:onChange select-range
-                     :maxDate (js/moment. (after (js/Date.) 1))}
+                     :maxDate (js/moment. (js/Date.))}
               (not (empty? model-value)) (assoc :startDate start :endDate end)))]]]])))
 
 (defn rest-inputs []

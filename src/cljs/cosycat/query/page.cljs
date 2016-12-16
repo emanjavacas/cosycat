@@ -28,15 +28,15 @@
     (if (= code "Query string error")
       (let [[query-str at] (parse-query-error-msg message)]
         [error-panel
-         :status (str "Query misquoted starting at position " at)
-         :content (highlight-error query-str at)])
+         {:status (str "Query misquoted starting at position " at)
+          :content (highlight-error query-str at)}])
       [error-panel
-       :status code
-       :content [:div message]])))
+       {:status code
+        :content [:div message]}])))
 
 (defn no-results-panel [query-str]
   (fn [query-str]
-    [error-panel :status (format "Ooops! No matches found for query: %s" query-str)]))
+    [error-panel {:status (format "Ooops! No matches found for query: %s" query-str)}]))
 
 (defn results-frame []
   (let [status (re-frame/subscribe [:project-session :status])
