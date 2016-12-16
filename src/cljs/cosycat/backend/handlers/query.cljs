@@ -198,6 +198,12 @@
 
 (defn error-handler [data] (timbre/debug data))
 
+(defn get-words-map [hit dir]
+  (let [left (take-while (complement :match) hit)
+        right (take-while (complement :match) (reverse hit))]    
+    {:words-left (if (= dir :left) (inc (count left)) (dec (count left)))
+     :words-right (if (= dir :right) (inc (count right)) (dec (count right)))}))
+
 (re-frame/register-handler ;; shift window around hit left or right
  :shift-hit
  standard-middleware
@@ -207,16 +213,11 @@
            corpus (ensure-corpus (find-corpus-config db corpus))
            active-project (get-in db [:session :active-project])
            path-to-hit [:projects active-project :session :query :results :results-by-id id]
-           {:keys [hit]} (get-in db path-to-hit)
-           left (take-while (complement :match) hit)
-           right (take-while (complement :match) (reverse hit))
-           words-left (if (= dir :left) (inc (count left)) (dec (count left)))
-           words-right (if (= dir :right) (inc (count right)) (dec (count right)))
-           words-map {:words-left words-left :words-right words-right}]
-       (query-hit corpus id words-map update-hit error-handler))
+           {:keys [hit]} (get-in db path-to-hit)]
+       (query-hit corpus id (get-words-map hit dir) update-hit error-handler))
      db)))
 
-(defn fetch-issue-id-handler
+(defn fetch-issue-hit-handler
   "creates a handler to be passed to query-hit when fetching hit for an edit annotation issue"
   [{issue-id :id :as issue} context & {:keys [with-annotations?] :or {with-annotations? false}}]  
   (fn [hit-map]
@@ -228,7 +229,7 @@
             start (max 0 (- hit-start context))
             end (+ hit-end context)]
         (re-frame/dispatch
-         [:fetch-annotations-in-issue-hit
+         [:fetch-issue-hit-annotations
           {:start start :end end :hit-id hit-id :doc doc :corpus corpus} issue])))))
 
 (re-frame/register-handler
@@ -236,39 +237,27 @@
  standard-middleware
  (fn [db [_ {{{:keys [hit-id corpus]} :data :as issue} :issue context :context}]]
    (let [corpus (ensure-corpus (find-corpus-config db corpus))
-         handler (fetch-issue-id-handler issue context :with-annotations? true)]
+         handler (fetch-issue-hit-handler issue context :with-annotations? true)]
      (query-hit corpus hit-id {:words-left context :words-right context} handler error-handler)
      db)))
 
-(defn build-query-map
-  [{{ann-key :key ann-value :value} :ann
-    {:keys [from to]} :timestamp corpus :corpus username :username :as query-map}]
-  (cond-> {}
-    (not (empty? ann-key)) (assoc-in [:ann :key] ann-key)
-    (not (empty? ann-value)) (assoc-in [:ann :value] ann-value)
-    (not (empty? corpus)) (assoc :corpus (vec corpus))
-    (not (empty? username)) (assoc :username (vec username))
-    from (assoc-in [:timestamp :from] from)
-    to (assoc-in [:timestamp :to] to)))
+(defn fetch-review-hit-handler [corpus context]
+  (fn [{:keys [id] :as hit-map}]
+    (re-frame/dispatch [:add-review-hit hit-map])
+    (let [{start :hit-start end :hit-end doc :doc-id} (parse-hit-id id)]
+      (re-frame/dispatch
+       [:fetch-review-hit-annotations
+        {:start (max 0 (- start context))
+         :end (+ end context)
+         :hit-id id
+         :corpus corpus
+         :doc doc}]))))
 
 (re-frame/register-handler
- :query-review
- standard-middleware
- (fn [db _]
-   (let [active-project (get-in db [:session :active-project])
-         path-to-query-opts [:projects active-project :session :review :query-opts]
-         {:keys [query-map context] :as query-opts} (get-in db path-to-query-opts)]
-     (println query-opts)
-     (GET "annotation/query"
-          {:params {:query-map (build-query-map query-map)
-                    :context context
-                    :page {:page-num 0 :page-size 10}
-                    :project-name active-project}
-           :handler #(.log js/console %)
-           :error-handler #(.log js/console %)})
-     db)))
-
-;; {query-map :query-map
-;;  context :context
-;;  project-name :project-name
-;;  {:keys [page-num page-size]} :page}
+ :fetch-review-hit
+ (fn [db [_ {:keys [hit-id corpus context]}]]
+   (let [corpus-instance (ensure-corpus (find-corpus-config db corpus))
+         words-map {:words-left context :words-right context}
+         handler (fetch-review-hit-handler corpus context)]
+     (query-hit corpus-instance hit-id words-map handler error-handler))
+   db))

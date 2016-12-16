@@ -3,7 +3,8 @@
             [schema.core :as s]
             [ajax.core :refer [POST GET]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
-            [cosycat.app-utils :refer [deep-merge is-last-partition token-id->span span->token-id]]
+            [cosycat.app-utils
+             :refer [deep-merge is-last-partition token-id->span span->token-id make-hit-id]]
             [cosycat.utils :refer [format get-msg now]]
             [cosycat.backend.middleware :refer [standard-middleware]]
             [taoensso.timbre :as timbre]))
@@ -108,24 +109,88 @@
              :error-handler (fetch-annotation-error-handler)})))
    db))
 
-(re-frame/register-handler
- :fetch-annotations-in-issue-hit
+(re-frame/register-handler ;; annotation fetcher for issue hits
+ :fetch-issue-hit-annotations
  (fn [db [_ {:keys [start end hit-id doc corpus]} {issue-id :id :as issue}]]
+    (let [active-project (get-in db [:session :active-project])]
+      (GET "/annotation/page"
+           {:params {:page-margins [{:start start :end end :hit-id hit-id :doc doc}]
+                     :project-name active-project
+                     :corpus corpus}
+            :handler (fn [data]
+                       (when-let [{:keys [anns]} (first data)]
+                         (re-frame/dispatch
+                          [:update-issue-meta issue-id [:hit-map :hit]
+                           (fn [hit] (update-hit hit anns))])))
+            :error-handler #(timbre/warn "Couldn't fetch annotations" (str %))})
+      db)))
+
+(re-frame/register-handler ;; annotation fetcher for review pages
+ :fetch-review-hit-annotations
+ (fn [db [_ {:keys [start end hit-id doc corpus]}]]
     (let [project-name (get-in db [:session :active-project])]
       (GET "/annotation/page"
            {:params {:page-margins [{:start start :end end :hit-id hit-id :doc doc}]
                      :project-name project-name
                      :corpus corpus}
-            :handler (fn [[{:keys [hit-id project-name anns]}]]
-                       (re-frame/dispatch
-                        [:update-issue-meta issue-id [:hit-map :hit]
-                         (fn [hit] (update-hit hit anns))]))
+            :handler (fn [data]
+                       (when-let [{:keys [hit-id project-name anns]} (first data)]
+                         (re-frame/dispatch
+                          [:add-review-annotation
+                           {:hit-id hit-id :project-name project-name :anns anns}])))
             :error-handler #(timbre/warn "Couldn't fetch annotations" (str %))})
       db)))
 
-(re-frame/register-handler ;; groups annotations by hit-id
- :query-annotations
- (fn [db _]))
+(defn build-query-map
+  [{{ann-key :key ann-value :value} :ann
+    {:keys [from to]} :timestamp corpus :corpus username :username :as query-map}]
+  (cond-> {}
+    (not (empty? ann-key)) (assoc-in [:ann :key] ann-key)
+    (not (empty? ann-value)) (assoc-in [:ann :value] ann-value)
+    (not (empty? corpus)) (assoc :corpus (vec corpus))
+    (not (empty? username)) (assoc :username (vec username))
+    from (assoc-in [:timestamp :from] from)
+    to (assoc-in [:timestamp :to] to)))
+
+(re-frame/register-handler
+ :set-review-results-summary
+ standard-middleware
+ (fn [db [_ {grouped-data :grouped-data :as results-summary} context]]
+   (let [active-project (get-in db [:session :active-project])
+         path-to-summary [:projects active-project :session :review :results :results-summary]]
+     (doseq [{:keys [hit-start hit-end doc corpus]} grouped-data
+             :let [hit-id (make-hit-id doc hit-start hit-end)]]
+       (re-frame/dispatch [:fetch-review-hit {:hit-id hit-id :corpus corpus :context context}]))
+     (assoc-in db path-to-summary results-summary))))
+
+(defn query-review-handler [context]
+  (fn [{:keys [grouped-data] :as review-summary}]
+    (doseq [{:keys [anns]} grouped-data] (assert (apply = (map :corpus anns))))
+    (re-frame/dispatch [:set-review-results-summary review-summary context])))
+
+(defn query-review-error-handler [data]
+  (.log js/console data))
+
+(re-frame/register-handler
+ :query-review
+ standard-middleware
+ (fn [db _]
+   (let [active-project (get-in db [:session :active-project])
+         path-to-query-opts [:projects active-project :session :review :query-opts]
+         {:keys [query-map context] :as query-opts} (get-in db path-to-query-opts)]
+     (GET "annotation/query"
+          {:params {:query-map (build-query-map query-map)
+                    :context context
+                    :page {:page-num 0 :page-size 10}
+                    :project-name active-project}
+           :handler (query-review-handler context)
+           :error-handler query-review-error-handler})
+     db)))
+
+;; {query-map :query-map
+;;  context :context
+;;  project-name :project-name
+;;  {:keys [page-num page-size]} :page}
 
 ;;; Outgoing annotations
 (defmulti dispatch-annotation-handler

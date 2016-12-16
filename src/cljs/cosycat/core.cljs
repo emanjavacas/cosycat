@@ -12,6 +12,7 @@
             [cosycat.backend.handlers.projects]
             [cosycat.backend.handlers.corpora]
             [cosycat.backend.handlers.events]
+            [cosycat.backend.handlers.review]
             [cosycat.backend.ws-routes]
             [cosycat.backend.subs]
             [cosycat.query.page :refer [query-panel]]
