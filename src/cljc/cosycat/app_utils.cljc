@@ -152,7 +152,7 @@
 (defn parse-hit-id ;TODO: currently assuming mbg-format for hit-ids (doc-id.match-first.match-last)
   [hit-id]
   (let [[_ doc-id hit-start hit-end] (re-find #"(.*)\.([^\.]*)\.([^\.]*)" hit-id)]
-    {:doc-id doc-id :hit-start hit-start :hit-end hit-end}))
+    {:doc-id doc-id :hit-start (->int hit-start) :hit-end (->int hit-end)}))
 
 (defn validate-span-docs [doc-from doc-to]
   ;; return nil if both doc-ids are missing
@@ -204,3 +204,6 @@
   [token-id]
   (let [{:keys [doc id]} (parse-token-id token-id)]
     (-> (str (inc (->int doc)) id) ->int)))
+
+(defn make-hit-id [doc-id start end]
+  (apply str (interpose "." [doc-id start end])))
