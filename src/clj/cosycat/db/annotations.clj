@@ -3,6 +3,7 @@
             [monger.query :as mq]
             [monger.operators :refer :all]
             [taoensso.timbre :as timbre]
+            [config.core :refer [env]]
             [cosycat.app-utils :refer [server-project-name]]
             [cosycat.utils :refer [assert-ex-info]]
             [cosycat.vcs :as vcs]))
@@ -120,14 +121,13 @@
 
 (defn find-annotations
   [{db-conn :db :as db} project-name corpus from size
-   & {:keys [history doc] :or {history true} :as opts}]
-  (cond->> (mc/find-maps
-            db-conn (server-project-name project-name)
-            {"corpus" corpus
-             "span.doc" doc ;if doc is null, get docs without span.doc and docs with span.doc == null
-             $or [{$and [{"span.scope" {$gte from}} {"span.scope" {$lt (+ from size)}}]}
-                  {$and [{"span.scope.B" {$lte (+ from size)}} {"span.scope.O" {$gt from}}]}]})
-    history (mapv (partial with-history db-conn))))
+   & {:keys [retrieve-history doc] :or {retrieve-history true} :as opts}]
+  (let [query-map {"corpus" corpus
+                   "span.doc" doc ;; if doc is null, get docs without span.doc or null
+                   $or [{$and [{"span.scope" {$gte from}} {"span.scope" {$lt (+ from size)}}]}
+                        {$and [{"span.scope.B" {$lte (+ from size)}} {"span.scope.O" {$gt from}}]}]}]
+    (cond->> (mc/find-maps db-conn (server-project-name project-name) query-map)
+      retrieve-history (mapv (partial with-history db-conn)))))
 
 (defn find-annotation-owner [db project-name ann-id]
   (-> (find-annotation-by-id db project-name ann-id) :username))
@@ -141,13 +141,12 @@
 (defn query-annotations
   "paginate over a query of annotations"
   [{db-conn :db :as db} project-name query-map page-num page-size
-   & {:keys [with-history sort-fields] :or {with-history true sort-fields []}}]
-  ;; (mc/find-maps db-conn (server-project-name project) query-map)
+   & {:keys [retrieve-history sort-fields] :or {retrieve-history false sort-fields []}}]
   (cond->> (mq/with-collection db-conn (server-project-name project-name)
              (mq/find query-map)
              (mq/sort (apply array-map (into ["span.scope" 1 "span.scope.B" 1] sort-fields)))
              (mq/paginate :page page-num :per-page page-size))
-    with-history (map (partial vcs/with-history db-conn))))
+    retrieve-history (mapv (partial with-history db-conn))))
 
 ;;; Setters
 (defn insert-annotation

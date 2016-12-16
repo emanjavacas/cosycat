@@ -115,7 +115,7 @@
     (let [from (->int start)
           size (- (->int end) from)
           anns (anns/find-annotations db project-name corpus from size :doc doc)]
-      (when anns {:hit-id hit-id :project-name project-name :anns (normalize-anns anns)}))))
+      {:hit-id hit-id :project-name project-name :anns (normalize-anns anns)})))
 
 (defn fetch-annotation-page-route
   [{{project-name :project-name corpus :corpus page-margins :page-margins} :params
@@ -136,23 +136,27 @@
 
 (defn span-offset
   "assumes second argument correspondes to an annotation located later in the corpus"
-  [{{from-B :B :as from-scope} :scope from-type :type :as from-span}
-   {{to-B :B :as to-scope} :scope to-type :type :as to-span}]
-  (if-not (same-doc? from-span to-span)
+  [{{{from-B :B :as from-scope} :scope from-type :type :as from-span} :span from-corpus :corpus}
+   {{{to-B :B :as to-scope} :scope to-type :type :as to-span} :span to-corpus :corpus}]
+  (if-not (and (same-doc? from-span to-span) (= from-corpus to-corpus))
     -1
     (- (or to-B to-scope) (or from-B from-scope))))
 
 (defn get-token-scope
   "get the scope of a given annotation"
-  [{{{B :B :as scope} :scope} :span}]
+  [{{{B :B :as scope} :scope doc :doc} :span}]
   (or B scope))
 
 (defn get-token-context
   "return a map with info about the first and last token in a group of annotations"
   [anns]
-  (let [token-ids (->> anns (map get-token-scope) (sort))]
-    {:min (first token-ids)
-     :max (last token-ids)}))
+  (let [token-ids (->> anns (map get-token-scope) (sort))
+        corpus (-> anns first (get :corpus))
+        doc (-> anns first (get-in [:span :doc]))]
+    (cond-> {:hit-start (first token-ids)
+             :hit-end (last token-ids)
+             :corpus corpus}
+      (not (nil? doc)) (assoc :doc doc))))
 
 (defn normalize-group
   "transform a group of annotations into an structured map with contextual info"
@@ -170,36 +174,49 @@
     (if (nil? queue)
       (if-not (empty? acc)
         (conj acc (normalize-group group)))
-      (let [offset (span-offset (:span pivot) (:span (first queue)))]
+      (let [offset (span-offset pivot (first queue))]
         (if (and (pos? offset) (< offset context))
           (recur pivot (next queue) (conj group (first queue)) acc)
           (recur (first queue) (next queue) [(first queue)] (conj acc (normalize-group group))))))))
+
+(defn type-check-query-map
+  [{{ann-key :key ann-value :value} :ann username :username corpus :corpus
+    {:keys [from to] :as timestamp} :timestamp}]
+  (cond-> {}
+    corpus (assoc :corpus (unwrap-arraymap corpus))
+    username (assoc :username (unwrap-arraymap username))
+    from (assoc-in [:timestamp :from] (->long from))
+    to (assoc-in [:timestamp :to] (->long to))))
 
 (defn build-query-map
   "thread a base query-map through a sequence of conditional statements
   transforming API input into mongodb query syntax"
   [{{ann-key :key ann-value :value} :ann username :username corpus :corpus
-             {:keys [from to] :as timestamp} :timestamp}]
+    {:keys [from to] :as timestamp} :timestamp}]
   ;; TODO: type check the input
   (cond-> {}
     ann-key (assoc "ann.key" ann-key)
     ann-value (assoc "ann.value" ann-value)
     corpus (assoc :corpus {$in corpus})
     username (assoc :username {$in username})
-    (and from to) (assoc $and [{:timestamp {$gte (->long from)}} {:timestamp {$lt (->long to)}}])
-    (and from (nil? to)) (assoc :timestamp {$gte (->long from)})
-    (and to (nil? from)) (assoc :timestamp {$lt (->long to)})))
+    (and from to) (assoc $and [{:timestamp {$gte from}} {:timestamp {$lt to}}])
+    (and from (nil? to)) (assoc :timestamp {$gte from})
+    (and to (nil? from)) (assoc :timestamp {$lt to})))
 
 (defn query-annotations
   ([{db-conn :db :as db} project-name page-num page-size query-map]
-   (anns/query-annotations db project-name (build-query-map query-map) page-num page-size))
+   (anns/query-annotations db project-name query-map page-num page-size))
   ([{db-conn :db :as db} project-name page-num page-size query-map context]
    (let [page-num (->int page-num), page-size (->int page-size), context (->int context)
+         typed-check-query-map (type-check-query-map query-map)
+         query-map (build-query-map typed-check-query-map)
          annotations (query-annotations db project-name page-num page-size query-map)
          grouped-by-hits (group-by-hits annotations context)]
-     {:page-size-hits (count grouped-by-hits)
-      :page-size-anns (count annotations)
-      :total-anns (anns/count-annotation-query db project-name query-map)
+     {:page {:hits (count grouped-by-hits)
+             :from page-num
+             :to (count annotations)}      
+      :query-size (anns/count-annotation-query db project-name query-map)
+      :query-map typed-check-query-map
       :grouped-data grouped-by-hits})))
 
 (defn query-annotations-route
