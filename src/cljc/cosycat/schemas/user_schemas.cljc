@@ -1,25 +1,21 @@
 (ns cosycat.schemas.user-schemas
   (:require [schema.core :as s]
-            [cosycat.schemas.event-schemas :refer [event-schema]]))
+            [cosycat.schemas.queries-schemas :refer [query-opts-schema review-opts-schema]]))
 
 ;;; Avatar
 (def avatar-schema
   {:href s/Str
    :dominant-color s/Str})
 
-;;; Query opts
-(def filter-opts-schema
-  {:attribute s/Str :value s/Str})
+;;; Events
+(def event-id-schema s/Any)
 
-(def sort-opts-schema
-  {:position s/Str :attribute s/Str :facet s/Str})
-
-(def query-opts-schema
-  {:corpus s/Str
-   :query-opts {:context s/Int :from s/Int :page-size s/Int} ;from is kept updated
-   :sort-opts [sort-opts-schema]
-   :filter-opts [filter-opts-schema]            ;multiple filters
-   :snippet-opts {:snippet-size s/Int :snippet-delta s/Int}})
+(def event-schema
+  {:id event-id-schema
+   :timestamp s/Int
+   (s/optional-key :repeated) [s/Int] ;field to efficiently collapse repeated events
+   :type s/Any
+   :data {s/Any s/Any}})
 
 ;;; Settings
 (def settings-schema
@@ -27,7 +23,7 @@
                    ;; restrict notifications of ws-events
                    (s/optional-key :verbosity) {s/Keyword s/Bool}}
    :query query-opts-schema
-   ;; TODO: review settings?
+   ;; TODO: :review review-opts-schema
    (s/optional-key :tagsets) [s/Any]})
 
 ;;; User project

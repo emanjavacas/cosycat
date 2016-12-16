@@ -1,6 +1,7 @@
 (ns cosycat.schemas.results-schemas
   (:require [schema.core :as s]
-            [cosycat.schemas.user-schemas :refer [sort-opts-schema filter-opts-schema]]
+            [cosycat.schemas.utils :refer [make-keys-optional]]
+            [cosycat.schemas.queries-schemas :refer [review-opts-schema query-opts-schema]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]))
 
 ;;; Query
@@ -43,8 +44,8 @@
    :query-str s/Str
    :query-time s/Int
    :has-next s/Bool
-   :sort-opts [sort-opts-schema]
-   :filter-opts [filter-opts-schema]
+   :sort-opts (:sort-opts query-opts-schema)
+   :filter-opts (:filter-opts query-opts-schema)
    :corpus s/Any})
 
 (def query-results-schema
@@ -53,10 +54,20 @@
    :results-by-id (s/conditional empty? {} :else results-by-id-schema)})
 
 ;;; Review
+(def grouped-data-schema
+  [{:hit-start s/Int
+    :hit-end s/Int
+    :corpus s/Str
+    (s/optional-key :doc) s/Any
+    :anns []}])
+
 (def review-results-summary-schema
-  {:query-size {:anns s/Int
-                :hits s/Int}
-   :page {:from s/Int :to s/Int}})
+  {:page {:from s/Int
+          :to s/Int
+          :hits s/Int}
+   :query-size s/Int
+   :grouped-data grouped-data-schema
+   :query-map (make-keys-optional (:query-map review-opts-schema))})
 
 (def review-results-schema
   {:results-by-id (s/conditional empty? {} :else results-by-id-schema)
