@@ -35,9 +35,9 @@
 (defn dispatch-new-annotations [ann-map tokens]
   (re-frame/dispatch
    [:dispatch-bulk-annotation
-    ann-map                    ;ann-map
-    (->> tokens (map :hit-id)) ;hit-ids
-    (->> tokens (map :id))]))  ;token-ids
+    {:ann-data {:ann-map ann-map
+                :hit-ids (->> tokens (map :hit-id))
+                :token-ids (->> tokens (map :id))}}]))
 
 (defn dispatch-annotation-updates [{{:keys [key value]} :ann :as ann-map} tokens]
   (doseq [{hit-id :hit-id {ann key} :anns} tokens

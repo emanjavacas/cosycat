@@ -22,8 +22,11 @@
    (update-in db [:projects project-name :session :review :results :results-by-id hit-id :hit]
               update-hit anns)))
 
+(defn make-review-hit-meta [{:keys [corpus anns] :as group-data}]
+  {:meta {:throbbing? true :corpus corpus :anns (apply hash-set (map :_id anns))}})
+
 (defn make-results-by-id [grouped-data]
-  (apply hash-map (interleave (keys grouped-data) (repeat {:meta {:throbbing? true}}))))
+  (apply hash-map (interleave (keys grouped-data) (map make-review-hit-meta (vals grouped-data)))))
 
 (re-frame/register-handler
  :set-review-results
@@ -32,11 +35,11 @@
    (let [active-project (get-in db [:session :active-project])
          path-to-results [:projects active-project :session :review :results]]
      (re-frame/dispatch [:stop-throbbing :review-frame])
-     (doseq [{:keys [hit-id corpus anns]} (vals grouped-data)]
+     (doseq [{:keys [hit-id corpus]} (vals grouped-data)]
        (re-frame/dispatch [:fetch-review-hit {:hit-id hit-id :corpus corpus :context context}]))
      (-> db
-         (assoc-in (conj path-to-results :results-summary) results-summary)      
-         (assoc-in (conj path-to-results :results-by-id) (make-results-by-id grouped-data))))))
+         (assoc-in (conj path-to-results :results-by-id) (make-results-by-id grouped-data))
+         (assoc-in (conj path-to-results :results-summary) (dissoc results-summary :grouped-data))))))
 
 (re-frame/register-handler
  :unset-review-results

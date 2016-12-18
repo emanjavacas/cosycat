@@ -54,10 +54,21 @@
                         :opts [hit-id meta editable? show-hit-id?]})))))
 
 (defn annotation-component
-  [hit-map & opts]
-  (fn [hit-map color-map
-       & {:keys [path-to-hit editable? show-hit-id? show-match? highlight-ann-key? highlight-token-id?]
-          :or {editable? true show-hit-id? true show-match? true}}]
+  [{hit-id :id :as hit-map} & opts]
+  (fn [{hit-id :id :as hit-map} color-map
+       & {:keys [corpus ;in case it can't be inferred from query settings
+                 db-path ;path from project to hit-map (defaults to query path)
+                 editable? ;whether to allow annotation dispatches or not
+                 show-hit-id? ;whether to display hit id (and snippet viz)
+                 show-match?  ;whether to highlight match tokens
+                 unmerge-on-dispatch? ;unmerge input cells after dispatch
+                 highlight-fn] ;a pred of ann-map to decide whether to highlight
+          :or {db-path [:session :query :results :results-by-id]
+               editable? true
+               show-hit-id? true
+               show-match? true
+               unmerge-on-dispatch? false
+               highlight-fn (constantly false)}}]
     [bs/table
      {:id "table-annotation"
       :style {:border-collapse "collapse" :border "1px" :border-style "inset"}
@@ -70,9 +81,12 @@
          :editable? editable?
          :show-hit-id? show-hit-id?
          :show-match? show-match?]]
-       (when editable? [[input-row hit-map]])
+       (when editable?
+         [[input-row hit-map db-path
+           :corpus corpus
+           :unmerge-on-dispatch? unmerge-on-dispatch?]])
        (for [ann-key (sort-by :key > (ann-types hit-map))]
          [annotation-row hit-map ann-key color-map
+          :db-path db-path
           :editable? editable?
-          :highlight-ann-key? highlight-ann-key?
-          :highlight-token-id? highlight-token-id?])))]))
+          :highlight-fn highlight-fn])))]))

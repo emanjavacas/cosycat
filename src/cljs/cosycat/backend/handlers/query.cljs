@@ -65,12 +65,14 @@
 (re-frame/register-handler
  :set-query-results
  standard-middleware
- (fn [db [_ {:keys [results-summary results status]}]]
+ (fn [db [_ {{:keys [corpus] :as results-summary} :results-summary
+             results :results
+             status :status}]]
    (re-frame/dispatch [:stop-throbbing :results-frame])
-   (re-frame/dispatch [:fetch-annotations {:page-margins (page-margins results)}])
+   (re-frame/dispatch [:fetch-annotations {:page-margins (page-margins results) :corpus corpus}])
    (let [active-project (get-in db [:session :active-project])
          ;; path to query
-         path-to-query  [:projects active-project :session :query :results]         
+         path-to-query  [:projects active-project :session :query :results]
          ;; previous query-str         
          query-str (get-in db (into path-to-query [:results-summary :query-str]))
          ;; add current query settings to results-summary
@@ -183,17 +185,20 @@
 (re-frame/register-handler
  :update-hit
  standard-middleware
- (fn [db [_ {:keys [hit id]}]]
-   (let [{doc-id :doc-id} (parse-hit-id id)
+ (fn [db [_ {{:keys [hit id]} :hit-map db-path :db-path corpus :corpus}]]
+   (let [{doc :doc-id} (parse-hit-id id)
          active-project (get-in db [:session :active-project])
          start (->> hit first :id parse-token-id :id)
          end (->> hit last :id parse-token-id :id)
-         path-to-hit [:projects active-project :session :query :results :results-by-id id]]
-     (if-let [current-hit (get-in db path-to-hit)]
+         path-to-results (into [:projects active-project] db-path)]
+     (if-let [current-hit-map (get-in db (conj path-to-results id))]
        (do (re-frame/dispatch
-            [:fetch-annotations {:page-margins [{:start start :end end :hit-id id :doc doc-id}]}])
-           (assoc-in db (conj path-to-hit :hit) hit))
-       (do (timbre/warn (format "Event :update-hit but coultn't find hit id [%s]" (str id)))
+            [:fetch-annotations
+             {:page-margins [{:start start :end end :hit-id id :doc doc}]
+              :corpus corpus
+              :db-path db-path}])
+           (assoc-in db (into path-to-results [id :hit]) hit))
+       (do (timbre/debug (format "Event :update-hit but coultn't find hit id [%s]" (str id)))
            db)))))
 
 (defn error-handler [data] (timbre/error data))
@@ -207,14 +212,15 @@
 (re-frame/register-handler ;; shift window around hit left or right
  :shift-hit
  standard-middleware
- (fn [db [_ id dir]]
-   (let [update-hit (fn [hit-map] (re-frame/dispatch [:update-hit hit-map]))
-         {:keys [corpus]} (get-in db [:settings :query])
+ (fn [db [_ {:keys [hit-id dir db-path corpus]
+             :or {corpus (get-in db [:settings :query :corpus])}}]]
+   (let [handler (fn [hit-map] (re-frame/dispatch
+                                [:update-hit
+                                 {:hit-map hit-map :db-path db-path :corpus corpus}]))
          corpus (ensure-corpus (find-corpus-config db corpus))
          active-project (get-in db [:session :active-project])
-         path-to-hit [:projects active-project :session :query :results :results-by-id id]
-         {:keys [hit]} (get-in db path-to-hit)]
-     (query-hit corpus id (get-words-map hit dir) update-hit error-handler))
+         hit (get-in db (into [:projects active-project] (into db-path [hit-id :hit])))]
+     (query-hit corpus hit-id (get-words-map hit dir) handler error-handler))
    db))
 
 (defn fetch-issue-hit-handler
@@ -255,6 +261,7 @@
 
 (re-frame/register-handler
  :fetch-review-hit
+ standard-middleware
  (fn [db [_ {:keys [hit-id corpus context]}]]
    (let [corpus-instance (ensure-corpus (find-corpus-config db corpus))
          words-map {:words-left context :words-right context}

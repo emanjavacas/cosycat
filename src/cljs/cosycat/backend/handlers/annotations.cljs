@@ -41,49 +41,55 @@
 
 (defmulti add-annotations
   "generic reducer function for incoming annotation data"
-  (fn [db map-or-maps] (type map-or-maps)))
+  (fn [db {:keys [payload]}] (type payload)))
 
 (defmethod add-annotations cljs.core/PersistentArrayMap
-  [db {project-name :project-name hit-id :hit-id anns :anns}]
-  (let [results-by-id (get-in db [:projects project-name :session :query :results :results-by-id])
-        path [:projects project-name :session :query :results :results-by-id hit-id :hit]]
+  [db {{:keys [project-name hit-id anns]} :payload db-path :db-path}]
+  (let [path-to-results (into [:projects project-name] db-path)
+        path-to-hit (fn [hit-id] (into path-to-results [hit-id :hit]))
+        results-by-id (get-in db path-to-results)]
     (if (contains? results-by-id hit-id)
       ;; found hit by id
-      (update-in db path update-hit anns)
+      (do (timbre/debug "found hit by id") (update-in db (path-to-hit hit-id) update-hit anns))
       (if-let [hit-id (find-hit-id (keys anns) (vals results-by-id))]
         ;; found hit for annotation
-        (update-in db path update-hit anns)
+        (do (timbre/debug "found hit for annotation") (update-in db (path-to-hit hit-id) update-hit anns))
         ;; couldn't find hit for annotation
-        db))))
+        (do (timbre/debug "couldn't find hit") db)))))
 
 (defmethod add-annotations cljs.core/PersistentVector
-  [db ms]
-  (reduce (fn [db m] (add-annotations db m)) db ms))
+  [db {ms :payload :as data}]
+  (reduce (fn [db m] (add-annotations db (assoc data :payload m))) db ms))
 
 (re-frame/register-handler ;; generic handler
  :add-annotation
  standard-middleware
- (fn [db [_ map-or-maps]] (add-annotations db map-or-maps)))
+ (fn [db [_ data]] (add-annotations db data)))
 
 (re-frame/register-handler
  :remove-annotation
  standard-middleware
- (fn [db [_ {project-name :project-name hit-id :hit-id key :key {type :type :as span} :span}]]
-   (let [path [:projects project-name :session :query :results :results-by-id hit-id :hit]
-         results (vals (get-in db [:projects project-name :session :query :results :results-by-id]))
+ (fn [db [_ {{project-name :project-name
+              hit-id :hit-id
+              key :key
+              {type :type :as span} :span} :payload
+             db-path :db-path}]]
+   (let [path-to-results (into [:projects project-name] db-path)
+         results (vals (get-in db path-to-results))
+         path-to-hit (fn [hit-id] (into path-to-results [hit-id :hit]))
          token-id-or-ids (span->token-id span)]
-     (if-let [hit (get-in db path)]
+     (if-let [hit (get-in db (path-to-hit hit-id))]
        ;; found hit by id
-       (update-in db path delete-ann token-id-or-ids key)
+       (update-in db (path-to-hit hit-id) delete-ann token-id-or-ids key)
        (if-let [hit-id (find-hit-id token-id-or-ids results)]
          ;; found hit for annotation
-         (update-in db path delete-ann token-id-or-ids key)
+         (update-in db (path-to-hit hit-id) delete-ann token-id-or-ids key)
          ;; couldn't find hit
          db)))))
 
-(defn fetch-annotation-handler [& {:keys [is-last]}]
-  (fn [data]
-    (re-frame/dispatch [:add-annotation data])
+(defn fetch-annotation-handler [& {:keys [is-last db-path]}]
+  (fn [payload]
+    (re-frame/dispatch [:add-annotation {:payload payload :db-path db-path}])
     (when is-last
       (re-frame/dispatch [:stop-throbbing :fetch-annotations]))))
 
@@ -95,9 +101,9 @@
 (re-frame/register-handler ;; general annotation fetcher for query hits
  :fetch-annotations
  standard-middleware
- (fn [db [_ {:keys [page-margins]}]] ;; [{:start token-id :end token-id :hit-id .. :doc ..}]
+ (fn [db [_ {:keys [page-margins corpus db-path] ;; [{:start token-id :end token-id :hit-id .. :doc ..}]
+             :or {db-path [:session :query :results :results-by-id]}}]]
    (let [project-name (get-in db [:session :active-project])
-         corpus (get-in db [:projects project-name :session :query :results :results-summary :corpus])
          margins (count page-margins)
          partition-size 20]
      (re-frame/dispatch [:start-throbbing :fetch-annotations])
@@ -105,7 +111,7 @@
              :let [is-last (is-last-partition margins partition-size i)]]
        (GET "/annotation/page"
             {:params {:page-margins subpage-margins :project-name project-name :corpus corpus}
-             :handler (fetch-annotation-handler :is-last is-last)
+             :handler (fetch-annotation-handler :is-last is-last :db-path db-path)
              :error-handler (fetch-annotation-error-handler)})))
    db))
 
@@ -179,11 +185,6 @@
      db)))
 
 ;;; Outgoing annotations
-(defmulti dispatch-annotation-handler
-  "Variadic handler for successful annotations. Dispatches are based on whether
-  ann-map is a vector (bulk annotation payload) or a map (single annotation payload)"
-  type)
-
 (defn notification-message
   [{{{B :B O :O :as scope} :scope span-type :type} :span :as data} message]
   (if-not span-type  ;; project-level error (e.g. insufficient rights)
@@ -193,35 +194,48 @@
            "IOB" (get-msg [:annotation :error :IOB] B O message))
          (assoc {} :message))))
 
-(defmethod dispatch-annotation-handler cljs.core/PersistentArrayMap
-  [{status :status message :message data :data}]
+(defmulti dispatch-annotation-handler*
+  "Variadic handler for successful annotations. Dispatches are based on whether
+  ann-map is a vector (bulk annotation payload) or a map (single annotation payload)"
+  (fn [{payload :payload}] (type payload)))
+
+(defmethod dispatch-annotation-handler* cljs.core/PersistentArrayMap
+  [{{status :status message :message data :data} :payload db-path :db-path}]
   (case status
-    :ok (do (re-frame/dispatch [:add-annotation data])
+    :ok (do (re-frame/dispatch [:add-annotation {:payload data :db-path db-path}])
             (re-frame/dispatch [:notify {:message (str "Added 1 annotation")}]))
     :error (re-frame/dispatch [:notify (notification-message data message)])))
 
-(defmethod dispatch-annotation-handler cljs.core/PersistentVector
-  [ms]
+(defmethod dispatch-annotation-handler* cljs.core/PersistentVector
+  [{ms :payload db-path :db-path}]
   (let [{oks :ok errors :error :as grouped} (group-by :status ms)
         message (str "Added " (count oks) " annotations with " (count errors) " errors")]
     (when-not (empty? oks)
-      (do (re-frame/dispatch [:add-annotation (mapv :data oks)])
+      (do (re-frame/dispatch [:add-annotation {:payload (mapv :data oks) :db-path db-path}])
           (re-frame/dispatch [:notify {:message message}])))
     (doseq [{data :data message :message} errors]
       (re-frame/dispatch [:notify (notification-message data message)]))))
+
+(defn dispatch-annotation-handler [& {:keys [db-path]}]
+  (fn [data] (dispatch-annotation-handler* {:payload data :db-path db-path})))
 
 (defn error-handler [& args]
   (re-frame/dispatch [:notify {:message "Unrecognized internal error"}]))
 
 (re-frame/register-handler
  :dispatch-simple-annotation
- (fn [db [_ {ann-query :query :as ann-map} hit-id token-id & [token-to]]]
+ standard-middleware
+ (fn [db [_ {{{ann-query :query :as ann-map} :ann-map
+              hit-id :hit-id
+              token-from :token-from
+              token-to :token-to} :ann-data
+             db-path :db-path :or {db-path [:session :query :results :results-by-id]}}]]
    (let [project-name (get-in db [:session :active-project])
          path-to-query [:projects project-name :session :query :results :results-summary :query-str]
          query (or ann-query (get-in db path-to-query))
-         span (if token-to (token-id->span token-id token-to) (token-id->span token-id))
+         span (if token-to (token-id->span token-from token-to) (token-id->span token-from))
          ann-map (assoc ann-map :hit-id hit-id :span span :timestamp (now) :query query)]
-     (re-frame/dispatch [:dispatch-annotation ann-map]))
+     (re-frame/dispatch [:dispatch-annotation ann-map :db-path db-path]))
    db))
 
 (defn package-ann-maps [db-query ann-map hit-ids token-ids & [token-to's]]
@@ -240,22 +254,24 @@
 
 (re-frame/register-handler
  :dispatch-bulk-annotation
- (fn [db [_ ann-map hit-ids token-ids & [token-to's]]]
+ standard-middleware
+ (fn [db [_ {{:keys [ann-map hit-ids token-ids token-to's]} :ann-data db-path :db-path}]]
    (let [project-name (get-in db [:session :active-project])
          path-to-query [:projects project-name :session :query :results :results-summary :query-str]
          db-query (get-in db path-to-query)
          ann-maps (package-ann-maps db-query ann-map hit-ids token-ids token-to's)]
-     (re-frame/dispatch [:dispatch-annotation ann-maps]))
+     (re-frame/dispatch [:dispatch-annotation ann-maps :db-path db-path]))
    db))
 
 (re-frame/register-handler
  :dispatch-annotation
- (fn [db [_ ann-map-or-maps]]
+ standard-middleware
+ (fn [db [_ ann-map-or-maps & {:keys [db-path] :or {db-path [:session :query :results :results-by-id]}}]]
    (let [project-name (get-in db [:session :active-project])
          corpus (get-in db [:projects project-name :session :query :results :results-summary :corpus])]
      (try (POST "/annotation/new"
                 {:params {:ann-map ann-map-or-maps :project-name project-name :corpus corpus}
-                 :handler dispatch-annotation-handler
+                 :handler (dispatch-annotation-handler :db-path db-path)
                  :error-handler error-handler})
           (catch :default e
             (re-frame/dispatch
@@ -263,17 +279,18 @@
      db)))
 
 (defn update-annotation-handler
-  [{status :status message :message data :data}]
-  (condp = status
-    :ok (re-frame/dispatch [:add-annotation data])
-    :error (re-frame/dispatch
-            [:notify
-             {:message (format "Couldn't update annotation! Reason: [%s]" message)
-              :meta data}])))
+  [& {:keys [db-path]}]
+  (fn [{status :status message :message payload :data}]
+    (condp = status
+      :ok (re-frame/dispatch [:add-annotation {:payload payload :db-path db-path}])
+      :error (re-frame/dispatch
+              [:notify {:message (format "Couldn't update annotation! Reason: [%s]" message)}]))))
 
 (re-frame/register-handler
  :update-annotation
- (fn [db [_ {{:keys [_version _id hit-id value] :as update-map} :update-map}]]
+ (fn [db [_ {{:keys [_version _id hit-id value] :as update-map} :update-map
+             db-path :db-path
+             :or {db-path [:session :query :results :results-by-id]}}]]
    (let [project-name (get-in db [:session :active-project])
          path-to-results [:projects project-name :session :query :results]
          corpus (get-in db (into path-to-results [:results-summary :corpus]))
@@ -281,26 +298,26 @@
          update-map (assoc update-map :timestamp (.now js/Date) :corpus corpus :query query)]
      (POST "/annotation/update"
            {:params {:update-map update-map :project-name project-name}
-            :handler update-annotation-handler
+            :handler (update-annotation-handler :db-path db-path)
             :error-handler error-handler})
      db)))
 
-(defn remove-annotation-handler
-  [{{project-name :project-name hit-id :hit-id span :span key :key :as data} :data
-    status :status message :message}]
-  (condp = status
-    :ok (re-frame/dispatch [:remove-annotation data])
-    :error (re-frame/dispatch
-            [:notify {:message (format "Couldn't remove annotation! Reason: [%s]" message)
-                      :meta data}])))
+(defn remove-annotation-handler [& {:keys [db-path]}]
+  (fn [{{project-name :project-name hit-id :hit-id span :span key :key :as data} :data
+        status :status message :message}]
+    (condp = status
+      :ok (re-frame/dispatch [:remove-annotation {:payload data :db-path db-path}])
+      :error (re-frame/dispatch
+              [:notify {:message (format "Couldn't remove annotation! Reason: [%s]" message)
+                        :meta data}]))))
 
 (re-frame/register-handler
  :delete-annotation
- (fn [db [_ {:keys [ann-map hit-id]}]]
-   (let [project-name (get-in db [:session :active-project])
-         corpus (get-in db [:projects project-name :session :query :results :results-summary :corpus])]
+ (fn [db [_ {{:keys [ann-map hit-id]} :ann-data corpus :corpus db-path :db-path
+             :or {db-path [:session :query :results :results-by-id]}}]]
+   (let [project-name (get-in db [:session :active-project])]
      (POST "/annotation/remove"
            {:params {:project-name project-name :hit-id hit-id :ann ann-map}
-            :handler remove-annotation-handler
+            :handler (remove-annotation-handler :db-path db-path)
             :error-handler error-handler})
      db)))

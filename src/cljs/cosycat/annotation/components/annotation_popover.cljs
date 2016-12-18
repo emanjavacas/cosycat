@@ -8,36 +8,37 @@
             [taoensso.timbre :as timbre]))
 
 (defn dispatch-update
-  [{:keys [_id _version username history] :as ann-map} hit-id new-value my-name my-role]
+  [{:keys [_id _version username history] :as ann-map} hit-id new-value my-name my-role db-path]
   (if (may-edit? :update username my-name my-role)
     ;; dispatch update
     (re-frame/dispatch
      [:update-annotation
-      {:update-map {:_id _id :_version _version :value new-value :hit-id hit-id}}])
+      {:update-map {:_id _id :_version _version :value new-value :hit-id hit-id}
+       :db-path db-path}])
     ;; dispatch update edit
     (re-frame/dispatch [:open-annotation-edit-issue (assoc ann-map :value new-value)])))
 
-(defn dispatch-remove [{:keys [_id _version username history] :as ann-map} hit-id my-name my-role]
+(defn dispatch-remove [{:keys [_id _version username history] :as ann-map} hit-id my-name my-role db-path]
   (if (may-edit? :update username my-name my-role)
     ;; dispatch remove
-    (re-frame/dispatch [:delete-annotation {:ann-map ann-map :hit-id hit-id}])
+    (re-frame/dispatch [:delete-annotation {:ann-data {:ann-map ann-map :hit-id hit-id} :db-path db-path}])
     ;; dispatch remote edit
     (re-frame/dispatch [:open-annotation-remove-issue ann-map])))
 
-(defn trigger-update [ann-map hit-id new-value my-name my-role & [on-dispatch]]
+(defn trigger-update [ann-map hit-id new-value my-name my-role db-path & [on-dispatch]]
   (fn [e]
     (when (= 13 (.-charCode e))
       (on-dispatch)
       (if (empty? new-value)
-        (dispatch-remove ann-map hit-id my-name my-role)
-        (dispatch-update ann-map hit-id new-value my-name my-role)))))
+        (dispatch-remove ann-map hit-id my-name my-role db-path)
+        (dispatch-update ann-map hit-id new-value my-name my-role db-path)))))
 
-(defn new-value-input [{{value :value} :ann} hit-id my-name my-role on-dispatch]
+(defn new-value-input [{{value :value} :ann} hit-id my-name my-role db-path on-dispatch]
   (let [text-atom (reagent/atom value)
         clicked (reagent/atom false)]
     (fn [{{key :key value :value} :ann
           id :_id version :_version username :username time :timestamp :as ann-map}
-         hit-id my-name my-role on-dispatch]
+         hit-id my-name my-role db-path on-dispatch]
       (let [may-edit (may-edit? :update username my-name my-role)
             tooltip-text (if may-edit "Click to modify" "Click to suggest a modification")]
         [:div
@@ -56,7 +57,7 @@
              {:name "newannval"
               :type "text"
               :value  @text-atom
-              :on-key-press (trigger-update ann-map hit-id @text-atom my-name my-role on-dispatch)
+              :on-key-press (trigger-update ann-map hit-id @text-atom my-name my-role db-path on-dispatch)
               :on-blur #(do (reset! text-atom value) (swap! clicked not))
               :on-change #(reset! text-atom (.. % -target -value))}])]]))))
 
@@ -113,7 +114,7 @@
 
 (defn annotation-popover
   [{{:keys [timestamp username history _version ann] :as ann-map} :ann-map
-    hit-id :hit-id on-dispatch :on-dispatch editable? :editable?
+    hit-id :hit-id on-dispatch :on-dispatch editable? :editable? db-path :db-path
     :or {editable? true}}]
   (let [user (re-frame/subscribe [:user username])
         my-name (re-frame/subscribe [:me :username])
@@ -136,7 +137,7 @@
      [:div.container-fluid
       [:div.row {:style {:background-color "#e2e2e2"}}
        (if editable?
-         [new-value-input ann-map hit-id @my-name @my-role on-dispatch]
+         [new-value-input ann-map hit-id @my-name @my-role db-path on-dispatch]
          [key-val ann])]
       [:div.row {:style {:height "8px"}}]
       [:div.row [:table (when-not (empty? history)

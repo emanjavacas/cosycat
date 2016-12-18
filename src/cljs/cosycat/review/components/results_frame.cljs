@@ -14,6 +14,8 @@
        (if (get-in @hit-map [:meta :throbbing?])
          "loading..."
          [annotation-component @hit-map color-map
+          :db-path [:session :review :results :results-by-id]
+          :corpus (get-in hit-map [:meta :corpus])
           :editable? true
           :show-match? false
           :show-hit-id? false])])))
@@ -22,8 +24,7 @@
   (sort-by #(let [{:keys [hit-start doc-id]} (parse-hit-id %)] [doc-id hit-start]) hit-ids))
 
 (defn results-frame []
-  (let [path-to-subs [:project-session :review :results :results-summary :grouped-data]
-        results (re-frame/subscribe path-to-subs)]
+  (let [results (re-frame/subscribe [:project-session :review :results :results-by-id])]
     (fn []
       [:div.container-fluid
        (doall (for [hit-id (sort-by-doc (keys @results))]

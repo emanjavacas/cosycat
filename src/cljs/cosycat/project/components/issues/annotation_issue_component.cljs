@@ -20,8 +20,8 @@
       :reagent-render
       (fn [{{new-value :value {:keys [value key]} :ann {{B :B :as scope} :scope} :span} :data
             {{:keys [hit]} :hit-map} :meta}]
-        [annotation-component hit-map
-         :color-map color-map
+        [annotation-component hit-map color-map
+         :db-path [:issues issue-id :meta :hit-map]
          :highlight-ann-key? key
          :highlight-token-id? (or B scope)
          :editable? false

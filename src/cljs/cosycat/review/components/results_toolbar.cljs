@@ -11,7 +11,7 @@
         query-size (re-frame/subscribe (conj path-to-summary :query-size))]
     (fn []
       (let [from (* @selected-page-size @page-num)
-            to (+ from @page-size)]
+            to (min @query-size (+ from @page-size))]
         [:label
          {:style {:line-height "35px"}}
          "Showing " [:strong (min (inc from) to)] "-" [:strong to]

@@ -145,7 +145,11 @@
       (let [{{{:keys [status]} :resolve :as issue-payload} :issue-payload ann-payload :ann-payload} data]
         (re-frame/dispatch [:update-project-issue project-name issue-payload])
         (when (and (= issue-type "annotation-edit") (= status "accepted"))
-          (re-frame/dispatch [:add-annotation ann-payload]))
+          (re-frame/dispatch
+           [:add-annotation
+            {:payload ann-payload
+             ;; assuming all ws incoming annotations only go to query panel
+             :db-path [:session :query :results :results-by-id]}]))
         (when (and (= issue-type "annotation-remove") (= status "accepted"))
           (re-frame/dispatch [:remove-annotation ann-payload]))
         (re-frame/dispatch [:notify {:message "Issue was succesfully closed"}])))))
