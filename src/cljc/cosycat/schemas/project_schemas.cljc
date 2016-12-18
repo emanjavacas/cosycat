@@ -99,6 +99,9 @@
 ;;; project settings schemas
 (def project-settings-schema (make-keys-optional settings-schema))
 
+;; (identity settings-schema)
+;; (make-keys-optional settings-schema)
+
 ;;; project users schemas
 (def project-user-schema
   {:username s/Str :role s/Str})

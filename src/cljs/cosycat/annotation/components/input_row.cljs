@@ -131,4 +131,6 @@
             (-> (for [{token-id :id word :word match :match} hit]
                   ^{:key (str hit-id "-" token-id)}
                   [input-cell hit-map token-id metadata {:unmerge-on-dispatch? unmerge-on-dispatch?}])
-                (prepend-cell {:key (str hit-id "pager") :child pager-cell :opts [hit-id]}))))))
+                (prepend-cell {:key (str hit-id "pager")
+                               :child pager-cell
+                               :opts [hit-id]}))))))

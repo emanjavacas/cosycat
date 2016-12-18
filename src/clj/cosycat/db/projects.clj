@@ -6,7 +6,7 @@
             [cosycat.utils :refer [new-uuid]]
             [cosycat.app-utils :refer [server-project-name get-pending-users dekeyword]]
             [cosycat.schemas.project-schemas
-             :refer [project-schema project-user-schema issue-schema queries-schema]]
+             :refer [project-schema project-user-schema issue-schema query-annotation-schema]]
             [cosycat.roles :refer [check-project-role]]
             [cosycat.db.utils :refer [is-user? normalize-project normalize-query-hit]]
             [cosycat.components.db :refer [new-db colls]]
@@ -456,7 +456,7 @@
   "Inserts new query into user db to allow for query-related metadata.
    Returns this query's id needed for further updates."
   [{db-conn :db :as db} username project-name query-id query-data query-default description]
-  (s/validate (:query-data queries-schema) query-data)
+  (s/validate (:query-data query-annotation-schema) query-data)
   (check-user-in-project db username project-name)
   (ensure-query-index db-conn)
   (let [payload {:query-data query-data

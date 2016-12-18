@@ -19,8 +19,8 @@
 (def hit-id-schema s/Any)
 
 (def hit-meta-schema
-  {(s/required-key :num) s/Int          ;index of hit in current query
-   ;; optional keys 
+  {;; optional keys
+   (s/optional-key :num) s/Int          ;index of hit in current query
    (s/optional-key :marked) s/Bool      ;is hit marked for annotation?
    (s/optional-key :has-marked) s/Bool  ;does hit contain marked tokens?
    (s/optional-key :query-str) s/Str    ;the query-str that retrieved it
@@ -55,19 +55,19 @@
 
 ;;; Review
 (def grouped-data-schema
-  [{:hit-start s/Int
-    :hit-end s/Int
-    :corpus s/Str
-    (s/optional-key :doc) s/Any
-    :anns []}])
+  {s/Str {:hit-id s/Str
+          :corpus s/Str
+          :anns [annotation-schema]}})
 
 (def review-results-summary-schema
-  {:page {:from s/Int
-          :to s/Int
-          :hits s/Int}
-   :query-size s/Int
-   :grouped-data grouped-data-schema
-   :query-map (make-keys-optional (:query-map review-opts-schema))})
+  {:page {:page-num s/Int
+          :page-size s/Int ;; returned page-size
+          :num-hits s/Int}
+   :query-size s/Int ;; number of annotations returned
+   :size s/Int ;; selected page-size
+   :context s/Int ;; number of context tokens
+   :query-map (make-keys-optional (:query-map review-opts-schema))
+   :grouped-data grouped-data-schema})
 
 (def review-results-schema
   {:results-by-id (s/conditional empty? {} :else results-by-id-schema)

@@ -81,6 +81,7 @@
     "Mark hits"]
    [bs/button
     {:onClick #(re-frame/dispatch [:unmark-hits])
+     :class "dropdown-toggle"
      :style {:font-size "12px" :height "34px"}}
     [bs/glyphicon {:glyph "erase"}]]])
 

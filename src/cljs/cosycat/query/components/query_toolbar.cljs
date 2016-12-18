@@ -38,7 +38,7 @@
      (merge 
       {:label "size: "
        :header "Select page size"
-       :options (map #(->map % %) [2 5 7 10 15 25 35 55 85 125])
+       :options (map #(->map % %) [2 5 7 10 15 25 35 55 85])
        :model @page-size
        :select-fn (on-select :page-size :has-query? has-query?)}
       (dissoc args :has-query?))]))

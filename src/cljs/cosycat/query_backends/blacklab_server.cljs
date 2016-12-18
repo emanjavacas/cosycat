@@ -7,13 +7,15 @@
 
 (declare ->BlacklabServerCorpus)
 
+(defonce callback-id (atom 0))
+
 (defn make-blacklab-server-corpus
   "instantiate a BlacklabServerCorpus for a given corpus name
    `on-counting-callback` is a callback to be called internally in case BlacklabServer
    return a partial count for a given query"
   [corpus-name {:keys [server web-service on-counting-callback]
                 :or {on-counting-callback identity}}]
-  (let [timeout-ids (atom []), callback-id (atom 0)]
+  (let [timeout-ids (atom [])]
     (->BlacklabServerCorpus
      corpus-name server web-service on-counting-callback timeout-ids callback-id)))
 
@@ -126,7 +128,9 @@
     (not (nil? error)))
 
   (p/callback-id [_]
-    (swap! callback-id inc)))
+    (let [new-id (swap! callback-id inc)]
+      (timbre/debug "registering callback-id:" new-id)
+      new-id)))
 
 ;;; Parse cosycat args -> blacklab-server params
 (defn join-params [& params]

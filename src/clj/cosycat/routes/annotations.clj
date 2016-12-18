@@ -2,6 +2,7 @@
   (:require [compojure.core :refer [routes context POST GET]]
             [monger.operators :refer :all]
             [cosycat.utils :refer [->int ->long assert-ex-info]]
+            [cosycat.app-utils :refer [make-hit-id normalize-by]]
             [cosycat.routes.utils
              :refer [make-safe-route make-default-route unwrap-arraymap
                      check-user-rights normalize-anns]]
@@ -147,21 +148,23 @@
   [{{{B :B :as scope} :scope doc :doc} :span}]
   (or B scope))
 
-(defn get-token-context
-  "return a map with info about the first and last token in a group of annotations"
-  [anns]
-  (let [token-ids (->> anns (map get-token-scope) (sort))
-        corpus (-> anns first (get :corpus))
-        doc (-> anns first (get-in [:span :doc]))]
-    (cond-> {:hit-start (first token-ids)
-             :hit-end (last token-ids)
-             :corpus corpus}
-      (not (nil? doc)) (assoc :doc doc))))
+(defn get-hit-id [anns]
+  (let [doc (-> anns first (get-in [:span :doc]))
+        token-ids (->> anns (map get-token-scope) (sort))
+        first-token (first token-ids)]    
+    (if (= 1 (count token-ids))
+      (make-hit-id doc first-token (inc first-token))      
+      (make-hit-id doc first-token (last token-ids)))))
+
+(defn get-corpus [anns]
+  (-> anns first (get :corpus)))
 
 (defn normalize-group
   "transform a group of annotations into an structured map with contextual info"
   [group]
-  (-> (get-token-context group) (assoc :anns group)))
+  (-> {:hit-id (get-hit-id group)
+       :corpus (get-corpus group)}
+      (assoc :anns group)))
 
 (defn group-by-hits
   "group annotations in spans of at most `context` token positions. 
@@ -181,8 +184,8 @@
 
 (defn type-check-query-map
   [{{ann-key :key ann-value :value} :ann username :username corpus :corpus
-    {:keys [from to] :as timestamp} :timestamp}]
-  (cond-> {}
+    {:keys [from to] :as timestamp} :timestamp :as query-map}]
+  (cond-> query-map
     corpus (assoc :corpus (unwrap-arraymap corpus))
     username (assoc :username (unwrap-arraymap username))
     from (assoc-in [:timestamp :from] (->long from))
@@ -193,7 +196,6 @@
   transforming API input into mongodb query syntax"
   [{{ann-key :key ann-value :value} :ann username :username corpus :corpus
     {:keys [from to] :as timestamp} :timestamp}]
-  ;; TODO: type check the input
   (cond-> {}
     ann-key (assoc "ann.key" ann-key)
     ann-value (assoc "ann.value" ann-value)
@@ -212,16 +214,18 @@
          query-map (build-query-map typed-check-query-map)
          annotations (query-annotations db project-name page-num page-size query-map)
          grouped-by-hits (group-by-hits annotations context)]
-     {:page {:hits (count grouped-by-hits)
-             :from page-num
-             :to (count annotations)}      
+     {:page {:num-hits (count grouped-by-hits)
+             :page-num page-num
+             :page-size (count annotations)}
+      :context context
+      :size page-size
       :query-size (anns/count-annotation-query db project-name query-map)
       :query-map typed-check-query-map
-      :grouped-data grouped-by-hits})))
+      :grouped-data (normalize-by grouped-by-hits :hit-id)})))
 
 (defn query-annotations-route
   [{{query-map :query-map context :context project-name :project-name
-     {:keys [page-num page-size]} :page} :params
+     {:keys [page-num page-size]} :page :or {query-map {}}} :params
     {{username :username} :identity} :session
     {db :db} :components}]
   (check-user-rights db username project-name :read)

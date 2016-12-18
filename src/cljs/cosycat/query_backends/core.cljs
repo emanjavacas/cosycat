@@ -1,7 +1,8 @@
 (ns cosycat.query-backends.core
   (:require [cosycat.query-backends.blacklab :refer [make-blacklab-corpus]]
             [cosycat.query-backends.blacklab-server :refer [make-blacklab-server-corpus]]
-            [cosycat.query-backends.protocols :refer [corpus-info]]))
+            [cosycat.query-backends.protocols :refer [corpus-info]]
+            [taoensso.timbre :as timbre]))
 
 (def ctors
   {:blacklab make-blacklab-corpus
@@ -12,6 +13,7 @@
     (if-let [corpus (get @mem corpus-name)]      
       corpus
       (let [corpus (ctor corpus-name args)]
+        (timbre/info "creating corpus" corpus-name)
         (corpus-info corpus)
         corpus))))
 

@@ -12,7 +12,8 @@
             [cosycat.query.components.snippet-modal :refer [snippet-modal]]
             [cosycat.query.components.minimize-panel :refer [minimize-panel]]
             [cosycat.query.components.annotate-query-modal :refer [annotate-query-modal]]
-            [cosycat.annotation.components.annotation-frame :refer [annotation-frame]]
+            [cosycat.annotation.components.annotation-component
+             :refer [annotation-component hit-row]]
             [cosycat.components :refer
              [error-panel throbbing-panel filter-annotation-buttons]]
             [taoensso.timbre :as timbre]))
@@ -106,7 +107,35 @@
     :open-header query-frame-open-header
     :closed-header query-frame-closed-header}])
 
-;;; annotaiton frame
+;;; annotation frame
+(defn closed-annotation-component [hit-map color-map]
+  (fn [hit-map color-map]
+    [bs/table
+     {:id "table-annotation"}
+     [:thead]
+     [:tbody
+      [hit-row hit-map color-map
+       :editable? true
+       :show-match? true
+       :show-hit-id? true]]]))
+
+(defn annotation-frame [& {:keys [page-size] :or {page-size 10}}]
+  (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])
+        color-map (re-frame/subscribe [:filtered-users-colors])
+        current-hit-page (re-frame/subscribe [:project-session :components :current-hit-page])
+        open-hits (re-frame/subscribe [:project-session :components :open-hits])]
+    (fn [& {:keys [page-size] :or {page-size 10}}]
+      [:div.container-fluid
+       (let [start (* page-size (or @current-hit-page 0))
+             end (min (count @marked-hits) (+ start page-size))
+             sorted-marked-hits (sort-by #(get-in % [:meta :num]) @marked-hits)]
+         (doall (for [{hit-id :id :as hit-map} (subvec (vec sorted-marked-hits) start end)]
+                  ^{:key (str hit-id)}
+                  [:div.row
+                   (if (contains? @open-hits hit-id)
+                     [annotation-component hit-map color-map]
+                     [closed-annotation-component hit-map color-map])])))])))
+
 (defn annotation-closed-header []
   (let [marked-hits (re-frame/subscribe [:marked-hits {:has-marked? false}])]
     (fn []

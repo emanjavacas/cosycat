@@ -1,4 +1,4 @@
-(ns cosycat.review.review-toolbar
+(ns cosycat.review.components.review-toolbar
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
@@ -27,7 +27,7 @@
         model (re-frame/subscribe [:project-session :review :query-opts :query-map :ann label])]
     (fn [{:keys [label placeholder]}]
       [:div.form-group
-       {:style {:padding "0 5px"}}
+       {:style {:padding "0 5px 0 0"}}
        [:div.input-group
         [:input.form-control
          {:type "text"
@@ -46,18 +46,34 @@
   (fn [v]
     (re-frame/dispatch [:set-project-session (into [:review :query-opts] path) v])))
 
-(defn main-inputs []
+(defn context-select []
   (let [context (re-frame/subscribe [:project-session :review :query-opts :context])]
     (fn []
-      [:form.form-inline
-       [text-input {:label :key :placeholder "Ann Key"}]
-       [text-input {:label :value :placeholder "Ann Value"}]
-       [dropdown-select
-        {:label "context: "
-         :header "Select a token context size"
-         :options (map #(->map % %) (range 1 21))
-         :model @context
-         :select-fn (select-fn [:context])}]])))
+      [dropdown-select
+       {:label "context: "
+        :header "Select a token context size"
+        :style {:padding "0 5px 0 0"}
+        :options (map #(->map % %) (range 1 21))
+        :model @context
+        :select-fn (select-fn [:context])}])))
+
+(defn size-select []
+  (let [size (re-frame/subscribe [:project-session :review :query-opts :size])]
+    (fn []
+      [dropdown-select
+       {:label "size: "
+        :header "Select number of annotations per page"
+        :options (map #(->map % %) [2 3 4 5 7 10 12 15 20 25])
+        :model @size
+        :select-fn (select-fn [:size])}])))
+
+(defn main-inputs []
+  (fn []
+    [:form.form-inline
+     [text-input {:label :key :placeholder "Ann Key"}]
+     [text-input {:label :value :placeholder "Ann Value"}]
+     [context-select]
+     [size-select]]))
 
 ;;; Username & Corpora
 (defn multiple-select-row [{:keys [key label selected?]} on-select]
@@ -80,7 +96,8 @@
          :bsStyle (if has-selection? "primary" "default")}
         label]
        [bs/button
-        {:onClick #(on-clear)}
+        {:onClick #(on-clear)
+         :class "dropdown-toggle"}
         [bs/glyphicon {:glyph "erase"}]]
        [bs/overlay
         {:show @show?
@@ -154,7 +171,8 @@
         "Time range"]
        [bs/button
         {:onClick #(re-frame/dispatch
-                    [:set-project-session [:review :query-opts :query-map :timestamp] {}])}
+                    [:set-project-session [:review :query-opts :query-map :timestamp] {}])
+         :class "dropdown-toggle"}
         [bs/glyphicon {:glyph "erase"}]]
        [bs/overlay
         {:show @open?
@@ -218,5 +236,4 @@
      [:div.col-lg-5.col-md-6.text-left
       [main-inputs]]
      [:div.col-lg-6.col-md-5 [rest-inputs]]
-     [:div.col-lg-1.col-md-1.pull-right
-      [submit]]]))
+     [:div.col-lg-1.col-md-1.pull-right.text-right [submit]]]))

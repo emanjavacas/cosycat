@@ -4,7 +4,7 @@
             [react-bootstrap.components :as bs]
             [clojure.string :refer [capitalize]]
             [cosycat.utils :refer [format]]
-            [cosycat.annotation.components.annotation-frame :refer [annotation-component]]
+            [cosycat.annotation.components.annotation-component :refer [annotation-component]]
             [cosycat.project.components.issues.components :refer [collapsible-issue-panel]]
             [cosycat.project.components.issues.issue-thread-component
              :refer [issue-thread-component]]
@@ -20,7 +20,8 @@
       :reagent-render
       (fn [{{new-value :value {:keys [value key]} :ann {{B :B :as scope} :scope} :span} :data
             {{:keys [hit]} :hit-map} :meta}]
-        [annotation-component hit-map color-map
+        [annotation-component hit-map
+         :color-map color-map
          :highlight-ann-key? key
          :highlight-token-id? (or B scope)
          :editable? false

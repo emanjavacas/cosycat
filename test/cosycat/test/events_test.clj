@@ -3,7 +3,7 @@
             [monger.collection :as mc]
             [schema.core :as s]
             [cosycat.test.test-config :refer [db-fixture project-fixture project-data db]]
-            [cosycat.schemas.event-schemas :refer [event-schema]]
+            [cosycat.schemas.user-schemas :refer [event-schema]]
             [cosycat.db.users :as users]
             [cosycat.db.projects :as proj]))
 

@@ -173,7 +173,7 @@
 (defmethod handle-query-hit :jsonp
   [{:keys [corpus url params opts handler error-handler]}]
   (jsonp url
-         (let [jsonp-callback-str (str "callback" (callback-id corpus))]
+         (let [jsonp-callback-str (str "callback" (callback-id corpus))]           
            {:params (assoc params :jsonp jsonp-callback-str)
             :handler (fn [data]
                        (let [cljs-data (js->clj data :keywordize-keys true)]

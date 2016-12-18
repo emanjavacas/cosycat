@@ -205,5 +205,6 @@
   (let [{:keys [doc id]} (parse-token-id token-id)]
     (-> (str (inc (->int doc)) id) ->int)))
 
-(defn make-hit-id [doc-id start end]
-  (apply str (interpose "." [doc-id start end])))
+(defn make-hit-id
+  ([start end] (str start "." end))
+  ([doc-id start end] (apply str (interpose "." [doc-id start end]))))

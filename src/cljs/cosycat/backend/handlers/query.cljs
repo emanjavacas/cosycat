@@ -192,11 +192,11 @@
      (if-let [current-hit (get-in db path-to-hit)]
        (do (re-frame/dispatch
             [:fetch-annotations {:page-margins [{:start start :end end :hit-id id :doc doc-id}]}])
-           (assoc-in db (into path-to-hit [:hit]) hit))
+           (assoc-in db (conj path-to-hit :hit) hit))
        (do (timbre/warn (format "Event :update-hit but coultn't find hit id [%s]" (str id)))
            db)))))
 
-(defn error-handler [data] (timbre/debug data))
+(defn error-handler [data] (timbre/error data))
 
 (defn get-words-map [hit dir]
   (let [left (take-while (complement :match) hit)
@@ -207,15 +207,15 @@
 (re-frame/register-handler ;; shift window around hit left or right
  :shift-hit
  standard-middleware
- (let [update-hit (fn [hit-map] (re-frame/dispatch [:update-hit hit-map]))]
-   (fn [db [_ id dir]]
-     (let [{:keys [corpus]} (get-in db [:settings :query])
-           corpus (ensure-corpus (find-corpus-config db corpus))
-           active-project (get-in db [:session :active-project])
-           path-to-hit [:projects active-project :session :query :results :results-by-id id]
-           {:keys [hit]} (get-in db path-to-hit)]
-       (query-hit corpus id (get-words-map hit dir) update-hit error-handler))
-     db)))
+ (fn [db [_ id dir]]
+   (let [update-hit (fn [hit-map] (re-frame/dispatch [:update-hit hit-map]))
+         {:keys [corpus]} (get-in db [:settings :query])
+         corpus (ensure-corpus (find-corpus-config db corpus))
+         active-project (get-in db [:session :active-project])
+         path-to-hit [:projects active-project :session :query :results :results-by-id id]
+         {:keys [hit]} (get-in db path-to-hit)]
+     (query-hit corpus id (get-words-map hit dir) update-hit error-handler))
+   db))
 
 (defn fetch-issue-hit-handler
   "creates a handler to be passed to query-hit when fetching hit for an edit annotation issue"

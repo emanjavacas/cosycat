@@ -9,7 +9,7 @@
             [taoensso.timbre :as timbre]))
 
 (defn annotation-cell-style
-  [color-map username highlight?]
+  [username highlight? & {:keys [color-map] :or {color-map {}}}]
   (let [color (get color-map username)]
     (cond-> {}
       highlight?  (assoc :background-color "antiquewhite")
@@ -22,7 +22,7 @@
     (fn [{username :username anns :anns {value :value} :ann :as ann-map}
          hit-id token-id colspan color-map & {:keys [editable? highlight?]}]
       [:td.ann-cell
-       {:style (annotation-cell-style @color-map username highlight?)
+       {:style (annotation-cell-style username highlight? :color-map @color-map)
         :colSpan colspan
         :on-click #(do (reset! target (.-target %)) (swap! open? not))}
        [bs/label {:bsStyle "primary" :style {:font-size "85%"}} value]
@@ -82,8 +82,8 @@
     highlight-token-id? (= highlight-token-id? token-id)))
 
 (defn annotation-row
-  [hit color-map ann-key & {:keys [editable? highlight-ann-key? highlight-token-id?]}]
-  (fn [{hit-id :id hit :hit} color-map ann-key
+  [hit-map ann-key color-map & {:keys [editable? highlight-ann-key? highlight-token-id?]}]
+  (fn [{hit-id :id hit :hit} ann-key color-map
        & {:keys [editable? highlight-ann-key? highlight-token-id?] :or {editable? true}}]
     (into
      [:tr.ann-row {:data-hitid hit-id}]
