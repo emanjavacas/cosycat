@@ -103,11 +103,6 @@ div.well.selected:hover {
     box-sizing:border-box;
 }
 
-.input-cell {
-    border-radius: 0px;
-    height: 230%;
-}
-
 td.hit-pager:hover {
     color: #158cba;
 }
