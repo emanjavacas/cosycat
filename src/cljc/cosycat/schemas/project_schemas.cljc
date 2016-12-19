@@ -86,6 +86,7 @@
    :review-input-open? {:key s/Bool :value s/Bool}
    :toggle-hits (s/enum "none" "kept" "discarded" "unseen")
    :token-field s/Keyword
+   (s/optional-key :issues) {s/Str {:show-hit s/Bool}}
    (s/optional-key :active-query) s/Str})
 
 (def project-session-schema

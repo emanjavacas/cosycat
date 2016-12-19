@@ -1,6 +1,6 @@
 (ns cosycat.backend.handlers.review
   (:require [re-frame.core :as re-frame]
-            [cosycat.app-utils :refer [make-hit-id]]
+            [cosycat.app-utils :refer [make-hit-id deep-merge]]
             [cosycat.backend.middleware :refer [standard-middleware]]
             [cosycat.backend.handlers.annotations :refer [update-hit]]))
 
@@ -12,7 +12,7 @@
    (let [active-project (get-in db [:session :active-project])
          path-to-hit-id [:projects active-project :session :review :results :results-by-id id]]
      (-> db
-         (assoc-in path-to-hit-id hit-map)
+         (update-in path-to-hit-id deep-merge hit-map)
          (assoc-in (into path-to-hit-id [:meta :throbbing?]) false)))))
 
 (re-frame/register-handler

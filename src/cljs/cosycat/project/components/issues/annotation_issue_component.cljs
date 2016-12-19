@@ -12,18 +12,21 @@
 
 (def context 6)
 
+(defn highlight-fn [id]
+  (fn [{input-ann-id :_id}]
+    (= id input-ann-id)))
+
 (defn hit-component [{{hit-map :hit-map} :meta issue-id :id :as issue}]
   (let [color-map (re-frame/subscribe [:project-users-colors])]
     (reagent/create-class
      {:component-will-mount
       #(when-not hit-map (re-frame/dispatch [:fetch-issue-hit {:issue issue :context context}]))
       :reagent-render
-      (fn [{{new-value :value {:keys [value key]} :ann {{B :B :as scope} :scope} :span} :data
+      (fn [{{id :_id} :data
             {{:keys [hit]} :hit-map} :meta}]
         [annotation-component hit-map color-map
          :db-path [:issues issue-id :meta :hit-map]
-         :highlight-ann-key? key
-         :highlight-token-id? (or B scope)
+         :highlight-fn (highlight-fn id)
          :editable? false
          :show-match? false
          :show-hit-id? false])})))

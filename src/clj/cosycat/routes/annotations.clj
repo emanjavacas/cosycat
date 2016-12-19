@@ -210,8 +210,8 @@
    (anns/query-annotations db project-name query-map page-num page-size))
   ([{db-conn :db :as db} project-name page-num page-size query-map context]
    (let [page-num (->int page-num), page-size (->int page-size), context (->int context)
-         typed-check-query-map (type-check-query-map query-map)
-         query-map (build-query-map typed-check-query-map)
+         typed-query-map (type-check-query-map query-map)
+         query-map (build-query-map typed-query-map)
          annotations (query-annotations db project-name page-num page-size query-map)
          grouped-by-hits (group-by-hits annotations context)]
      {:page {:num-hits (count grouped-by-hits)
@@ -220,7 +220,7 @@
       :context context
       :size page-size
       :query-size (anns/count-annotation-query db project-name query-map)
-      :query-map typed-check-query-map
+      :query-map typed-query-map
       :grouped-data (normalize-by grouped-by-hits :hit-id)})))
 
 (defn query-annotations-route

@@ -85,14 +85,9 @@
                :let [{parsed-token-id :id} (parse-token-id token-id)]]
            ^{:key (str ann-key hit-id token-id)}
            (if-let [ann-map (get anns ann-key)]
-             [annotation-cell
-              (get anns ann-key)
-              hit-id
-              token-id
-              colspan
-              color-map
+             [annotation-cell (get anns ann-key) hit-id token-id colspan color-map
               :db-path db-path
               :editable? editable?
               :highlight? (highlight-fn ann-map)]
-             [dummy-cell]))
+             [:td ""]))
          (prepend-cell {:key (str ann-key) :child annotation-key :opts [ann-key]})))))

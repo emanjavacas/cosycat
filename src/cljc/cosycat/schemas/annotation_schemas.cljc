@@ -35,12 +35,13 @@
 
 (def annotation-schema
   {:ann {:key s/Str :value s/Str}
-   #?(:clj :username :cljs (s/optional-key :username)) s/Str ;we don't always send username along
+   #?(:clj :username :cljs (s/optional-key :username)) s/Str ;; we don't always send username along
    :timestamp s/Int
    :span span-schema
    :corpus s/Str
-   :query s/Str
+   (s/optional-key :query) s/Str ;; review annotations don't have query
    :hit-id s/Any
-   #?(:clj :_id :cljs (s/optional-key :_id)) s/Any ;outgoing annotations do not have an id yet
+   #?(:clj :_id :cljs (s/optional-key :_id)) s/Any ;; outgoing annotations do not have an id yet
    #?(:clj :_version :cljs (s/optional-key :_version)) s/Any
-   (s/optional-key :history) history-schema}) ;     this is the same except history and _id
+   (s/optional-key :history) history-schema}) ;; this is the same except history and _id
+

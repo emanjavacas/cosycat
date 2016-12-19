@@ -8,7 +8,7 @@
             [taoensso.timbre :as timbre]))
 
 (defn dispatch-update
-  [{:keys [_id _version username history] :as ann-map} hit-id new-value my-name my-role db-path]
+  [{:keys [_id _version username] :as ann-map} new-value hit-id my-name my-role db-path]
   (if (may-edit? :update username my-name my-role)
     ;; dispatch update
     (re-frame/dispatch
@@ -18,26 +18,29 @@
     ;; dispatch update edit
     (re-frame/dispatch [:open-annotation-edit-issue (assoc ann-map :value new-value)])))
 
-(defn dispatch-remove [{:keys [_id _version username history] :as ann-map} hit-id my-name my-role db-path]
+(defn dispatch-remove [{:keys [username] :as ann-map} hit-id my-name my-role db-path]
   (if (may-edit? :update username my-name my-role)
     ;; dispatch remove
-    (re-frame/dispatch [:delete-annotation {:ann-data {:ann-map ann-map :hit-id hit-id} :db-path db-path}])
+    (re-frame/dispatch
+     [:delete-annotation
+      {:ann-data {:ann-map ann-map :hit-id hit-id}
+       :db-path db-path}])
     ;; dispatch remote edit
     (re-frame/dispatch [:open-annotation-remove-issue ann-map])))
 
-(defn trigger-update [ann-map hit-id new-value my-name my-role db-path & [on-dispatch]]
+(defn trigger-update [ann-map new-value hit-id my-name my-role db-path & [on-dispatch]]
   (fn [e]
     (when (= 13 (.-charCode e))
       (on-dispatch)
       (if (empty? new-value)
         (dispatch-remove ann-map hit-id my-name my-role db-path)
-        (dispatch-update ann-map hit-id new-value my-name my-role db-path)))))
+        (dispatch-update ann-map new-value hit-id my-name my-role db-path)))))
 
-(defn new-value-input [{{value :value} :ann} hit-id my-name my-role db-path on-dispatch]
-  (let [text-atom (reagent/atom value)
+(defn new-value-input
+  [{{value :value} :ann} hit-id my-name my-role db-path on-dispatch]
+  (let [value-atom (reagent/atom value)
         clicked (reagent/atom false)]
-    (fn [{{key :key value :value} :ann
-          id :_id version :_version username :username time :timestamp :as ann-map}
+    (fn [{{key :key value :value} :ann username :username :as ann-map}
          hit-id my-name my-role db-path on-dispatch]
       (let [may-edit (may-edit? :update username my-name my-role)
             tooltip-text (if may-edit "Click to modify" "Click to suggest a modification")]
@@ -56,10 +59,11 @@
             [:input.input-as-div
              {:name "newannval"
               :type "text"
-              :value  @text-atom
-              :on-key-press (trigger-update ann-map hit-id @text-atom my-name my-role db-path on-dispatch)
-              :on-blur #(do (reset! text-atom value) (swap! clicked not))
-              :on-change #(reset! text-atom (.. % -target -value))}])]]))))
+              :value @value-atom
+              :on-key-press
+              (trigger-update ann-map @value-atom hit-id my-name my-role db-path on-dispatch)
+              :on-blur #(do (reset! value-atom value) (swap! clicked not))
+              :on-change #(reset! value-atom (.. % -target -value))}])]]))))
 
 (defn history-row [ann-map current-ann hit-id my-name my-role on-dispatch & {:keys [editable?]}]
   (fn [{{value :value} :ann timestamp :timestamp username :username} current-ann hit-id on-dispatch
@@ -86,22 +90,20 @@
          {:style {:margin-left "10px"}}
          (human-time timestamp)]]])))
 
-(defn spacer-row [] [:tr {:style {:height "5px"}} [:td ""]])
-
 (defn get-history [history]
    (butlast (interleave (sort-by :timestamp > history) (range))))
 
-(defn history-body [history current-ann hit-id my-name my-role on-dispatch & {:keys [editable?]}]
-  (fn [history current-ann hit-id on-dispatch & {:keys [editable?]}]
+(defn history-body
+  [{:keys [history] :as current-ann} hit-id my-name my-role on-dispatch & {:keys [editable?]}]
+  (fn [{:keys [history] :as current-ann} hit-id on-dispatch & {:keys [editable?]}]
     [:tbody
      (doall
-      (for [{{:keys [key value]} :ann timestamp :timestamp :as ann-map-or-idx} (get-history history)]
+      (for [{{:keys [key value]} :ann timestamp :timestamp :as item} (get-history history)]
         (if value
           ^{:key (str value timestamp)}
-          [history-row ann-map-or-idx current-ann hit-id my-name my-role on-dispatch
-           :editable? editable?]
-          ^{:key (str "spacer-" ann-map-or-idx)}
-          [spacer-row])))]))
+          [history-row item current-ann hit-id my-name my-role on-dispatch :editable? editable?]
+          ^{:key (str "spacer-" item)}
+          [:tr {:style {:height "5px"}} [:td ""]])))]))
 
 (defn key-val [{:keys [key value]}]
   [:div
@@ -113,10 +115,9 @@
      value]]])
 
 (defn annotation-popover
-  [{{:keys [timestamp username history _version ann] :as ann-map} :ann-map
-    hit-id :hit-id on-dispatch :on-dispatch editable? :editable? db-path :db-path
-    :or {editable? true}}]
-  (let [user (re-frame/subscribe [:user username])
+  [{:keys [ann-map hit-id on-dispatch editable? db-path] :or {editable? true}}]
+  (let [{:keys [timestamp username history ann]} ann-map
+        user (re-frame/subscribe [:user username])
         my-name (re-frame/subscribe [:me :username])
         my-role (re-frame/subscribe [:active-project-role])]
     [bs/popover
@@ -140,6 +141,7 @@
          [new-value-input ann-map hit-id @my-name @my-role db-path on-dispatch]
          [key-val ann])]
       [:div.row {:style {:height "8px"}}]
-      [:div.row [:table (when-not (empty? history)
-                          [history-body history ann-map hit-id @my-name @my-role on-dispatch
-                           :editable? editable?])]]]]))
+      [:div.row
+       [:table
+        (when-not (empty? history)
+          [history-body ann-map hit-id @my-name @my-role on-dispatch :editable? editable?])]]]]))
