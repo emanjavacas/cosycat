@@ -5,7 +5,7 @@
             [cosycat.app-utils :refer [make-hit-id normalize-by]]
             [cosycat.routes.utils
              :refer [make-safe-route make-default-route unwrap-arraymap
-                     check-user-rights normalize-anns]]
+                     check-user-rights normalize-anns format-stacktrace]]
             [cosycat.db.annotations :as anns]
             [cosycat.db.projects :refer [find-project-by-name find-annotation-issue]]
             [cosycat.components.ws :refer [send-clients]]
@@ -36,15 +36,15 @@
           :source-client username :target-clients users)
          {:status :ok :data data})
        (catch clojure.lang.ExceptionInfo e
-         (let [{:keys [message data] :as exception} (bean e)
-               payload {:message message :data data :status :error}]
-           (timbre/error (if (:dev? env) (str exception) (str payload)))
-           payload))
+         (let [{:keys [message data]} (ex-data e)]
+           (timbre/debug "Caught ExceptionInfo:" (ex-data e))
+           {:message message :data data :status :error}))
        (catch Exception e
-         (let [{message :message exception-class :class :as exception} (bean e)
-               payload {:message message :data {:exception exception-class} :status :error}]
-           (timbre/error (if (:dev? env) (str exception) (str payload)))
-           payload))))
+         (let [{message :message ex :class} (bean e)
+               stacktrace (mapv str (.getStackTrace e))]
+           (timbre/debug "Caught java.lang.Exception: [" (str ex) "]\n"
+                         "Stacktrace:\n" (format-stacktrace stacktrace))
+           {:message message :status :error :data {:exception (str ex) :stacktrace stacktrace}}))))
 
 (defn insert-annotation-route*
   "handles errors within the success callback to ease polymorphic payloads (bulk inserts)"

@@ -2,8 +2,10 @@
   (:require [monger.collection :as mc]
             [monger.query :as mq]
             [monger.operators :refer :all]
+            [schema.core :as s]
             [taoensso.timbre :as timbre]
             [config.core :refer [env]]
+            [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
             [cosycat.app-utils :refer [server-project-name]]
             [cosycat.utils :refer [assert-ex-info]]
             [cosycat.vcs :as vcs]))
@@ -15,18 +17,22 @@
         :else "undefined"))
 
 (defn ex-overwrite-span [source-span span]
-  (ex-info (str "Attempt to overwrite span annotation with "
-                (span-or-token source-span) " annotation")
-           {:source-span source-span :span span}))
+  (let [message (str "Attempt to overwrite span annotation with "
+                     (span-or-token source-span) " annotation")]
+    (ex-info message {:message message :data {:source-span source-span :span span}})))
 
 (defn ex-overwrite-token [source-span span]
-  (ex-info (str "Attempt to overwrite token annotation with "
-                (span-or-token source-span) " annotation")
-           {:source-span source-span :span span}))
+  (let [message (str "Attempt to overwrite token annotation with "
+                     (span-or-token source-span) " annotation")]
+    (ex-info message {:message message :data {:source-span source-span :span span}})))
 
 (defn ex-overlapping-span [source-span span]
-  (ex-info "Attempt to overwrite overlapping span annotation"
-           {:source-span source-span :span span}))
+  (let [message (ex-info "Attempt to overwrite overlapping span annotation")]
+    (ex-info message {:message message :data {:source-span source-span :span span}})))
+
+(defn ex-validation [validation-error]
+  (let [message "Validation error"]
+    (ex-info message {:message message :data {:error (str validation-error)}})))
 
 ;;; Checkers
 (declare find-span-annotation-by-key find-token-annotation-by-key)
@@ -154,6 +160,8 @@
   (check-insert db project-name ann-map)
   (timbre/info "Inserting annotation" (str ann-map))
   (let [ann-map (assoc ann-map :_id (vcs/new-uuid))]
+    (when-let [error (s/check (dissoc annotation-schema :_version) ann-map)]
+      (throw (ex-validation error)))
     (vcs/insert-and-return db-conn (server-project-name project-name) ann-map)))
 
 (defn update-annotation
@@ -166,8 +174,10 @@
             db-conn (server-project-name project-name)
             version  
             {:_id id}
-            {$set {"ann.value" value "timestamp" timestamp "username" username
-                   "query" query "corpus" corpus "hit-id" hit-id}}
+            {$set (cond-> {"ann.value" value "timestamp" timestamp "username" username}
+                    query (assoc "query" query)
+                    corpus (assoc "corpus" corpus)
+                    hit-id (assoc "hit-id" hit-id))}
             {:return-new true})
     history (with-history db-conn)))
 
