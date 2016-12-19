@@ -171,7 +171,7 @@
 (re-frame/register-handler
  :query-review
  standard-middleware
- (fn [db [_ {:keys [page-num] :or {page-num 0}}]]
+ (fn [db [_ {:keys [page-num] :or {page-num 1}}]]
    (let [active-project (get-in db [:session :active-project])
          path-to-query-opts [:projects active-project :session :review :query-opts]
          {:keys [query-map context size] :as query-opts} (get-in db path-to-query-opts)]

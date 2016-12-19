@@ -10,7 +10,7 @@
         selected-page-size (re-frame/subscribe (conj path-to-summary :size))
         query-size (re-frame/subscribe (conj path-to-summary :query-size))]
     (fn []
-      (let [from (* @selected-page-size @page-num)
+      (let [from (* @selected-page-size (dec @page-num))
             to (min @query-size (+ from @page-size))]
         [:label
          {:style {:line-height "35px"}}
@@ -33,11 +33,11 @@
         :boundaryLinks true
         :items (.ceil js/Math (/ @query-size @selected-page-size))
         :maxButtons 10
-        :activePage (inc @page-num)
+        :activePage @page-num
         :onSelect  #(this-as this
                       (re-frame/dispatch
                        [:query-review
-                        {:page-num (dec (.-eventKey this))}]))}])))
+                        {:page-num (.-eventKey this)}]))}])))
 
 (defn results-toolbar []
   (let []
