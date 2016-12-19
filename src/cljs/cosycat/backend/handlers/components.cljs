@@ -173,11 +173,11 @@
  (fn [db _]
    (let [project-name (get-in db [:session :active-project])
          query-id (get-in db [:projects project-name :session :components :active-query])
-         {query-hits :hits} (get-in db [:projects project-name :queries query-id])
+         {:keys [default hits]} (get-in db [:projects project-name :queries query-id])
          path-to-results [:projects project-name :session :query :results :results-by-id]]
      (reduce (fn [acc hit-id]
-               (let [status (get-in query-hits [hit-id :status])]
-                 (if-not (= status "discarded")
+               (let [status (get-in hits [hit-id :status])]
+                 (if-not (or (= status "discarded") (and (= default "discarded") (nil? status)))
                    (assoc-in acc (into path-to-results [hit-id :meta :marked]) true)
                    acc)))
              db
