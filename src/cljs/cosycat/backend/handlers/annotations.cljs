@@ -84,8 +84,8 @@
          path-to-review (into [:projects project-name] (expand-db-path :review))
          token-ids (span->token-id span)]
      (-> db
-         (update-db path-to-query hit-id token-ids delete-ann token-ids key)
-         (update-db path-to-review hit-id token-ids delete-ann token-ids key)))))
+         (update-db path-to-query hit-id token-ids delete-hit-ann token-ids key)
+         (update-db path-to-review hit-id token-ids delete-hit-ann token-ids key)))))
 
 (defn fetch-annotation-handler [& {:keys [is-last db-path]}]
   (fn [payload]
