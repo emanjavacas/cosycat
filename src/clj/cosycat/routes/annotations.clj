@@ -144,16 +144,16 @@
 
 (defn span-offset
   "assumes second argument correspondes to an annotation located later in the corpus"
-  [{{{from-B :B :as from-scope} :scope from-type :type :as from-span} :span from-corpus :corpus}
-   {{{to-B :B :as to-scope} :scope to-type :type :as to-span} :span to-corpus :corpus}]
+  [{{{from-O :O :as from-scope} :scope from-type :type :as from-span} :span from-corpus :corpus}
+   {{{to-O :O :as to-scope} :scope to-type :type :as to-span} :span to-corpus :corpus}]
   (if-not (and (same-doc? from-span to-span) (= from-corpus to-corpus))
     -1
-    (- (or to-B to-scope) (or from-B from-scope))))
+    (- (or to-O to-scope) (or from-O from-scope))))
 
 (defn get-token-scope
   "get the scope of a given annotation"
-  [{{{B :B :as scope} :scope doc :doc} :span}]
-  (or B scope))
+  [{{{O :O :as scope} :scope doc :doc} :span}]
+  (or O scope))
 
 (defn get-hit-id [anns]
   (let [doc (-> anns first (get-in [:span :doc]))
@@ -175,7 +175,7 @@
 
 (defn group-by-hits
   "group annotations in spans of at most `context` token positions. 
-   Output is normalized according to `normalize-group`"
+   output is normalized according to `normalize-group`"
   [annotations context]
   (loop [pivot (first annotations)
          queue (next annotations)
@@ -184,11 +184,12 @@
     (if (nil? queue)
       (conj acc (normalize-group group))
       (let [offset (span-offset pivot (first queue))]
-        (if (and (pos? offset) (< offset context))
+        (if (and (not (neg? offset)) (< offset context))
           (recur pivot (next queue) (conj group (first queue)) acc)
           (recur (first queue) (next queue) [(first queue)] (conj acc (normalize-group group))))))))
 
 (defn type-check-query-map
+  "check and conform query map fields to their right types"
   [{{ann-key :key ann-value :value} :ann username :username corpus :corpus
     {:keys [from to] :as timestamp} :timestamp :as query-map}]
   (cond-> query-map
@@ -199,7 +200,7 @@
 
 (defn build-query-map
   "thread a base query-map through a sequence of conditional statements
-  transforming API input into mongodb query syntax"
+   transforming API input into mongodb query syntax"
   [{{ann-key :key ann-value :value} :ann username :username corpus :corpus
     {:keys [from to] :as timestamp} :timestamp}]
   (cond-> {}
