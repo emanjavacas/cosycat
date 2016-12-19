@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [cosycat.app-utils :refer [make-hit-id deep-merge]]
             [cosycat.backend.middleware :refer [standard-middleware]]
-            [cosycat.backend.handlers.annotations :refer [update-hit]]))
+            [cosycat.backend.handlers.annotations :refer [update-hit-anns]]))
 
 (re-frame/register-handler
  :add-review-hit
@@ -20,8 +20,8 @@
  :add-review-annotation
  standard-middleware
  (fn [db [_ {:keys [hit-id project-name anns]}]]
-   (update-in db [:projects project-name :session :review :results :results-by-id hit-id :hit]
-              update-hit anns)))
+   (let [path-to-hit [:projects project-name :session :review :results :results-by-id hit-id :hit]]
+     (update-in db path-to-hit update-hit-anns anns))))
 
 (defn make-review-hit-meta [{:keys [corpus anns] :as group-data}]
   {:meta {:throbbing? true :corpus corpus :anns (apply hash-set (map :_id anns))}})

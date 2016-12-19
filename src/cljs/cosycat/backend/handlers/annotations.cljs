@@ -11,19 +11,21 @@
             [taoensso.timbre :as timbre]))
 
 ;;; Incoming annotations; query-panel
-(defn update-hit [hit anns]
+(defn is-token?
+  "is current token a token of interest (as per token-id-or-ids?)"
+  [id token-id-or-ids]
+  (if (sequential? token-id-or-ids)
+    (contains? (apply hash-set token-id-or-ids) id)
+    (= id token-id-or-ids)))
+
+(defn update-hit-anns [hit anns]
   (mapv (fn [{token-id :id :as token}]
           (if-let [ann (get anns token-id)]
             (update token :anns deep-merge ann)
             token))
         hit))
 
-(defn is-token? [id token-id-or-ids]
-  (if (sequential? token-id-or-ids)
-    (contains? (apply hash-set token-id-or-ids) id)
-    (= id token-id-or-ids)))
-
-(defn delete-ann [hit token-id-or-ids key]
+(defn delete-hit-ann [hit token-id-or-ids key]
   (mapv (fn [{id :id anns :anns :as token}]
           (if (and (is-token? id token-id-or-ids) (contains? anns key))
             (assoc token :anns (dissoc anns key))
@@ -34,30 +36,36 @@
   "find the hid id given `token-ids`"
   [token-id-or-ids hit-maps]
   (if (coll? token-id-or-ids)
-    (some #(find-hit-id % hit-maps) token-id-or-ids)
+    (some (fn [token-id] (find-hit-id token-id hit-maps)) token-id-or-ids)
     (some (fn [{:keys [id hit]}]
             (when (some #{token-id-or-ids} (map :id hit))
               id))
           hit-maps)))
 
-;;; TODO: check multiple db paths
+(defn update-db [db path-to-results hit-id token-ids update-fn & args]
+  (let [path-to-hit (fn [hit-id] (into path-to-results [hit-id :hit]))
+        results-by-id (get-in db path-to-results)]
+    (if (contains? results-by-id hit-id)
+      ;; found hit by id
+      (do (timbre/debug "found hit by id") (apply update-in db (path-to-hit hit-id) update-fn args))
+      (if-let [hit-id (find-hit-id token-ids (vals results-by-id))]
+        ;; found hit for annotation
+        (do (timbre/debug "found hit") (apply update-in db (path-to-hit hit-id) update-fn args))
+        ;; couldn't find hit for annotation
+        (do (timbre/debug "couldn't find hit") db)))))
+
 (defmulti add-annotations
   "generic reducer function for incoming annotation data"
   (fn [db {:keys [payload]}] (type payload)))
 
 (defmethod add-annotations cljs.core/PersistentArrayMap
   [db {{:keys [project-name hit-id anns]} :payload db-path :db-path}]
-  (let [path-to-results (into [:projects project-name] (expand-db-path db-path))
-        path-to-hit (fn [hit-id] (into path-to-results [hit-id :hit]))
-        results-by-id (get-in db path-to-results)]
-    (if (contains? results-by-id hit-id)
-      ;; found hit by id
-      (do (timbre/debug "found hit by id") (update-in db (path-to-hit hit-id) update-hit anns))
-      (if-let [hit-id (find-hit-id (keys anns) (vals results-by-id))]
-        ;; found hit for annotation
-        (do (timbre/debug "found hit") (update-in db (path-to-hit hit-id) update-hit anns))
-        ;; couldn't find hit for annotation
-        (do (timbre/debug "couldn't find hit") db)))))
+  (let [path-to-query (into [:projects project-name] (expand-db-path :query))
+        path-to-review (into [:projects project-name] (expand-db-path :review))
+        token-ids (keys anns)]
+    (-> db
+        (update-db path-to-query hit-id token-ids update-hit-anns anns)
+        (update-db path-to-review hit-id token-ids update-hit-anns anns))))
 
 (defmethod add-annotations cljs.core/PersistentVector
   [db {ms :payload :as data}]
@@ -71,23 +79,13 @@
 (re-frame/register-handler
  :remove-annotation
  standard-middleware
- (fn [db [_ {{project-name :project-name
-              hit-id :hit-id
-              key :key
-              {type :type :as span} :span} :payload
-             db-path :db-path}]]
-   (let [path-to-results (into [:projects project-name] (expand-db-path db-path))
-         results (vals (get-in db path-to-results))
-         path-to-hit (fn [hit-id] (into path-to-results [hit-id :hit]))
-         token-id-or-ids (span->token-id span)]
-     (if-let [hit (get-in db (path-to-hit hit-id))]
-       ;; found hit by id
-       (update-in db (path-to-hit hit-id) delete-ann token-id-or-ids key)
-       (if-let [hit-id (find-hit-id token-id-or-ids results)]
-         ;; found hit for annotation
-         (update-in db (path-to-hit hit-id) delete-ann token-id-or-ids key)
-         ;; couldn't find hit
-         db)))))
+ (fn [db [_ {{:keys [project-name hit-id key span]} :payload db-path :db-path}]]
+   (let [path-to-query (into [:projects project-name] (expand-db-path :query))
+         path-to-review (into [:projects project-name] (expand-db-path :review))
+         token-ids (span->token-id span)]
+     (-> db
+         (update-db path-to-query hit-id token-ids delete-ann token-ids key)
+         (update-db path-to-review hit-id token-ids delete-ann token-ids key)))))
 
 (defn fetch-annotation-handler [& {:keys [is-last db-path]}]
   (fn [payload]
@@ -128,7 +126,7 @@
                        (when-let [{:keys [anns]} (first data)]
                          (re-frame/dispatch
                           [:update-issue-meta issue-id [:hit-map :hit]
-                           (fn [hit] (update-hit hit anns))])))
+                           (fn [hit] (update-hit-anns hit anns))])))
             :error-handler #(timbre/warn "Couldn't fetch annotations" (str %))})
       db)))
 
