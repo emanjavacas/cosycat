@@ -58,21 +58,29 @@
     (fn [new-ann]
       {:anns (normalize-anns [new-ann]) :project-name project-name :hit-id hit-id})}))
 
+(defn build-ann-map [{ann-query :query :as ann-map} params-query]
+  (cond-> ann-map
+    ;; add something in case of no query?
+    (not (nil? params-query)) (assoc :query params-query)
+    (not (nil? ann-query)) (assoc :query ann-query)))
+
 (defmulti insert-annotation-route (fn [{{:keys [ann-map]} :params}] (type ann-map)))
 
 (defmethod insert-annotation-route clojure.lang.PersistentArrayMap
-  [{{{hit-id :hit-id span :span :as ann} :ann-map project-name :project-name corpus :corpus} :params
+  [{{{hit-id :hit-id span :span ann-query :query :as ann-map} :ann-map
+     project-name :project-name corpus :corpus query :query} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (insert-annotation-route* db ws username project-name corpus ann))
+  (insert-annotation-route* db ws username project-name corpus (build-ann-map ann-map query)))
 
 (defmethod insert-annotation-route clojure.lang.PersistentVector
-  [{{anns :ann-map project-name :project-name corpus :corpus} :params
+  [{{ann-maps :ann-map project-name :project-name corpus :corpus query :query} :params
     {{username :username} :identity} :session
     {db :db ws :ws} :components}]
-  (mapv (fn [ann]
-          (insert-annotation-route* db ws username project-name corpus ann))
-        anns))
+  (mapv
+   (fn [ann-map]
+     (insert-annotation-route* db ws username project-name corpus (build-ann-map ann-map query)))
+   ann-maps))
 
 (defn update-annotation-route
   [{{project-name :project-name {hit-id :hit-id id :_id :as update-map} :update-map} :params

@@ -2,6 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [ajax.core :refer [GET]]
             [cosycat.backend.middleware :refer [standard-middleware no-debug-middleware]]
+            [cosycat.backend.handlers.utils :refer [get-corpus-param expand-db-path]]
             [cosycat.backend.db :refer [default-project-session]]
             [cosycat.query-backends.core :refer [ensure-corpus]]
             [cosycat.query-backends.protocols :refer [query query-sort snippet query-hit]]
@@ -190,7 +191,7 @@
          active-project (get-in db [:session :active-project])
          start (->> hit first :id parse-token-id :id)
          end (->> hit last :id parse-token-id :id)
-         path-to-results (into [:projects active-project] db-path)]
+         path-to-results (into [:projects active-project] (expand-db-path db-path))]
      (if-let [current-hit-map (get-in db (conj path-to-results id))]
        (do (re-frame/dispatch
             [:fetch-annotations
@@ -212,15 +213,16 @@
 (re-frame/register-handler ;; shift window around hit left or right
  :shift-hit
  standard-middleware
- (fn [db [_ {:keys [hit-id dir db-path corpus]
-             :or {corpus (get-in db [:settings :query :corpus])}}]]
-   (let [handler (fn [hit-map] (re-frame/dispatch
+ (fn [db [_ {:keys [hit-id dir db-path corpus]}]]
+   (let [project-name (get-in db [:session :active-project])
+         corpus (get-corpus-param db project-name db-path corpus)
+         handler (fn [hit-map] (re-frame/dispatch
                                 [:update-hit
                                  {:hit-map hit-map :db-path db-path :corpus corpus}]))
-         corpus (ensure-corpus (find-corpus-config db corpus))
-         active-project (get-in db [:session :active-project])
-         hit (get-in db (into [:projects active-project] (into db-path [hit-id :hit])))]
-     (query-hit corpus hit-id (get-words-map hit dir) handler error-handler))
+         corpus-instance (ensure-corpus (find-corpus-config db corpus))
+         path-to-results (into [:projects project-name] (expand-db-path db-path)) 
+         hit (get-in db (into path-to-results [hit-id :hit]))]
+     (query-hit corpus-instance hit-id (get-words-map hit dir) handler error-handler))
    db))
 
 (defn fetch-issue-hit-handler

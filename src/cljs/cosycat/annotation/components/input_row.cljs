@@ -43,30 +43,41 @@
         :merge   (swap! chans merge data))
       (recur))))
 
-(defn dispatch-span-annotation
-  [ann-map hit-id token-ids chans unmerge-on-dispatch? db-path]
-  (let [sorted-ids (sort-by #(-> % parse-token-id :id) token-ids)
-        from (first sorted-ids)
-        to (last sorted-ids)]
-    (when unmerge-on-dispatch? (unmerge-cells (first token-ids) chans))
-    (re-frame/dispatch [:dispatch-simple-annotation
-                        {:ann-data {:ann-map ann-map :hit-id hit-id :token-from from :token-to to}
-                         :db-path db-path}])))
+(defn get-span-tokens [token-ids]
+  (let [sorted-ids (sort-by #(-> % parse-token-id :id) token-ids)]
+    {:from (first sorted-ids)
+     :to (last sorted-ids)}))
 
 (defn on-key-down
   "`unmerge-on-dispatch?` is a bool indicating whether to clear selection after dispatch"
-  [{hit-id :id {query :query} :meta :as hit-map} token-ids {:keys [value chans]} unmerge-on-dispatch? db-path]
+  [{{hit-id :id {query :query corpus :corpus} :meta} :hit-map
+    token-ids :token-ids {:keys [value chans]} :metadata
+    unmerge-on-dispatch? :unmerge-on-dispatch? db-path :db-path}]
   (fn [pressed]
     (.stopPropagation pressed)
     (when (= 13 (.-keyCode pressed))
       (if-let [new-ann (parse-annotation (.. pressed -target -value))]
-        (let [ann-map {:ann new-ann :query query}]
+        (let [ann-map (cond-> {:ann new-ann} query (assoc :query query))]
           (condp = (count token-ids)
+            ;; empty selection
             0 (re-frame/dispatch [:notify {:message "Empty selection"}])
+            ;; token annotation
             1 (re-frame/dispatch [:dispatch-simple-annotation
-                                  {:ann-data {:ann-map ann-map :hit-id hit-id :token-from (first token-ids)}
-                                   :db-path db-path}])
-            (dispatch-span-annotation ann-map hit-id token-ids chans unmerge-on-dispatch? db-path))
+                                  (cond-> {:ann-data {:ann-map ann-map
+                                                      :hit-id hit-id
+                                                      :token-from (first token-ids)}
+                                           :db-path db-path}
+                                    corpus (assoc :corpus corpus))])
+            ;; span annotation
+            (let [{:keys [from to]} (get-span-tokens token-ids)]
+              (when unmerge-on-dispatch? (unmerge-cells (first token-ids) chans))
+              (re-frame/dispatch [:dispatch-simple-annotation
+                                  (cond-> {:ann-data {:ann-map ann-map
+                                                      :hit-id hit-id
+                                                      :token-from from
+                                                      :token-to to}
+                                           :db-path db-path}
+                                    corpus (assoc :corpus corpus))])))
           (reset! value ""))))))
 
 (defn input-component [{hit-id :id :as hit-map} token-id chans unmerge-on-dispatch? db-path]
@@ -80,8 +91,10 @@
          :class "form-control input-cell"
          :value value
          :onChange #(reset! value (.. % -target -value))
-         :onKeyDown
-         (on-key-down hit-map (keys @chans) {:value value :chans chans} unmerge-on-dispatch? db-path)}]])))
+         :onKeyDown (on-key-down {:hit-map hit-map :token-ids (keys @chans)
+                                  :metadata {:value value :chans chans}
+                                  :unmerge-on-dispatch? unmerge-on-dispatch?
+                                  :db-path db-path})}]])))
 
 (defn hidden-input-cell []
   (fn [] [:td {:style {:display "none"}}]))
@@ -128,10 +141,10 @@
          [bs/glyphicon {:glyph "chevron-right" :style {:vertical-align "text-bottom"}}]]]]]]))
 
 (defn input-row
-  [{hit :hit hit-id :id meta :meta :as hit-map} db-path & {:keys [unmerge-on-dispatch? corpus]}]
+  [{hit :hit hit-id :id meta :meta :as hit-map} & {:keys [unmerge-on-dispatch? corpus db-path]}]
   ;; TODO unmerge should depend on project settings
   (let [metadata {:mouse-down (reagent/atom false) :source (reagent/atom nil)}]
-    (fn [{hit :hit hit-id :id meta :meta} db-path & {:keys [unmerge-on-dispatch? corpus]}]
+    (fn [{hit :hit hit-id :id meta :meta} & {:keys [unmerge-on-dispatch? corpus db-path]}]
       (into [:tr
              {:on-mouse-leave #(reset-metadata! metadata)
               :on-mouse-up #(reset-metadata! metadata)}]

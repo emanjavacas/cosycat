@@ -19,19 +19,13 @@
 ;;; Annotations
 (defmethod ws-handler :annotation
   [db {:keys [data]}]
-  (re-frame/dispatch
-   [:add-annotation
-    {:payload data
-     ;; assuming all ws incoming annotations only go to query panel
-     :db-path [:session :query :results :results-by-id]}])
+  ;; assuming all ws incoming annotations only go to query panel
+  (re-frame/dispatch [:add-annotation {:payload data :db-path :query}])
   (update-in db [:session :throbbing?] dissoc))
 
 (defmethod ws-handler :remove-annotation
   [db {{:keys [key span project-name hit-id] :as remove-payload} :data}]
-  (re-frame/dispatch
-   [:remove-annotation {:payload remove-payload
-                        ;; assuming all ws incoming annotations only go to query panel
-                        :db-path [:session :query :results :results-by-id]}])
+  (re-frame/dispatch [:remove-annotation {:payload remove-payload :db-path :query}])
   db)
 
 ;;; Auth

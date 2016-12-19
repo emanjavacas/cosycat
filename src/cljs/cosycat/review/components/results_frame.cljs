@@ -6,6 +6,10 @@
             [cosycat.annotation.components.annotation-component
              :refer [annotation-component]]))
 
+(defn highlight-fn [{{:keys [anns]} :meta}]
+  (fn [{id :_id}]
+    (contains? anns id)))
+
 (defn hit-row [hit-id]
   (let [hit-map (re-frame/subscribe [:project-session :review :results :results-by-id hit-id])
         color-map (re-frame/subscribe [:project-users-colors])]
@@ -14,9 +18,10 @@
        (if (get-in @hit-map [:meta :throbbing?])
          "loading..."
          [annotation-component @hit-map color-map
-          :db-path [:session :review :results :results-by-id]
-          :corpus (get-in hit-map [:meta :corpus])
+          :db-path :review
+          :corpus (get-in @hit-map [:meta :corpus])
           :editable? true
+          :highlight-fn (highlight-fn @hit-map)
           :show-match? false
           :show-hit-id? false])])))
 

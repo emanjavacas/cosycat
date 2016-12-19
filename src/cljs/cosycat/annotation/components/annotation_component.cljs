@@ -63,7 +63,7 @@
                  show-match?  ;whether to highlight match tokens
                  unmerge-on-dispatch? ;unmerge input cells after dispatch
                  highlight-fn] ;a pred of ann-map to decide whether to highlight
-          :or {db-path [:session :query :results :results-by-id]
+          :or {db-path :query
                editable? true
                show-hit-id? true
                show-match? true
@@ -82,7 +82,8 @@
          :show-hit-id? show-hit-id?
          :show-match? show-match?]]
        (when editable?
-         [[input-row hit-map db-path
+         [[input-row hit-map
+           :db-path db-path
            :corpus corpus
            :unmerge-on-dispatch? unmerge-on-dispatch?]])
        (for [ann-key (sort-by :key > (ann-types hit-map))]

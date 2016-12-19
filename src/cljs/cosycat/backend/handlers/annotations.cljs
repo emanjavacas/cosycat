@@ -7,6 +7,7 @@
              :refer [deep-merge is-last-partition token-id->span span->token-id]]
             [cosycat.utils :refer [format get-msg now]]
             [cosycat.backend.middleware :refer [standard-middleware]]
+            [cosycat.backend.handlers.utils :refer [get-query get-corpus-param expand-db-path]]
             [taoensso.timbre :as timbre]))
 
 ;;; Incoming annotations; query-panel
@@ -39,13 +40,14 @@
               id))
           hit-maps)))
 
+;;; TODO: check multiple db paths
 (defmulti add-annotations
   "generic reducer function for incoming annotation data"
   (fn [db {:keys [payload]}] (type payload)))
 
 (defmethod add-annotations cljs.core/PersistentArrayMap
   [db {{:keys [project-name hit-id anns]} :payload db-path :db-path}]
-  (let [path-to-results (into [:projects project-name] db-path)
+  (let [path-to-results (into [:projects project-name] (expand-db-path db-path))
         path-to-hit (fn [hit-id] (into path-to-results [hit-id :hit]))
         results-by-id (get-in db path-to-results)]
     (if (contains? results-by-id hit-id)
@@ -53,7 +55,7 @@
       (do (timbre/debug "found hit by id") (update-in db (path-to-hit hit-id) update-hit anns))
       (if-let [hit-id (find-hit-id (keys anns) (vals results-by-id))]
         ;; found hit for annotation
-        (do (timbre/debug "found hit for annotation") (update-in db (path-to-hit hit-id) update-hit anns))
+        (do (timbre/debug "found hit") (update-in db (path-to-hit hit-id) update-hit anns))
         ;; couldn't find hit for annotation
         (do (timbre/debug "couldn't find hit") db)))))
 
@@ -74,7 +76,7 @@
               key :key
               {type :type :as span} :span} :payload
              db-path :db-path}]]
-   (let [path-to-results (into [:projects project-name] db-path)
+   (let [path-to-results (into [:projects project-name] (expand-db-path db-path))
          results (vals (get-in db path-to-results))
          path-to-hit (fn [hit-id] (into path-to-results [hit-id :hit]))
          token-id-or-ids (span->token-id span)]
@@ -101,8 +103,7 @@
 (re-frame/register-handler ;; general annotation fetcher for query hits
  :fetch-annotations
  standard-middleware
- (fn [db [_ {:keys [page-margins corpus db-path] ;; [{:start token-id :end token-id :hit-id .. :doc ..}]
-             :or {db-path [:session :query :results :results-by-id]}}]]
+ (fn [db [_ {:keys [page-margins corpus db-path] :or {db-path :query}}]]
    (let [project-name (get-in db [:session :active-project])
          margins (count page-margins)
          partition-size 20]
@@ -225,52 +226,45 @@
 (re-frame/register-handler
  :dispatch-simple-annotation
  standard-middleware
- (fn [db [_ {{{ann-query :query :as ann-map} :ann-map
-              hit-id :hit-id
-              token-from :token-from
-              token-to :token-to} :ann-data
-             db-path :db-path :or {db-path [:session :query :results :results-by-id]}}]]
-   (let [project-name (get-in db [:session :active-project])
-         path-to-query [:projects project-name :session :query :results :results-summary :query-str]
-         query (or ann-query (get-in db path-to-query))
+ (fn [db [_ {:keys [ann-data db-path corpus] :or {db-path :query}}]]
+   (let [{:keys [ann-map hit-id token-from token-to]} ann-data
          span (if token-to (token-id->span token-from token-to) (token-id->span token-from))
-         ann-map (assoc ann-map :hit-id hit-id :span span :timestamp (now) :query query)]
-     (re-frame/dispatch [:dispatch-annotation ann-map :db-path db-path]))
+         ann-map (assoc ann-map :hit-id hit-id :span span :timestamp (now))]
+     (re-frame/dispatch [:dispatch-annotation ann-map corpus :db-path db-path]))
    db))
 
-(defn package-ann-maps [db-query ann-map hit-ids token-ids & [token-to's]]
-  {:pre [#(when token-to's (= (count token-ids) (count token-to's)))]}
-  ;; TODO: we should try to pass real query (as done with single annotations)
+(defn package-ann-maps [ann-map hit-ids token-ids & [token-to's]]
+  {:pre [(or (not token-to's) (= (count token-ids) (count token-to's)))]}
   (let [timestamp (now)]
     (if token-to's
       (mapv (fn [hit-id token-from token-to]
               (let [span (token-id->span token-from token-to)]
-                (assoc ann-map :hit-id hit-id :span span :timestamp timestamp :query db-query)))
+                (assoc ann-map :hit-id hit-id :span span :timestamp timestamp)))
             hit-ids token-ids token-to's)
       (mapv (fn [hit-id token-id]
               (let [span (token-id->span token-id)]
-                (assoc ann-map :hit-id hit-id :span span :timestamp timestamp :query db-query)))
+                (assoc ann-map :hit-id hit-id :span span :timestamp timestamp)))
             hit-ids token-ids))))
 
 (re-frame/register-handler
  :dispatch-bulk-annotation
  standard-middleware
- (fn [db [_ {{:keys [ann-map hit-ids token-ids token-to's]} :ann-data db-path :db-path}]]
-   (let [project-name (get-in db [:session :active-project])
-         path-to-query [:projects project-name :session :query :results :results-summary :query-str]
-         db-query (get-in db path-to-query)
-         ann-maps (package-ann-maps db-query ann-map hit-ids token-ids token-to's)]
-     (re-frame/dispatch [:dispatch-annotation ann-maps :db-path db-path]))
+ (fn [db [_ {:keys [ann-data db-path corpus] :or {db-path :query}}]]
+   (let [{:keys [ann-map hit-ids token-ids token-to's]} ann-data
+         ann-maps (package-ann-maps ann-map hit-ids token-ids token-to's)]
+     (re-frame/dispatch [:dispatch-annotation ann-maps corpus :db-path db-path]))
    db))
 
 (re-frame/register-handler
  :dispatch-annotation
  standard-middleware
- (fn [db [_ ann-map-or-maps & {:keys [db-path] :or {db-path [:session :query :results :results-by-id]}}]]
-   (let [project-name (get-in db [:session :active-project])
-         corpus (get-in db [:projects project-name :session :query :results :results-summary :corpus])]
+ (fn [db [_ ann-map-or-maps corpus & {:keys [db-path] :or {db-path :query}}]]
+   (let [project-name (get-in db [:session :active-project])]
      (try (POST "/annotation/new"
-                {:params {:ann-map ann-map-or-maps :project-name project-name :corpus corpus}
+                {:params (cond-> {:ann-map ann-map-or-maps
+                                  :project-name project-name
+                                  :corpus (get-corpus-param db project-name db-path corpus)}
+                           (= db-path :query) (assoc :query (get-query db project-name)))
                  :handler (dispatch-annotation-handler :db-path db-path)
                  :error-handler error-handler})
           (catch :default e
@@ -288,9 +282,7 @@
 
 (re-frame/register-handler
  :update-annotation
- (fn [db [_ {{:keys [_version _id hit-id value] :as update-map} :update-map
-             db-path :db-path
-             :or {db-path [:session :query :results :results-by-id]}}]]
+ (fn [db [_ {update-map :update-map db-path :db-path :or {db-path :query}}]]
    (let [project-name (get-in db [:session :active-project])
          path-to-results [:projects project-name :session :query :results]
          corpus (get-in db (into path-to-results [:results-summary :corpus]))
@@ -313,8 +305,7 @@
 
 (re-frame/register-handler
  :delete-annotation
- (fn [db [_ {{:keys [ann-map hit-id]} :ann-data corpus :corpus db-path :db-path
-             :or {db-path [:session :query :results :results-by-id]}}]]
+ (fn [db [_ {{:keys [ann-map hit-id]} :ann-data db-path :db-path :or {db-path :query}}]]
    (let [project-name (get-in db [:session :active-project])]
      (POST "/annotation/remove"
            {:params {:project-name project-name :hit-id hit-id :ann ann-map}
