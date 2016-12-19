@@ -6,7 +6,7 @@
             [taoensso.timbre :as timbre]
             [config.core :refer [env]]
             [cosycat.schemas.annotation-schemas :refer [annotation-schema]]
-            [cosycat.app-utils :refer [server-project-name]]
+            [cosycat.app-utils :refer [server-project-name maybe-dekeyword]]
             [cosycat.utils :refer [assert-ex-info]]
             [cosycat.vcs :as vcs]))
 
@@ -144,17 +144,32 @@
   [{db-conn :db :as db} project-name query-map]
   (mc/count db-conn (server-project-name project-name) query-map))
 
-(def default-sort-fields ["span.doc" 1 "span.scope" 1 "span.scope.B" 1])
+(defn transform-sort-fields
+  "sorting is done on the scope projection within aggregation, therefore we need
+   to transform user input sort fields to match the internal aggregation representation"
+  [sort-fields]
+  (->> sort-fields
+       (map (fn [[field sort-order]] [(str "document." (maybe-dekeyword field)) sort-order]))
+       (into ["document.span.doc" 1 "scope" 1])
+       (apply array-map)))
 
 (defn query-annotations
   "paginate over a query of annotations"
   [{db-conn :db :as db} project-name query-map page-num page-size
    & {:keys [retrieve-history sort-fields] :or {retrieve-history false sort-fields []}}]
-  (cond->> (mq/with-collection db-conn (server-project-name project-name)
-             (mq/find query-map)
-             (mq/sort (apply array-map (into default-sort-fields sort-fields)))
-             (mq/paginate :page page-num :per-page page-size))
-    retrieve-history (mapv (partial with-history db-conn))))
+  (let [mongo-sort-fields (transform-sort-fields sort-fields)]
+    (cond->> (mc/aggregate
+              db-conn (server-project-name project-name)
+              [{$match query-map}
+               {$project {:document "$$ROOT"                          
+                          :scope {$cond [{"$eq" ["$span.type" "IOB"]}
+                                         "$span.scope.B"
+                                         "$span.scope"]}}}
+               {$sort mongo-sort-fields}
+               {$skip (* (dec page-num) page-size)}
+               {$limit page-size}])
+      true (map :document)
+      retrieve-history (mapv (partial with-history db-conn)))))
 
 ;;; Setters
 (defn insert-annotation

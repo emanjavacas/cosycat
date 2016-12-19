@@ -158,7 +158,7 @@
 (defn get-hit-id [anns]
   (let [doc (-> anns first (get-in [:span :doc]))
         token-ids (->> anns (map get-token-scope) (sort))
-        first-token (first token-ids)]    
+        first-token (first token-ids)]
     (if (= 1 (count token-ids))
       (make-hit-id doc first-token (inc first-token))      
       (make-hit-id doc first-token (last token-ids)))))

@@ -97,6 +97,12 @@
 
 (defn dekeyword [k] (apply str (rest (str k))))
 
+(defn maybe-dekeyword
+  [s]
+  (if-not (keyword? s)
+    s
+    (dekeyword s)))
+
 (defn normalize-by [coll by]
   (zipmap (map by coll) coll))
 
