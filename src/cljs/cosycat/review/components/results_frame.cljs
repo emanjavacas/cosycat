@@ -34,4 +34,3 @@
       [:div.container-fluid
        (doall (for [hit-id (sort-by-doc (keys @results))]
                 ^{:key (str "review-" hit-id)} [hit-row hit-id]))])))
-

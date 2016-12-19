@@ -228,7 +228,7 @@
     [bs/button
      {:bsStyle "primary"
       :onClick (dispatch-query-review)}
-     "Submit"]))
+     "Search"]))
 
 (defn review-toolbar []
   (fn []

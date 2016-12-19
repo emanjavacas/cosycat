@@ -68,10 +68,6 @@
     (when-not (zero? (count query-str))
       (re-frame/dispatch [:query query-str]))))
 
-(defn query-will-update [query-str query-str-atom]
-  (fn []
-    (reset! query-str-atom @query-str)))
-
 (defn query-toolbar []
   (let [query-str (re-frame/subscribe [:project-session :query :results :results-summary :query-str])]
     (reagent/create-class
