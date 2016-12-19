@@ -12,7 +12,8 @@
    (let [active-project (get-in db [:session :active-project])
          path-to-hit-id [:projects active-project :session :review :results :results-by-id id]]
      (-> db
-         (update-in path-to-hit-id deep-merge hit-map)
+         (assoc-in (conj path-to-hit-id :hit) hit)
+         (assoc-in (conj path-to-hit-id :id) id)
          (assoc-in (into path-to-hit-id [:meta :throbbing?]) false)))))
 
 (re-frame/register-handler
