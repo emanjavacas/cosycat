@@ -140,8 +140,7 @@
   "annotation may have a doc field, which can be used to shortcut
   further proximity computations"
   [{from-doc :doc} {to-doc :doc}]
-  (when (and from-doc to-doc)
-    (= from-doc to-doc)))
+  (or (and (not from-doc) (not to-doc)) (and from-doc to-doc) (= from-doc to-doc)))
 
 (defn span-offset
   "assumes second argument correspondes to an annotation located later in the corpus"
@@ -183,8 +182,7 @@
          group [(first annotations)]
          acc []]
     (if (nil? queue)
-      (if-not (empty? acc)
-        (conj acc (normalize-group group)))
+      (conj acc (normalize-group group))
       (let [offset (span-offset pivot (first queue))]
         (if (and (pos? offset) (< offset context))
           (recur pivot (next queue) (conj group (first queue)) acc)

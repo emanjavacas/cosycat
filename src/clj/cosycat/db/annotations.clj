@@ -144,13 +144,15 @@
   [{db-conn :db :as db} project-name query-map]
   (mc/count db-conn (server-project-name project-name) query-map))
 
+(def default-sort-fields ["span.doc" 1 "span.scope" 1 "span.scope.B" 1])
+
 (defn query-annotations
   "paginate over a query of annotations"
   [{db-conn :db :as db} project-name query-map page-num page-size
    & {:keys [retrieve-history sort-fields] :or {retrieve-history false sort-fields []}}]
   (cond->> (mq/with-collection db-conn (server-project-name project-name)
              (mq/find query-map)
-             (mq/sort (apply array-map (into ["span.scope" 1 "span.scope.B" 1] sort-fields)))
+             (mq/sort (apply array-map (into default-sort-fields sort-fields)))
              (mq/paginate :page page-num :per-page page-size))
     retrieve-history (mapv (partial with-history db-conn))))
 
@@ -172,7 +174,7 @@
   (assert-ex-info (and version id) "annotation update requires annotation id/version" update-map)
   (cond->> (vcs/find-and-modify
             db-conn (server-project-name project-name)
-            version  
+            version
             {:_id id}
             {$set (cond-> {"ann.value" value "timestamp" timestamp "username" username}
                     query (assoc "query" query)

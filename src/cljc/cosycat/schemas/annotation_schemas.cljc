@@ -28,7 +28,7 @@
     :username s/Str
     :timestamp s/Int
     :corpus s/Str
-    :query s/Str
+    (s/optional-key :query) s/Str
     :hit-id s/Any
     :_version s/Int
     :span span-schema}])

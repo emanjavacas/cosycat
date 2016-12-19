@@ -150,11 +150,12 @@
 
 (defn query-review-handler [context]
   (fn [{:keys [grouped-data] :as review-summary}]
-    ;; (doseq [{:keys [anns]} grouped-data] (assert (apply = (map :corpus anns))))
+    {:pre [(apply = (mapcat (fn [{:keys [anns]}] (map :corpus anns)) grouped-data))]}
     (re-frame/dispatch [:set-review-results review-summary context])))
 
 (defn query-review-error-handler [data]
-  (.log js/console data))
+  (timbre/debug data)
+  (re-frame/dispatch [:notify {:message "Couldn't fetch annotations"}]))
 
 (defn build-query-map
   [{{ann-key :key ann-value :value} :ann

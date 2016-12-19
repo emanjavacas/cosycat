@@ -65,13 +65,10 @@
   [idx]
   {:id (new-token-id idx) :word ""})
 
-(s/defn ^:always-validate get-token-id :- s/Int
+(defn get-token-id
   [token]
   (if-let [id (:id token)]
-    (try
-      (->int id)
-      (catch NumberFormatException e
-        -1))
+    (->int id)
     (ex-info "token missing id" token)))
 
 ;;; IO
