@@ -46,6 +46,7 @@
          :required true
          :value @query-id
          :placeholder "Annotation query name"
+         :on-key-down #(.stopPropagation %) ;avoid triggerring global events
          :on-change #(reset! query-id (.-value (.-target %)))}]]
       (when @(:query-id has-input-error?)
         [:span.help-block @(:query-id has-input-error?)])]]))
@@ -64,6 +65,7 @@
          :maxLength 500
          :value @description
          :placeholder "Describe your query to other humans"
+         :on-key-down #(.stopPropagation %) ;avoid triggerring global events
          :on-change #(reset! description (.-value (.-target %)))}]]]]))
 
 (defn filter-checkbox-row [include-filter-opts? has-input-error?]
