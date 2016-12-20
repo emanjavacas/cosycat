@@ -230,17 +230,19 @@
 (defn normalize-query-hit
   [data {:keys [hit-id words-left words-right] :as opts}]
   (let [{doc-id :doc-id start :hit-start end :hit-end} (parse-hit-id hit-id)
-        bl-hit (normalize-bl-hit (assoc data :docPid doc-id :start start :end end))
-        [left match right] (partition-by :match (:hit bl-hit))
-        left (reverse (take (min (count left) words-left) (reverse left)))
-        right (take (min (count right) words-right) right)]
+        {:keys [hit] :as bl-hit} (normalize-bl-hit (assoc data :docPid doc-id :start start :end end))
+        match (filter :match hit)
+        left (take-while (complement :match) hit)
+        right (reverse (take-while (complement :match) (reverse hit)))]
     (assoc bl-hit :hit (vec (concat left match right)))))
 
 (defn normalize-snippet
   [data {:keys [hit-id dir]}]
   (let [{doc-id :doc-id start :hit-start end :hit-end} (parse-hit-id hit-id)
-        bl-hit (normalize-bl-hit (assoc data :docPid doc-id :start start :end end))
-        [left match right] (partition-by :match (:hit bl-hit))]
+        {:keys [hit] :as bl-hit} (normalize-bl-hit (assoc data :docPid doc-id :start start :end end))
+        match (filter :match hit)
+        left (take-while (complement :match) hit)
+        right (reverse (take-while (complement :match) (reverse hit)))]
     {:snippet (cond-> {:match match :left left :right right}
                 (= dir :left) (dissoc :right)
                 (= dir :right) (dissoc :left)
