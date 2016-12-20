@@ -20,11 +20,16 @@
    :snippet-opts {:snippet-size s/Int :snippet-delta s/Int}})
 
 ;;; Review opts
+(def input-value-schema
+  {:string s/Str
+   :as-regex? s/Bool})
+
 (def review-opts-schema
   {:context s/Int ;; number of context tokens
    :size s/Int ;; page-size
    :window s/Int ;; number of tokens around context
-   :query-map {:ann {(s/optional-key :key) s/Str (s/optional-key :value) s/Str}
+   :query-map {:ann {(s/optional-key :key) input-value-schema
+                     (s/optional-key :value) input-value-schema}
                :corpus #{s/Str}
                :username #{s/Str}
                :timestamp {(s/optional-key :from) s/Int (s/optional-key :to) s/Int}}

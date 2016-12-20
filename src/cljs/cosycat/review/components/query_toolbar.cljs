@@ -1,4 +1,4 @@
-(ns cosycat.review.components.review-toolbar
+(ns cosycat.review.components.query-toolbar
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
@@ -8,17 +8,25 @@
             [cosycat.app-utils :refer [dekeyword disjconj]]
             [taoensso.timbre :as timbre]))
 
-;;; Ann & context
-(defn on-change-label [label]
-  (fn [e]
-    (let [new-val (.-value (.-target e))]
-      (re-frame/dispatch [:set-project-session [:review :query-opts :query-map :ann label] new-val]))))
-
 (defn dispatch-query-review []
   (re-frame/dispatch [:query-review]))
 
+(defn on-change-label [label]
+  (fn [e]
+    (let [new-val (.-value (.-target e))]
+      (re-frame/dispatch
+       [:set-project-session [:review :query-opts :query-map :ann label :string] new-val]))))
+
+(defn on-change-regex [label as-regex?]
+  (fn []
+    (let [new-val (not @as-regex?)]
+      (re-frame/dispatch
+       [:set-project-session [:review :query-opts :query-map :ann label :as-regex?] new-val]))))
+
 (defn text-input [{:keys [label placeholder]}]
-  (let [model (re-frame/subscribe [:project-session :review :query-opts :query-map :ann label])]
+  (let [path-to-query-map  [:project-session :review :query-opts :query-map :ann]
+        model (re-frame/subscribe (into path-to-query-map [label :string]))
+        as-regex? (re-frame/subscribe (into path-to-query-map [label :as-regex?]))]
     (fn [{:keys [label placeholder]}]
       [:div.form-group
        {:style {:padding "0 5px 0 0"}}
@@ -31,9 +39,13 @@
           :on-change (on-change-label label)
           :on-key-press #(when (and (pos? (count @model)) (= 13 (.-charCode %)))
                            (dispatch-query-review))}]
-        [:div.input-group-addon
-         [bs/glyphicon
-          {:glyph "pencil"}]]]])))
+        [bs/overlay-trigger
+         {:overlay (reagent/as-component [bs/tooltip {:id "tooltip"} "Use string as regex?"])}
+         [:div.input-group-addon
+          [:input {:type "checkbox"
+                   :style {:cursor "pointer"}
+                   :checked @as-regex?
+                   :on-change (on-change-regex label as-regex?)}]]]]])))
 
 (defn select-fn [path]
   (fn [v]
@@ -235,7 +247,7 @@
       {:onClick #(re-frame/dispatch [:unset-review-results])}
       [bs/glyphicon {:glyph "erase"}]]]))
 
-(defn review-toolbar []
+(defn query-toolbar []
   (fn []
     [:div.row
      [:div.col-lg-6.col-md-6.text-left [main-inputs]]

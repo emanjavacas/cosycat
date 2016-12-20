@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
-            [cosycat.review.components.review-toolbar :refer [review-toolbar]]
+            [cosycat.review.components.query-toolbar :refer [query-toolbar]]
             [cosycat.review.components.results-toolbar :refer [results-toolbar]]
             [cosycat.review.components.results-frame :refer [results-frame]]
             [taoensso.timbre :as timbre]))
@@ -22,7 +22,7 @@
         [bs/panel
          {:header (reagent/as-component [review-panel-header])}
          [:div.container-fluid
-          [review-toolbar]
+          [query-toolbar]
           [:div.row {:style {:height "20px"}}]
           (when-not (empty? @results-summary) [results-toolbar])
           (when-not (empty? @results-summary) [:div.row {:style {:height "20px"}}])

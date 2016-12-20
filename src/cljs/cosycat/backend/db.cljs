@@ -54,9 +54,13 @@
                          :size 5
                          :sort-opts []
                          :query-map {:corpus #{}
-                                     :ann {}
+                                     :ann {:key {:string ""
+                                                 :as-regex? false}
+                                           :value {:string ""
+                                                   :as-regex? false}}
                                      :username #{}
                                      :timestamp {}}}}
+   :snippet {}
    :status {}
    :components {:panel-open {:query-frame true :annotation-frame false}
                 :active-project-frame :users

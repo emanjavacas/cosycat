@@ -156,11 +156,14 @@
   (re-frame/dispatch [:notify {:message "Couldn't fetch annotations"}]))
 
 (defn build-query-map
-  [{{ann-key :key ann-value :value} :ann
+  [{{{ann-key :string key-as-regex? :as-regex?} :key
+     {ann-value :string value-as-regex? :as-regex?} :value} :ann
     {:keys [from to]} :timestamp corpus :corpus username :username :as query-map}]
   (cond-> {}
-    (not (empty? ann-key)) (assoc-in [:ann :key] ann-key)
-    (not (empty? ann-value)) (assoc-in [:ann :value] ann-value)
+    (not (empty? ann-key)) (assoc-in [:ann :key :string] ann-key)
+    key-as-regex? (assoc-in [:ann :key :as-regex?] true)
+    (not (empty? ann-value)) (assoc-in [:ann :value :string] ann-value)
+    value-as-regex? (assoc-in [:ann :value :as-regex?] true)
     (not (empty? corpus)) (assoc :corpus (vec corpus))
     (not (empty? username)) (assoc :username (vec username))
     from (assoc-in [:timestamp :from] from)
