@@ -177,16 +177,20 @@
   "group annotations in spans of at most `context` token positions. 
    output is normalized according to `normalize-group`"
   [annotations context]
-  (loop [pivot (first annotations)
-         queue (next annotations)
-         group [(first annotations)]
-         acc []]
-    (if (nil? queue)
-      (conj acc (normalize-group group))
-      (let [offset (span-offset pivot (first queue))]
-        (if (and (not (neg? offset)) (< offset context))
-          (recur pivot (next queue) (conj group (first queue)) acc)
-          (recur (first queue) (next queue) [(first queue)] (conj acc (normalize-group group))))))))
+  (if (empty? annotations)
+    {}
+    (loop [pivot (first annotations)
+           queue (next annotations)
+           group [(first annotations)]
+           acc []]
+      (if (nil? queue)
+        (conj acc (normalize-group group))
+        (let [offset (span-offset pivot (first queue))
+              current (first queue)
+              rest-q (next queue)]
+          (if (and (not (neg? offset)) (< offset context))
+            (recur pivot rest-q (conj group current) acc)
+            (recur current rest-q [current] (conj acc (normalize-group group)))))))))
 
 (defn type-check-query-map
   "check and conform query map fields to their right types"
