@@ -23,6 +23,7 @@
 (def review-opts-schema
   {:context s/Int ;; number of context tokens
    :size s/Int ;; page-size
+   :window s/Int ;; number of tokens around context
    :query-map {:ann {(s/optional-key :key) s/Str (s/optional-key :value) s/Str}
                :corpus #{s/Str}
                :username #{s/Str}

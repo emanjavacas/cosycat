@@ -50,6 +50,7 @@
    :review {:results {:results-summary {}
                       :results-by-id {}}
             :query-opts {:context 5
+                         :window 5
                          :size 5
                          :sort-opts []
                          :query-map {:corpus #{}

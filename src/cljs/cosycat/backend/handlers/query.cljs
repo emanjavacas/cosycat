@@ -261,14 +261,14 @@
      (query-hit corpus hit-id {:words-left context :words-right context} handler error-handler)
      db)))
 
-(defn fetch-review-hit-handler [corpus context]
+(defn fetch-review-hit-handler [corpus window]
   (fn [{:keys [id] :as hit-map}]
     (re-frame/dispatch [:add-review-hit hit-map])
     (let [{start :hit-start end :hit-end doc :doc-id} (parse-hit-id id)]
       (re-frame/dispatch
        [:fetch-review-hit-annotations
-        {:start (max 0 (- start context))
-         :end (+ end context)
+        {:start (max 0 (dec (- start window)))
+         :end (inc (+ end window))
          :hit-id id
          :corpus corpus
          :doc doc}]))))
@@ -276,9 +276,9 @@
 (re-frame/register-handler
  :fetch-review-hit
  standard-middleware
- (fn [db [_ {:keys [hit-id corpus context]}]]
+ (fn [db [_ {:keys [hit-id corpus window]}]]
    (let [corpus-instance (ensure-corpus (find-corpus-config db corpus))
-         words-map {:words-left context :words-right context}
-         handler (fetch-review-hit-handler corpus context)]
+         words-map {:words-left window :words-right window}
+         handler (fetch-review-hit-handler corpus window)]
      (query-hit corpus-instance hit-id words-map handler error-handler))
    db))

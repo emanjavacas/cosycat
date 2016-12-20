@@ -66,8 +66,7 @@
    :query-size s/Int ;; number of annotations returned
    :size s/Int ;; selected page-size
    :context s/Int ;; number of context tokens
-   :query-map (make-keys-optional (:query-map review-opts-schema))
-   :grouped-data grouped-data-schema})
+   :query-map (make-keys-optional (:query-map review-opts-schema))})
 
 (def review-results-schema
   {:results-by-id (s/conditional empty? {} :else results-by-id-schema)

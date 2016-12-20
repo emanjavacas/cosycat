@@ -146,10 +146,10 @@
             :error-handler #(timbre/warn "Couldn't fetch annotations" (str %))})
       db)))
 
-(defn query-review-handler [context]
+(defn query-review-handler [window]
   (fn [{:keys [grouped-data] :as review-summary}]
     {:pre [(apply = (mapcat (fn [{:keys [anns]}] (map :corpus anns)) grouped-data))]}
-    (re-frame/dispatch [:set-review-results review-summary context])))
+    (re-frame/dispatch [:set-review-results review-summary window])))
 
 (defn query-review-error-handler [data]
   (timbre/debug data)
@@ -172,7 +172,7 @@
  (fn [db [_ {:keys [page-num] :or {page-num 1}}]]
    (let [active-project (get-in db [:session :active-project])
          path-to-query-opts [:projects active-project :session :review :query-opts]
-         {:keys [query-map context size] :as query-opts} (get-in db path-to-query-opts)]
+         {:keys [query-map context size window] :as query-opts} (get-in db path-to-query-opts)]
      (re-frame/dispatch [:unset-review-results])
      (re-frame/dispatch [:start-throbbing :review-frame])
      (GET "annotation/query"
@@ -180,7 +180,7 @@
                     :context context
                     :page {:page-num page-num :page-size size}
                     :project-name active-project}
-           :handler (query-review-handler context)
+           :handler (query-review-handler window)
            :error-handler query-review-error-handler})
      db)))
 

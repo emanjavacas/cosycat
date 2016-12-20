@@ -9,22 +9,16 @@
             [taoensso.timbre :as timbre]))
 
 ;;; Ann & context
-(defn on-input-open [label open?]
-  (fn []
-    (let [path [:review :query-opts :query-map :ann label]]
-      (if-not @open?
-        (re-frame/dispatch [:set-project-session-component [:review-input-open? label] true])
-        (do (re-frame/dispatch [:set-project-session-component [:review-input-open? label] false])
-            (re-frame/dispatch [:set-project-session path nil]))))))
-
 (defn on-change-label [label]
   (fn [e]
-    (re-frame/dispatch
-     [:set-project-session [:review :query-opts :query-map :ann label] (.-value (.-target e))])))
+    (let [new-val (.-value (.-target e))]
+      (re-frame/dispatch [:set-project-session [:review :query-opts :query-map :ann label] new-val]))))
+
+(defn dispatch-query-review []
+  (re-frame/dispatch [:query-review]))
 
 (defn text-input [{:keys [label placeholder]}]
-  (let [open? (re-frame/subscribe [:project-session :components :review-input-open? label])
-        model (re-frame/subscribe [:project-session :review :query-opts :query-map :ann label])]
+  (let [model (re-frame/subscribe [:project-session :review :query-opts :query-map :ann label])]
     (fn [{:keys [label placeholder]}]
       [:div.form-group
        {:style {:padding "0 5px 0 0"}}
@@ -32,13 +26,12 @@
         [:input.form-control
          {:type "text"
           :style {:width "90px"}
-          :disabled (not @open?)
           :placeholder placeholder
           :value @model
-          :on-change (on-change-label label)}]
+          :on-change (on-change-label label)
+          :on-key-press #(when (and (pos? (count @model)) (= 13 (.-charCode %)))
+                           (dispatch-query-review))}]
         [:div.input-group-addon
-         {:onClick (on-input-open label open?)
-          :style {:cursor "pointer"}}
          [bs/glyphicon
           {:glyph "pencil"}]]]])))
 
@@ -57,11 +50,22 @@
         :model @context
         :select-fn (select-fn [:context])}])))
 
+(defn window-select []
+  (let [window (re-frame/subscribe [:project-session :review :query-opts :window])]
+    (fn []
+      [dropdown-select
+       {:label "window: "
+        :header "Select a window size around results"
+        :options (map #(->map % %) (range 1 21))
+        :model @window
+        :select-fn (select-fn [:window])}])))
+
 (defn size-select []
   (let [size (re-frame/subscribe [:project-session :review :query-opts :size])]
     (fn []
       [dropdown-select
        {:label "size: "
+        :style {:padding "0 5px 0 0"}
         :header "Select number of annotations per page"
         :options (map #(->map % %) [2 3 4 5 7 10 12 15 20 25])
         :model @size
@@ -73,7 +77,8 @@
      [text-input {:label :key :placeholder "Ann Key"}]
      [text-input {:label :value :placeholder "Ann Value"}]
      [context-select]
-     [size-select]]))
+     [size-select]
+     [window-select]]))
 
 ;;; Username & Corpora
 (defn multiple-select-row [{:keys [key label selected?]} on-select]
@@ -219,21 +224,20 @@
                     {:key username :label username :selected? selected?})
          :has-selection? (not (empty? @user-select))}]])))
 
-(defn dispatch-query-review []
-  (fn []
-    (re-frame/dispatch [:query-review])))
-
 (defn submit []
   (fn []
-    [bs/button
-     {:bsStyle "primary"
-      :onClick (dispatch-query-review)}
-     "Search"]))
+    [bs/button-group
+     [bs/button
+      {:bsStyle "primary"
+       :onClick dispatch-query-review}
+      "Search"]
+     [bs/button
+      {:onClick #(re-frame/dispatch [:unset-review-results])}
+      [bs/glyphicon {:glyph "erase"}]]]))
 
 (defn review-toolbar []
   (fn []
     [:div.row
-     [:div.col-lg-5.col-md-6.text-left
-      [main-inputs]]
-     [:div.col-lg-6.col-md-5 [rest-inputs]]
-     [:div.col-lg-1.col-md-1.pull-right.text-right [submit]]]))
+     [:div.col-lg-6.col-md-6.text-left [main-inputs]]
+     [:div.col-lg-4.col-md-4 [rest-inputs]]
+     [:div.col-lg-2.col-md-2.pull-right.text-right [submit]]]))

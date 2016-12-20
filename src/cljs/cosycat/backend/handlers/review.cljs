@@ -32,12 +32,12 @@
 (re-frame/register-handler
  :set-review-results
  standard-middleware
- (fn [db [_ {grouped-data :grouped-data :as results-summary} context]]
+ (fn [db [_ {grouped-data :grouped-data :as results-summary} window]]
    (let [active-project (get-in db [:session :active-project])
          path-to-results [:projects active-project :session :review :results]]
      (re-frame/dispatch [:stop-throbbing :review-frame])
      (doseq [{:keys [hit-id corpus]} (vals grouped-data)]
-       (re-frame/dispatch [:fetch-review-hit {:hit-id hit-id :corpus corpus :context context}]))
+       (re-frame/dispatch [:fetch-review-hit {:hit-id hit-id :corpus corpus :window window}]))
      (-> db
          (assoc-in (conj path-to-results :results-by-id) (make-results-by-id grouped-data))
          (assoc-in (conj path-to-results :results-summary) (dissoc results-summary :grouped-data))))))
