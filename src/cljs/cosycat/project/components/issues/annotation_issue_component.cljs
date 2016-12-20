@@ -114,7 +114,7 @@
          (when (nil? resolve)
            [:div.pull-right
             [bs/button
-             {:onClick #(re-frame/dispatch [:open-modal :close-annotation-issue issue])}
+             {:onClick #(re-frame/dispatch [:open-modal [:close-annotation-issue] issue])}
              "Close issue"]])]]])))
 
 (defn collapsible-header [{issue-id :id :as issue}]

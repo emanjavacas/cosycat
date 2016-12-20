@@ -26,7 +26,7 @@
         :placement "bottom"}
        [bs/button
         {:bsSize "small"
-         :onClick #(re-frame/dispatch [(if @show? :close-modal :open-modal) :delete-project])}
+         :onClick #(re-frame/dispatch [(if @show? :close-modal :open-modal) [:delete-project]])}
         [bs/glyphicon {:glyph "remove-sign"}]]])))
 
 (defn leave-project-btn []
@@ -37,7 +37,7 @@
         :placement "bottom"}
        [bs/button
         {:bsSize "small"
-         :onClick #(re-frame/dispatch [(if @show? :close-modal :open-modal) :leave-project])}
+         :onClick #(re-frame/dispatch [(if @show? :close-modal :open-modal) [:leave-project]])}
         [bs/glyphicon {:glyph "hand-right"}]]])))
 
 (defn project-buttons [my-role]

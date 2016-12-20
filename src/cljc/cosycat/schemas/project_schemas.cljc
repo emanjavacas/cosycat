@@ -89,10 +89,19 @@
    (s/optional-key :issues) {s/Str {:show-hit s/Bool}}
    (s/optional-key :active-query) s/Str})
 
+(def subhit-schema
+  [{:word s/Str
+    (s/optional-key :match) s/Bool
+    s/Any s/Str}])
+
+(def snippet-schema
+  {:hit-id s/Str
+   :snippet {:left subhit-schema :match subhit-schema :right subhit-schema}})
+
 (def project-session-schema
   {:query {:results query-results-schema}
-   :review {:results review-results-schema
-            :query-opts review-opts-schema}
+   :review {:results review-results-schema :query-opts review-opts-schema}
+   :snippet (s/conditional empty? {} :else snippet-schema)
    :status (s/conditional empty? {} :else status-schema)   
    :components project-session-components-schema
    :filtered-users #{s/Str}}) ;filter out annotations by other users

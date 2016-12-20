@@ -219,6 +219,6 @@
                   :cursor (if (disabled? marked-tokens) "auto" "pointer")
                   :height "34px"}
           :onClick #(when-not (disabled? marked-tokens)
-                      (re-frame/dispatch [:open-modal :annotation-modal]))}
+                      (re-frame/dispatch [:open-modal [:annotation-modal]]))}
          [:div [:i.zmdi.zmdi-edit]
           [annotation-modal marked-tokens current-ann]]]))))

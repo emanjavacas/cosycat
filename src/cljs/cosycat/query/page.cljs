@@ -4,12 +4,12 @@
             [react-bootstrap.components :as bs]
             [cosycat.utils :refer [format]]
             [cosycat.app-utils :refer [->int]]
+            [cosycat.snippet :refer [snippet-modal]]
             [cosycat.query.components.highlight-error :refer [highlight-error]]
             [cosycat.query.components.query-toolbar :refer [query-toolbar]]
             [cosycat.query.components.results-table :refer [results-table]]
             [cosycat.query.components.results-toolbar :refer [results-toolbar]]
             [cosycat.query.components.sort-toolbar :refer [sort-toolbar]]
-            [cosycat.query.components.snippet-modal :refer [snippet-modal]]
             [cosycat.query.components.minimize-panel :refer [minimize-panel]]
             [cosycat.query.components.annotate-query-modal :refer [annotate-query-modal]]
             [cosycat.annotation.components.annotation-component
@@ -214,5 +214,5 @@
          [:div
           [:div.row [minimizable-annotation-frame]]
           [:div.row [minimizable-query-frame]]])
-       [snippet-modal]
+       [snippet-modal :query]
        [annotate-query-modal]])))

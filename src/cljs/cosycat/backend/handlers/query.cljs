@@ -7,7 +7,7 @@
             [cosycat.query-backends.core :refer [ensure-corpus]]
             [cosycat.query-backends.protocols :refer [query query-sort snippet query-hit]]
             [cosycat.utils :refer [filter-marked-hits current-results format]]
-            [cosycat.app-utils :refer [parse-token-id parse-hit-id]]
+            [cosycat.app-utils :refer [parse-token-id parse-hit-id deep-merge]]
             [taoensso.timbre :as timbre]))
 
 (defn pager-next
@@ -169,17 +169,29 @@
 
 ;;; cosycat.query-backends.protocols/snippet
 (re-frame/register-handler
+ :set-snippet-data
+ standard-middleware
+ (fn [db [_ snippet-data]]
+   (let [active-project (get-in db [:session :active-project])]
+     (update-in db [:projects active-project :session :snippet] deep-merge snippet-data))))
+
+(re-frame/register-handler
+ :unset-snippet-data
+ standard-middleware
+ (fn [db _]
+   (let [active-project (get-in db [:session :active-project])]
+     (assoc-in db [:projects active-project :session :snippet] {}))))
+
+(re-frame/register-handler
  :fetch-snippet
- (fn [db [_ hit-id {user-delta :snippet-delta dir :dir}]]
-   (let [{snippet-opts :snippet-opts corpus-name :corpus} (get-in db [:settings :query])
-         {snippet-delta :snippet-delta} snippet-opts
-         snippet-opts (assoc snippet-opts :snippet-delta (or user-delta snippet-delta))
-         corpus (ensure-corpus (find-corpus-config db corpus-name))
-         {query-str :query-str} (current-results db)]
+ (fn [db [_ hit-id {user-snippet-delta :snippet-delta dir :dir}]]
+   (let [{:keys [corpus snippet-opts]} (get-in db [:settings :query])
+         snippet-delta (or user-snippet-delta (:snippet-delta snippet-opts))
+         corpus-instance (ensure-corpus (find-corpus-config db corpus))]
      (when-not dir ;; only register first request
        (re-frame/dispatch
-        [:register-user-project-event {:data {:hit-id hit-id :corpus corpus-name} :type "snippet"}]))
-     (snippet corpus query-str snippet-opts hit-id dir)
+        [:register-user-project-event {:data {:hit-id hit-id :corpus corpus} :type "snippet"}]))
+     (snippet corpus-instance (assoc snippet-opts :snippet-delta snippet-delta) hit-id dir)
      db)))
 
 ;;; cosycat.query-backends.protocols/query-hit

@@ -25,16 +25,17 @@
 (re-frame/register-handler
  :open-modal
  standard-middleware
- (fn [db [_ modal & [data]]]
-   (if-not data
-     (assoc-in db [:session :modals modal] true)     
-     (update-in db [:session :modals modal] deep-merge data))))
+ (fn [db [_ path & [data]]]
+   (let [path-to-modal (into [:session :modals] path)]
+     (if-not data
+       (assoc-in db path-to-modal true)
+       (update-in db path-to-modal deep-merge data)))))
 
 (re-frame/register-handler
  :close-modal
  standard-middleware
- (fn [db [_ modal]]
-   (assoc-in db [:session :modals modal] false)))
+ (fn [db [_ & path]]
+   (assoc-in db (into [:session :modals] path) false)))
 
 (re-frame/register-handler
  :start-throbbing

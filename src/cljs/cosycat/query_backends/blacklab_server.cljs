@@ -75,7 +75,7 @@
   
   (p/transform-query-error-data [_ {:keys [error]}] error)
 
-  (p/snippet [this query-str {:keys [snippet-size snippet-delta] :as snippet-opts} hit-id dir]
+  (p/snippet [this {:keys [snippet-size snippet-delta] :as snippet-opts} hit-id dir]
     (let [{:keys [doc-id hit-start hit-end]} (parse-hit-id hit-id)]
       (p/handle-snippet
        {:corpus this

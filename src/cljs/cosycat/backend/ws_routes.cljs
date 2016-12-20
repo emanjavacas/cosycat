@@ -67,7 +67,7 @@
     (re-frame/dispatch [:remove-project project-name])
     (if (= project-name active-project)
       (do (nav! "/")
-          (re-frame/dispatch [:open-modal :session-message {:message message}]))
+          (re-frame/dispatch [:open-modal [:session-message] {:message message}]))
       ;; just a notification
       (when (should-notify? db :remove-project)
         (re-frame/dispatch [:notify {:message message}]))))

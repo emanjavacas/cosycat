@@ -21,7 +21,7 @@
     "transforms success query payload to app internal query data structures")
   (transform-query-error-data [corpus data]
     "transforms error query payload to app internal query error data structures")
-  (snippet [corpus query-str query-opts hit-id dir]
+  (snippet [corpus query-opts hit-id dir]
     "fetches text surrounding a given query hit identified by `hit-id` in a 
      given `dir` (:left :right nil)")
   (transform-snippet-data [corpus data opts])
@@ -118,7 +118,7 @@
 
 ;;; Snippets
 (defn snippet-handler [snippet-data]
-  (re-frame/dispatch [:open-modal :snippet snippet-data]))
+  (re-frame/dispatch [:set-snippet-data snippet-data]))
 
 (defn snippet-error-handler
   [{:keys [code message]}]

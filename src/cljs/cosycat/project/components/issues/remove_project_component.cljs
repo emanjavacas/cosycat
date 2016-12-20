@@ -26,7 +26,7 @@
 
 (defn you-pending [& {:keys [capitalize?] :or {capitalize? false}}]
   [:span {:style {:cursor "pointer"}}
-   [:a {:onClick #(re-frame/dispatch [:open-modal :delete-project])}
+   [:a {:onClick #(re-frame/dispatch [:open-modal [:delete-project]])}
     [:strong (if capitalize? "You" "you")]]])
 
 (defn pending-message [{{:keys [agreed]} :data issue-id :id :as issue} project-users me]

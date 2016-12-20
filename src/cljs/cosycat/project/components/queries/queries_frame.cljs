@@ -59,7 +59,7 @@
            (when (= creator @me)        ;only creator can delete query
                [bs/button
                 {:style {:cursor "pointer"}
-                 :onClick #(re-frame/dispatch [:open-modal :remove-query id])}
+                 :onClick #(re-frame/dispatch [:open-modal [:remove-query] id])}
                 [bs/glyphicon {:glyph "trash"}]])]]]]
        [:div.row.pad
         [:div.col-lg-6.col-md-6.col-sm-6

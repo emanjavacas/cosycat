@@ -68,6 +68,7 @@
 (defn on-double-click [hit-id]
   (fn [event]
     (.stopPropagation event)
+    (re-frame/dispatch [:open-modal [:query :snippet]])
     (re-frame/dispatch [:fetch-snippet hit-id])))
 
 (defn get-color [status]
@@ -94,7 +95,8 @@
         [:tr {:class row-class
               :data-hit id
               ;; hide hit if discarded and toggle is on
-              :style {:display (when (and (not= @toggle-hits "none") (= @hit-status @toggle-hits)) "none")}}
+              :style {:display (when (and (not= @toggle-hits "none") (= @hit-status @toggle-hits))
+                                 "none")}}
          (concat
           [^{:key (str hit-num "-check")}
            [:td.ignore

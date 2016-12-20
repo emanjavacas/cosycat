@@ -30,7 +30,7 @@
   (fn []
     (cond
       @active-query (re-frame/dispatch [:unset-active-query])
-      @has-query?   (re-frame/dispatch [:open-modal :annotate-query]))))
+      @has-query?   (re-frame/dispatch [:open-modal [:annotate-query]]))))
 
 (defn annotate-query [queries]
   (let [has-query? (re-frame/subscribe [:has-query?])

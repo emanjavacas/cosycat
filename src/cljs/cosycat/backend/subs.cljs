@@ -1,6 +1,7 @@
 (ns cosycat.backend.subs
     (:require-macros [reagent.ratom :refer [reaction]])
     (:require [re-frame.core :as re-frame]
+              [cosycat.backend.handlers.utils :refer [expand-db-path]]
               [cosycat.utils :refer [filter-marked-hits]]
               [cosycat.app-utils :refer [select-values]]
               [taoensso.timbre :as timbre]))
@@ -30,17 +31,18 @@
 
 (re-frame/register-sub
  :modals
- (fn [db [_ modal]]
-   (reaction (get-in @db [:session :modals modal]))))
+ (fn [db [_ & path]]
+   (reaction (get-in @db (into [:session :modals] path)))))
 
 (re-frame/register-sub
- :snippet-hit
- (fn [db _]
-   (let [snippet-modal (reaction (get-in @db [:session :modals :snippet]))]
-     (reaction (when-let [{:keys [hit-id]} @snippet-modal]
-                 (let [active-project (reaction (get-in @db [:session :active-project]))
-                       project (reaction (get-in @db [:projects @active-project]))]
-                   (get-in @project [:session :query :results :results-by-id hit-id])))))))
+ :snippet-data
+ (fn [db [_ db-path]]
+   (let [active-project (reaction (get-in @db [:session :active-project]))
+         snippet-data (reaction (get-in @db [:projects @active-project :session :snippet]))]
+     (reaction (when-let [{:keys [hit-id snippet] :as snippet-data} (not-empty @snippet-data)]
+                 (let [project (reaction (get-in @db [:projects @active-project]))]
+                   {:hit-map (get-in @project (conj (expand-db-path db-path) hit-id))
+                    :snippet snippet}))))))
 
 (re-frame/register-sub
  :session-has-error?

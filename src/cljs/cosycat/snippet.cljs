@@ -1,4 +1,4 @@
-(ns cosycat.query.components.snippet-modal
+(ns cosycat.snippet
   (:require [reagent.core :as reagent]
             [re-frame.core :as re-frame]
             [react-bootstrap.components :as bs]
@@ -17,9 +17,9 @@
                       (fetch-more-snippet hit-id snippet-delta dir))}
         [bs/glyphicon {:glyph glyph}]]])))
 
-(defn metadata-button [metadata-show]
+(defn metadata-button [metadata-show?]
   [:i.round-button
-   {:on-click #(swap! metadata-show not)}
+   {:on-click #(swap! metadata-show? not)}
    [bs/glyphicon {:glyph "file"}]])
 
 (defn text-snippet [left match right]
@@ -40,33 +40,32 @@
               :max-height "200px"}}
      [data-tree meta]]))
 
-(defn snippet-modal []
-  (let [snippet-modal? (re-frame/subscribe [:modals :snippet])
+(defn snippet-modal [db-path]
+  (let [show? (re-frame/subscribe [:modals db-path :snippet])
+        metadata-show? (reagent/atom false)
         snippet-opts (re-frame/subscribe [:settings :query :snippet-opts])
-        hit-map (re-frame/subscribe [:snippet-hit])
-        metadata-show (reagent/atom false)]
-    (fn []
+        snippet-data (re-frame/subscribe [:snippet-data db-path])]
+    (fn [db-path]
       [bs/modal
-       {:show (boolean @snippet-modal?)}
+       {:show (boolean @show?)}
        [bs/modal-header
         {:closeButton true
-         :onHide #(re-frame/dispatch [:close-modal :snippet])}
+         :onHide #(do (re-frame/dispatch [:unset-snippet-data])
+                      (re-frame/dispatch [:close-modal db-path :snippet]))}
         [:h4 "Snippet"]]
        [bs/modal-body
-        (let [{{:keys [left match right] :as snippet} :snippet hit-id :hit-id} @snippet-modal?
-              {:keys [snippet-delta snippet-size]} @snippet-opts
-              {:keys [hit meta]} @hit-map]
+        (let [{:keys [snippet-delta snippet-size]} @snippet-opts
+              {{:keys [left match right]} :snippet {:keys [id meta]} :hit-map} @snippet-data]
           [:div.container-fluid.text-justify
            [:div.row {:style {:padding "10px 0"}}
             [:div.col-sm-4]
             [:div.col-sm-1
-             [more-button hit-id snippet-size snippet-delta :left "menu-up"]]
+             [more-button id snippet-size snippet-delta :left "menu-up"]]
             [:div.col-sm-1
-             [more-button hit-id snippet-size snippet-delta :right "menu-down"]]
+             [more-button id snippet-size snippet-delta :right "menu-down"]]
             [:div.col-sm-1]
             [:div.col-sm-1
-             [metadata-button metadata-show]]
+             [metadata-button metadata-show?]]
             [:div.col-sm-4]]
-           (when @metadata-show
-             [metadata meta])
+           (when @metadata-show? [metadata meta])
            [:div.row {:style {:padding "10px 0"}} [text-snippet left match right]]])]])))

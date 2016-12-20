@@ -58,7 +58,7 @@
   (let [show? (re-frame/subscribe [:modals :add-user])]
     (fn []
       [bs/button
-       {:onClick #(re-frame/dispatch [(if @show? :close-modal :open-modal) :add-user])}
+       {:onClick #(re-frame/dispatch [(if @show? :close-modal :open-modal) [:add-user]])}
        "Add User"])))
 
 (defn users-frame []
