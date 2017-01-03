@@ -29,8 +29,9 @@
         token-ids (->> anns (map get-token-scope) (sort))
         first-token (first token-ids)]
     (if (= 1 (count token-ids))
-      (make-hit-id doc first-token (inc first-token))      
-      (make-hit-id doc first-token (last token-ids)))))
+      (make-hit-id doc first-token (inc first-token))
+      (let [last-token (max (inc first-token) (last token-ids))]
+        (make-hit-id doc first-token)))))
 
 (defn get-corpus [anns]
   (-> anns first (get :corpus)))
