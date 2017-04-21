@@ -81,7 +81,7 @@
                              "Stopping the application now..."]
                             (string/join \newline)))
           (exit 1 "Done. Goodbye!")))
-    (when-not (.exists (io/file resource-path))
+    (when-not (and (io/file resource-path) (.exists (io/file resource-path)))
       (io/make-parents (str resource-path avatar-path "dummy")))))
 
 (defn run-server [& {:keys [debug]}]
