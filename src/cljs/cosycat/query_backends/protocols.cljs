@@ -69,7 +69,7 @@
 (defn safe-error-handler [data]
   (re-frame/dispatch
    [:notify
-    {:message "Unrecognized error. Contact admin!"
+    {:message "Looks like this is taking too long... This can have various causes. Contact admin!"
      :code (cond-> "Unrecognized query error" (not (empty? data)) (string/join (str ": " data)))}]))
 
 ;;; Queries
@@ -84,7 +84,7 @@
 (defn- safe-query-error-handler [data]
   (re-frame/dispatch
    [:query-error
-    {:message "Unrecognized error. Contact admin!"
+    {:message "Looks like this is taking too long... This can have various causes. Contact admin!"
      :code (cond-> "Unrecognized query error" (not (empty? data)) (string/join (str ": " data)))}]))
 
 (defmulti handle-query
