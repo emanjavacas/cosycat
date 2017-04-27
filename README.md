@@ -1,7 +1,7 @@
 <h1>Cosycat 
 <span>
 <em>
-<sub>Collaborative Synchronized Corpus Annotation Tool</sub>
+<sub><sup>(Collaborative Synchronized Corpus Annotation Tool)</sup></sub>
 </em>
 </span>
 </h1>
