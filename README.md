@@ -1,4 +1,5 @@
-# Cosycat (Collaborative Synchronized Corpus Annotation Tool)
+# Cosycat 
+## *Collaborative Synchronized Corpus Annotation Tool*
 
 For more documentation see [the wiki](https://github.com/emanjavacas/cosycat/wiki).
 
