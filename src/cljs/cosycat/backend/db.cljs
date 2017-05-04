@@ -59,7 +59,9 @@
                                            :value {:string ""
                                                    :as-regex? false}}
                                      :username #{}
-                                     :timestamp {}}}}
+                                     :timestamp {}
+                                     ;; :hit-id ""
+                                     }}}
    :snippet {}
    :status {}
    :components {:panel-open {:query-frame true :annotation-frame false}

@@ -234,7 +234,8 @@
          :options (for [username (map :username @users)
                         :let [selected? (get-selected :username username)]]
                     {:key username :label username :selected? selected?})
-         :has-selection? (not (empty? @user-select))}]])))
+         :has-selection? (not (empty? @user-select))}]
+       [text-input {:label :hit-id :placeholder "Hit-id"}]])))
 
 (defn submit []
   (fn []
