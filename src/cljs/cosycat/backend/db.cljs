@@ -60,8 +60,8 @@
                                                    :as-regex? false}}
                                      :username #{}
                                      :timestamp {}
-                                     ;; :hit-id ""
-                                     }}}
+                                     :hit-id {:string ""
+                                              :as-regex? false}}}}
    :snippet {}
    :status {}
    :components {:panel-open {:query-frame true :annotation-frame false}

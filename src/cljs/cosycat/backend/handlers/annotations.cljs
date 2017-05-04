@@ -158,12 +158,15 @@
 (defn build-query-map
   [{{{ann-key :string key-as-regex? :as-regex?} :key
      {ann-value :string value-as-regex? :as-regex?} :value} :ann
+    {hit-id :string hit-id-as-regex? :as-regex?} :hit-id
     {:keys [from to]} :timestamp corpus :corpus username :username :as query-map}]
   (cond-> {}
     (not (empty? ann-key)) (assoc-in [:ann :key :string] ann-key)
     key-as-regex? (assoc-in [:ann :key :as-regex?] true)
     (not (empty? ann-value)) (assoc-in [:ann :value :string] ann-value)
     value-as-regex? (assoc-in [:ann :value :as-regex?] true)
+    (not (empty? hit-id)) (assoc-in [:hit-id :string] hit-id)
+    hit-id-as-regex? (assoc-in [:hit-id :as-regex?] true)
     (not (empty? corpus)) (assoc :corpus (vec corpus))
     (not (empty? username)) (assoc :username (vec username))
     from (assoc-in [:timestamp :from] from)

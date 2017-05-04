@@ -76,13 +76,16 @@
    transforming API input into mongodb query syntax"
   [{{{ann-key :string key-as-regex? :as-regex?} :key
      {ann-value :string value-as-regex? :as-regex?} :value} :ann
+    {hit-id :string hit-id-as-regex? :as-regex?} :hit-id
     username :username corpus :corpus
     {:keys [from to] :as timestamp} :timestamp}]
   (cond-> {}
     ann-key (assoc "ann.key" ann-key)
-    (and ann-key key-as-regex?) (assoc "ann.key" {$regex ann-key})
+    (and ann-key key-as-regex?) (assoc "ann.key" {$regex ann-key}) ;overwrite
     ann-value (assoc "ann.value" ann-value)
     (and ann-value value-as-regex?) (assoc "ann.value" {$regex ann-value})
+    hit-id (assoc "hit-id" hit-id)
+    (and hit-id hit-id-as-regex?) (assoc "hit-id" {$regex hit-id})
     corpus (assoc :corpus {$in corpus})
     username (assoc :username {$in username})
     (and from to) (assoc $and [{:timestamp {$gte from}} {:timestamp {$lt to}}])

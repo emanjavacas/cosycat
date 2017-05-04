@@ -11,23 +11,25 @@
 (defn dispatch-query-review []
   (re-frame/dispatch [:query-review]))
 
-(defn on-change-label [label]
+(defn on-change-label [path]
   (fn [e]
-    (let [new-val (.-value (.-target e))]
+    (let [new-val (.-value (.-target e))
+          path-to-label (into [:review :query-opts :query-map] (conj path :string))]
       (re-frame/dispatch
-       [:set-project-session [:review :query-opts :query-map :ann label :string] new-val]))))
+       [:set-project-session path-to-label new-val]))))
 
-(defn on-change-regex [label as-regex?]
+(defn on-change-regex [path as-regex?]
   (fn []
-    (let [new-val (not @as-regex?)]
+    (let [new-val (not @as-regex?)
+          path-to-label (into [:review :query-opts :query-map] (conj path :as-regex?))]
       (re-frame/dispatch
-       [:set-project-session [:review :query-opts :query-map :ann label :as-regex?] new-val]))))
+       [:set-project-session path-to-label new-val]))))
 
-(defn text-input [{:keys [label placeholder]}]
-  (let [path-to-query-map  [:project-session :review :query-opts :query-map :ann]
-        model (re-frame/subscribe (into path-to-query-map [label :string]))
-        as-regex? (re-frame/subscribe (into path-to-query-map [label :as-regex?]))]
-    (fn [{:keys [label placeholder]}]
+(defn text-input [{:keys [path placeholder]}]
+  (let [path-to-query-map (into [:project-session :review :query-opts :query-map] path)
+        model (re-frame/subscribe (into path-to-query-map [:string]))
+        as-regex? (re-frame/subscribe (into path-to-query-map [:as-regex?]))]
+    (fn [{:keys [path placeholder]}]
       [:div.form-group
        {:style {:padding "0 5px 0 0"}}
        [:div.input-group
@@ -36,7 +38,7 @@
           :style {:width "90px"}
           :placeholder placeholder
           :value @model
-          :on-change (on-change-label label)
+          :on-change (on-change-label path)
           :on-key-press #(when (and (pos? (count @model)) (= 13 (.-charCode %)))
                            (dispatch-query-review))}]
         [bs/overlay-trigger
@@ -45,7 +47,7 @@
           [:input {:type "checkbox"
                    :style {:cursor "pointer"}
                    :checked @as-regex?
-                   :on-change (on-change-regex label as-regex?)}]]]]])))
+                   :on-change (on-change-regex path as-regex?)}]]]]])))
 
 (defn select-fn [path]
   (fn [v]
@@ -86,8 +88,9 @@
 (defn main-inputs []
   (fn []
     [:form.form-inline
-     [text-input {:label :key :placeholder "Ann Key"}]
-     [text-input {:label :value :placeholder "Ann Value"}]
+     [text-input {:path [:ann :key] :placeholder "Ann Key"}]
+     [text-input {:path [:ann :value] :placeholder "Ann Value"}]
+     [text-input {:path [:hit-id] :placeholder "Hit-id"}]
      [context-select]
      [size-select]
      [window-select]]))
@@ -234,8 +237,7 @@
          :options (for [username (map :username @users)
                         :let [selected? (get-selected :username username)]]
                     {:key username :label username :selected? selected?})
-         :has-selection? (not (empty? @user-select))}]
-       [text-input {:label :hit-id :placeholder "Hit-id"}]])))
+         :has-selection? (not (empty? @user-select))}]])))
 
 (defn submit []
   (fn []
