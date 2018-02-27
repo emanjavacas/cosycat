@@ -57,6 +57,9 @@
     :close-project-issue (make-schema {:data {:project-name s/Str :issue issue-schema}})
     ;; Projects users
     :add-project-user (make-schema {:data {:project project-schema}})
+    :kick-project-user (make-schema {:data {:project-name s/Str
+                                            :target-username s/Str
+                                            :username s/Str}})
     :new-project-user (make-schema {:data {:user project-user-schema :project-name s/Str}})
     :remove-project-user (make-schema {:data {:username s/Str :project-name s/Str}})
     :new-project-user-role (make-schema {:data {:project-name s/Str :username s/Str :role s/Str}})

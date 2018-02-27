@@ -4,6 +4,7 @@
             [react-bootstrap.components :as bs]
             [cosycat.project.components.delete-project-modal :refer [delete-project-modal]]
             [cosycat.project.components.leave-project-modal :refer [leave-project-modal]]
+            [cosycat.project.components.remove-user-modal :refer [remove-user-modal]]
             [cosycat.project.components.users.users-frame :refer [users-frame]]
             [cosycat.project.components.events.events-frame :refer [events-frame]]
             [cosycat.project.components.issues.issues-frame :refer [issues-frame]]
@@ -90,6 +91,7 @@
         [:div
          [delete-project-modal name]
          [leave-project-modal name]
+         [remove-user-modal name]
          [:div.container-fluid
           [:div.row [project-header project]]
           [:div.row

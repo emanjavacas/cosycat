@@ -23,6 +23,10 @@
         (some #{my-role} ["guest" "user"]) false
         :else true))
 
+(defn can-remove-user? [my-role user-role]
+  (and (some #{my-role}   ["creator" "project-lead"])
+       (some #{user-role} ["guest" "user"])))
+
 (defn can-add-users? [my-role]
   (contains? #{"project-lead" "creator"} my-role))
 
@@ -35,6 +39,7 @@
        :on-submit (fn [{:keys [username]} role]
                     (re-frame/dispatch [:user-role-update {:username username :new-role role}]))
        :displayable? true
+       :removable? (can-remove-user? my-role project-role)
        :editable? (can-edit-role? my-role project-role)])))
 
 (defn project-users [users my-role]
@@ -52,8 +57,6 @@
                              [:div.well {:style (when (= @me username) my-user-style)}
                               [project-user user role my-role]]]))]))]))))
 
-
-
 (defn add-user-button []
   (let [show? (re-frame/subscribe [:modals :add-user])]
     (fn []
@@ -68,8 +71,10 @@
       (let [{:keys [name users] :as project} @active-project]
         [:div
          [add-user-modal]
+         ;; TODO: remove-user-modal
          [:div.container-fluid
-          (when (can-add-users? @my-role)
-            [:div.row [:div.col-lg-12 [:div.pull-right [add-user-button]]]])
+          [:div.row
+           [:div.col-lg-12
+            (when (can-add-users? @my-role) [:div.pull-right [add-user-button]])]]
           [:div.row {:style {:height "10px"}}]
           [:div.row [project-users users @my-role]]]]))))

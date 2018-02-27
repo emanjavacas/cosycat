@@ -15,6 +15,7 @@
     [user-profile-component @selected-user-atom
      project-user-roles
      :editable? true
+     :removable? false
      :on-dismiss #(do (reset! current-selection-atom nil) (reset! selected-user-atom nil))
      :on-submit (fn [{:keys [username]} role]
                   (re-frame/dispatch
@@ -32,7 +33,7 @@
          [bs/well
           [user-profile-component @current-selection-atom 
            project-user-roles
-           :editable? false :displayable? false]]))]))
+           :editable? false :displayable? false :removable? false]]))]))
 
 (defn find-user-by-name [username users]
   (some #(when (= username (:username %)) %) users))

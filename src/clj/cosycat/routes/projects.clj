@@ -201,6 +201,18 @@
      :source-client username
      :target-clients (mapv :username users))))
 
+(defn kick-user-route
+  [{{project-name :project-name target-username :username} :params
+    {{username :username} :identity} :session
+    {db :db ws :ws} :components}]
+  (let [{:keys [users]} (proj/get-project db target-username project-name)]
+    (proj/remove-user db target-username project-name :kicked? true :by username)
+    (send-clients
+     ws {:type :kick-project-user
+         :data {:target-username target-username :username username :project-name project-name}}
+     :source-client username
+     :target-clients (mapv :username users))))
+
 (defn update-user-role
   [{{project-name :project-name username :username new-role :new-role} :params
     {{issuer :username} :identity} :session
@@ -281,6 +293,7 @@
       (POST "/new" [] (make-default-route new-project-route))    
       (POST "/add-user" [] (make-default-route add-user-route))
       (POST "/remove-user" [] (make-default-route remove-user-route))
+      (POST "/kick-user" [] (make-default-route kick-user-route))
       (POST "/remove-project" [] (make-default-route remove-project-route))
       (POST "/update-user-role" [] (make-default-route update-user-role))
       (context "/queries" []

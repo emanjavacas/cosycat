@@ -123,6 +123,20 @@
       (re-frame/dispatch [:notify {:message message :by username}])))
   db)
 
+(defmethod ws-handler :kick-project-user
+  [db {{:keys [target-username username project-name]} :data}]
+  (re-frame/dispatch [:remove-project-user {:username target-username :project-name project-name}])
+  (when (= target-username (get-in db [:me :username]))
+    ;; remove project from client db
+    (re-frame/dispatch [:remove-project project-name])
+    ;; redirect to home page
+    (nav! "/"))
+  (when (should-notify? db :kick-project-user)
+    (let [message (format "\"%s\" has been removed from project \"%s\" by \"%s\""
+                          target-username project-name username)]
+      (re-frame/dispatch [:notify {:message message}])))
+  db)
+
 (defmethod ws-handler :new-project-user-role
   [db {{username :username project-name :project-name role :role} :data by :by}]
   (let [{{me :username} :me} db]

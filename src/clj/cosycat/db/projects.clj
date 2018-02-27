@@ -214,8 +214,10 @@
 (defn new-user-role-event [username new-role]
   (make-event {:type :new-user-role :data {:username username :new-role new-role}}))
 
-(defn remove-user-event [username]
-  (make-event {:type :user-left-project :data {:username username}}))
+(defn remove-user-event [username kicked? by]
+  (if kicked?
+    (make-event {:type :user-kicked-out-project :data {:username username :by by}})
+    (make-event {:type :user-left-project :data {:username username}})))
 
 ;;; Setters
 (defn join-project-creator [creator users]
@@ -278,7 +280,7 @@
 
 (defn remove-user
   "removes user from project"
-  [{db-conn :db :as db} username project-name]
+  [{db-conn :db :as db} username project-name & {:keys [kicked? by] :or {kicked? false}}]
   (check-user-in-project db username project-name)
   (check-project-empty db project-name :transform-f #(update % :users remove-from-users username))
   (mc/update
@@ -286,7 +288,7 @@
    {"name" project-name}
    {$pull {"users" {"username" username}}
     ;; atomically add event to project
-    $push {"events" (remove-user-event username)}}))
+    $push {"events" (remove-user-event username kicked? by)}}))
 
 ;;; Issues
 (defn get-project-issue [{db-conn :db :as db} project-name issue-id]
