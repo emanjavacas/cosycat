@@ -30,6 +30,7 @@
    :window s/Int ;; number of tokens around context
    :query-map {:ann {(s/optional-key :key) input-value-schema
                      (s/optional-key :value) input-value-schema}
+               :hit-id input-value-schema
                :corpus #{s/Str}
                :username #{s/Str}
                :timestamp {(s/optional-key :from) s/Int (s/optional-key :to) s/Int}}
