@@ -212,7 +212,7 @@
               (not (empty? model-value)) (assoc :startDate start :endDate end)))]]]])))
 
 (defn rest-inputs []
-  (let [users (re-frame/subscribe [:users])
+  (let [users (re-frame/subscribe [:active-project :users])
         corpora (re-frame/subscribe [:corpora :corpus])
         user-select (re-frame/subscribe [:project-session :review :query-opts :query-map :username])
         corpus-select (re-frame/subscribe [:project-session :review :query-opts :query-map :corpus])]
