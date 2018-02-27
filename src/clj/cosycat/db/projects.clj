@@ -396,7 +396,7 @@
     (vcs/drop db-conn (server-project-name project-name))
     ;; drop project from projects collection
     (mc/remove db-conn (:projects colls) {:name project-name})
-    ;; remove project from
+    ;; remove project from db
     (mc/update db-conn (:users colls) {:name users} {$pull {:projects {:name project-name}}})
     ;; remove query-metadata from query
     (doseq [{query-id :id} queries]

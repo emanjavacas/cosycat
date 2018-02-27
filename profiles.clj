@@ -4,19 +4,15 @@
        :env {:host "localhost"
              :dev? true
              :admin "enrique"
-             :log-dir "/home/enrique/code/cosycat/dev-resources"
+             :log-dir "/home/manjavacas/code/cosycat/dev-resources"
              :database-url "mongodb://127.0.0.1:27017/cosycatDev"
              :port 3000
              :session-expires 900       ;in minutes
-             :tagset-paths ["/home/enrique/code/cosycat/resources/public/tagsets"]
+             :tagset-paths ["/home/manjavacas/code/cosycat/resources/public/tagsets"]
              :corpora
-             [{:corpus "brown-tei"
+             [{:corpus "brown"
                :type :blacklab-server
-               :args {:server "mbgserver.uantwerpen.be:8080"
-                      :web-service "blacklab-server-1.6.0-SNAPSHOT"}}
-              {:corpus "mbg-index"
-               :type :blacklab-server
-               :args {:server "mbgserver.uantwerpen.be:8080"
+               :args {:server "localhost:8080"
                       :web-service "blacklab-server-1.6.0-SNAPSHOT"}}]}}
  :test {:env {:database-url "mongodb://127.0.0.1:27017/cosycatTest"
               :dev? true
