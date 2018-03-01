@@ -23,24 +23,28 @@
         (some #{my-role} ["guest" "user"]) false
         :else true))
 
-(defn can-remove-user? [my-role user-role]
-  (and (some #{my-role}   ["creator" "project-lead"])
-       (some #{user-role} ["guest" "user"])))
+(defn can-remove-user? [my-role target-role am-i-admin? am-i-target?]
+  (or (and am-i-admin? (not am-i-target?))
+      (and (some #{my-role}   ["creator" "project-lead"])
+           (some #{target-role} ["guest" "user"]))))
 
 (defn can-add-users? [my-role]
   (contains? #{"project-lead" "creator"} my-role))
 
-(defn project-user [{:keys [username]} project-role my-role]
-  (let [user (re-frame/subscribe [:user username])]
+(defn project-user [{:keys [username]} project-role my-role me]
+  (let [user (re-frame/subscribe [:user username])
+        am-i-admin? (re-frame/subscribe [:am-i-admin?])]
     (fn [{:keys [username]} project-role my-role]
-      [user-profile-component @user project-user-roles
-       :role project-role
-       ;; :on-submit TODO: send edit to project
-       :on-submit (fn [{:keys [username]} role]
-                    (re-frame/dispatch [:user-role-update {:username username :new-role role}]))
-       :displayable? true
-       :removable? (can-remove-user? my-role project-role)
-       :editable? (can-edit-role? my-role project-role)])))
+      (let [am-i-target? (= username me)]
+        [user-profile-component @user project-user-roles
+         :role project-role
+         ;; :on-submit TODO: send edit to project
+         :on-submit (fn [{:keys [username]} role]
+                      (re-frame/dispatch
+                       [:user-role-update {:username username :new-role role}]))
+         :displayable? true
+         :removable? (can-remove-user? my-role project-role @am-i-admin? am-i-target?)
+         :editable? (can-edit-role? my-role project-role)]))))
 
 (defn project-users [users my-role]
   (let [me (re-frame/subscribe [:me :username])]
@@ -55,7 +59,7 @@
                             [:div
                              {:class (format "col-lg-%d col-sm-6 col-md-6" (/ 12 users-per-row))}
                              [:div.well {:style (when (= @me username) my-user-style)}
-                              [project-user user role my-role]]]))]))]))))
+                              [project-user user role my-role @me]]]))]))]))))
 
 (defn add-user-button []
   (let [show? (re-frame/subscribe [:modals :add-user])]

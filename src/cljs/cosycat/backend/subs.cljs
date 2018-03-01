@@ -116,6 +116,12 @@
    (reaction (get-in @db (into [:me] path)))))
 
 (re-frame/register-sub
+ :am-i-admin?
+ (fn [db _]
+   (let [app-roles (reaction (get-in @db [:me :roles]))]
+     (reaction (boolean (some #{"admin"} @app-roles))))))
+
+(re-frame/register-sub
  :has-query?
  (fn [db _]
    (let [active-project (reaction (get-in @db [:session :active-project]))
