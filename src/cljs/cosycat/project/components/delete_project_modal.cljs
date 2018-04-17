@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [react-bootstrap.components :as bs]
-            [cosycat.components :refer [user-profile-component compute-feedback]]
+            [cosycat.components :refer [compute-feedback]]
             [cosycat.roles :refer [project-user-roles]]
             [cosycat.utils :refer [human-time]]
             [cosycat.app-utils :refer [ceil get-pending-users]]

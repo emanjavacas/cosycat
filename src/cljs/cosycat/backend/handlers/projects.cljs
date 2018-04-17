@@ -212,6 +212,22 @@
           :error-handler error-handler})
    db))
 
+(defn kick-user-handler [project-name username]
+  (fn []
+    (re-frame/dispatch
+     [:notify {:message (str "Succesfully removed " username " from project " project-name)}])
+    (re-frame/dispatch
+     [:remove-project-user {:username username :project-name project-name}])))
+
+(re-frame/register-handler
+ :project-kick-user
+ (fn [db [_ project-name username]]
+   (POST "/project/kick-user"
+         {:params {:project-name project-name :username username}
+          :handler (kick-user-handler project-name username)
+          :error-handler error-handler})
+   db))
+
 (defn parse-remove-project-payload [payload]
   (if (empty? payload)
     :project-removed

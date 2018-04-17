@@ -150,8 +150,8 @@
                :on-click #(do (swap! editing not) (on-dismiss))}
               [bs/glyphicon {:glyph "remove"}]]])]]))))
 
-(defn display-role-btn [editing role editable?]
-  (fn [editing role editable?]
+(defn display-role-btn [{:keys [username]} role editing? editable? removable?]
+  (fn [{:keys [username]} role editing? editable?]
     [:div
      [:div.input-group
       (let [desc (project-user-roles-descs role)]
@@ -166,19 +166,31 @@
         :placement "right"}
        [:span.input-group-addon
         {:style {:cursor (if editable? "pointer" "not-allowed") :opacity (if-not editable? 0.6)}
-         :onClick #(do (.stopPropagation %) (if editable? (swap! editing not)))}
-        [bs/glyphicon {:glyph "pencil"}]]]]]))
+         :onClick #(do (.stopPropagation %) (if editable? (swap! editing? not)))}
+        [bs/glyphicon {:glyph "pencil"}]]]
+      (when removable?
+        [bs/overlay-trigger
+         {:overlay (reagent/as-component
+                    [bs/tooltip {:id "tooltip"}
+                     "Click to kick the user out of the project"])
+          :placement "right"}
+         [:span.input-group-addon
+          {:style {:cursor "pointer"}
+           :onClick #(do (.stopPropagation %)
+                         (re-frame/dispatch
+                          [:open-modal [:remove-user] {:username username}]))}
+          [bs/glyphicon {:glyph "hand-right"}]]])]]))
 
 (defn select-role-btn
-  [user roles {:keys [role on-change on-submit displayable? editable?] :as opts}]
-  (when displayable? (assert role "Role must be provide in displayable mode"))
-  (let [editing (reagent/atom (not role))]
+  [user roles {:keys [role on-change on-submit displayable? editable? removable?] :as opts}]
+  (when displayable? (assert role "Role must be provided in displayable mode"))
+  (let [editing? (reagent/atom (not role))]
     (fn [user roles {:keys [role on-change on-submit]}]
       (if (not displayable?)
-          [editable-role-btn user roles editing editable? opts]
-          (if @editing
-            [editable-role-btn user roles editing editable? opts]
-            [display-role-btn editing role editable?])))))
+          [editable-role-btn user roles editing? editable? opts]
+          (if @editing?
+            [editable-role-btn user roles editing? editable? opts]
+            [display-role-btn user role editing? editable? removable?])))))
 
 (defn text-td [text]
   [:td [:div {:style {:width "100%"
@@ -231,8 +243,8 @@
    dismiss it)"
   [user roles & opts]
   (fn [{:keys [avatar username firstname lastname email created last-active active] :as user}
-       roles & {:keys [role on-change on-submit on-dismiss editable? displayable?]
-                :or {editable? true displayable? false}
+       roles & {:keys [role on-change on-submit on-dismiss editable? displayable? removable?]
+                :or {editable? true displayable? false removable? false}
                 :as opts}]
     [:div.container-fluid
      [:div.row
@@ -240,9 +252,9 @@
        [:h4 [:img.img-rounded.img-responsive
              {:src (:href avatar) :style {:max-height "65.5px"}}]]] ;gravatar height
       [:div.col-sm-8.col-md-8
-       [:h4.truncate username
+       [:h4.truncate.pull-right username
         [:br]
-        [:span [:small [:cite (str firstname " " lastname)]]]]
+        [:span.pull-right [:small [:cite (str firstname " " lastname)]]]]
        (when active [online-dot active])]]
      [:div.row {:style {:padding "0 15px"}}
       [user-attributes user]]
