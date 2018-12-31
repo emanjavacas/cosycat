@@ -67,3 +67,25 @@ flexibility of NoSQL databases.
     This is done with a [small module](https://github.com/emanjavacas/cosycat/blob/master/src/clj/cosycat/vcs.clj),
 	that stores changes to a MongoDB document in a version-controlled
     collection using a traditional lock system for data consistency.
+
+# Citing
+
+If you've found this work useful, please cite the following paper:
+
+@inproceedings{Arevalo:2017:EAH:3078081.3078089,
+ author = {Ar{\'e}valo, Enrique Manjavacas and Petr{\'e}, Peter},
+ title = {Enabling Annotation of Historical Corpora in an Asynchronous Collaborative Environment},
+ booktitle = {Proceedings of the 2Nd International Conference on Digital Access to Textual Cultural Heritage},
+ series = {DATeCH2017},
+ year = {2017},
+ isbn = {978-1-4503-5265-9},
+ location = {G\öttingen, Germany},
+ pages = {9--14},
+ numpages = {6},
+ url = {http://doi.acm.org/10.1145/3078081.3078089},
+ doi = {10.1145/3078081.3078089},
+ acmid = {3078089},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {Asynchronous Collaboration, Corpus Annotation, Groupware},
+}
